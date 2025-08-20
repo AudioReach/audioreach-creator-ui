@@ -1,0 +1,118 @@
+###############################################################################
+# Dependency directories
+###############################################################################
+**/node_modules/
+
+###############################################################################
+# Build / cache artifacts
+###############################################################################
+dist/
+build/
+out/
+out-tsc/
+bundle-size-dist/
+temp/
+tmp/
+.sst/
+.build/
+.turbo/
+**/.turbo/**
+.turbo-cache/*
+!.turbo-cache/.gitkeep
+.nx/cache/
+.nx/workspace-data/
+_cdk.context.json
+.cdk.context.json
+packages/**/stats.yml
+packages/**/meta.json
+*-unpacked/
+
+###############################################################################
+# Framework-specific outputs
+###############################################################################
+# Angular
+**/.angular/
+
+# SvelteKit
+**/*.svelte-kit/output
+
+###############################################################################
+# Documentation & static-site tooling
+###############################################################################
+packages/**/build
+packages/**/generated/**
+!packages/**/generated/.gitkeep
+packages/**/src/doc-props.json
+.typedoc
+
+###############################################################################
+# Environment / secrets
+###############################################################################
+.env*
+**/certs
+
+###############################################################################
+# Logs & debug info
+###############################################################################
+*.log
+.log*
+yarn-error.log
+.pnpm-debug.log
+.pnpm-debug.log_
+vite*.config.ts.timestamp*
+.eslintcache
+.nyc_output/
+.aiignore
+.aider*
+!.aiderignore
+
+###############################################################################
+# TypeScript incremental build info
+###############################################################################
+tsconfig.tsbuildinfo
+tsconfig.*.tsbuildinfo
+
+###############################################################################
+# Test artifacts & screenshots
+###############################################################################
+**screenshots**
+.react-router/
+**/*\wsl.*
+**/coverage
+
+###############################################################################
+# OS / editor / IDE files
+###############################################################################
+.DS_Store
+.fleet/
+.idea/
+.webstorm/backup
+
+###############################################################################
+# Keep-tracked placeholder
+###############################################################################
+!generated/.gitkeep
+!.idea/bookmarks.json
+!.aider.conf.yml
+
+###############################################################################
+# Project-specific overrides
+###############################################################################
+# Allow VSCode shared settings for team consistency
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Allow electron installer scripts (production deployment)
+packages/electron-app/installer/**
+!packages/electron-app/installer/*.bat
+!packages/electron-app/installer/*.sh
+
+# Additional project-specific patterns
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vite

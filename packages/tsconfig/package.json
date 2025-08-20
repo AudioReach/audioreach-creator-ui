@@ -1,0 +1,10 @@
+{
+  "name": "@audioreach-creator-ui/tsconfig",
+  "version": "1.0.0",
+  "files": [
+    "tsconfig.*.json"
+  ],
+  "devDependencies": {
+    "typescript": "5.7.3"
+  }
+}

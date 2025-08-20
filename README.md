@@ -1,47 +1,182 @@
-**After repository creation:**
-- [ ] Update this `README.md`. Update the Project Name, description, and all sections. Remove this checklist.
-- [ ] If required, update `LICENSE.txt` and the License section with your project's approved license
-- [ ] Search this repo for "REPLACE-ME" and update all instances accordingly
-- [ ] Update `CONTRIBUTING.md` as needed
-- [ ] Review the workflows in `.github/workflows`, updating as needed. See https://docs.github.com/en/actions for information on what these files do and how they work.
-- [ ] Review and update the suggested Issue and PR templates as needed in `.github/ISSUE_TEMPLATE` and `.github/PULL_REQUEST_TEMPLATE`
+# AudioReach Creator using React Frontend and Electron
 
-# Project Name
+A cross-platform application to design, view and edit audio and voice use cases using AudioReach Engine.
 
-*\<update with your project name and a short description\>*
+## Technologies Used
 
-Project that does ... implemented in ... runs on Qualcomm® *\<processor\>*
+- [React](https://react.dev/) 19 with [React Router](https://reactrouter.com/) 7
+- [Electron](https://www.electronjs.org/) 37+
+- [TypeScript](https://www.typescriptlang.org/) 5.7
+- [QUI React](https://react.qui.qualcomm.com/) and [Tailwind CSS](https://tailwindcss.com/) for styling
+- [Vite](https://vitejs.dev/) 7 for frontend bundling
+- [ESBuild](https://esbuild.github.io/) for Electron bundling
+- [Generouted](https://github.com/oedotme/generouted) for file-based routing
+- [Zustand](https://zustand-demo.pmnd.rs/) for state management (may change)
+- [Playwright](https://playwright.dev) for e2e testing
+- ESLint, Prettier, and Stylelint for code formatting
 
-## Branches
+## Project Structure
 
-**main**: Primary development branch. Contributors should develop submissions based on this branch, and submit pull requests to this branch.
+This template follows a monorepo structure using [pnpm workspaces](https://pnpm.io/workspaces), organized into the following packages:
 
-## Requirements
+```
+├── packages/
+│   ├── api-utils/         # Shared types and utilities for IPC communication
+│   ├── electron-app/      # Electron main process and preload scripts
+│   ├── react-app/         # React frontend application
+│   └── tsconfig/          # Shared TypeScript configurations
+```
 
-List requirements to run the project, how to install them, instructions to use docker container, etc...
+### Feature-Sliced Design Architecture
 
-## Installation Instructions
+The React frontend is organized using [Feature-Sliced Design](https://feature-sliced.design/) architecture, which provides a structured approach to organizing code by its domain and purpose:
 
-How to install the software itself.
+```
+src/
+├── entities/       # Business entities (users, products, etc.)
+├── features/       # User interactions, processes, and features
+├── pages/          # Application pages/screens
+├── shared/         # Shared utilities, UI components, and libraries
+└── widgets/        # Composite UI blocks combining entities and features
+```
 
-## Usage
+#### Layers Explained
 
-Describe how to use the project.
+- **entities**: Core business logic and data models
+- **features**: User interactions and business processes
+- **pages**: Application screens that compose widgets and features
+- **shared**: Reusable components, utilities, and libraries
+- **widgets**: Composite UI blocks that combine entities and features
 
-## Development
+This architecture promotes:
 
-How to develop new features/fixes for the software. Maybe different than "usage". Also provide details on how to contribute via a [CONTRIBUTING.md file](CONTRIBUTING.md).
+- Clear separation of concerns
+- Better code organization and discoverability
+- Improved maintainability and scalability
+- Easier onboarding for new developers
 
-## Getting in Contact
+## Prerequisites
 
-How to contact maintainers. E.g. GitHub Issues, GitHub Discussions could be indicated for many cases. However a mail list or list of Maintainer e-mails could be shared for other types of discussions. E.g.
+- [Node.js](https://nodejs.org/) (LTS version recommended)
+- [pnpm](https://pnpm.io/) package manager
 
-* [Report an Issue on GitHub](../../issues)
-* [Open a Discussion on GitHub](../../discussions)
-* [E-mail us](mailto:REPLACE-ME@qti.qualcomm.com) for general questions
+## Installation
 
-## License
+### Setting Up pnpm
 
-*\<update with your project name and license\>*
+This project uses pnpm for package management. We recommend using [Corepack](https://pnpm.io/installation#using-corepack) to install the version specified in the root `package.json`:
 
-*\<REPLACE-ME\>* is licensed under the [BSD-3-clause License](https://spdx.org/licenses/BSD-3-Clause.html). See [LICENSE.txt](LICENSE.txt) for the full license text.
+```bash
+# Enable Corepack (only needed once per Node.js installation)
+corepack enable pnpm
+
+# Install dependencies
+pnpm install
+```
+
+If you encounter certificate issues during installation, check the [Troubleshooting](#troubleshooting) section below.
+
+## Development Workflow
+
+### Initial Build
+
+If it's your first time starting the application (i.e., after a fresh clone), make sure to run:
+
+```bash
+pnpm build
+```
+
+### Starting the Development Server
+
+To start the development server with hot reloading:
+
+```bash
+pnpm dev
+```
+
+This command:
+
+1. Starts the React development server
+2. Builds and watches the Electron app
+3. Launches the Electron app connected to the React development server
+
+### Development Scripts
+
+- `pnpm dev`: Start both React and Electron in development mode
+- `pnpm dev:ui`: Start only the React development server
+- `pnpm dev:electron`: Start only the Electron app
+- `pnpm typecheck`: Run TypeScript type checking
+
+## Building and Bundling
+
+### Building the Application
+
+To build the application without bundling:
+
+```bash
+pnpm build
+```
+
+This command:
+
+1. Cleans the output directories
+2. Builds the api-utils package
+3. Builds the React frontend
+4. Builds the Electron app
+
+### Bundling for Distribution
+
+To bundle the application for distribution:
+
+```bash
+pnpm bundle
+```
+
+This command:
+
+1. Builds all packages
+2. Packages the application using electron-builder
+
+The bundled application will be available in the `packages/electron-app/out` directory, with builds for:
+
+- Windows (x64)
+- macOS
+- Linux (x64)
+
+Note: Binaries built for Windows need to be built on a Windows device.
+
+## IPC Communication
+
+The template includes a type-safe IPC communication system between the Electron main process and the React renderer process:
+
+- `api-utils` package defines shared types and interfaces
+- `preload.ts` exposes a secure API to the renderer process
+- TypeScript discriminated unions ensure type safety across processes
+
+Example usage:
+
+```typescript
+// In renderer process
+const response = await window.api.send({
+  requestType: ApiRequest.CamelCase,
+  data: {input: "hello-world"},
+})
+```
+
+## Testing
+
+The template includes Playwright for end-to-end testing of the Electron application:
+
+```bash
+pnpm test
+```
+
+## Troubleshooting
+
+If you encounter certificate issues during installation, you may need to configure npm to use a different certificate authority or disable strict SSL:
+
+```bash
+npm config set strict-ssl false
+```
+
+For other common issues, please refer to the [Electron documentation](https://www.electronjs.org/docs/latest/).

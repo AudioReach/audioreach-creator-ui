@@ -1,0 +1,17 @@
+{
+  "extends": "@audioreach-creator-ui/tsconfig/tsconfig.strict.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+  },
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

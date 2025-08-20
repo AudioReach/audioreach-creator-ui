@@ -1,0 +1,57 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "cacheDir": ".turbo-cache",
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "build/**",
+        "dist/**"
+      ],
+      "inputs": [
+        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
+      ],
+      "outputLogs": "new-only"
+    },
+    "lint": {
+      "inputs": [
+        "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
+        "src/**/*"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test": {
+      "inputs": [
+        "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
+        "src/**/*",
+        "tests/**/*"
+      ],
+      "outputLogs": "new-only"
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "package": {
+      "inputs": [
+        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
+      ],
+      "outputs": [
+        "out/**"
+      ],
+      "outputLogs": "new-only"
+    },
+    "make": {
+      "inputs": [
+        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
+      ],
+      "outputs": [
+        "out/**"
+      ],
+      "outputLogs": "new-only"
+    }
+  }
+}

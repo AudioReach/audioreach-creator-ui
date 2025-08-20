@@ -1,0 +1,49 @@
+{
+  "name": "@audioreach-creator-ui/react-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React FrontEnd for AudioReach Creator",
+  "scripts": {
+    "dev:site": "vite -c vite.config.ts --host --clearScreen=false",
+    "dev:ts": "tsc -b tsconfig.lib.json -w --preserveWatchOutput --force",
+    "dev": "run-p dev:site dev:ts",
+    "build": "tsc -b tsconfig.lib.json --force && vite build",
+    "lint": "eslint --quiet",
+    "preview": "vite preview -c vite.config.ts",
+    "watch": "tsc -p tsconfig.lib.json -w --preserveWatchOutput --force"
+  },
+  "dependencies": {
+    "@generouted/react-router": "^1.19.6",
+    "@audioreach-creator-ui/api-utils": "workspace:*",
+    "@qui/base": "^2.37.0",
+    "@qui/react": "^2.6.1",
+    "@qui/react-table": "^3.0.0",
+    "@qui/styles": "^2.14.0",
+    "@qui/table-core": "^1.1.2",
+    "@tanstack/react-query": "^5.56.2",
+    "dayjs": "^1.11.9",
+    "fast-xml-parser": "^5.2.5",
+    "lucide-react": "^0.441.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "^7.6.3",
+    "react-router-dom": "^7.6.3",
+    "react-transition-group": "^4.4.5",
+    "zustand": "^5.0.7"
+  },
+  "devDependencies": {
+    "@audioreach-creator-ui/tsconfig": "workspace:*",
+    "@qui/tailwind-plugin": "^1.3.2",
+    "@types/node": "^22.16.3",
+    "@types/react": "^19.0.14",
+    "@types/react-dom": "^19.0.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.15",
+    "postcss": "^8.5.6",
+    "shx": "^0.4.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "5.7.3",
+    "vite": "^7.0.4"
+  }
+}

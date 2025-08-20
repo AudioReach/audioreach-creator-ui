@@ -1,0 +1,45 @@
+{
+  "version": "0.0.1",
+  "name": "@audioreach-creator-ui/electron-app",
+  "description": "AudioReach Creator to create/edit/view audio/voice use case graphs and adjust calibration data of modules",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "types": "dist/index.d.ts",
+  "author": "Qualcomm Inc.",
+  "homepage": "",
+  "scripts": {
+    "clean": "shx rm -rf dist out",
+    "compile": "tsx scripts/build.ts --mode production",
+    "compile:types": "tsc -b tsconfig.lib.json --force",
+    "build": "pnpm clean && run-p compile compile:types",
+    "dev": "run-p watch:js watch:types",
+    "watch:js": "cross-env DEV=1 tsx ./scripts/build.ts --mode development --watch",
+    "watch:types": "tsc -b tsconfig.lib.json --force -w --preserveWatchOutput",
+    "package": "electron-builder --dir --config electron-builder.config.ts",
+    "lint": "eslint",
+    "test": "cross-env DEBUG=pw:browser* playwright test",
+    "test:ci": "cross-env IS_CI=true DISPLAY=:99 xvfb-run --auto-servernum -- playwright test"
+  },
+  "dependencies": {
+    "@audioreach-creator-ui/api-utils": "workspace:*",
+    "@audioreach-creator-ui/react-app": "workspace:*",
+    "@audioreach-creator-ui/tsconfig": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@qui/esbuild": "^1.0.0",
+    "@types/mime": "^3.0.4",
+    "@types/node": "^22.16.3",
+    "electron": "37.2.1",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.6",
+    "fs-extra": "^11.1.1",
+    "glob": "^10.2.6",
+    "npm-run-all2": "^8.0.4",
+    "ora": "^7.0.1",
+    "shx": "^0.4.0",
+    "tsx": "^4.20.3",
+    "typescript": "5.7.3"
+  }
+}

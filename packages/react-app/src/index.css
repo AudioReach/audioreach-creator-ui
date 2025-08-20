@@ -1,0 +1,53 @@
+@import "@qui/styles/dist/all.min.css";
+@import "@qui/base/dist/all.min.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Roboto Flex", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--q-text-1-primary);
+
+  --app-primary-background: var(--q-background-1);
+
+  background-color: var(--app-primary-background);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --header-height: 90px;
+  --app-padding-x: 18px;
+
+  @media screen and (min-width: 768px) {
+    --app-padding-x: 48px;
+  }
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 240px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+}
+
+.page-wrapper {
+  max-width: 1280px;
+  padding: 24px var(--app-padding-x);
+}
+
+.main-content {
+  height: 100%;
+  width: 100%;
+  padding: 20px 26px;
+  min-height: calc(100vh - var(--header-height));
+}

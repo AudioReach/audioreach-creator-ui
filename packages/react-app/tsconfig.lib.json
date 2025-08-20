@@ -1,0 +1,21 @@
+{
+  "extends": "@audioreach-creator-ui/tsconfig/tsconfig.strict.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "node_modules/.tmp/.tsbuildinfo",
+    "paths": {
+      "~assets/*": ["./src/assets/*"],
+      "~data/*": ["./src/data/*"],
+      "~entities/*": ["./src/entities/*"],
+      "~features/*": ["./src/features/*"],
+      "~pages/*": ["./src/pages/*"],
+      "~shared/*": ["./src/shared/*"],
+      "~widgets/*": ["./src/widgets/*"]
+    }
+  },
+  "include": ["./src"],
+  "exclude": ["./src/**/*.spec.tsx"]
+}

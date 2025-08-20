@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "unifiedjs.vscode-mdx",
+    "christian-kohler.npm-intellisense",
+    "stylelint.vscode-stylelint",
+    "bradlc.vscode-tailwindcss"
+  ]
+}

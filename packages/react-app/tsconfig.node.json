@@ -1,0 +1,11 @@
+{
+  "extends": "@audioreach-creator-ui/tsconfig/tsconfig.strict.json",
+  "compilerOptions": {
+    "composite": true
+  },
+  "include": [
+    "build.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+  ]
+}
