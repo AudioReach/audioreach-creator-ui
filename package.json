@@ -11,7 +11,7 @@
     "dev": "cross-env FORCE_COLOR=1 DEV=true turbo run dev",
     "dev:ui": "pnpm dev --filter='!@audioreach-creator-ui/electron-app'",
     "dev:electron": "pnpm run -C packages/electron-app dev",
-    "typecheck": "cross-env FORCE_COLOR=1 DEV=true turbo run dev:ts",
+    "typecheck": "cross-env FORCE_COLOR=1 turbo run typecheck",
     "package": "cross-env FORCE_COLOR=1 turbo run package",
     "lint": "cross-env FORCE_COLOR=1 turbo run lint",
     "lint:ci": "cross-env FORCE_COLOR=1 turbo run lint --continue",

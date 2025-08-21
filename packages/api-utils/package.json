@@ -11,6 +11,7 @@
     "compile": "run-p build:components build:types",
     "build:components": "vite build -c vite.config.ts",
     "build:types": "tsc -b tsconfig.lib.json --force",
+    "typecheck": "tsc -b tsconfig.lib.json --force --noEmit",
     "dev": "run-p watch:components watch:types",
     "watch:components": "vite build -c vite.config.ts -w --emptyOutDir=false",
     "watch:types": "tsc -b tsconfig.lib.json -w --preserveWatchOutput --force",

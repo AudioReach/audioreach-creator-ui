@@ -9,6 +9,7 @@
     "dev:ts": "tsc -b tsconfig.lib.json -w --preserveWatchOutput --force",
     "dev": "run-p dev:site dev:ts",
     "build": "tsc -b tsconfig.lib.json --force && vite build",
+    "typecheck": "tsc -b tsconfig.lib.json --force --noEmit",
     "lint": "eslint --quiet",
     "preview": "vite preview -c vite.config.ts",
     "watch": "tsc -p tsconfig.lib.json -w --preserveWatchOutput --force"

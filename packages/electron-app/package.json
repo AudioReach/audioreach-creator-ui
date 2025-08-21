@@ -13,6 +13,7 @@
     "compile": "tsx scripts/build.ts --mode production",
     "compile:types": "tsc -b tsconfig.lib.json --force",
     "build": "pnpm clean && run-p compile compile:types",
+    "typecheck": "tsc -b tsconfig.lib.json --force --noEmit",
     "dev": "run-p watch:js watch:types",
     "watch:js": "cross-env DEV=1 tsx ./scripts/build.ts --mode development --watch",
     "watch:types": "tsc -b tsconfig.lib.json --force -w --preserveWatchOutput",
