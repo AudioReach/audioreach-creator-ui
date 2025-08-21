@@ -4,10 +4,10 @@ import {
   type ApiResponse,
   camelCaseInput,
 } from "@audioreach-creator-ui/api-utils"
-import { app, BrowserWindow, dialog, ipcMain } from "electron"
-import { readdir, readFile } from "node:fs/promises"
-import { join, resolve } from "node:path"
-import { setTimeout } from "node:timers/promises"
+import {app, BrowserWindow, dialog, ipcMain} from "electron"
+import {readdir, readFile} from "node:fs/promises"
+import {join, resolve} from "node:path"
+import {setTimeout} from "node:timers/promises"
 
 let win: BrowserWindow
 
@@ -121,22 +121,22 @@ ipcMain.handle(
 
           if (result.canceled) {
             response = "Directory selection cancelled"
-            data = { cancelled: true, directoryPath: null }
+            data = {cancelled: true, directoryPath: null}
           } else {
             const directoryPath = result.filePaths[0]
             console.log(`Directory selected: ${directoryPath}`)
             response = `Directory selected: ${directoryPath}`
-            data = { cancelled: false, directoryPath }
+            data = {cancelled: false, directoryPath}
           }
         } catch (error) {
           console.error("Directory selection error:", error)
           response = "Failed to open directory dialog"
-          data = { cancelled: true, directoryPath: null }
+          data = {cancelled: true, directoryPath: null}
         }
         break
       case ApiRequest.LoadXmlsFromDirectory:
         try {
-          const { directoryPath } = args.data
+          const {directoryPath} = args.data
           console.log(`Loading XMLs from: ${directoryPath}`)
 
           const files = await readdir(directoryPath)
@@ -154,13 +154,13 @@ ipcMain.handle(
             }
           } else {
             // Read and validate XML files
-            const xmlContents: { content: string; filename: string }[] = []
+            const xmlContents: {content: string; filename: string}[] = []
 
             for (const xmlFile of xmlFiles) {
               try {
                 const filePath = join(directoryPath, xmlFile)
                 const content = await readFile(filePath, "utf-8")
-                xmlContents.push({ content, filename: xmlFile })
+                xmlContents.push({content, filename: xmlFile})
               } catch (error) {
                 console.error(`Failed to read ${xmlFile}:`, error)
               }
@@ -190,6 +190,6 @@ ipcMain.handle(
         response = "Unknown request type"
     }
 
-    return { data, message: response, requestType: args.requestType }
+    return {data, message: response, requestType: args.requestType}
   },
 )

@@ -13,6 +13,7 @@ import {
 
 import arcLogo from "~assets/qact_48.png"
 import {mockBackend} from "~entities/examples/module/api/mock-backend"
+
 import {ThemeToggle} from "../../theme"
 
 export function Navbar(): ReactNode {

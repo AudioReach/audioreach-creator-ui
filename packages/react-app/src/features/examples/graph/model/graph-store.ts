@@ -120,8 +120,9 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
     try {
       // Fetch available modules from mock backend
-      const availableModules = (await mockBackend.fetchModuleList())
-                                .map((module) => (module.id))
+      const availableModules = (await mockBackend.fetchModuleList()).map(
+        (module) => module.id,
+      )
 
       // If no modules available, handle gracefully
       if (availableModules.length === 0) {

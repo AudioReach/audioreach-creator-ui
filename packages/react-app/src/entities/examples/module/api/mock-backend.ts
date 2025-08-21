@@ -1,5 +1,5 @@
 // Mock backend that simulates separate API endpoints
-import { parseModuleXml } from "../lib/xml-parser"
+import {parseModuleXml} from "../lib/xml-parser"
 import type {
   Module,
   ModuleIdentity,
@@ -7,7 +7,6 @@ import type {
   ModulePorts,
   ModuleProperties,
 } from "../model"
-
 
 class MockBackend {
   private xmlData: Module[] = []
@@ -193,13 +192,13 @@ class MockBackend {
 
   // Initialize from XML contents loaded from directory
   initializeFromXmlContents(
-    xmlContents: { content: string; filename: string }[],
+    xmlContents: {content: string; filename: string}[],
   ): void {
     try {
       console.log(`Initializing backend with ${xmlContents.length} XML files`)
 
       // Process each XML file
-      const moduleArrays = xmlContents.map(({ content, filename }) => {
+      const moduleArrays = xmlContents.map(({content, filename}) => {
         console.log(`Processing ${filename}`)
         return parseModuleXml(content)
       })

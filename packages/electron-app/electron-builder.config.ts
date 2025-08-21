@@ -1,6 +1,6 @@
-import type { Configuration } from "electron-builder"
+import type {Configuration} from "electron-builder"
 
-import { removeBinaries } from "./scripts/remove-binaries"
+import {removeBinaries} from "./scripts/remove-binaries"
 
 const config: Configuration = {
   afterPack: async () => {
@@ -37,7 +37,7 @@ const config: Configuration = {
   linux: {
     category: "Utility",
     executableName: "audioreach-creator-ui",
-    icon: "public/libs/icons/qact_256.png"
+    icon: "public/libs/icons/qact_256.png",
   },
 
   productName: "audioreach-creator-ui",
