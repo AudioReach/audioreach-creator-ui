@@ -10,7 +10,7 @@ export function Footer(): ReactNode {
     <div className="q-border-subtle q-background-2 flex flex-col gap-5 border-t-[1px]">
       <div className="q-text-1-secondary q-body-xxs flex gap-2.5">
         <div className="ml-auto flex">
-          <div className="q-font-body-md p-1.5">
+          <div className="q-font-body-md p-1.5" data-testid="footer-text">
             © 2025 Qualcomm Technologies, Inc. and/or its affiliated companies
           </div>
           <QDivider orientation="vertical" spacingBefore={10} />

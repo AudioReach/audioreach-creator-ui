@@ -79,6 +79,15 @@ tsconfig.*.tsbuildinfo
 .react-router/
 **/*\wsl.*
 **/coverage
+# Playwright test results and reports
+**/test-results/
+**/playwright-report/
+# Test artifacts (traces, videos, screenshots from test runs)
+**/*.trace.zip
+**/trace.zip
+# Additional test output formats
+**/results.json
+**/junit.xml
 
 ###############################################################################
 # OS / editor / IDE files

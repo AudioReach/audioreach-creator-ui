@@ -41,7 +41,9 @@ export function Navbar(): ReactNode {
       <QHeaderLogo>
         <div className="q-heading-xs flex min-h-[36px] items-center gap-2 pl-2">
           {logo}
-          <span className="whitespace-nowrap">AudioReach&trade; Creator</span>
+          <span className="whitespace-nowrap" data-testid="header-text">
+            AudioReach&trade; Creator
+          </span>
         </div>
         <QDivider orientation="vertical" spacingBefore={24} />
       </QHeaderLogo>
