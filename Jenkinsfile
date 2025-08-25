@@ -109,16 +109,40 @@ pipeline {
                     }
                 }
             }
+            post {
+                always {
+                    // Archive all test artifacts
+                    archiveArtifacts artifacts: 'packages/electron-app/test-results/**/*', allowEmptyArchive: true
+
+                    // Publish test results to Jenkins
+                    script {
+                        if (fileExists('packages/electron-app/test-results/junit.xml')) {
+                            junit testResults: 'packages/electron-app/test-results/junit.xml', allowEmptyResults: true
+                        } else {
+                            echo '⚠️ No JUnit XML file found - tests may not have run or generated results'
+                        }
+                    }
+                }
+                failure {
+                    echo '❌ Tests failed! Check test results for details.'
+                }
+                unstable {
+                    echo '⚠️ Some tests failed but build continues.'
+                }
+            }
         }
 
         stage('Package') {
             when {
-                anyOf {
-                    branch 'main'
-                    branch 'develop'
-                    branch 'release/*'
+                expression {
+                    // Check direct branch builds
+                    def directBranch = env.BRANCH_NAME ==~ /(main|develop|release\/.*|feature\/.*)/
+                    // Check PR builds targeting feature branches
+                    def prToFeature = env.CHANGE_TARGET && env.CHANGE_TARGET ==~ /feature\/.*/
+                    return directBranch || prToFeature
                 }
             }
+
             steps {
                 echo '📦 Creating distribution packages...'
                 bat 'pnpm package'
