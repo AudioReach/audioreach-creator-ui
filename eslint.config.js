@@ -21,6 +21,52 @@ const languageOptions = {
   },
 }
 
+// Shared member ordering rule configuration
+const memberOrderingRule = {
+  "@typescript-eslint/member-ordering": [
+    "error",
+    {
+      default: {
+        memberTypes: [
+          // Variables/fields first (grouped together)
+          [
+            "public-static-field",
+            "protected-static-field",
+            "private-static-field",
+          ],
+          [
+            "public-instance-field",
+            "protected-instance-field",
+            "private-instance-field",
+          ],
+          ["public-abstract-field", "protected-abstract-field"],
+
+          // Then constructors
+          [
+            "public-constructor",
+            "protected-constructor",
+            "private-constructor",
+          ],
+
+          // Then methods/functions (grouped together)
+          [
+            "public-static-method",
+            "protected-static-method",
+            "private-static-method",
+          ],
+          [
+            "public-instance-method",
+            "protected-instance-method",
+            "private-instance-method",
+          ],
+          ["public-abstract-method", "protected-abstract-method"],
+        ],
+        order: "alphabetically-case-insensitive",
+      },
+    },
+  ],
+}
+
 export default tseslint.config(
   {
     ignores: [
@@ -74,21 +120,15 @@ export default tseslint.config(
     files: ["packages/**/*.{jsx,js,mjs,cjs}", "*.{jsx,js,mjs.cjs}"],
   },
 
-  // TS
-  {
-    extends: [...quiEslint.configGroups.typeCheckedPerformance],
-    files: ["packages/**/*.ts"],
-    languageOptions,
-  },
-
-  // react
+  // TS & React - Combined configuration with shared member ordering rule
   {
     extends: [
       ...quiEslint.configGroups.typeCheckedPerformance,
       quiEslintReact.configs.recommended,
     ],
-    files: ["packages/react-app/**/*.{ts,tsx}"],
+    files: ["packages/**/*.{ts,tsx}"],
     languageOptions,
+    rules: memberOrderingRule,
   },
 
   // mdx

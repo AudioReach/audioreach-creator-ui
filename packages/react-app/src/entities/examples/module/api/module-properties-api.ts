@@ -8,18 +8,18 @@ export class ModulePropertiesApi {
     return mockBackend.fetchModuleProperties(moduleId)
   }
 
-  async updateDisplayName(
-    moduleId: string,
-    displayName: string,
-  ): Promise<ModuleIdentity> {
-    return mockBackend.updateModuleDisplayName(moduleId, displayName)
-  }
-
   async updateDescription(
     moduleId: string,
     description: string,
   ): Promise<ModuleProperties> {
     return mockBackend.updateModuleDescription(moduleId, description)
+  }
+
+  async updateDisplayName(
+    moduleId: string,
+    displayName: string,
+  ): Promise<ModuleIdentity> {
+    return mockBackend.updateModuleDisplayName(moduleId, displayName)
   }
 }
 
