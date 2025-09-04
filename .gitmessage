@@ -1,0 +1,47 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+
+# Type should be one of the following:
+# * feat: A new feature
+# * fix: A bug fix
+# * docs: Documentation only changes
+# * style: Changes that do not affect the meaning of the code
+# * refactor: A code change that neither fixes a bug nor adds a feature
+# * perf: A code change that improves performance
+# * test: Adding missing tests or correcting existing tests
+# * build: Changes that affect the build system or external dependencies
+# * ci: Changes to our CI configuration files and scripts
+# * chore: Other changes that don't modify src or test files
+# * revert: Reverts a previous commit
+
+# Scope should be one of the following for this project:
+# * electron: Electron main process, preload scripts
+# * react: React frontend application
+# * api-utils: Shared types and IPC utilities
+# * workspace: Monorepo/workspace configuration
+# * docs: Documentation changes
+
+# Subject line should:
+# * Use imperative mood ("add" not "added" or "adds")
+# * Not capitalize first letter
+# * Not end with a period
+# * Be no more than 50 characters
+
+# Body should:
+# * Use imperative mood
+# * Include motivation for the change
+# * Contrast with previous behavior
+
+# Footer should:
+# * Reference issues and pull requests
+# * Include breaking change notes
+# * Use "BREAKING CHANGE:" for breaking changes
+
+# Examples:
+# feat(react): add audio waveform visualization component
+# fix(electron): resolve IPC communication timeout issue
+# docs(readme): update installation instructions for pnpm
+# refactor(api-utils): simplify type definitions for audio processing
