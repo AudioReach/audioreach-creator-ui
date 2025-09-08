@@ -5,11 +5,11 @@
     "baseUrl": "./",
     "moduleResolution": "bundler",
     "types": [
-      "vitest",
-      "@vitest/browser/providers/playwright"
+      "jest",
+      "@testing-library/jest-dom"
     ],
   },
-  "include": ["./src/**/*.spec.tsx", "./test"],
+  "include": ["./src/**/*.spec.tsx", "./src/**/*.test.tsx", "./tests/**/*.test.ts", "./tests/**/*.test.tsx", "./test"],
   "references": [
     {
       "path": "./tsconfig.lib.json"

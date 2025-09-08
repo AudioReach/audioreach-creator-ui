@@ -1,14 +1,18 @@
 // Application store exports
 export {useApplicationStore, APP_CONFIG} from "./application-store"
+
+// Type exports
 export type {
   ApplicationStore,
   ApplicationConfig,
-  AppPage,
-  ProjectPage,
-  Tab,
-  RecentFile,
+  AppTab,
+  AppGroup,
+  MainTab,
+  ProjectTab,
+  ProjectGroup,
+  RecentProject,
   ActiveTab,
-  isAppPage,
-  isProjectPage,
-  isTab,
-} from "./types"
+} from "./store-types"
+
+// Type guard exports
+export {isAppTab, isProjectGroup, isMainTab, isProjectTab} from "./store-types"

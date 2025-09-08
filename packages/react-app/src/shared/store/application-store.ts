@@ -1,32 +1,25 @@
-import type {ReactNode} from "react"
-
 import {create} from "zustand"
 
 import type {
   ActiveTab,
+  AppGroup,
   ApplicationConfig,
   ApplicationStore,
-  AppPage,
-  ProjectPage,
-  RecentFile,
-  Tab,
-} from "./types"
+  AppTab,
+  MainTab,
+  ProjectGroup,
+  ProjectTab,
+} from "./store-types"
 
 // Configuration constants
 const APP_CONFIG: ApplicationConfig = {
-  AUTO_COLLAPSE_ON_NEW_PROJECT: true,
+  AUTO_COLLAPSE_ON_NEW_PROJECT: false, // Disable auto-collapse for now
   DEFAULT_PROJECT_NAME_PATTERN: (filename: string) => {
     const name = filename.split(/[/\\]/).pop() || filename
     return name.replace(/\.(xml|json|acdb)$/i, "")
   },
-  MAX_PROJECTS: 5,
-  MAX_RECENT_FILES: 10,
+  MAX_PROJECT_GROUPS: 5,
   STORAGE_VERSION: "1.0",
-}
-
-// Storage keys
-const STORAGE_KEYS = {
-  RECENT_FILES: "audioreach-recent-files",
 }
 
 // Utility function to generate unique IDs
@@ -34,182 +27,134 @@ const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
-// Default tab creation function
-const createDefaultTabs = (): Tab[] => [
-  {
-    component: null as ReactNode, // Here
-    id: generateId(),
-    title: "Graph",
-  },
-]
+// Default main tab creation function
+const createDefaultMainTab = (): MainTab => ({
+  component: null,
+  id: generateId(),
+  title: "Graph",
+})
 
-// Create start page
-const createStartPage = (): AppPage => ({
-  component: null as ReactNode, // Will be set when component is available
-  id: "start-page",
-  isCloseable: true,
-  pageKey: "start",
-  title: "Start",
+// Default app group creation function
+const createDefaultAppGroup = (): AppGroup => ({
+  appTabs: [],
+  id: generateId(),
+  isCollapsed: false,
+  name: "Application",
 })
 
 export const useApplicationStore = create<ApplicationStore>((set, get) => ({
-  activeProjectId: null,
+  activeProjectGroupId: null,
   activeTab: null,
-  // Recently opened files management
-  addRecentFile: (filePath: string): void => {
-    set((state) => {
-      const fileName = filePath.split(/[/\\]/).pop() || filePath
-      const now = new Date()
-
-      // Remove existing entry if it exists
-      const filteredFiles = state.recentFiles.filter(
-        (file) => file.filePath !== filePath,
-      )
-
-      // Add to the beginning (most recent)
-      const newRecentFile: RecentFile = {
-        fileName,
-        filePath,
-        lastOpened: now,
-      }
-
-      const updatedRecentFiles = [newRecentFile, ...filteredFiles].slice(
-        0,
-        state.maxRecentFiles,
-      )
-
-      // Save to storage
-      const newState = {
-        recentFiles: updatedRecentFiles,
-      }
-
-      // Persist to localStorage
-      setTimeout(() => {
-        get().saveRecentFilesToStorage()
-      }, 0)
-
-      return newState
-    })
-  },
-  // Tab management within projects
-  addTabToProject: (projectId: string, tab: Tab): void => {
+  // Add AppTab to the application group
+  addAppTab: (appTab: AppTab): void => {
     set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === projectId
+      appGroup: {
+        ...state.appGroup,
+        appTabs: [...state.appGroup.appTabs, appTab],
+      },
+    }))
+  },
+  // Tab management within project groups
+  addTabToProjectGroup: (projectGroupId: string, tab: ProjectTab): void => {
+    set((state) => ({
+      projectGroups: state.projectGroups.map((projectGroup) =>
+        projectGroup.id === projectGroupId
           ? {
-              ...project,
+              ...projectGroup,
               activeTabId: tab.id, // Make the new tab active
-              tabs: [...project.tabs, tab],
+              projectTabs: [...projectGroup.projectTabs, tab],
             }
-          : project,
+          : projectGroup,
       ),
     }))
   },
-  // State
-  appPages: [],
-  canCreateNewProject: (): boolean => {
+
+  // Single app group
+  appGroup: createDefaultAppGroup(),
+  canCreateNewProjectGroup: (): boolean => {
     const state = get()
-    return state.projects.length < state.maxProjects
-  },
-  clearRecentFiles: (): void => {
-    set({
-      recentFiles: [],
-    })
-
-    // Clear from storage
-    setTimeout(() => {
-      get().saveRecentFilesToStorage()
-    }, 0)
+    return state.projectGroups.length < state.maxProjectGroups
   },
 
-  closeAppPage: (pageKey: string): void => {
+  closeAppTab: (tabKey: string): void => {
     set((state) => ({
-      appPages: state.appPages.filter((page) => page.pageKey !== pageKey),
+      appGroup: {
+        ...state.appGroup,
+        appTabs: state.appGroup.appTabs.filter((tab) => tab.tabKey !== tabKey),
+      },
     }))
   },
 
-  // Project management
-  createProject: (filePath: string, name?: string): string => {
+  // Project Group management
+  createProjectGroup: (filePath: string, name?: string): string => {
     const state = get()
 
-    // Check if we can create a new Project
-    if (!state.canCreateNewProject()) {
+    // Check if we can create a new Project Group
+    if (!state.canCreateNewProjectGroup()) {
       throw new Error(
-        `Maximum number of projects (${state.maxProjects}) reached`,
+        `Maximum number of project groups (${state.maxProjectGroups}) reached`,
       )
     }
 
-    // Check if project already exists
-    const existingProject = state.isProjectAlreadyOpen(filePath)
-    if (existingProject) {
-      // Switch to existing project instead of creating new one
-      state.switchToProject(existingProject.id)
-      return existingProject.id
+    // Check if project group already exists
+    const existingProjectGroup = state.isProjectGroupAlreadyOpen(filePath)
+    if (existingProjectGroup) {
+      // Switch to existing project group instead of creating new one
+      state.switchToProjectGroup(existingProjectGroup.id)
+      return existingProjectGroup.id
     }
 
-    const projectId = generateId()
-    const defaultTabs = createDefaultTabs()
-    const projectName =
+    const projectGroupId = generateId()
+    const defaultMainTab = createDefaultMainTab()
+    const projectGroupName =
       name || APP_CONFIG.DEFAULT_PROJECT_NAME_PATTERN(filePath)
 
-    const newProject: ProjectPage = {
-      activeTabId: defaultTabs[0]?.id || "",
+    const newProjectGroup: ProjectGroup = {
+      activeTabId: defaultMainTab.id,
       filePath,
-      id: projectId,
+      id: projectGroupId,
       isCollapsed: false,
-      name: projectName,
-      tabs: defaultTabs,
+      mainTab: defaultMainTab,
+      name: projectGroupName,
+      projectTabs: [],
     }
 
     set((state) => {
-      const updatedProjects = [...state.projects, newProject]
+      const updatedProjectGroups = [...state.projectGroups, newProjectGroup]
 
-      // If this is the second project and auto-collapse is enabled, collapse the first one
+      // If this is the second project group and auto-collapse is enabled, collapse the first one
       if (
-        updatedProjects.length > 1 &&
+        updatedProjectGroups.length > 1 &&
         APP_CONFIG.AUTO_COLLAPSE_ON_NEW_PROJECT
       ) {
-        updatedProjects.forEach((project) => {
-          if (project.id !== projectId) {
-            project.isCollapsed = true
+        updatedProjectGroups.forEach((projectGroup) => {
+          if (projectGroup.id !== projectGroupId) {
+            projectGroup.isCollapsed = true
           }
         })
       }
 
       return {
-        activeProjectId: projectId,
+        activeProjectGroupId: projectGroupId,
         activeTab: {
-          id: newProject.activeTabId,
-          projectId,
-          type: "project-tab",
+          id: newProjectGroup.activeTabId,
+          projectGroupId,
+          type: "main-tab",
         },
-        projects: updatedProjects,
+        projectGroups: updatedProjectGroups,
       }
     })
 
-    // Add to recent files
-    state.addRecentFile(filePath)
-
-    return projectId
-  },
-
-  createProjectFromRecentFile: (filePath: string): string | null => {
-    const state = get()
-    try {
-      const projectId = state.createProject(filePath)
-      return projectId
-    } catch (error) {
-      console.error("Failed to create project from recent file:", error)
-      return null
-    }
+    return projectGroupId
   },
 
   // Navigation utility methods
-  getActiveProject: (): ProjectPage | null => {
+  getActiveProjectGroup: (): ProjectGroup | null => {
     const state = get()
     return (
-      state.projects.find((project) => project.id === state.activeProjectId) ||
-      null
+      state.projectGroups.find(
+        (projectGroup) => projectGroup.id === state.activeProjectGroupId,
+      ) || null
     )
   },
 
@@ -218,61 +163,70 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     return state.activeTab
   },
 
-  getActiveTabContent: (): AppPage | Tab | null => {
+  getActiveTabContent: (): AppTab | MainTab | ProjectTab | null => {
     const state = get()
 
     if (!state.activeTab) {
       return null
     }
 
-    if (state.activeTab.type === "app-page") {
+    if (state.activeTab.type === "app-tab") {
       return (
-        state.appPages.find((page) => page.id === state.activeTab!.id) || null
+        state.appGroup.appTabs.find((tab) => tab.id === state.activeTab!.id) ||
+        null
       )
     } else if (
-      state.activeTab.type === "project-tab" &&
-      state.activeTab.projectId
+      (state.activeTab.type === "main-tab" ||
+        state.activeTab.type === "project-tab") &&
+      state.activeTab.projectGroupId
     ) {
-      const project = state.getProjectById(state.activeTab.projectId)
-      if (project) {
-        return (
-          project.tabs.find((tab) => tab.id === state.activeTab!.id) || null
-        )
+      const projectGroup = state.getProjectGroupById(
+        state.activeTab.projectGroupId,
+      )
+      if (projectGroup) {
+        if (state.activeTab.type === "main-tab") {
+          return projectGroup.mainTab.id === state.activeTab.id
+            ? projectGroup.mainTab
+            : null
+        } else {
+          return (
+            projectGroup.projectTabs.find(
+              (tab) => tab.id === state.activeTab!.id,
+            ) || null
+          )
+        }
       }
     }
 
     return null
   },
 
-  getProjectById: (projectId: string): ProjectPage | null => {
+  getProjectGroupById: (projectGroupId: string): ProjectGroup | null => {
     const state = get()
-    return state.projects.find((project) => project.id === projectId) || null
-  },
-
-  getRecentFiles: (): RecentFile[] => {
-    const state = get()
-    // Return sorted by most recent first
-    return [...state.recentFiles].sort(
-      (a, b) => b.lastOpened.getTime() - a.lastOpened.getTime(),
+    return (
+      state.projectGroups.find(
+        (projectGroup) => projectGroup.id === projectGroupId,
+      ) || null
     )
   },
 
   // Dynamic tab visibility (key feature)
   getVisibleTabs: () => {
     const state = get()
-    const visibleTabs: (AppPage | ProjectPage | Tab)[] = []
+    const visibleTabs: (AppTab | ProjectGroup | MainTab | ProjectTab)[] = []
 
-    // Always show app pages
-    visibleTabs.push(...state.appPages)
+    // Always show app tabs
+    visibleTabs.push(...state.appGroup.appTabs)
 
     // Show project tabs based on collapse state
-    state.projects.forEach((project) => {
-      if (project.isCollapsed) {
-        // Show as single project tab
-        visibleTabs.push(project)
+    state.projectGroups.forEach((projectGroup) => {
+      if (projectGroup.isCollapsed) {
+        // Show as single project group tab
+        visibleTabs.push(projectGroup)
       } else {
-        // Show individual tabs
-        visibleTabs.push(...project.tabs)
+        // Show main tab and individual project tabs
+        visibleTabs.push(projectGroup.mainTab)
+        visibleTabs.push(...projectGroup.projectTabs)
       }
     })
 
@@ -281,244 +235,185 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
 
   // App lifecycle
   initializeApp: (): void => {
-    const state = get()
-
-    // Load recent files from storage
-    state.loadRecentFilesFromStorage()
-
-    // Open start page
-    state.openStartPage()
+    // App initialization logic can be added here if needed
   },
 
-  isAppPageOpen: (pageKey: string): boolean => {
+  isAppTabOpen: (tabKey: string): boolean => {
     const state = get()
-    return state.appPages.some((page) => page.pageKey === pageKey)
+    return state.appGroup.appTabs.some((tab) => tab.tabKey === tabKey)
   },
 
-  isProjectAlreadyOpen: (filePath: string): ProjectPage | null => {
+  isProjectGroupAlreadyOpen: (filePath: string): ProjectGroup | null => {
     const state = get()
     return (
-      state.projects.find((project) => project.filePath === filePath) || null
+      state.projectGroups.find(
+        (projectGroup) => projectGroup.filePath === filePath,
+      ) || null
     )
   },
 
-  // Persistence
-  loadRecentFilesFromStorage: (): void => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.RECENT_FILES)
-      if (stored) {
-        const data = JSON.parse(stored)
-        if (
-          data.version === APP_CONFIG.STORAGE_VERSION &&
-          Array.isArray(data.files)
-        ) {
-          const recentFiles: RecentFile[] = data.files.map((file: any) => ({
-            ...file,
-            lastOpened: new Date(file.lastOpened),
-          }))
+  maxProjectGroups: APP_CONFIG.MAX_PROJECT_GROUPS,
 
-          set({
-            recentFiles: recentFiles.slice(0, get().maxRecentFiles),
-          })
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load recent files from storage:", error)
-    }
-  },
+  projectGroups: [],
 
-  maxProjects: APP_CONFIG.MAX_PROJECTS,
-
-  maxRecentFiles: APP_CONFIG.MAX_RECENT_FILES,
-
-  // App page management
-  openStartPage: (): void => {
-    const state = get()
-    const existingStartPage = state.appPages.find(
-      (page) => page.pageKey === "start",
-    )
-
-    if (existingStartPage) {
-      // If start page already exists, just set it as active
-      state.setActiveAppPage(existingStartPage.id)
-      return
-    }
-
-    // Create new start page
-    const startPage = createStartPage()
-    set((state) => ({
-      activeTab: {
-        id: startPage.id,
-        type: "app-page",
-      },
-      appPages: [...state.appPages, startPage],
-    }))
-  },
-
-  projects: [],
-
-  recentFiles: [],
-
-  removeProject: (projectId: string): void => {
+  removeProjectGroup: (projectGroupId: string): void => {
     set((state) => {
-      const updatedProjects = state.projects.filter(
-        (project) => project.id !== projectId,
+      const updatedProjectGroups = state.projectGroups.filter(
+        (projectGroup) => projectGroup.id !== projectGroupId,
       )
 
-      // If we removed the active project, set a new active project
-      let newActiveProjectId = state.activeProjectId
-      if (state.activeProjectId === projectId) {
-        newActiveProjectId =
-          updatedProjects.length > 0 ? updatedProjects[0].id : null
+      // If we removed the active project group, set a new active project group
+      let newActiveProjectGroupId = state.activeProjectGroupId
+      if (state.activeProjectGroupId === projectGroupId) {
+        newActiveProjectGroupId =
+          updatedProjectGroups.length > 0 ? updatedProjectGroups[0].id : null
       }
 
-      // If only one project remains, expand it
-      if (updatedProjects.length === 1) {
-        updatedProjects[0].isCollapsed = false
+      // If only one project group remains, expand it
+      if (updatedProjectGroups.length === 1) {
+        updatedProjectGroups[0].isCollapsed = false
       }
 
       return {
-        activeProjectId: newActiveProjectId,
-        projects: updatedProjects,
+        activeProjectGroupId: newActiveProjectGroupId,
+        projectGroups: updatedProjectGroups,
       }
     })
   },
 
-  removeRecentFile: (filePath: string): void => {
-    set((state) => {
-      const updatedRecentFiles = state.recentFiles.filter(
-        (file) => file.filePath !== filePath,
-      )
-
-      // Save to storage
-      setTimeout(() => {
-        get().saveRecentFilesToStorage()
-      }, 0)
-
-      return {
-        recentFiles: updatedRecentFiles,
-      }
-    })
-  },
-
-  removeTabFromProject: (projectId: string, tabId: string): void => {
+  removeTabFromProjectGroup: (projectGroupId: string, tabId: string): void => {
     set((state) => ({
-      projects: state.projects.map((project) => {
-        if (project.id !== projectId) {
-          return project
+      projectGroups: state.projectGroups.map((projectGroup) => {
+        if (projectGroup.id !== projectGroupId) {
+          return projectGroup
         }
 
-        const updatedTabs = project.tabs.filter((tab) => tab.id !== tabId)
+        const updatedProjectTabs = projectGroup.projectTabs.filter(
+          (tab) => tab.id !== tabId,
+        )
 
         // If we removed the active tab, set a new active tab
-        let newActiveTabId = project.activeTabId
-        if (project.activeTabId === tabId && updatedTabs.length > 0) {
-          newActiveTabId = updatedTabs[0].id
+        let newActiveTabId = projectGroup.activeTabId
+        if (projectGroup.activeTabId === tabId) {
+          // Default to main tab if no project tabs remain, or first project tab
+          newActiveTabId =
+            updatedProjectTabs.length > 0
+              ? updatedProjectTabs[0].id
+              : projectGroup.mainTab.id
         }
 
         return {
-          ...project,
+          ...projectGroup,
           activeTabId: newActiveTabId,
-          tabs: updatedTabs,
+          projectTabs: updatedProjectTabs,
         }
       }),
     }))
   },
 
-  renameProject: (projectId: string, newName: string): void => {
+  renameProjectGroup: (projectGroupId: string, newName: string): void => {
     set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === projectId ? {...project, name: newName} : project,
+      projectGroups: state.projectGroups.map((projectGroup) =>
+        projectGroup.id === projectGroupId
+          ? {...projectGroup, name: newName}
+          : projectGroup,
       ),
     }))
   },
 
-  saveRecentFilesToStorage: (): void => {
-    try {
-      const state = get()
-      const data = {
-        files: state.recentFiles,
-        version: APP_CONFIG.STORAGE_VERSION,
-      }
-      localStorage.setItem(STORAGE_KEYS.RECENT_FILES, JSON.stringify(data))
-    } catch (error) {
-      console.error("Failed to save recent files to storage:", error)
-    }
-  },
-
   // Active tab management
-  setActiveAppPage: (appPageId: string): void => {
+  setActiveAppTab: (appTabId: string): void => {
     const state = get()
-    const appPage = state.appPages.find((page) => page.id === appPageId)
+    const appTab = state.appGroup.appTabs.find((tab) => tab.id === appTabId)
 
-    if (!appPage) {
-      console.warn(`App page with id ${appPageId} not found`)
+    if (!appTab) {
+      console.warn(`App tab with id ${appTabId} not found`)
       return
     }
 
     set({
       activeTab: {
-        id: appPageId,
-        type: "app-page",
+        id: appTabId,
+        type: "app-tab",
       },
     })
   },
 
-  setActiveProjectTab: (projectId: string, tabId: string): void => {
+  setActiveProjectTab: (projectGroupId: string, tabId: string): void => {
     const state = get()
-    const project = state.getProjectById(projectId)
+    const projectGroup = state.getProjectGroupById(projectGroupId)
 
-    if (!project) {
-      console.warn(`Project with id ${projectId} not found`)
+    if (!projectGroup) {
+      console.warn(`Project group with id ${projectGroupId} not found`)
       return
     }
 
-    const tab = project.tabs.find((t) => t.id === tabId)
-    if (!tab) {
-      console.warn(`Tab with id ${tabId} not found in project ${projectId}`)
-      return
+    // Check if it's the main tab or a project tab
+    let tabType: "main-tab" | "project-tab"
+    if (projectGroup.mainTab.id === tabId) {
+      tabType = "main-tab"
+    } else {
+      const projectTab = projectGroup.projectTabs.find((t) => t.id === tabId)
+      if (!projectTab) {
+        console.warn(
+          `Tab with id ${tabId} not found in project group ${projectGroupId}`,
+        )
+        return
+      }
+      tabType = "project-tab"
     }
 
-    // Update the active tab in the project
-    state.setActiveTabInProject(projectId, tabId)
+    // Update the active tab in the project group
+    state.setActiveTabInProjectGroup(projectGroupId, tabId)
 
     // Set the global active tab
     set({
       activeTab: {
         id: tabId,
-        projectId,
-        type: "project-tab",
+        projectGroupId,
+        type: tabType,
       },
     })
   },
 
-  setActiveTabInProject: (projectId: string, tabId: string): void => {
+  setActiveTabInProjectGroup: (projectGroupId: string, tabId: string): void => {
     set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === projectId ? {...project, activeTabId: tabId} : project,
+      projectGroups: state.projectGroups.map((projectGroup) =>
+        projectGroup.id === projectGroupId
+          ? {...projectGroup, activeTabId: tabId}
+          : projectGroup,
       ),
     }))
   },
 
-  switchToProject: (projectId: string): void => {
+  switchToProjectGroup: (projectGroupId: string): void => {
     const state = get()
-    const targetProject = state.getProjectById(projectId)
+    const targetProjectGroup = state.getProjectGroupById(projectGroupId)
 
-    if (!targetProject) {
-      console.warn(`Project with id ${projectId} not found`)
+    if (!targetProjectGroup) {
+      console.warn(`Project group with id ${projectGroupId} not found`)
       return
     }
 
+    // Determine the tab type for the active tab
+    let tabType: "main-tab" | "project-tab"
+    if (targetProjectGroup.mainTab.id === targetProjectGroup.activeTabId) {
+      tabType = "main-tab"
+    } else {
+      tabType = "project-tab"
+    }
+
     set((state) => ({
-      activeProjectId: projectId,
+      activeProjectGroupId: projectGroupId,
       activeTab: {
-        id: targetProject.activeTabId,
-        projectId,
-        type: "project-tab",
+        id: targetProjectGroup.activeTabId,
+        projectGroupId,
+        type: tabType,
       },
-      projects: state.projects.map((project) => ({
-        ...project,
-        isCollapsed: project.id !== projectId,
+      // Don't collapse other projects - keep them all expanded for now
+      projectGroups: state.projectGroups.map((projectGroup) => ({
+        ...projectGroup,
+        isCollapsed: false, // Keep all projects expanded
       })),
     }))
   },
