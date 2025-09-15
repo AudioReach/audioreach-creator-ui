@@ -31,12 +31,22 @@
       ],
       "outputLogs": "new-only"
     },
+    "test:ci": {
+      "inputs": [
+        "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
+        "src/**/*",
+        "tests/**/*"
+      ],
+      "outputLogs": "new-only"
+    },
     "dev": {
       "cache": false,
       "persistent": true
-    },    
+    },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "inputs": [
         "**/*.{ts,tsx}",
         "tsconfig*.json"

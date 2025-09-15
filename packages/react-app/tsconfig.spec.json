@@ -1,15 +1,18 @@
 {
-  "extends": "@audioreach-creator-ui/tsconfig/tsconfig.strict.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": true,
     "baseUrl": "./",
     "moduleResolution": "bundler",
-    "types": [
-      "jest",
-      "@testing-library/jest-dom"
-    ],
+    "types": ["jest", "@testing-library/jest-dom"]
   },
-  "include": ["./src/**/*.spec.tsx", "./src/**/*.test.tsx", "./tests/**/*.test.ts", "./tests/**/*.test.tsx", "./test"],
+  "include": [
+    "./src/**/*.spec.tsx",
+    "./src/**/*.test.tsx",
+    "./tests/**/*.test.ts",
+    "./tests/**/*.test.tsx",
+    "./test"
+  ],
   "references": [
     {
       "path": "./tsconfig.lib.json"

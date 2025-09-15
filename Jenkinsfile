@@ -100,7 +100,7 @@ pipeline {
                 echo '🧪 Running tests...'
                 script {
                     try {
-                        bat 'pnpm test'
+                        bat 'pnpm test:ci'
                     } catch (Exception e) {
                         echo '⚠️ No tests configured or tests failed'
                         echo "Test error: ${e.getMessage()}"
@@ -111,15 +111,24 @@ pipeline {
             }
             post {
                 always {
-                    // Archive all test artifacts
-                    archiveArtifacts artifacts: 'packages/electron-app/test-results/**/*', allowEmptyArchive: true
+                    // Archive all test artifacts from both packages
+                    archiveArtifacts artifacts: 'packages/**/test-results/**/*', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'packages/**/coverage/**/*', allowEmptyArchive: true
 
                     // Publish test results to Jenkins
                     script {
-                        if (fileExists('packages/electron-app/test-results/junit.xml')) {
-                            junit testResults: 'packages/electron-app/test-results/junit.xml', allowEmptyResults: true
-                        } else {
-                            echo '⚠️ No JUnit XML file found - tests may not have run or generated results'
+                        def hasTestResults = false
+                        // Check if either test result file exists
+                        if (fileExists('packages/electron-app/test-results/junit.xml') &&
+                            fileExists('packages/react-app/test-results/junit.xml')) {
+                                junit testResults: ['packages/electron-app/test-results/junit.xml',
+                                                    'packages/react-app/test-results/junit.xml'
+                                                    ].join(','), allowEmptyResults: true
+                                hasTestResults = true
+                        }
+
+                        if (!hasTestResults) {
+                            echo '⚠️ No JUnit XML files found - tests may not have run or generated results'
                         }
                     }
                 }

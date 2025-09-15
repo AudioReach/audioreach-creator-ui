@@ -42,6 +42,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
         version: 5.2.0(eslint@9.31.0(jiti@1.21.7))
+      jest-junit:
+        specifier: ^16.0.0
+        version: 16.0.0
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4
@@ -1034,14 +1037,14 @@ packages:
     hasBin: true
 
   '@qui/base@2.39.2':
-    resolution: {integrity: sha512-T61ZCjG123AoDnbQXj3dksQGAJUlS5vcf2sDQtR90ExhLSt9gPMuhMpWikrJLcg99CKdNRlbby+2w6EejsFPVA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/base/-/@qui/base-2.39.2.tgz}
+    resolution: {integrity: sha512-T61ZCjG123AoDnbQXj3dksQGAJUlS5vcf2sDQtR90ExhLSt9gPMuhMpWikrJLcg99CKdNRlbby+2w6EejsFPVA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/base/-/@qui/base-2.39.2.tgz}
 
   '@qui/esbuild@1.0.0':
-    resolution: {integrity: sha512-w868cozH/xPS9FY2f5WV9piRHJKsnDStsXWfWAcoKjSTI9dzqq/xfEdBp34OJsrd+kb/TfGuOGUPbQAmgeO/pA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/esbuild/-/@qui/esbuild-1.0.0.tgz}
+    resolution: {integrity: sha512-w868cozH/xPS9FY2f5WV9piRHJKsnDStsXWfWAcoKjSTI9dzqq/xfEdBp34OJsrd+kb/TfGuOGUPbQAmgeO/pA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/esbuild/-/@qui/esbuild-1.0.0.tgz}
     hasBin: true
 
   '@qui/eslint-config-fsd@1.0.1':
-    resolution: {integrity: sha512-prpr9uX5VG0bpHlTdhl6g5ZOSNJhdO0yJP+wAo8cfFqV+R+m6zjcmkwbvB4eZB9xO2+g6jLD2ZUPf/fvfN7OLQ==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-fsd/-/@qui/eslint-config-fsd-1.0.1.tgz}
+    resolution: {integrity: sha512-prpr9uX5VG0bpHlTdhl6g5ZOSNJhdO0yJP+wAo8cfFqV+R+m6zjcmkwbvB4eZB9xO2+g6jLD2ZUPf/fvfN7OLQ==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-fsd/-/@qui/eslint-config-fsd-1.0.1.tgz}
     peerDependencies:
       eslint: '>=9'
       eslint-plugin-boundaries: '>=5.0.1 <6'
@@ -1050,7 +1053,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-mdx@3.0.0':
-    resolution: {integrity: sha512-nr3EzHpKQOu5GCgcDx/BCYdPogKNZ7t8TKlt9Ok+n2D5MAIS0jPTGJ1oUFRSVB6l0lLWe716Lcjem+ZOnEQGog==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-mdx/-/@qui/eslint-config-mdx-3.0.0.tgz}
+    resolution: {integrity: sha512-nr3EzHpKQOu5GCgcDx/BCYdPogKNZ7t8TKlt9Ok+n2D5MAIS0jPTGJ1oUFRSVB6l0lLWe716Lcjem+ZOnEQGog==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-mdx/-/@qui/eslint-config-mdx-3.0.0.tgz}
     peerDependencies:
       eslint: '>=9'
       eslint-mdx: '>=3.4.1'
@@ -1061,7 +1064,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-react@8.0.0':
-    resolution: {integrity: sha512-mXQ+/zMcRFunByWOvOZ/DT+GuPi+PD5ivKKKf++33HJEml9Qx5FC+u6k5IJKx9ukq2xo/SorZ4JdWoY6kOLrgg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-react/-/@qui/eslint-config-react-8.0.0.tgz}
+    resolution: {integrity: sha512-mXQ+/zMcRFunByWOvOZ/DT+GuPi+PD5ivKKKf++33HJEml9Qx5FC+u6k5IJKx9ukq2xo/SorZ4JdWoY6kOLrgg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-react/-/@qui/eslint-config-react-8.0.0.tgz}
     peerDependencies:
       '@typescript-eslint/eslint-plugin': '>=8.31.1'
       '@typescript-eslint/parser': '>=8.31.1'
@@ -1073,7 +1076,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-typescript@10.1.1':
-    resolution: {integrity: sha512-GVniDoyJlWARmfal7K+MZhAXelzJve7/2MzR9TSg7f5PtjRIxZ4azBsK3PFUuiOIienIVTRbDxFMugm8dq1yBQ==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-typescript/-/@qui/eslint-config-typescript-10.1.1.tgz}
+    resolution: {integrity: sha512-GVniDoyJlWARmfal7K+MZhAXelzJve7/2MzR9TSg7f5PtjRIxZ4azBsK3PFUuiOIienIVTRbDxFMugm8dq1yBQ==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-typescript/-/@qui/eslint-config-typescript-10.1.1.tgz}
     peerDependencies:
       '@eslint/js': '>=9.25.1'
       '@typescript-eslint/eslint-plugin': '>=8.31.1'
@@ -1103,7 +1106,7 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/react-table@3.0.0':
-    resolution: {integrity: sha512-FK1fDYL8DZVFYFuYm9WRPNqLsmDo40ALrUAsCloCWWJqvMnNqB10cTtdo8K5OHSKj5dWZIMg/wV9ORTlVw0Psg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/react-table/-/@qui/react-table-3.0.0.tgz}
+    resolution: {integrity: sha512-FK1fDYL8DZVFYFuYm9WRPNqLsmDo40ALrUAsCloCWWJqvMnNqB10cTtdo8K5OHSKj5dWZIMg/wV9ORTlVw0Psg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/react-table/-/@qui/react-table-3.0.0.tgz}
     peerDependencies:
       '@qui/base': ^2.37.0
       '@qui/react-core': ^1.0.0
@@ -1116,7 +1119,7 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/react@2.6.3':
-    resolution: {integrity: sha512-KNu5Ei5nKcvILn9cPutIgMMQ8NVQU7kbOQ3ZKSwQbIlFjnHCSAIjEmo12F1Qs+BlRmMtXnzfMQXOqflWyjr0Yg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/react/-/@qui/react-2.6.3.tgz}
+    resolution: {integrity: sha512-KNu5Ei5nKcvILn9cPutIgMMQ8NVQU7kbOQ3ZKSwQbIlFjnHCSAIjEmo12F1Qs+BlRmMtXnzfMQXOqflWyjr0Yg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/react/-/@qui/react-2.6.3.tgz}
     peerDependencies:
       '@floating-ui/react': '>=0.26.9 <1'
       '@qui/base': ^2.39.2
@@ -1129,13 +1132,13 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/styles@2.14.0':
-    resolution: {integrity: sha512-uP9fBmaUz1E4fbtRO4+4obzjNDglXpjR8F3ky5eMgCUM3HUpB9negluzpKH279bCn9lWiIApteWhfVEwVMCHUw==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/styles/-/@qui/styles-2.14.0.tgz}
+    resolution: {integrity: sha512-uP9fBmaUz1E4fbtRO4+4obzjNDglXpjR8F3ky5eMgCUM3HUpB9negluzpKH279bCn9lWiIApteWhfVEwVMCHUw==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/styles/-/@qui/styles-2.14.0.tgz}
 
   '@qui/table-core@1.1.2':
-    resolution: {integrity: sha512-xO+dlE168n/Fn0BPXQBS/usoVGRDuNKr92c366AerDk0aswQh9o65KQlpSL1MgrIT05mPTcoKrQLIyY/zsrKWA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/table-core/-/@qui/table-core-1.1.2.tgz}
+    resolution: {integrity: sha512-xO+dlE168n/Fn0BPXQBS/usoVGRDuNKr92c366AerDk0aswQh9o65KQlpSL1MgrIT05mPTcoKrQLIyY/zsrKWA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/table-core/-/@qui/table-core-1.1.2.tgz}
 
   '@qui/tailwind-plugin@1.7.1':
-    resolution: {integrity: sha512-HzAFkI7Pjl+1JXJkm9H/1HZBs6MH3e4L0LEkiephABFigRRQngJOJsErSrG/e3NO5/N0b8XEYPDV0SlcNhyy6A==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/tailwind-plugin/-/@qui/tailwind-plugin-1.7.1.tgz}
+    resolution: {integrity: sha512-HzAFkI7Pjl+1JXJkm9H/1HZBs6MH3e4L0LEkiephABFigRRQngJOJsErSrG/e3NO5/N0b8XEYPDV0SlcNhyy6A==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/tailwind-plugin/-/@qui/tailwind-plugin-1.7.1.tgz}
     peerDependencies:
       tailwindcss: '>=3.3.2'
 
@@ -3393,6 +3396,10 @@ packages:
     resolution: {integrity: sha512-JLeM84kNjpRkggcGpQLsV7B8W4LNUWz7oDNVnY1Vjj22b5/fAb3kk3htiD+4Na8bmJmjJR7rBtS2Rmq/NEcADg==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
 
+  jest-junit@16.0.0:
+    resolution: {integrity: sha512-A94mmw6NfJab4Fg/BlvVOUXzXgF0XIH6EmTgJ5NDPp4xoKq0Kr7sErb+4Xs9nZvu58pJojz5RFGpqnZYJTrRfQ==}
+    engines: {node: '>=10.12.0'}
+
   jest-leak-detector@30.1.0:
     resolution: {integrity: sha512-AoFvJzwxK+4KohH60vRuHaqXfWmeBATFZpzpmzNmYTtmRMiyGPVhkXpBqxUQunw+dQB48bDf4NpUs6ivVbRv1g==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
@@ -5301,6 +5308,10 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    hasBin: true
+
   uvu@0.5.6:
     resolution: {integrity: sha512-+g8ENReyr8YsOc6fv/NVJs2vFdHBnBNdfE49rshrTzDWOlUx4Gq7KOS2GD8eqhy2j+Ejq29+SbKH8yjkAqXqoA==}
     engines: {node: '>=8'}
@@ -5485,6 +5496,9 @@ packages:
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
+
+  xml@1.0.1:
+    resolution: {integrity: sha512-huCv9IH9Tcf95zuYCsQraZtWnJvBtLVE0QHMOs8bWyZAFZNDcYjsPq1nEx8jKA9y+Beo9v+7OBPRisQTjinQMw==}
 
   xmlbuilder@15.1.1:
     resolution: {integrity: sha512-yMqGBqtXyeN1e3TGYvgNgDVZ3j84W4cwkOXQswghol6APgZWaff9lnbvN7MHYJOiXsvGPXtjTYJEiC9J2wv9Eg==}
@@ -9240,6 +9254,13 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  jest-junit@16.0.0:
+    dependencies:
+      mkdirp: 1.0.4
+      strip-ansi: 6.0.1
+      uuid: 8.3.2
+      xml: 1.0.1
+
   jest-leak-detector@30.1.0:
     dependencies:
       '@jest/get-type': 30.1.0
@@ -11534,6 +11555,8 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
+  uuid@8.3.2: {}
+
   uvu@0.5.6:
     dependencies:
       dequal: 2.0.3
@@ -11728,6 +11751,8 @@ snapshots:
   ws@8.18.3: {}
 
   xml-name-validator@5.0.0: {}
+
+  xml@1.0.1: {}
 
   xmlbuilder@15.1.1: {}
 

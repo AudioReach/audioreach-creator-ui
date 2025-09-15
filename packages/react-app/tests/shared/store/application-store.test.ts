@@ -1,8 +1,5 @@
-import {
-  APP_CONFIG,
-  useApplicationStore,
-} from "../../../src/shared/store/application-store"
-import type {ProjectTab} from "../../../src/shared/store/store-types"
+import {APP_CONFIG, useApplicationStore} from "~shared/store/application-store"
+import type {ProjectTab} from "~shared/store/store-types"
 
 // Mock console methods to avoid noise in tests
 const consoleMock = {

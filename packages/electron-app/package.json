@@ -20,7 +20,7 @@
     "package": "electron-builder --dir --config electron-builder.config.ts",
     "lint": "eslint",
     "test": "cross-env DEBUG=pw:browser* playwright test",
-    "test:ci": "cross-env IS_CI=true DISPLAY=:99 xvfb-run --auto-servernum -- playwright test"
+    "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test"
   },
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",

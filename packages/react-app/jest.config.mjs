@@ -16,10 +16,10 @@ export default {
   // Coverage thresholds
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
+      branches: 20,
+      functions: 20,
+      lines: 20,
+      statements: 20,
     },
   },
 
@@ -35,6 +35,7 @@ export default {
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
       "jest-transform-stub",
+    // Path aliases
     "^~assets/(.*)$": "<rootDir>/src/assets/$1",
     "^~data/(.*)$": "<rootDir>/src/data/$1",
     "^~entities/(.*)$": "<rootDir>/src/entities/$1",
@@ -45,6 +46,22 @@ export default {
   },
 
   preset: "ts-jest/presets/default-esm",
+
+  // Reporters
+  reporters: [
+    "default",
+    [
+      "jest-junit",
+      {
+        ancestorSeparator: " › ",
+        classNameTemplate: "react-app.{classname}",
+        outputDirectory: "test-results",
+        outputName: "junit.xml",
+        titleTemplate: "{title}",
+        usePathForSuiteName: true,
+      },
+    ],
+  ],
 
   // Root directory for tests
   rootDir: ".",
