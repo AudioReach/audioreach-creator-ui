@@ -79,6 +79,7 @@ export default tseslint.config(
       "**/node_modules/",
       "**/out/",
       "**/vite.config.ts.timestamp*",
+      "**/tests/",
     ],
   },
   {

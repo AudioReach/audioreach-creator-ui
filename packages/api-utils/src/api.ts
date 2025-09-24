@@ -85,3 +85,14 @@ export interface ElectronApi {
 }
 
 export type WindowWithApi = Window & {api: ElectronApi}
+
+export interface ConfigResult {
+  data?: string
+  message: string
+  status: boolean
+}
+
+export interface ConfigApi {
+  loadConfigData: () => Promise<ConfigResult>
+  saveConfigData: (data: string) => Promise<ConfigResult>
+}

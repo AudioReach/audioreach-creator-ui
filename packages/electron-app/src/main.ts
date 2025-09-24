@@ -3,13 +3,16 @@ import {
   type ApiRequestType,
   type ApiResponse,
   camelCaseInput,
+  type ConfigResult,
 } from "@audioreach-creator-ui/api-utils"
 import {app, BrowserWindow, dialog, ipcMain} from "electron"
+import {existsSync, readFileSync, writeFileSync} from "node:fs"
 import {readdir, readFile} from "node:fs/promises"
 import {join, resolve} from "node:path"
 import {setTimeout} from "node:timers/promises"
 
 let win: BrowserWindow
+const CONFIG_FILE = "config.json"
 
 const appUrl = "http://localhost:5173"
 
@@ -193,3 +196,82 @@ ipcMain.handle(
     return {data, message: response, requestType: args.requestType}
   },
 )
+
+//  #region Configuration file handling
+
+function getConfigFilePath() {
+  return join(__dirname, CONFIG_FILE)
+}
+
+function ensureConfigFileExists(): string {
+  const filePath = getConfigFilePath()
+  try {
+    if (!existsSync(filePath)) {
+      writeFileSync(filePath, "", "utf8")
+      console.log(
+        "Configuration file does not exist. A new empty file has been created at ${filePath}",
+      )
+    }
+  } catch (error) {
+    console.log(
+      "Failed to create an empty configuration file due to an error:",
+      error,
+    )
+    return ""
+  }
+
+  return filePath
+}
+
+ipcMain.handle("load-config-data", (): ConfigResult => {
+  try {
+    const filePath = ensureConfigFileExists()
+    if (!filePath) {
+      return {
+        message:
+          "Error occurred while creating or fetching the configuration file",
+        status: false,
+      }
+    }
+    const configData = readFileSync(filePath, "utf-8")
+    return {
+      data: configData,
+      message: "success",
+      status: true,
+    }
+  } catch (error: unknown) {
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      status: false,
+    }
+  }
+})
+
+ipcMain.handle(
+  "save-config-data",
+  (_event, newConfigData: string): ConfigResult => {
+    try {
+      const filePath = ensureConfigFileExists()
+      if (!filePath) {
+        return {
+          message: "Error occurred while fetching the configuration file",
+          status: false,
+        }
+      }
+      writeFileSync(filePath, newConfigData, "utf-8")
+      return {
+        message:
+          "Successfully saved the configuration file to the path: ${filePath}",
+        status: true,
+      }
+    } catch (error: unknown) {
+      console.error("Unable to save configuration file due to an error:", error)
+      return {
+        message: error instanceof Error ? error.message : String(error),
+        status: false,
+      }
+    }
+  },
+)
+
+//  #endregion Configuration file handling
