@@ -35,7 +35,6 @@ export default {
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
       "jest-transform-stub",
-    // Path aliases
     "^~assets/(.*)$": "<rootDir>/src/assets/$1",
     "^~data/(.*)$": "<rootDir>/src/data/$1",
     "^~entities/(.*)$": "<rootDir>/src/entities/$1",

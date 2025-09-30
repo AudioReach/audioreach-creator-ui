@@ -1,0 +1,16 @@
+/* Base class for common properties */
+.arc-key-vector-selector-text {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Default color for hint and required text */
+.arc-key-vector-selector-hint,
+.arc-key-vector-selector-required {
+  color: #666;
+}
+
+/* Error color variation */
+.arc-key-vector-selector-error {
+  color: #d32f2f;
+}

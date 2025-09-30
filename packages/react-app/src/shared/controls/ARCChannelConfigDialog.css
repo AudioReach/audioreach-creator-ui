@@ -1,0 +1,173 @@
+/* ARCChannelConfigDialog Component Styles */
+
+/* CSS Variables */
+:root {
+  --arc-popup-z-index: 1000;
+  --arc-popup-overlay-bg: rgba(0, 0, 0, 0.5);
+  --arc-popup-bg: var(--q-background-1, #ffffff);
+  --arc-popup-border-radius: 4px;
+  --arc-popup-box-shadow: 0 4px 12px var(--q-shadow-1, rgba(0, 0, 0, 0.15));
+  --arc-popup-header-bg: var(--q-background-2, #f5f5f5);
+  --arc-popup-footer-bg: var(--q-background-2, #f5f5f5);
+  --arc-popup-title-color: var(--q-text-1-primary, #333333);
+  --arc-popup-border-color: var(--q-border-1, #e0e0e0);
+}
+
+/* Main container */
+.arc-channel-config-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  max-width: 550px;
+  margin: 0 auto;
+  font-family: var(
+    --q-font-family-base,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Open Sans",
+    "Helvetica Neue",
+    sans-serif
+  );
+}
+
+/* Row layout */
+.arc-channel-config-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 40px;
+}
+
+/* Labels - consolidated */
+.arc-channel-config-label,
+.arc-channel-config-label-config {
+  font-weight: 500;
+  color: #ffffff;
+  font-size: 0.875rem;
+  flex: 0 0 120px;
+  margin: 0;
+  padding: 8px 12px 8px 0;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* Input containers - consolidated */
+.arc-channel-config-input,
+.arc-channel-config-input-wrapper {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+/* Separator */
+.arc-channel-config-separator {
+  width: 100%;
+  height: 1px;
+  background-color: var(--q-border-1, #e5e7eb);
+  margin: 16px 0;
+  border: none;
+}
+
+/* Scrollable channels container */
+.arc-channel-config-channels {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Channel items */
+.arc-channel-config-item {
+  padding: 8px 0;
+}
+
+/* Validation message */
+.arc-channel-config-validation-message {
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+  padding: 12px;
+}
+
+/* Popup overlay and positioning */
+.arc-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--arc-popup-overlay-bg);
+  z-index: var(--arc-popup-z-index);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Popup content structure */
+.arc-popup-content {
+  background-color: var(--arc-popup-bg);
+  border-radius: var(--arc-popup-border-radius);
+  box-shadow: var(--arc-popup-box-shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid var(--arc-popup-border-color);
+  overflow: hidden;
+}
+
+/* Popup header and footer - consolidated */
+.arc-popup-header,
+.arc-popup-footer {
+  padding: 12px 16px;
+  border-color: var(--arc-popup-border-color);
+}
+
+.arc-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--arc-popup-header-bg);
+  border-bottom: 1px solid;
+}
+
+.arc-popup-footer {
+  background-color: var(--arc-popup-footer-bg);
+  border-top: 1px solid;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.arc-popup-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--arc-popup-title-color);
+}
+
+.arc-popup-body {
+  padding: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Empty state message */
+.arc-channel-config-empty-message {
+  color: #666;
+  padding: 5px;
+  text-align: center;
+}
+
+/* Footer button container */
+.arc-popup-footer-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

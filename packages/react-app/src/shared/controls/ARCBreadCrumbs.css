@@ -1,0 +1,51 @@
+/* ARCBreadCrumbs */
+
+.arc-breadcrumbs-container {
+  position: relative;
+  background-color: transparent;
+  color: inherit;
+  min-height: 2rem;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100%;
+}
+
+/* Dropdown overlay positioning */
+.arc-dropdown-overlay {
+  position: absolute;
+  min-width: 200px;
+  z-index: 1000;
+  left: var(--dropdown-left, 0);
+  top: var(--dropdown-top, 0);
+}
+
+/* Dropdown container */
+.arc-dropdown-container {
+  border-radius: 6px;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.arc-dropdown-container button,
+.arc-dropdown-container .qui-button {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  min-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* QButton will handle dropdown item styling and hover effects */
+
+/* Dropdown item icon */
+.arc-dropdown-item-icon {
+  font-size: 1rem;
+  margin-right: 0.5rem;
+}
+
+/* Dropdown item label */
+.arc-dropdown-item-label {
+  flex: 1;
+}
