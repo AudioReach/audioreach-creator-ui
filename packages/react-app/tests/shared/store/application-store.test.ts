@@ -146,7 +146,7 @@ describe("ApplicationStore", () => {
       expect(state.projectGroups[0].name).toBe("Test Project")
       expect(state.projectGroups[0].filePath).toBe("/path/to/test.xml")
       expect(state.projectGroups[0].isCollapsed).toBe(false)
-      expect(state.projectGroups[0].mainTab.title).toBe("Graph")
+      expect(state.projectGroups[0].mainTab.title).toBe("Test Project")
       expect(state.projectGroups[0].projectTabs).toHaveLength(0)
       expect(state.activeProjectGroupId).toBe(projectGroupId)
     })
@@ -532,7 +532,7 @@ describe("ApplicationStore", () => {
 
       const activeTabContent = store.getActiveTabContent()
       expect(activeTabContent).not.toBeNull()
-      expect((activeTabContent as any)?.title).toBe("Graph")
+      expect((activeTabContent as any)?.title).toBe("Test Project")
     })
 
     it("should get active tab content for project tab", () => {
@@ -638,7 +638,7 @@ describe("ApplicationStore", () => {
 
       expect(visibleTabs).toHaveLength(2) // Test tab + main tab
       expect(visibleTabs[0] as any).toHaveProperty("tabKey", "test")
-      expect(visibleTabs[1] as any).toHaveProperty("title", "Graph")
+      expect(visibleTabs[1] as any).toHaveProperty("title", "Test Project")
     })
 
     it("should return only app tabs when no project groups exist", () => {

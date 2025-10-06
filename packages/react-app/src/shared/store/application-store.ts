@@ -8,12 +8,13 @@ import type {
   AppTab,
   MainTab,
   ProjectGroup,
+  ProjectGroupCloseCallback,
   ProjectTab,
 } from "./store-types"
 
 // Configuration constants
 const APP_CONFIG: ApplicationConfig = {
-  AUTO_COLLAPSE_ON_NEW_PROJECT: false, // Disable auto-collapse for now
+  AUTO_COLLAPSE_ON_NEW_PROJECT: true,
   DEFAULT_PROJECT_NAME_PATTERN: (filename: string) => {
     const name = filename.split(/[/\\]/).pop() || filename
     return name.replace(/\.(xml|json|acdb)$/i, "")
@@ -28,10 +29,10 @@ const generateId = (): string => {
 }
 
 // Default main tab creation function
-const createDefaultMainTab = (): MainTab => ({
+const createDefaultMainTab = (title: string = "Graph"): MainTab => ({
   component: null,
   id: generateId(),
-  title: "Graph",
+  title,
 })
 
 // Default app group creation function
@@ -56,26 +57,28 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
   },
   // Tab management within project groups
   addTabToProjectGroup: (projectGroupId: string, tab: ProjectTab): void => {
-    set((state) => ({
-      projectGroups: state.projectGroups.map((projectGroup) =>
+    set((state) => {
+      const updatedProjectGroups = state.projectGroups.map((projectGroup) =>
         projectGroup.id === projectGroupId
           ? {
               ...projectGroup,
-              activeTabId: tab.id, // Make the new tab active
+              activeTabId: tab.id, // Set the new tab as active
               projectTabs: [...projectGroup.projectTabs, tab],
             }
           : projectGroup,
-      ),
-    }))
-  },
+      )
 
-  // Single app group
+      return {
+        projectGroups: updatedProjectGroups,
+      }
+    })
+  },
   appGroup: createDefaultAppGroup(),
+
   canCreateNewProjectGroup: (): boolean => {
     const state = get()
     return state.projectGroups.length < state.maxProjectGroups
   },
-
   closeAppTab: (tabKey: string): void => {
     set((state) => ({
       appGroup: {
@@ -85,8 +88,13 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     }))
   },
 
-  // Project Group management
-  createProjectGroup: (filePath: string, name?: string): string => {
+  // Project Group management and Accept Callback Parameter
+  createProjectGroup: (
+    filePath: string,
+    name?: string,
+    projectId?: string,
+    onClose?: ProjectGroupCloseCallback,
+  ): string => {
     const state = get()
 
     // Check if we can create a new Project Group
@@ -104,11 +112,15 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
       return existingProjectGroup.id
     }
 
-    const projectGroupId = generateId()
-    const defaultMainTab = createDefaultMainTab()
+    const projectGroupId = projectId || generateId()
     const projectGroupName =
       name || APP_CONFIG.DEFAULT_PROJECT_NAME_PATTERN(filePath)
+    const defaultMainTab = createDefaultMainTab(projectGroupName)
 
+    // Determine if this is the first project group
+    const isFirstGroup = state.projectGroups.length === 0
+
+    // Each group has its own callback, not a global one
     const newProjectGroup: ProjectGroup = {
       activeTabId: defaultMainTab.id,
       filePath,
@@ -116,6 +128,7 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
       isCollapsed: false,
       mainTab: defaultMainTab,
       name: projectGroupName,
+      onClose, // Store the callback with the group
       projectTabs: [],
     }
 
@@ -134,18 +147,88 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
         })
       }
 
-      return {
-        activeProjectGroupId: projectGroupId,
+      // For accordion behavior: always set new group as active
+      // The setTimeout with expandProjectGroupAccordion will handle the proper accordion state
+      const newState = {
+        activeProjectGroupId: projectGroupId, // Always set new group as active
         activeTab: {
           id: newProjectGroup.activeTabId,
           projectGroupId,
-          type: "main-tab",
+          type: "main-tab" as const,
         },
+        previousActiveProjectGroupId: state.activeProjectGroupId,
         projectGroups: updatedProjectGroups,
       }
+
+      return newState
     })
 
+    // If this is the first group, automatically expand it using accordion behavior
+    // This ensures the first group is always visible and active
+    if (isFirstGroup) {
+      // Use a small delay to ensure the group is fully created before expanding
+      setTimeout(() => {
+        const currentState = get()
+        if (currentState.projectGroups.find((g) => g.id === projectGroupId)) {
+          currentState.expandProjectGroupAccordion(projectGroupId)
+        }
+      }, 0)
+    }
+
     return projectGroupId
+  },
+
+  // Accordion behavior - expand one group and collapse all others
+  expandProjectGroupAccordion: (projectGroupId: string): void => {
+    set((state) => {
+      const clickedGroup = state.projectGroups.find(
+        (p) => p.id === projectGroupId,
+      )
+      const isCurrentlyCollapsed = clickedGroup
+        ? clickedGroup.isCollapsed
+        : true
+
+      // Check if clicking on already active and expanded group - prevent refresh
+      if (
+        state.activeProjectGroupId === projectGroupId &&
+        !isCurrentlyCollapsed
+      ) {
+        return state
+      }
+
+      let newActiveTab = state.activeTab
+      if (isCurrentlyCollapsed && clickedGroup) {
+        if (clickedGroup.projectTabs.length > 0) {
+          const targetTabId =
+            clickedGroup.activeTabId &&
+            clickedGroup.projectTabs.find(
+              (t) => t.id === clickedGroup.activeTabId,
+            )
+              ? clickedGroup.activeTabId
+              : clickedGroup.projectTabs[0].id
+
+          newActiveTab = {
+            id: targetTabId,
+            projectGroupId: clickedGroup.id,
+            type: "project-tab" as const,
+          }
+        }
+      }
+
+      const newState = {
+        activeProjectGroupId: projectGroupId, // Always set as active project group
+        activeTab: newActiveTab, // Set appropriate active tab
+        previousActiveProjectGroupId: state.activeProjectGroupId, // Track previous
+        projectGroups: state.projectGroups.map(
+          (projectGroup) =>
+            projectGroup.id === projectGroupId
+              ? {...projectGroup, isCollapsed: false} // Always expand clicked group
+              : {...projectGroup, isCollapsed: true}, // Collapse all others
+        ),
+      }
+
+      return newState
+    })
   },
 
   // Navigation utility methods
@@ -210,7 +293,7 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     )
   },
 
-  // Dynamic tab visibility (key feature)
+  // Dynamic tab visibility
   getVisibleTabs: () => {
     const state = get()
     const visibleTabs: (AppTab | ProjectGroup | MainTab | ProjectTab)[] = []
@@ -221,10 +304,8 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     // Show project tabs based on collapse state
     state.projectGroups.forEach((projectGroup) => {
       if (projectGroup.isCollapsed) {
-        // Show as single project group tab
         visibleTabs.push(projectGroup)
       } else {
-        // Show main tab and individual project tabs
         visibleTabs.push(projectGroup.mainTab)
         visibleTabs.push(...projectGroup.projectTabs)
       }
@@ -254,6 +335,8 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
 
   maxProjectGroups: APP_CONFIG.MAX_PROJECT_GROUPS,
 
+  previousActiveProjectGroupId: null,
+
   projectGroups: [],
 
   removeProjectGroup: (projectGroupId: string): void => {
@@ -262,20 +345,67 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
         (projectGroup) => projectGroup.id !== projectGroupId,
       )
 
-      // If we removed the active project group, set a new active project group
       let newActiveProjectGroupId = state.activeProjectGroupId
-      if (state.activeProjectGroupId === projectGroupId) {
-        newActiveProjectGroupId =
-          updatedProjectGroups.length > 0 ? updatedProjectGroups[0].id : null
-      }
+      let newActiveTab = state.activeTab
 
-      // If only one project group remains, expand it
-      if (updatedProjectGroups.length === 1) {
-        updatedProjectGroups[0].isCollapsed = false
+      if (updatedProjectGroups.length > 0) {
+        // Try to use previous active group if it still exists
+        let groupToExpand = null
+        if (state.previousActiveProjectGroupId) {
+          groupToExpand = updatedProjectGroups.find(
+            (g) => g.id === state.previousActiveProjectGroupId,
+          )
+        }
+
+        // Fallback to first available group if previous not found
+        if (!groupToExpand) {
+          groupToExpand = updatedProjectGroups[0]
+        }
+
+        // Expand the group
+        groupToExpand.isCollapsed = false
+
+        // Set it as active project group
+        newActiveProjectGroupId = groupToExpand.id
+
+        // Set active tab in the expanded group
+        if (groupToExpand.projectTabs.length > 0) {
+          // Use group's active tab or first project tab
+          const targetTabId =
+            groupToExpand.activeTabId &&
+            groupToExpand.projectTabs.find(
+              (t) => t.id === groupToExpand.activeTabId,
+            )
+              ? groupToExpand.activeTabId
+              : groupToExpand.projectTabs[0].id
+
+          newActiveTab = {
+            id: targetTabId,
+            projectGroupId: groupToExpand.id,
+            type: "project-tab" as const,
+          }
+
+          // Update the group's active tab
+          groupToExpand.activeTabId = targetTabId
+        } else {
+          // Use main tab
+          newActiveTab = {
+            id: groupToExpand.mainTab.id,
+            projectGroupId: groupToExpand.id,
+            type: "main-tab" as const,
+          }
+
+          groupToExpand.activeTabId = groupToExpand.mainTab.id
+        }
+      } else {
+        // No project groups left, clear active state
+        newActiveProjectGroupId = null
+        newActiveTab = null
       }
 
       return {
         activeProjectGroupId: newActiveProjectGroupId,
+        activeTab: newActiveTab,
         projectGroups: updatedProjectGroups,
       }
     })
@@ -367,12 +497,13 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     state.setActiveTabInProjectGroup(projectGroupId, tabId)
 
     // Set the global active tab
+    const newActiveTab = {
+      id: tabId,
+      projectGroupId,
+      type: tabType,
+    }
     set({
-      activeTab: {
-        id: tabId,
-        projectGroupId,
-        type: tabType,
-      },
+      activeTab: newActiveTab,
     })
   },
 
@@ -385,7 +516,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
       ),
     }))
   },
-
   switchToProjectGroup: (projectGroupId: string): void => {
     const state = get()
     const targetProjectGroup = state.getProjectGroupById(projectGroupId)
@@ -410,10 +540,9 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
         projectGroupId,
         type: tabType,
       },
-      // Don't collapse other projects - keep them all expanded for now
       projectGroups: state.projectGroups.map((projectGroup) => ({
         ...projectGroup,
-        isCollapsed: false, // Keep all projects expanded
+        isCollapsed: false,
       })),
     }))
   },

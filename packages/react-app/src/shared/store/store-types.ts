@@ -1,5 +1,10 @@
 import type {ReactNode} from "react"
 
+export type ProjectGroupCloseCallback = (
+  groupId: string,
+  groupName: string,
+) => Promise<boolean> | boolean
+
 // Base interface for application-level tabs (start, settings, help, etc.)
 export interface AppTab {
   component: ReactNode
@@ -39,6 +44,7 @@ export interface ProjectGroup {
   isCollapsed: boolean
   mainTab: MainTab
   name: string
+  onClose?: ProjectGroupCloseCallback // callback for group closing confirmation
   projectTabs: ProjectTab[]
 }
 
@@ -63,7 +69,6 @@ export interface ApplicationStore {
   activeTab: ActiveTab | null
   // Add AppTab to the application group
   addAppTab: (appTab: AppTab) => void
-
   // Tab management within Project Groups
   addTabToProjectGroup: (projectGroupId: string, tab: ProjectTab) => void
 
@@ -73,8 +78,16 @@ export interface ApplicationStore {
   canCreateNewProjectGroup: () => boolean
 
   closeAppTab: (tabKey: string) => void
+
   // Project Group management
-  createProjectGroup: (filePath: string, name?: string) => string
+  // Store method matches what manager expects
+  createProjectGroup: (
+    filePath: string,
+    name?: string,
+    projectId?: string,
+    onClose?: ProjectGroupCloseCallback,
+  ) => string
+  expandProjectGroupAccordion: (projectGroupId: string) => void
 
   // Navigation
   getActiveProjectGroup: () => ProjectGroup | null
@@ -92,16 +105,17 @@ export interface ApplicationStore {
 
   maxProjectGroups: number
 
+  previousActiveProjectGroupId: string | null
   projectGroups: ProjectGroup[]
-  removeProjectGroup: (projectGroupId: string) => void
 
+  removeProjectGroup: (projectGroupId: string) => void
   removeTabFromProjectGroup: (projectGroupId: string, tabId: string) => void
   renameProjectGroup: (projectGroupId: string, newName: string) => void
+
   // Active tab management
   setActiveAppTab: (appTabId: string) => void
 
   setActiveProjectTab: (projectGroupId: string, tabId: string) => void
-
   setActiveTabInProjectGroup: (projectGroupId: string, tabId: string) => void
   switchToProjectGroup: (projectGroupId: string) => void
 }

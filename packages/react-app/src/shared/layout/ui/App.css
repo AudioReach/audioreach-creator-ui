@@ -1,0 +1,129 @@
+/* Group Label Interactive Button Styles */
+.group-label-tab-button {
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  border: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.group-label-tab-button:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.group-label-tab-button:active {
+  transform: scale(0.98);
+}
+
+.group-label-tab-button .arrow-icon {
+  color: white !important;
+  font-size: 12px;
+}
+
+/* Group Header Layout */
+.group-header {
+  height: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 30px;
+  background: #f3f3f3;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Group Color Coding for Tabs */
+.group-color-1,
+.group-color-1 .flexlayout__tab_button,
+.group-color-1 .flexlayout__tab,
+.flexlayout__tab.group-color-1 {
+  border-top: 2px solid #2196F3 !important; /* Blue */
+}
+
+.group-color-2,
+.group-color-2 .flexlayout__tab_button,
+.group-color-2 .flexlayout__tab,
+.flexlayout__tab.group-color-2 {
+  border-top: 2px solid #4CAF50 !important; /* Green */
+}
+
+.group-color-3,
+.group-color-3 .flexlayout__tab_button,
+.group-color-3 .flexlayout__tab,
+.flexlayout__tab.group-color-3 {
+  border-top: 2px solid #FF9800 !important; /* Orange */
+}
+
+.group-color-4,
+.group-color-4 .flexlayout__tab_button,
+.group-color-4 .flexlayout__tab,
+.flexlayout__tab.group-color-4 {
+  border-top: 2px solid #9C27B0 !important; /* Purple */
+}
+
+.group-color-5,
+.group-color-5 .flexlayout__tab_button,
+.group-color-5 .flexlayout__tab,
+.flexlayout__tab.group-color-5 {
+  border-top: 2px solid #F44336 !important; /* Red */
+}
+
+.group-color-6,
+.group-color-6 .flexlayout__tab_button,
+.group-color-6 .flexlayout__tab,
+.flexlayout__tab.group-color-6 {
+  border-top: 2px solid #00BCD4 !important; /* Cyan */
+}
+
+/* Group Label Background Colors */
+.group-label-color-1 {
+  background-color: #2196F3 !important;
+  color: white !important;
+}
+
+.group-label-color-2 {
+  background-color: #4CAF50 !important;
+  color: white !important;
+}
+
+.group-label-color-3 {
+  background-color: #FF9800 !important;
+  color: white !important;
+}
+
+.group-label-color-4 {
+  background-color: #9C27B0 !important;
+  color: white !important;
+}
+
+.group-label-color-5 {
+  background-color: #F44336 !important;
+  color: white !important;
+}
+
+.group-label-color-6 {
+  background-color: #00BCD4 !important;
+  color: white !important;
+}
+
+/* Non-draggable Tab Visual Feedback */
+.flexlayout__tab[data-enable-drag="false"],
+.flexlayout__tab_button[data-enable-drag="false"] {
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+}
+
+.flexlayout__tab[data-enable-drag="false"]:hover,
+.flexlayout__tab_button[data-enable-drag="false"]:hover {
+  cursor: not-allowed !important;
+  background-color: #f5f5f5 !important;
+}
