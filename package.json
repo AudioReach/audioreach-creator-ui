@@ -25,7 +25,7 @@
     "api-utils": "pnpm -C packages/api-utils",
     "electron-app": "pnpm -C packages/electron-app",
     "react-app": "pnpm -C packages/react-app",
-    "clean": "pnpm run -C packages/electron-app clean && pnpm run -C packages/api-utils clean"
+    "clean": "pnpm run -C packages/electron-app clean && pnpm run -C packages/react-app clean && pnpm run -C packages/api-utils clean"
   },
   "devDependencies": {
     "@qui/eslint-config-fsd": "1.0.1",

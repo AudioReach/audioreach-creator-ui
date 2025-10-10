@@ -15,7 +15,8 @@
     "watch": "tsc -p tsconfig.lib.json -w --preserveWatchOutput --force",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:ci": "jest --ci --coverage --watchAll=false"
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "clean": "shx rm -rf dist"
   },
   "dependencies": {
     "@generouted/react-router": "^1.19.6",
