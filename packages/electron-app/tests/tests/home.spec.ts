@@ -12,26 +12,41 @@ test.afterAll(async () => {
   await electronApp?.close?.()
 })
 
-test("Renders the top nav", async () => {
+test("Renders Start Page heading", async () => {
   const page = await electronApp?.firstWindow?.()
 
   if (!page) {
     return test.fail()
   }
 
-  const headerTextEl = page.getByTestId("header-text")
-  await expect(headerTextEl).toBeVisible()
-  await expect(headerTextEl).toHaveText("AudioReach™ Creator")
+  const startHeading = page.getByRole("heading", { name: "Start Page" })
+  await expect(startHeading).toBeVisible()
 })
 
-test("Renders the footer", async () => {
+test("Shows 'Open Project' section with OpenFile placeholder", async () => {
   const page = await electronApp?.firstWindow?.()
 
   if (!page) {
     return test.fail()
   }
 
-  const footerTextEl = page.getByTestId("footer-text")
-  await expect(footerTextEl).toBeVisible()
-  await expect(footerTextEl).toContainText("Qualcomm")
+  const openProjectHeading = page.getByRole("heading", { name: "Open Project" })
+  await expect(openProjectHeading).toBeVisible()
+
+  const openFilePlaceholder = page.getByText("OpenFile — Placeholder")
+  await expect(openFilePlaceholder).toBeVisible()
+})
+
+test("Shows 'Recent Projects' section with RecentFiles placeholder", async () => {
+  const page = await electronApp?.firstWindow?.()
+
+  if (!page) {
+    return test.fail()
+  }
+
+  const recentProjectsHeading = page.getByRole("heading", { name: "Recent Projects" })
+  await expect(recentProjectsHeading).toBeVisible()
+
+  const recentFilesPlaceholder = page.getByText("RecentFiles — Placeholder")
+  await expect(recentFilesPlaceholder).toBeVisible()
 })

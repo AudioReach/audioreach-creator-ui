@@ -1,2 +1,1 @@
-export * from "./footer"
-export * from "./navbar"
+export {default as LayoutTabGroupManager} from "./LayoutTabGroupManager"

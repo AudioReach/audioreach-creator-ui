@@ -1,4 +1,3 @@
-import generouted from "@generouted/react-router/plugin"
 import react from "@vitejs/plugin-react"
 import {resolve} from "path"
 import {defineConfig} from "vite"
@@ -17,14 +16,13 @@ export default defineConfig({
     },
     transformer: "postcss",
   },
-  plugins: [react(), generouted()],
+  plugins: [react()],
   resolve: {
     alias: {
       "~assets": resolve(__dirname, "./src/assets"),
       "~data": resolve(__dirname, "./src/data"),
       "~entities": resolve(__dirname, "./src/entities"),
       "~features": resolve(__dirname, "./src/features"),
-      "~pages": resolve(__dirname, "./src/pages"),
       "~shared": resolve(__dirname, "./src/shared"),
       "~widgets": resolve(__dirname, "./src/widgets"),
     },

@@ -1,10 +1,15 @@
-import {routes} from "@generouted/react-router"
 import {createRoot} from "react-dom/client"
-import {createHashRouter, RouterProvider} from "react-router-dom"
+
+import {QuiRoot} from "@qui/react"
+
+import {EditorShell} from "~widgets/editor-shell"
 
 import "./index.css"
 
-const router = createHashRouter(routes, {basename: "/"})
-const Routes = () => <RouterProvider router={router} />
+const App = () => (
+  <QuiRoot>
+    <EditorShell />
+  </QuiRoot>
+)
 
-createRoot(document.getElementById("root")!).render(<Routes />)
+createRoot(document.getElementById("root")!).render(<App />)

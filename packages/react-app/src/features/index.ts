@@ -1,1 +1,5 @@
-export * from "./examples"
+export * from "./open-file"
+export * from "./recent-files"
+export * from "./module-list"
+export * from "./log-view"
+export * from "./subsystem-browser"

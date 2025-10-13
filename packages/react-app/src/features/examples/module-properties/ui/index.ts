@@ -1,1 +1,0 @@
-export {ModulePropertiesPanel} from "./ModulePropertiesPanel"
