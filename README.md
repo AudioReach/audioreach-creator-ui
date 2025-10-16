@@ -4,13 +4,12 @@ A cross-platform application to design, view and edit audio and voice use cases 
 
 ## Technologies Used
 
-- [React](https://react.dev/) 19 with [React Router](https://reactrouter.com/) 7
+- [React](https://react.dev/) 19
 - [Electron](https://www.electronjs.org/) 37+
 - [TypeScript](https://www.typescriptlang.org/) 5.7
 - [QUI React](https://react.qui.qualcomm.com/) and [Tailwind CSS](https://tailwindcss.com/) for styling
 - [Vite](https://vitejs.dev/) 7 for frontend bundling
-- [ESBuild](https://esbuild.github.io/) for Electron bundling
-- [Generouted](https://github.com/oedotme/generouted) for file-based routing
+- [ESBuild](https://esbuild.github.io/) for Electron bundlingret
 - [Zustand](https://zustand-demo.pmnd.rs/) for state management (may change)
 - [Playwright](https://playwright.dev) for e2e testing
 - ESLint, Prettier, and Stylelint for code formatting

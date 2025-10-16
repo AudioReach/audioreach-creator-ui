@@ -20,7 +20,7 @@ async function main(argv: string[]) {
   // Clear the dist folder
   console.log("[build.ts] clear dist dir")
   try {
-    await rm(DIST_DIR, {recursive: true})
+    await rm(DIST_DIR, {force: true, recursive: true})
     await mkdir(DIST_DIR, {recursive: true})
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -73,6 +73,7 @@ async function main(argv: string[]) {
                   console.log(
                     "[build.ts] build errors detected, skipping electron restart",
                   )
+                  return
                 }
                 if (RELOAD_ON_CHANGE) {
                   await startElectron(PKG_DIR)
@@ -80,7 +81,6 @@ async function main(argv: string[]) {
                   await startElectron(PKG_DIR)
                   running = true
                 }
-                running = true
               })
             },
           },

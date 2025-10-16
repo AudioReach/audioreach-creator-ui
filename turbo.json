@@ -24,6 +24,10 @@
       "outputLogs": "new-only"
     },
     "test": {
+      "dependsOn": [
+        "^build",
+        "build"
+      ],
       "inputs": [
         "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
         "src/**/*",
@@ -32,6 +36,10 @@
       "outputLogs": "new-only"
     },
     "test:ci": {
+      "dependsOn": [
+        "^build",
+        "build"
+      ],
       "inputs": [
         "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
         "src/**/*",
@@ -45,7 +53,7 @@
     },
     "typecheck": {
       "dependsOn": [
-        "^build"
+        "^typecheck"
       ],
       "inputs": [
         "**/*.{ts,tsx}",

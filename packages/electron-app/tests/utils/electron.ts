@@ -1,10 +1,17 @@
 import {_electron as electron} from "@playwright/test"
+import path from "node:path"
 
 // TODO: https://www.electronjs.org/docs/latest/tutorial/testing-on-headless-ci
 export async function getTestApp() {
-  return electron.launch({
-    args: ["main.cjs"],
-    bypassCSP: true,
-    cwd: "dist",
-  })
+  try {
+    const distDir = path.resolve(process.cwd(), "dist")
+    const app = await electron.launch({
+      args: [path.join(distDir, "main.cjs")],
+      bypassCSP: true,
+    })
+    return app
+  } catch (error) {
+    console.error("Failed to launch Electron app:", error)
+    throw error
+  }
 }

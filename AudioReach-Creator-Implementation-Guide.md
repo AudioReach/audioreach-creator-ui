@@ -2,664 +2,168 @@
 
 ## Table of Contents
 
-1. [App Loading and Rendering Flow](#app-loading-and-rendering-flow)
-2. [Module-List Feature Implementation](#module-list-feature-implementation)
-3. [Architecture Overview](#architecture-overview)
-4. [Key Implementation Patterns](#key-implementation-patterns)
+1. App Loading and Rendering Flow
+2. Preload Script Bridge
+3. React App Entry and Shell
+4. Architecture Overview
+5. Key Implementation Patterns
 
 ---
 
-## App Loading and Rendering Flow
-
-### Overview
+## 1. App Loading and Rendering Flow
 
 AudioReach Creator is a hybrid desktop application built with Electron and React, following a monorepo structure with multiple packages for separation of concerns.
 
-### 1. Electron Main Process Initialization
+### Electron Main Process Initialization
 
-**File**: `packages/electron-app/src/main.ts`
+File: packages/electron-app/src/main.ts
 
-The app starts with the Electron main process:
+The app starts with the Electron main process.
 
-#### App Startup Process:
+- app.whenReady() triggers createWindow()
+- Creates a BrowserWindow with:
+  - width: 1550 (dev) / 1200 (prod)
+  - height: 800
+  - webPreferences.preload points to ./preload.cjs
+- In development, the app loads the React dev server at http://localhost:5173
+- In production, the app loads a local index.html from the bundled dist
 
-- `app.whenReady()` triggers the `createWindow()` function
-- Creates a `BrowserWindow` with specific dimensions (800x1200 in production, 800x1550 in dev)
-- Sets the preload script path to `./preload.cjs`
-- Removes the default menu bar
+### Development vs Production Loading
 
-#### Development vs Production Loading:
+Development Mode (process.env.DEV is truthy):
+- Uses a spinner (ora) and polls the React dev server for up to 60 seconds (120 attempts x 500ms).
+- On success, loads the URL and opens DevTools.
+- If the server doesn’t become ready in time, exits the process.
 
-**Development Mode** (`process.env.DEV` is true):
+Production Mode:
+- Loads a local index.html (await win.loadFile(${__dirname}/index.html)) from the packaged dist folder.
 
-- Waits for the React dev server at `http://localhost:5173`
-- Uses a polling mechanism (120 attempts, 500ms intervals) to check if the React app is ready
-- Once ready, loads the URL and opens DevTools
-- If the React app doesn't start within 60 seconds, exits with an error
+### IPC Communication Setup
 
-**Production Mode**:
+The main process registers a single IPC handler "ipc::message" (see packages/electron-app/src/main.ts), which supports multiple request types using the shared types from @audioreach-creator-ui/api-utils. Additional handlers support reading and writing a local config.json via load-config-data and save-config-data.
 
-- Directly loads a local `index.html` file from the `__dirname`
+---
 
-#### IPC Communication Setup:
+## 2. Preload Script Bridge
 
-- Sets up an IPC handler (`ipc::message`) for communication between Electron and React
-- Handles different request types: `Request1`, `Request2`, and `CamelCase`
-- Uses the `@audioreach-creator-ui/api-utils` package for type-safe communication
+File: packages/electron-app/src/preload.ts
 
-### 2. Preload Script Bridge
+The preload script acts as a secure bridge between the Electron main process and the renderer (React app) using contextBridge. It exposes:
+- api.send(request) → invokes ipc::message and returns typed responses
+- api.versions → { chromeVersion, electronVersion, nodeVersion }
 
-**File**: `packages/electron-app/src/preload.ts`
+This makes a safe window.api available in the renderer.
 
-The preload script acts as a secure bridge between the Electron main process and the renderer (React app):
+---
 
-```typescript
-const api: ElectronApi = {
-  send: (request: any): Promise<ApiResponse> => {
-    return ipcRenderer.invoke("ipc::message", request)
-  },
-  versions: {
-    chromeVersion: () => process.versions.chrome || "",
-    electronVersion: () => process.versions.electron || "",
-    nodeVersion: () => process.versions.node || "",
-  },
-}
+## 3. React App Entry and Shell
 
-contextBridge.exposeInMainWorld("api", api)
-```
+File: packages/react-app/src/main.tsx
 
-- Exposes a safe API to the renderer via `contextBridge.exposeInMainWorld("api", api)`
-- Provides methods for IPC communication and version information
-- This API becomes available as `window.api` in the React app
+The React application is initialized without a router. The root renders an application shell (EditorShell) within the QUI design system root.
 
-### 3. React App Entry Point & Routing System
-
-#### Main Entry Point
-
-**File**: `packages/react-app/src/main.tsx`
-
-The React application initialization:
-
-```typescript
-import {routes} from "@generouted/react-router"
+```tsx
 import {createRoot} from "react-dom/client"
-import {createHashRouter, RouterProvider} from "react-router-dom"
-
+import {QuiRoot} from "@qui/react"
+import {EditorShell} from "~widgets/editor-shell"
 import "./index.css"
 
-const router = createHashRouter(routes, {basename: "/"})
-const Routes = () => <RouterProvider router={router} />
+const App = () => (
+  <QuiRoot>
+    <EditorShell />
+  </QuiRoot>
+)
 
-createRoot(document.getElementById("root")!).render(<Routes />)
+createRoot(document.getElementById("root")!).render(<App />)
 ```
 
-**Key responsibilities**:
+Key points:
+- No file-based or imperative routing is used currently.
+- The shell composes top-level UI (widgets, features, layout).
+- The renderer is bundled by Vite in production, served by the dev server in development.
 
-- **Router Setup**: Uses `@generouted/react-router` for file-based routing
-- **Hash Router**: Creates a `HashRouter` (important for Electron apps to avoid file:// protocol issues)
-- **Route Generation**: Routes are automatically generated from the `pages/` directory structure
-- **DOM Rendering**: Uses React 18's `createRoot` API to render the router into the DOM element with id "root"
-
-#### Root Layout Component
-
-**File**: `packages/react-app/src/pages/_app.tsx`
-
-The root layout component that wraps all pages:
-
-```typescript
-import {Outlet} from "react-router-dom"
-import {QuiRoot} from "@qui/react"
-import {Footer, Navbar, SideNav} from "~shared/layout"
-
-export default function App() {
-  return (
-    <QuiRoot>
-      <div className="flex flex-1 flex-col">
-        <Navbar />
-        <div className="flex w-full flex-1">
-          <SideNav />
-          <div className="main-content">
-            <Outlet />
-          </div>
-        </div>
-        <Footer />
-      </div>
-    </QuiRoot>
-  )
-}
-```
-
-**Key responsibilities**:
-
-- **Root Layout**: Provides the common layout structure for all pages
-- **UI Library Wrapper**: Uses `QuiRoot` to initialize the QUI design system
-- **Navigation Structure**: Includes `Navbar`, `SideNav`, and `Footer` components
-- **Page Outlet**: Uses `<Outlet />` from React Router to render the current page content
-
-#### Relationship Between main.tsx and \_app.tsx
-
-The relationship between these files follows the file-based routing pattern:
-
-1. **`main.tsx`** is the application entry point that:
-   - Creates the router using routes generated by `@generouted`
-   - Renders the `RouterProvider` into the DOM
-
-2. **`_app.tsx`** is a special file in the `pages/` directory that:
-   - Acts as the root layout component for all routes
-   - Is automatically recognized by `@generouted` as the app shell
-   - Wraps all page components with common layout elements
-
-3. **Route Resolution Flow**:
-
-   ```
-   main.tsx → RouterProvider → _app.tsx (root layout) → <Outlet /> → Current Page Component
-   ```
-
-4. **File-based Routing Convention**:
-   - `_app.tsx` = Root layout (wraps all pages)
-   - `index.tsx` = Home page (/)
-   - `example/index.tsx` = Example page (/example)
-   - `example/nested/index.tsx` = Nested page (/example/nested)
-
-#### How index.tsx Relates to \_app.tsx
-
-**File**: `packages/react-app/src/pages/index.tsx`
-
-The `index.tsx` file is a specific page component that gets rendered within the `_app.tsx` layout:
-
-```typescript
-export default function HomePage(): ReactNode {
-  const {modules, selectedModuleId} = useModuleListStore()
-  const selectedModule = modules.find(
-    (module) => module.id === selectedModuleId,
-  )
-
-  return (
-    <div className="flex h-full w-full">
-      <Sidebar />
-      <div className="max-h-[calc(100vh-150px)] flex-1 overflow-auto pl-4">
-        {selectedModule ? (
-          <QCard className="w-full">
-            {/* Module details display */}
-          </QCard>
-        ) : (
-          <div className="q-font-heading-xl flex h-full items-center justify-center">
-            <p>Select a module from the sidebar to view details</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-```
-
-**Relationship Breakdown**:
-
-1. **`_app.tsx`** provides the **outer shell** with:
-   - `QuiRoot` wrapper
-   - `Navbar` at the top
-   - `SideNav` on the left
-   - `Footer` at the bottom
-   - `<Outlet />` where page content renders
-
-2. **`index.tsx`** provides the **page-specific content** that renders inside the `<Outlet />`:
-   - Module list sidebar (note: this creates a nested sidebar within the layout's SideNav)
-   - Module details display area
-   - State management for module selection
-
-**Rendering Hierarchy**:
-
-```
-_app.tsx (Root Layout)
-├── QuiRoot
-├── Navbar
-├── SideNav (from layout)
-├── <Outlet /> ← index.tsx renders here
-│   └── HomePage Component
-│       ├── Sidebar (module-specific)
-│       └── Module Details Area
-└── Footer
-```
-
-**Important Note**: The `index.tsx` component includes its own `<Sidebar />` component, which creates a nested sidebar structure. This means when viewing the home page, users see:
-
-- The main application `SideNav` (from `_app.tsx`)
-- The module-specific `Sidebar` (from `index.tsx`)
-
-This design allows for page-specific navigation while maintaining the overall application layout structure.
-
-### 4. HTML Template
-
-**File**: `packages/react-app/index.html`
-
-The base HTML template:
-
-- Contains a `<div id="root"></div>` where React mounts
-- Includes Google Fonts (Roboto Flex)
-- Has a module script tag that loads `./src/main.tsx`
-- Sets up basic meta tags and title
-
-### 4. Routing System Architecture
-
-The application uses a sophisticated file-based routing system where:
-
-- **`main.tsx`** bootstraps the React application and router
-- **`_app.tsx`** provides the persistent layout across all routes
-- **Individual page files** render specific content within the layout
-
-This creates a clean separation where:
-
-- Layout concerns (navigation, sidebar, footer) are handled in `_app.tsx`
-- Page-specific content is rendered through the `<Outlet />` component
-- The router automatically maps file paths to URL routes
-
-### 6. Complete Loading Sequence
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Electron as Electron Main
-    participant Preload as Preload Script
-    participant React as React Dev Server
-    participant Browser as BrowserWindow
-
-    User->>Electron: Launch app
-    Electron->>Electron: app.whenReady()
-    Electron->>Electron: createWindow()
-
-    alt Development Mode
-        Electron->>React: Poll http://localhost:5173
-        React-->>Electron: 200 OK (app ready)
-        Electron->>Browser: loadURL(localhost:5173)
-        Browser->>Preload: Load preload script
-        Preload->>Browser: Expose window.api
-        Browser->>React: Request index.html
-        React->>Browser: Serve index.html + main.tsx
-        Browser->>Browser: Execute React app
-        Browser->>Browser: createRoot + RouterProvider
-        Browser->>Browser: Render App layout with routes
-    else Production Mode
-        Electron->>Browser: loadFile(index.html)
-        Browser->>Preload: Load preload script
-        Preload->>Browser: Expose window.api
-        Browser->>Browser: Execute bundled React app
-        Browser->>Browser: createRoot + RouterProvider
-        Browser->>Browser: Render App layout with routes
-    end
-```
+HTML Template
+- File: packages/react-app/index.html
+- Contains a <div id="root"></div> where React mounts
+- Loads the React entry (src/main.tsx)
+- Includes fonts and basic meta
 
 ---
 
-## Module-List Feature Implementation
-
-### Architecture Overview
-
-The module-list feature follows a **Feature-Sliced Design (FSD)** architecture pattern, organizing code into layers: entities, features, widgets, and pages.
-
-```mermaid
-graph TD
-    A[XML Files] --> B[XML Parser]
-    B --> C[Module API]
-    C --> D[Zustand Store]
-    D --> E[ModuleList UI]
-    E --> F[Sidebar Widget]
-    F --> G[HomePage]
-
-    H[Module Entity] --> C
-    I[Parameter Entity] --> H
-    J[Port Entity] --> H
-```
-
-### 1. Data Layer (Entities)
-
-#### Module Entity
-
-**File**: `packages/react-app/src/entities/module/model/module.ts`
-
-```typescript
-export interface Module {
-  description: string
-  displayName: string
-  id: string
-  inputPorts: Port[]
-  isBuiltin: boolean
-  name: string
-  outputPorts: Port[]
-  parameters: Parameter[]
-}
-```
-
-The module entity defines the core data structure with:
-
-- Basic module information (id, name, displayName, description)
-- Port information for audio routing
-- Parameters for module configuration
-- Built-in flag to distinguish system vs custom modules
-
-#### Supporting Entities
-
-- **Port**: Defines input/output connection points
-- **Parameter**: Defines configurable module parameters
-
-### 2. Data Source & Parsing
-
-#### XML Data Source
-
-- Module definitions are stored as XML files in `/src/assets/module_xmls/`
-- Examples: `codec_dma_api.xml`, `mbdrc_api.xml`, `sal_api.xml`, etc.
-- These contain AudioReach module specifications
-
-#### XML Parser
-
-**File**: `packages/react-app/src/shared/lib/xml-parser/index.ts`
-
-Uses `fast-xml-parser` library for XML processing with key features:
-
-```typescript
-export const parseModuleXml = (xmlContent: string): Module[] => {
-  const parser = new XMLParser({
-    attributeNamePrefix: "",
-    ignoreAttributes: false,
-    isArray: (name) => {
-      if (name === "MODULE") {
-        return true
-      }
-      return false
-    },
-  })
-  // ... parsing logic
-}
-```
-
-**Key parsing features**:
-
-- **Hex value normalization**: Converts hex values to uppercase format
-- **Description sanitization**: Removes escape characters and formatting markers
-- **Port parsing**: Extracts input/output port definitions
-- **Parameter parsing**: Processes module parameters, filtering out sub-structures
-
-#### Mock API
-
-**File**: `packages/react-app/src/entities/module/api/mockModuleApi.ts`
-
-```typescript
-const moduleXmlFiles = import.meta.glob("/src/assets/module_xmls/*.xml", {
-  as: "raw",
-})
-
-export const fetchModules = async (): Promise<Module[]> => {
-  const moduleArrays = await Promise.all(
-    Object.entries(moduleXmlFiles).map(async ([path, importFn]) => {
-      const xmlContent = await importFn()
-      return parseModuleXml(xmlContent)
-    }),
-  )
-  return moduleArrays.flat()
-}
-```
-
-- Uses Vite's `import.meta.glob()` to automatically discover XML files
-- Processes all XML files in parallel using `Promise.all()`
-- Returns flattened array of parsed modules
-
-### 3. State Management (Zustand Store)
-
-**File**: `packages/react-app/src/features/module-list/model/module-list-store.ts`
-
-```typescript
-interface ModuleListState {
-  modules: Module[]
-  isLoading: boolean
-  error: string | null
-  selectedModuleId: string | null
-
-  // Actions
-  fetchModules: () => Promise<void>
-  selectModule: (id: string | null) => void
-}
-
-export const useModuleListStore = create<ModuleListState>((set) => ({
-  // ... implementation
-  fetchModules: async () => {
-    set({error: null, isLoading: true})
-    try {
-      const modules = await fetchModules()
-      setTimeout(() => {
-        set({isLoading: false, modules})
-      }, 1000) // Artificial delay for UX
-    } catch (error) {
-      set({
-        error:
-          error instanceof Error ? error.message : "Failed to fetch modules",
-        isLoading: false,
-      })
-    }
-  },
-  // ...
-}))
-```
-
-**Key Features**:
-
-- **Async data fetching** with loading states and error handling
-- **Module selection** state management
-- **Artificial delay** (1 second) to demonstrate loading states
-- **Error boundaries** with try-catch and user-friendly error messages
-
-### 4. UI Components
-
-#### ModuleList Component
-
-**File**: `packages/react-app/src/features/module-list/ui/ModuleList.tsx`
-
-```typescript
-export const ModuleList: React.FC = () => {
-  const {error, fetchModules, isLoading, modules, selectModule} =
-    useModuleListStore()
-
-  useEffect(() => {
-    fetchModules()
-  }, [fetchModules])
-
-  if (isLoading) {
-    return (
-      <div className="grid h-[full] grid-rows-2 items-center justify-items-center">
-        <QStatus
-          color="informative"
-          icon={Loader}
-          kind="badge"
-          label="Loading Module List ..."
-          size="m"
-        />
-        <QProgressCircle size="l" />
-      </div>
-    )
-  }
-
-  // ... error and success states
-}
-```
-
-**UI Features**:
-
-- **Loading State**: Shows spinner and status badge during data fetch
-- **Error State**: Displays user-friendly error messages
-- **Empty State**: Handles case when no modules are found
-- **Module List**: Renders scrollable list using QUI components
-- **Module Selection**: Handles click events to select modules
-
-#### Sidebar Widget
-
-**File**: `packages/react-app/src/widgets/sidebar/ui/Sidebar.tsx`
-
-```typescript
-export const Sidebar: React.FC = () => {
-  return (
-    <QCard className="h-full w-[300px]">
-      <QCardContent className="overflow-auto">
-        <ModuleList />
-      </QCardContent>
-    </QCard>
-  )
-}
-```
-
-- Wraps ModuleList in a fixed-width (300px) card container
-- Provides scrollable content area
-- Acts as a reusable widget
-
-### 5. Integration Points
-
-#### HomePage Integration
-
-**File**: `packages/react-app/src/pages/index.tsx`
-
-```typescript
-export default function HomePage(): ReactNode {
-  const {modules, selectedModuleId} = useModuleListStore()
-  const selectedModule = modules.find(
-    (module) => module.id === selectedModuleId,
-  )
-
-  return (
-    <div className="flex h-full w-full">
-      <Sidebar />
-      <div className="max-h-[calc(100vh-150px)] flex-1 overflow-auto pl-4">
-        {selectedModule ? (
-          <QCard className="w-full">
-            {/* Module details display */}
-          </QCard>
-        ) : (
-          <div className="q-font-heading-xl flex h-full items-center justify-center">
-            <p>Select a module from the sidebar to view details</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-```
-
-- **Two-panel layout**: Sidebar + Main content area
-- **Shared state**: Uses the same Zustand store to access selected module
-- **Detail view**: Shows comprehensive module information when selected
-- **Responsive design**: Handles overflow and scrolling
-
-### 6. Data Flow
-
-```mermaid
-sequenceDiagram
-    participant UI as ModuleList UI
-    participant Store as Zustand Store
-    participant API as Mock API
-    participant Parser as XML Parser
-    participant Files as XML Files
-
-    UI->>Store: useEffect calls fetchModules()
-    Store->>API: fetchModules()
-    API->>Files: import.meta.glob() discovers XMLs
-    Files->>API: Raw XML content
-    API->>Parser: parseModuleXml(xmlContent)
-    Parser->>API: Parsed Module objects
-    API->>Store: Module[] array
-    Store->>UI: Updates modules state
-    UI->>UI: Renders module list
-
-    Note over UI: User clicks module
-    UI->>Store: selectModule(moduleId)
-    Store->>UI: Updates selectedModuleId
-    UI->>UI: HomePage shows module details
-```
-
----
-
-## Architecture Overview
+## 4. Architecture Overview
 
 ### Project Structure
 
 ```
 packages/
-├── electron-app/           # Electron main process
+├── electron-app/           # Electron main process (main.ts) and preload (preload.ts)
 │   └── src/
-│       ├── main.ts        # App initialization
-│       └── preload.ts     # IPC bridge
-├── react-app/             # React frontend
+├── react-app/              # React frontend
 │   └── src/
-│       ├── entities/      # Business entities
-│       ├── features/      # Business features
-│       ├── widgets/       # UI compositions
-│       ├── pages/         # Route components
-│       └── shared/        # Shared utilities
-└── api-utils/             # Shared API types
+│       ├── entities/       # Business entities and domain types
+│       ├── features/       # Feature logic and UI
+│       ├── shared/         # Shared api, config, controls, layout, store, theme, etc.
+│       └── widgets/        # Composite UI (editor shell, start page, etc.)
+└── api-utils/              # Shared API types for Electron↔Renderer
 ```
 
 ### Key Technologies
 
-- **Electron**: Desktop app wrapper
-- **React 18**: UI framework with createRoot API
-- **React Router**: File-based routing with @generouted
-- **Zustand**: Lightweight state management
-- **TypeScript**: Type safety throughout
-- **Vite**: Build tool and dev server
-- **QUI React**: Design system components
-- **fast-xml-parser**: XML processing
-- **Lucide React**: Icon library
+- Electron (desktop shell)
+- React 19
+- QUI React + Tailwind for UI
+- Vite (frontend build/dev)
+- esbuild (Electron bundling)
+- Zustand (state)
+- TypeScript (types across all packages)
+- Playwright (end-to-end tests)
+
+Note: The application previously referenced file-based routing and react-router, but the current implementation does not use @generouted/react-router or react-router-dom.
 
 ---
 
-## Key Implementation Patterns
+## 5. Key Implementation Patterns
 
-### 1. Feature-Sliced Design (FSD)
+### 1) Feature-Sliced Design (FSD)
 
-- **Entities**: Core business logic (Module, Parameter, Port)
-- **Features**: Business features (module-list)
-- **Widgets**: UI compositions (Sidebar)
-- **Pages**: Route-level components (HomePage)
+- entities: Core business data and domain types
+- features: User interactions and workflows
+- widgets: Composite UI aggregating features/entities
+- shared: Reusable UI, utils, configs
 
-### 2. State Management Patterns
+This structure improves maintainability, scalability, and discoverability.
 
-- Zustand for lightweight, TypeScript-friendly state management
-- Separation of data fetching logic from UI components
-- Centralized error handling and loading states
+### 2) State and Data Flow
 
-### 3. Data Processing Patterns
+- Lightweight state with Zustand (src/shared/store)
+- Shared API types for IPC via @audioreach-creator-ui/api-utils
+- Utilities for Electron API access in src/shared/api
 
-- Automatic file discovery using Vite's glob imports
-- Parallel processing of multiple XML files
-- Robust error handling at each parsing stage
+### 3) Testing and CI
 
-### 4. UI/UX Patterns
+- Playwright for e2e of the Electron app
+- Centralized timeouts/workers/retries in packages/electron-app/playwright.config.ts
+- Turbo task graph enforces ordering:
+  - test/test:ci depends on build (ensures dist readiness)
+  - typecheck depends on ^typecheck (ensures upstream declaration availability without full builds)
+- Electron tests launch using an absolute path to dist/main.cjs for deterministic startup
 
-- Loading states with progress indicators
-- Error boundaries with user-friendly messages
-- Empty states for better user experience
-- Master-detail pattern (list + detail view)
+### 4) Build and Packaging
 
-### 5. Security Patterns
-
-- Secure IPC communication through preload scripts
-- Context isolation between main and renderer processes
-- Type-safe API contracts
-
-### 6. Scalability Considerations
-
-- **Modular architecture**: Easy to add new module types or data sources
-- **Type safety**: Full TypeScript coverage for data structures
-- **Performance**: Parallel XML processing and efficient state updates
-- **Extensibility**: Easy to add filtering, searching, or sorting capabilities
-- **Reusability**: Widget-based architecture allows component reuse
+- React app built with Vite
+- Electron main/preload bundled by esbuild via scripts/build.ts
+- electron-builder packages application (files include dist/** and package.json only)
+- remove-binaries step strips ffmpeg binaries as needed
 
 ---
 
 ## Conclusion
 
-The AudioReach Creator application demonstrates a well-architected approach to building hybrid desktop applications with:
+This guide reflects the current architecture:
+- Electron main handles app lifecycle and IPC.
+- Preload exposes a safe API to the renderer.
+- React app renders an EditorShell without routing, using a widget/feature/entity layered approach.
+- Type safety is maintained across processes using shared types in api-utils.
+- CI and tests are configured to avoid first-run flakiness and to keep typecheck independent of full builds.
 
-1. **Clear separation of concerns** between Electron and React layers
-2. **Type-safe communication** between processes
-3. **Scalable feature architecture** using FSD principles
-4. **Robust data processing** with error handling and loading states
-5. **Modern React patterns** with hooks and functional components
-6. **Performance considerations** with parallel processing and efficient state management
-
-This implementation serves as a solid foundation for building complex desktop applications that require both native desktop integration and modern web UI capabilities.
+Any previous references to @generouted/react-router or react-router-dom have been removed from the design and documentation to match the current implementation.
