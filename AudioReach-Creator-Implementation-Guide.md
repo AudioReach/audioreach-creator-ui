@@ -31,12 +31,14 @@ The app starts with the Electron main process.
 ### Development vs Production Loading
 
 Development Mode (process.env.DEV is truthy):
+
 - Uses a spinner (ora) and polls the React dev server for up to 60 seconds (120 attempts x 500ms).
 - On success, loads the URL and opens DevTools.
 - If the server doesn’t become ready in time, exits the process.
 
 Production Mode:
-- Loads a local index.html (await win.loadFile(${__dirname}/index.html)) from the packaged dist folder.
+
+- Loads a local index.html (await win.loadFile(${\_\_dirname}/index.html)) from the packaged dist folder.
 
 ### IPC Communication Setup
 
@@ -49,6 +51,7 @@ The main process registers a single IPC handler "ipc::message" (see packages/ele
 File: packages/electron-app/src/preload.ts
 
 The preload script acts as a secure bridge between the Electron main process and the renderer (React app) using contextBridge. It exposes:
+
 - api.send(request) → invokes ipc::message and returns typed responses
 - api.versions → { chromeVersion, electronVersion, nodeVersion }
 
@@ -78,11 +81,13 @@ createRoot(document.getElementById("root")!).render(<App />)
 ```
 
 Key points:
+
 - No file-based or imperative routing is used currently.
 - The shell composes top-level UI (widgets, features, layout).
 - The renderer is bundled by Vite in production, served by the dev server in development.
 
 HTML Template
+
 - File: packages/react-app/index.html
 - Contains a <div id="root"></div> where React mounts
 - Loads the React entry (src/main.tsx)
@@ -152,7 +157,7 @@ This structure improves maintainability, scalability, and discoverability.
 
 - React app built with Vite
 - Electron main/preload bundled by esbuild via scripts/build.ts
-- electron-builder packages application (files include dist/** and package.json only)
+- electron-builder packages application (files include dist/\*\* and package.json only)
 - remove-binaries step strips ffmpeg binaries as needed
 
 ---
@@ -160,6 +165,7 @@ This structure improves maintainability, scalability, and discoverability.
 ## Conclusion
 
 This guide reflects the current architecture:
+
 - Electron main handles app lifecycle and IPC.
 - Preload exposes a safe API to the renderer.
 - React app renders an EditorShell without routing, using a widget/feature/entity layered approach.

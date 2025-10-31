@@ -2,7 +2,7 @@ import {useEffect, useRef} from "react"
 
 import StoreFlexLayoutTabGroupManager from "~shared/layout/ui/LayoutTabGroupManager"
 import {useApplicationStore} from "~shared/store"
-import {StartPage} from "~widgets/start-page"
+import ArcStartPage from "~widgets/start-page/ui/ArcStartPage"
 
 export const EditorShell: React.FC = () => {
   const {addAppTab, appGroup, setActiveAppTab} = useApplicationStore()
@@ -19,7 +19,7 @@ export const EditorShell: React.FC = () => {
 
     if (appGroup.appTabs.length === 0) {
       const startTab = {
-        component: <StartPage />,
+        component: <ArcStartPage />,
         id: "start-page",
         isCloseable: true,
         tabKey: "start-page",

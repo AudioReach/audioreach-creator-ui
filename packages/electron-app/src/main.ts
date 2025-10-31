@@ -11,6 +11,12 @@ import {readdir, readFile} from "node:fs/promises"
 import {join, resolve} from "node:path"
 import {setTimeout} from "node:timers/promises"
 
+import {
+  getFileModificationDateSync,
+  openProjectFile,
+  showProjectInExplorer,
+} from "./project-file-api"
+
 let win: BrowserWindow
 const CONFIG_FILE = "config.json"
 
@@ -188,6 +194,29 @@ ipcMain.handle(
             xmlFiles: [],
           }
         }
+        break
+      case ApiRequest.GetProjectFileModificationDate:
+        const filepath = args.data.filepath
+        const modifiedDate = getFileModificationDateSync(filepath)
+
+        data = {date: modifiedDate}
+        response = ""
+
+        if (modifiedDate === undefined) {
+          response = "Unable to get modified date"
+        }
+
+        break
+      case ApiRequest.OpenProjectFile:
+        const openFileResponse = await openProjectFile(win)
+
+        response = openFileResponse.response
+        data = openFileResponse.data
+        break
+      case ApiRequest.ShowProjectFileInExplorer:
+        console.log(`opening file in explorer ${args.data}`)
+        showProjectInExplorer(args.data)
+        response = ""
         break
       default:
         response = "Unknown request type"

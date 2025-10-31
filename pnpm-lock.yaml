@@ -164,15 +164,18 @@ importers:
       '@audioreach-creator-ui/api-utils':
         specifier: workspace:*
         version: link:../api-utils
+      '@floating-ui/react':
+        specifier: ^0.27.16
+        version: 0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@qui/base':
         specifier: ^2.37.0
         version: 2.39.2
       '@qui/react':
         specifier: ^2.6.1
-        version: 2.6.3(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@types/react@19.1.8)(csstype@3.1.3)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
+        version: 2.6.3(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@types/react@19.1.8)(csstype@3.1.3)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
       '@qui/react-table':
         specifier: ^3.0.0
-        version: 3.0.0(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@qui/table-core@1.1.2)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
+        version: 3.0.0(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@qui/table-core@1.1.2)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
       '@qui/styles':
         specifier: ^2.14.0
         version: 2.14.0
@@ -191,6 +194,9 @@ importers:
       flexlayout-react:
         specifier: ^0.8.17
         version: 0.8.17(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
       lucide-react:
         specifier: ^0.441.0
         version: 0.441.0(react@19.1.0)
@@ -779,20 +785,20 @@ packages:
     resolution: {integrity: sha512-1+WqvgNMhmlAambTvT3KPtCl/Ibr68VldY2XY40SL1CE0ZXiakFR/cbTspaF5HsnpDMvcYYoJHfl4980NBjGag==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@floating-ui/core@1.7.2':
-    resolution: {integrity: sha512-wNB5ooIKHQc+Kui96jE/n69rHFWAVoxn5CAzL1Xdd8FG03cgY3MLO+GF9U3W737fYDSgPWA6MReKhBQBop6Pcw==}
+  '@floating-ui/core@1.7.3':
+    resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
 
-  '@floating-ui/dom@1.7.2':
-    resolution: {integrity: sha512-7cfaOQuCS27HD7DX+6ib2OrnW+b4ZBwDNnCcT0uTyidcmyWb03FnQqJybDBoCnpdxwBSfA94UAYlRCt7mV+TbA==}
+  '@floating-ui/dom@1.7.4':
+    resolution: {integrity: sha512-OOchDgh4F2CchOX94cRVqhvy7b3AFb+/rQXyswmzmGakRfkMgoWVjfnLWkRirfLEfuD4ysVW16eXzwt3jHIzKA==}
 
-  '@floating-ui/react-dom@2.1.4':
-    resolution: {integrity: sha512-JbbpPhp38UmXDDAu60RJmbeme37Jbgsm7NrHGgzYYFKmblzRUh6Pa641dII6LsjwF4XlScDrde2UAzDo/b9KPw==}
+  '@floating-ui/react-dom@2.1.6':
+    resolution: {integrity: sha512-4JX6rEatQEvlmgU80wZyq9RT96HZJa88q8hp0pBd+LrczeDI4o6uA2M+uvxngVHo4Ihr8uibXxH6+70zhAFrVw==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
-  '@floating-ui/react@0.27.13':
-    resolution: {integrity: sha512-Qmj6t9TjgWAvbygNEu1hj4dbHI9CY0ziCMIJrmYoDIn9TUAH5lRmiIeZmRd4c6QEZkzdoH7jNnoNyoY1AIESiA==}
+  '@floating-ui/react@0.27.16':
+    resolution: {integrity: sha512-9O8N4SeG2z++TSM8QA/KTeKFBVCNEz/AGS7gWPJf6KFRzmRWixFRnCnkPHRDwSVZW6QPDO6uT0P2SpWNKCc9/g==}
     peerDependencies:
       react: '>=17.0.0'
       react-dom: '>=17.0.0'
@@ -1021,14 +1027,14 @@ packages:
     hasBin: true
 
   '@qui/base@2.39.2':
-    resolution: {integrity: sha512-T61ZCjG123AoDnbQXj3dksQGAJUlS5vcf2sDQtR90ExhLSt9gPMuhMpWikrJLcg99CKdNRlbby+2w6EejsFPVA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/base/-/@qui/base-2.39.2.tgz}
+    resolution: {integrity: sha512-T61ZCjG123AoDnbQXj3dksQGAJUlS5vcf2sDQtR90ExhLSt9gPMuhMpWikrJLcg99CKdNRlbby+2w6EejsFPVA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/base/-/@qui/base-2.39.2.tgz}
 
   '@qui/esbuild@1.0.0':
-    resolution: {integrity: sha512-w868cozH/xPS9FY2f5WV9piRHJKsnDStsXWfWAcoKjSTI9dzqq/xfEdBp34OJsrd+kb/TfGuOGUPbQAmgeO/pA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/esbuild/-/@qui/esbuild-1.0.0.tgz}
+    resolution: {integrity: sha512-w868cozH/xPS9FY2f5WV9piRHJKsnDStsXWfWAcoKjSTI9dzqq/xfEdBp34OJsrd+kb/TfGuOGUPbQAmgeO/pA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/esbuild/-/@qui/esbuild-1.0.0.tgz}
     hasBin: true
 
   '@qui/eslint-config-fsd@1.0.1':
-    resolution: {integrity: sha512-prpr9uX5VG0bpHlTdhl6g5ZOSNJhdO0yJP+wAo8cfFqV+R+m6zjcmkwbvB4eZB9xO2+g6jLD2ZUPf/fvfN7OLQ==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-fsd/-/@qui/eslint-config-fsd-1.0.1.tgz}
+    resolution: {integrity: sha512-prpr9uX5VG0bpHlTdhl6g5ZOSNJhdO0yJP+wAo8cfFqV+R+m6zjcmkwbvB4eZB9xO2+g6jLD2ZUPf/fvfN7OLQ==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-fsd/-/@qui/eslint-config-fsd-1.0.1.tgz}
     peerDependencies:
       eslint: '>=9'
       eslint-plugin-boundaries: '>=5.0.1 <6'
@@ -1037,7 +1043,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-mdx@3.0.0':
-    resolution: {integrity: sha512-nr3EzHpKQOu5GCgcDx/BCYdPogKNZ7t8TKlt9Ok+n2D5MAIS0jPTGJ1oUFRSVB6l0lLWe716Lcjem+ZOnEQGog==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-mdx/-/@qui/eslint-config-mdx-3.0.0.tgz}
+    resolution: {integrity: sha512-nr3EzHpKQOu5GCgcDx/BCYdPogKNZ7t8TKlt9Ok+n2D5MAIS0jPTGJ1oUFRSVB6l0lLWe716Lcjem+ZOnEQGog==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-mdx/-/@qui/eslint-config-mdx-3.0.0.tgz}
     peerDependencies:
       eslint: '>=9'
       eslint-mdx: '>=3.4.1'
@@ -1048,7 +1054,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-react@8.0.0':
-    resolution: {integrity: sha512-mXQ+/zMcRFunByWOvOZ/DT+GuPi+PD5ivKKKf++33HJEml9Qx5FC+u6k5IJKx9ukq2xo/SorZ4JdWoY6kOLrgg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-react/-/@qui/eslint-config-react-8.0.0.tgz}
+    resolution: {integrity: sha512-mXQ+/zMcRFunByWOvOZ/DT+GuPi+PD5ivKKKf++33HJEml9Qx5FC+u6k5IJKx9ukq2xo/SorZ4JdWoY6kOLrgg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-react/-/@qui/eslint-config-react-8.0.0.tgz}
     peerDependencies:
       '@typescript-eslint/eslint-plugin': '>=8.31.1'
       '@typescript-eslint/parser': '>=8.31.1'
@@ -1060,7 +1066,7 @@ packages:
       typescript-eslint: '>=8.31.1'
 
   '@qui/eslint-config-typescript@10.1.1':
-    resolution: {integrity: sha512-GVniDoyJlWARmfal7K+MZhAXelzJve7/2MzR9TSg7f5PtjRIxZ4azBsK3PFUuiOIienIVTRbDxFMugm8dq1yBQ==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/eslint-config-typescript/-/@qui/eslint-config-typescript-10.1.1.tgz}
+    resolution: {integrity: sha512-GVniDoyJlWARmfal7K+MZhAXelzJve7/2MzR9TSg7f5PtjRIxZ4azBsK3PFUuiOIienIVTRbDxFMugm8dq1yBQ==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/eslint-config-typescript/-/@qui/eslint-config-typescript-10.1.1.tgz}
     peerDependencies:
       '@eslint/js': '>=9.25.1'
       '@typescript-eslint/eslint-plugin': '>=8.31.1'
@@ -1090,7 +1096,7 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/react-table@3.0.0':
-    resolution: {integrity: sha512-FK1fDYL8DZVFYFuYm9WRPNqLsmDo40ALrUAsCloCWWJqvMnNqB10cTtdo8K5OHSKj5dWZIMg/wV9ORTlVw0Psg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/react-table/-/@qui/react-table-3.0.0.tgz}
+    resolution: {integrity: sha512-FK1fDYL8DZVFYFuYm9WRPNqLsmDo40ALrUAsCloCWWJqvMnNqB10cTtdo8K5OHSKj5dWZIMg/wV9ORTlVw0Psg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/react-table/-/@qui/react-table-3.0.0.tgz}
     peerDependencies:
       '@qui/base': ^2.37.0
       '@qui/react-core': ^1.0.0
@@ -1103,7 +1109,7 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/react@2.6.3':
-    resolution: {integrity: sha512-KNu5Ei5nKcvILn9cPutIgMMQ8NVQU7kbOQ3ZKSwQbIlFjnHCSAIjEmo12F1Qs+BlRmMtXnzfMQXOqflWyjr0Yg==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/react/-/@qui/react-2.6.3.tgz}
+    resolution: {integrity: sha512-KNu5Ei5nKcvILn9cPutIgMMQ8NVQU7kbOQ3ZKSwQbIlFjnHCSAIjEmo12F1Qs+BlRmMtXnzfMQXOqflWyjr0Yg==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/react/-/@qui/react-2.6.3.tgz}
     peerDependencies:
       '@floating-ui/react': '>=0.26.9 <1'
       '@qui/base': ^2.39.2
@@ -1116,13 +1122,13 @@ packages:
       typescript: '>=5.0.0'
 
   '@qui/styles@2.14.0':
-    resolution: {integrity: sha512-uP9fBmaUz1E4fbtRO4+4obzjNDglXpjR8F3ky5eMgCUM3HUpB9negluzpKH279bCn9lWiIApteWhfVEwVMCHUw==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/styles/-/@qui/styles-2.14.0.tgz}
+    resolution: {integrity: sha512-uP9fBmaUz1E4fbtRO4+4obzjNDglXpjR8F3ky5eMgCUM3HUpB9negluzpKH279bCn9lWiIApteWhfVEwVMCHUw==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/styles/-/@qui/styles-2.14.0.tgz}
 
   '@qui/table-core@1.1.2':
-    resolution: {integrity: sha512-xO+dlE168n/Fn0BPXQBS/usoVGRDuNKr92c366AerDk0aswQh9o65KQlpSL1MgrIT05mPTcoKrQLIyY/zsrKWA==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/table-core/-/@qui/table-core-1.1.2.tgz}
+    resolution: {integrity: sha512-xO+dlE168n/Fn0BPXQBS/usoVGRDuNKr92c366AerDk0aswQh9o65KQlpSL1MgrIT05mPTcoKrQLIyY/zsrKWA==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/table-core/-/@qui/table-core-1.1.2.tgz}
 
   '@qui/tailwind-plugin@1.7.1':
-    resolution: {integrity: sha512-HzAFkI7Pjl+1JXJkm9H/1HZBs6MH3e4L0LEkiephABFigRRQngJOJsErSrG/e3NO5/N0b8XEYPDV0SlcNhyy6A==, tarball: https://re-artifactory.qualcomm.com/artifactory/api/npm/qui-npm/@qui/tailwind-plugin/-/@qui/tailwind-plugin-1.7.1.tgz}
+    resolution: {integrity: sha512-HzAFkI7Pjl+1JXJkm9H/1HZBs6MH3e4L0LEkiephABFigRRQngJOJsErSrG/e3NO5/N0b8XEYPDV0SlcNhyy6A==, tarball: https://re-artifactory.qualcomm.com:443/artifactory/api/npm/qui-npm/@qui/tailwind-plugin/-/@qui/tailwind-plugin-1.7.1.tgz}
     peerDependencies:
       tailwindcss: '>=3.3.2'
 
@@ -2976,6 +2982,9 @@ packages:
   html-tags@3.3.1:
     resolution: {integrity: sha512-ztqyC3kLto0e9WbNp0aeP+M3kTt+nbaIveGmUxAtZa+8iFgKLUOD4YKM5j+f3QD89bra7UeumolZHKuOXnTmeQ==}
     engines: {node: '>=8'}
+
+  html-to-image@1.11.13:
+    resolution: {integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==}
 
   http-cache-semantics@4.2.0:
     resolution: {integrity: sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ==}
@@ -6042,24 +6051,24 @@ snapshots:
       '@eslint/core': 0.15.1
       levn: 0.4.1
 
-  '@floating-ui/core@1.7.2':
+  '@floating-ui/core@1.7.3':
     dependencies:
       '@floating-ui/utils': 0.2.10
 
-  '@floating-ui/dom@1.7.2':
+  '@floating-ui/dom@1.7.4':
     dependencies:
-      '@floating-ui/core': 1.7.2
+      '@floating-ui/core': 1.7.3
       '@floating-ui/utils': 0.2.10
 
-  '@floating-ui/react-dom@2.1.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@floating-ui/react-dom@2.1.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      '@floating-ui/dom': 1.7.2
+      '@floating-ui/dom': 1.7.4
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      '@floating-ui/react-dom': 2.1.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@floating-ui/react-dom': 2.1.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@floating-ui/utils': 0.2.10
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -6469,9 +6478,9 @@ snapshots:
       typescript: 5.8.3
       typescript-eslint: 8.36.0(eslint@9.31.0(jiti@1.21.7))(typescript@5.8.3)
 
-  '@qui/react-core@1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
+  '@qui/react-core@1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
     dependencies:
-      '@floating-ui/react': 0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@floating-ui/react': 0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@qui/base': 2.39.2
       lucide-react: 0.441.0(react@19.1.0)
       react: 19.1.0
@@ -6482,10 +6491,10 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@qui/react-table@3.0.0(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@qui/table-core@1.1.2)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
+  '@qui/react-table@3.0.0(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@qui/table-core@1.1.2)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
     dependencies:
       '@qui/base': 2.39.2
-      '@qui/react-core': 1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
+      '@qui/react-core': 1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
       '@qui/styles': 2.14.0
       '@qui/table-core': 1.1.2
       lucide-react: 0.441.0(react@19.1.0)
@@ -6494,11 +6503,11 @@ snapshots:
       react-transition-group: 4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       typescript: 5.7.3
 
-  '@qui/react@2.6.3(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@types/react@19.1.8)(csstype@3.1.3)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
+  '@qui/react@2.6.3(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@qui/react-core@1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3))(@qui/styles@2.14.0)(@types/react@19.1.8)(csstype@3.1.3)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)':
     dependencies:
-      '@floating-ui/react': 0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@floating-ui/react': 0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@qui/base': 2.39.2
-      '@qui/react-core': 1.4.0(@floating-ui/react@0.27.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
+      '@qui/react-core': 1.4.0(@floating-ui/react@0.27.16(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@qui/base@2.39.2)(@types/react@19.1.8)(lucide-react@0.441.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-transition-group@4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.7.3)
       '@qui/styles': 2.14.0
       goober: 2.1.16(csstype@3.1.3)
       lucide-react: 0.441.0(react@19.1.0)
@@ -8728,6 +8737,8 @@ snapshots:
   html-escaper@2.0.2: {}
 
   html-tags@3.3.1: {}
+
+  html-to-image@1.11.13: {}
 
   http-cache-semantics@4.2.0: {}
 

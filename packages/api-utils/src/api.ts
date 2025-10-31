@@ -1,12 +1,17 @@
 // example third-party module
 import {camelCase} from "change-case"
 
+import type {ProjectFileApiRequestTypes} from "./project-file-api-types"
+
 export enum ApiRequest {
   Request1 = "request-1",
   Request2 = "request-2",
   CamelCase = "camel-case",
   SelectDirectory = "select-directory",
   LoadXmlsFromDirectory = "load-xmls-from-directory",
+  GetProjectFileModificationDate = "file-prop-get-mod-date",
+  OpenProjectFile = "open-project-file",
+  ShowProjectFileInExplorer = "show-project-file-in-explorer",
 }
 
 /**
@@ -29,6 +34,7 @@ export type ApiRequestType =
   | CamelCaseRequestType
   | SelectDirectoryRequestType
   | LoadXmlsFromDirectoryRequestType
+  | ProjectFileApiRequestTypes
 
 export type CamelCaseRequestType = {
   data: {input: string}

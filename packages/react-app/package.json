@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",
+    "@floating-ui/react": "^0.27.16",
     "@qui/base": "^2.37.0",
     "@qui/react": "^2.6.1",
     "@qui/react-table": "^3.0.0",
@@ -29,6 +30,7 @@
     "dayjs": "^1.11.9",
     "fast-xml-parser": "^5.2.5",
     "flexlayout-react": "^0.8.17",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.441.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
