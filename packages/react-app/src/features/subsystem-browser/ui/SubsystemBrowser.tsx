@@ -1,6 +1,17 @@
 import type {FC} from "react"
 
+import {useSubsystemBrowserStore} from "../model/subsystem-browser-store"
+
+import SubSystemTreeView from "./SubsystemTreeView"
+
 export const SubsystemBrowser: FC = () => {
+  // _id is intentionally unused for now to satisfy lint rule
+  const handleOnClick = (_id: number) => {
+    // TODO: Implement actual navigation logic
+  }
+
+  const subsystemData = useSubsystemBrowserStore((state) => state.data)
+
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden rounded-md border border-gray-200"
@@ -10,7 +21,8 @@ export const SubsystemBrowser: FC = () => {
         Subsystems
       </div>
       <div className="flex-1 p-3 text-sm text-gray-500">
-        Subsystem Browser Placeholder
+        <h2>Subsystem Browser</h2>
+        <SubSystemTreeView data={subsystemData} onClick={handleOnClick} />
       </div>
     </div>
   )
