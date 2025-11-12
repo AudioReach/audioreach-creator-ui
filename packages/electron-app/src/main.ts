@@ -2,12 +2,10 @@ import {
   ApiRequest,
   type ApiRequestType,
   type ApiResponse,
-  camelCaseInput,
   type ConfigResult,
 } from "@audioreach-creator-ui/api-utils"
-import {app, BrowserWindow, dialog, ipcMain} from "electron"
+import {app, BrowserWindow, ipcMain} from "electron"
 import {existsSync, readFileSync, writeFileSync} from "node:fs"
-import {readdir, readFile} from "node:fs/promises"
 import {join, resolve} from "node:path"
 import {setTimeout} from "node:timers/promises"
 
@@ -112,89 +110,6 @@ ipcMain.handle(
     let data = undefined
 
     switch (args.requestType) {
-      case ApiRequest.Request1:
-        response = `You sent: ${JSON.stringify(args.data.someObj)}`
-        break
-      case ApiRequest.Request2:
-        response = `You sent: ${JSON.stringify(args.data.someOtherObj)}`
-        break
-      case ApiRequest.CamelCase:
-        response = `Camel cased: ${camelCaseInput(args.data.input)}`
-        break
-      case ApiRequest.SelectDirectory:
-        try {
-          const result = await dialog.showOpenDialog(win, {
-            properties: ["openDirectory"],
-            title: "Select Module XMLs Directory",
-          })
-
-          if (result.canceled) {
-            response = "Directory selection cancelled"
-            data = {cancelled: true, directoryPath: null}
-          } else {
-            const directoryPath = result.filePaths[0]
-            console.log(`Directory selected: ${directoryPath}`)
-            response = `Directory selected: ${directoryPath}`
-            data = {cancelled: false, directoryPath}
-          }
-        } catch (error) {
-          console.error("Directory selection error:", error)
-          response = "Failed to open directory dialog"
-          data = {cancelled: true, directoryPath: null}
-        }
-        break
-      case ApiRequest.LoadXmlsFromDirectory:
-        try {
-          const {directoryPath} = args.data
-          console.log(`Loading XMLs from: ${directoryPath}`)
-
-          const files = await readdir(directoryPath)
-          const xmlFiles = files.filter((file) =>
-            file.toLowerCase().endsWith(".xml"),
-          )
-
-          if (xmlFiles.length === 0) {
-            response = "No XML files found in directory"
-            data = {
-              error: "No XML files found",
-              moduleCount: 0,
-              success: false,
-              xmlFiles: [],
-            }
-          } else {
-            // Read and validate XML files
-            const xmlContents: {content: string; filename: string}[] = []
-
-            for (const xmlFile of xmlFiles) {
-              try {
-                const filePath = join(directoryPath, xmlFile)
-                const content = await readFile(filePath, "utf-8")
-                xmlContents.push({content, filename: xmlFile})
-              } catch (error) {
-                console.error(`Failed to read ${xmlFile}:`, error)
-              }
-            }
-
-            console.log(`Successfully loaded ${xmlContents.length} XML files`)
-            response = `Loaded ${xmlContents.length} XML files`
-            data = {
-              moduleCount: xmlContents.length,
-              success: true,
-              xmlContents,
-              xmlFiles: xmlContents.map((x) => x.filename),
-            }
-          }
-        } catch (error) {
-          console.error("XML loading error:", error)
-          response = `Failed to load XML files: ${error instanceof Error ? error.message : "Unknown error"}`
-          data = {
-            error: error instanceof Error ? error.message : "Unknown error",
-            moduleCount: 0,
-            success: false,
-            xmlFiles: [],
-          }
-        }
-        break
       case ApiRequest.GetProjectFileModificationDate:
         const filepath = args.data.filepath
         const modifiedDate = getFileModificationDateSync(filepath)
@@ -214,7 +129,7 @@ ipcMain.handle(
         data = openFileResponse.data
         break
       case ApiRequest.ShowProjectFileInExplorer:
-        console.log(`opening file in explorer ${args.data}`)
+        console.debug(`Showing project file in explorer: ${args.data}`)
         showProjectInExplorer(args.data)
         response = ""
         break
@@ -238,7 +153,7 @@ function ensureConfigFileExists(): string {
     if (!existsSync(filePath)) {
       writeFileSync(filePath, "", "utf8")
       console.log(
-        "Configuration file does not exist. A new empty file has been created at ${filePath}",
+        `Configuration file does not exist. A new empty file has been created at ${filePath}`,
       )
     }
   } catch (error) {
@@ -289,8 +204,7 @@ ipcMain.handle(
       }
       writeFileSync(filePath, newConfigData, "utf-8")
       return {
-        message:
-          "Successfully saved the configuration file to the path: ${filePath}",
+        message: `Successfully saved the configuration file to the path: ${filePath}`,
         status: true,
       }
     } catch (error: unknown) {
@@ -302,5 +216,4 @@ ipcMain.handle(
     }
   },
 )
-
 //  #endregion Configuration file handling

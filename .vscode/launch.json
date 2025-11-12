@@ -1,0 +1,55 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Electron Main (Dev Mode)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/electron-app",
+      "runtimeExecutable": "${workspaceFolder}/packages/electron-app/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/packages/electron-app/node_modules/.bin/electron.cmd"
+      },
+      "runtimeArgs": ["--inspect=5858", "--remote-debugging-port=9222", "."],
+      "env": {
+        "DEV": "true"
+      },
+      "outputCapture": "std",
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": ["<node_internals>/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Electron Renderer (Dev Mode)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "urlFilter": "http://localhost:5173/*",
+      "webRoot": "${workspaceFolder}/packages/react-app",
+      "timeout": 60000,
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/src/*",
+        "webpack:///./*": "${webRoot}/*",
+        "webpack://*": "${webRoot}/*",
+        "/*": "${webRoot}/*"
+      }
+    },
+  ],
+  "compounds": [
+    {
+      "name": "🚀 Debug Dev Mode (Recommended)",
+      "configurations": ["Electron Main (Dev Mode)", "Electron Renderer (Dev Mode)"],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "1_dev",
+        "order": 1
+      }
+    }
+  ]
+}

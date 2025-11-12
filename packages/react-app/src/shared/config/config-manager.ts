@@ -176,7 +176,7 @@ export class ConfigFileManager {
       setConfigData(projectConfig, path, newConfigData, this.rootKey)
       return true
     } else {
-      console.log("No configuration data exists for Project Id: ${projectId}")
+      console.log(`No configuration data exists for Project Id: ${projectId}`)
       return false
     }
   }

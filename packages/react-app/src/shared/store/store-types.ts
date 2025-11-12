@@ -1,5 +1,7 @@
 import type {ReactNode} from "react"
 
+import type {UsecaseCategory} from "~shared/controls/usecase-selection-control/ui/types"
+
 export type ProjectGroupCloseCallback = (
   groupId: string,
   groupName: string,
@@ -46,6 +48,7 @@ export interface ProjectGroup {
   name: string
   onClose?: ProjectGroupCloseCallback // callback for group closing confirmation
   projectTabs: ProjectTab[]
+  usecaseData?: UsecaseCategory[] // Usecase data fetched from backend
 }
 
 // Recently opened project tracking
@@ -118,6 +121,10 @@ export interface ApplicationStore {
   setActiveProjectTab: (projectGroupId: string, tabId: string) => void
   setActiveTabInProjectGroup: (projectGroupId: string, tabId: string) => void
   switchToProjectGroup: (projectGroupId: string) => void
+  updateProjectGroupUsecaseData: (
+    projectGroupId: string,
+    usecaseData: UsecaseCategory[],
+  ) => void
 }
 
 // Configuration interface

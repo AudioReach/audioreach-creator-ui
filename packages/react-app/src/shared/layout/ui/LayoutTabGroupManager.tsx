@@ -110,6 +110,27 @@ class StoreFlexLayoutTabGroupManager extends Component<Props, State> {
 
       // Add project tabs if not collapsed
       if (!project.isCollapsed) {
+        // Add main tab first
+        const mainTabDef = {
+          className: `group-color-${colorNumber}`,
+          component: "main-tab",
+          enableClose: false,
+          enableDrag: false,
+          id: project.mainTab.id,
+          name: project.mainTab.title,
+          type: "tab",
+        }
+        children.push(mainTabDef)
+
+        // Check if main tab should be selected
+        if (
+          activeTab &&
+          activeTab.type === "main-tab" &&
+          activeTab.id === project.mainTab.id
+        ) {
+          selectedIndex = children.length - 1
+        }
+
         // Add project tabs
         project.projectTabs.forEach((projectTab, tabIndex) => {
           // Check if this is the first tab in the group

@@ -119,6 +119,16 @@ export default tseslint.config(
   {
     extends: [quiEslint.configs.sortKeys, quiEslint.configs.styleGuide],
     files: ["packages/**/*.{jsx,js,mjs,cjs}", "*.{jsx,js,mjs.cjs}"],
+    rules: {
+      "no-template-curly-in-string": "error",
+      "prefer-template": "error",
+      "quotes": [
+        "error",
+        "double",
+        {"allowTemplateLiterals": true, "avoidEscape": true},
+      ],
+      "spaced-comment": "off", // Allow comments without space after //
+    },
   },
 
   // TS & React - Combined configuration with shared member ordering rule
@@ -129,7 +139,18 @@ export default tseslint.config(
     ],
     files: ["packages/**/*.{ts,tsx}"],
     languageOptions,
-    rules: memberOrderingRule,
+    rules: {
+      ...memberOrderingRule,
+      "no-template-curly-in-string": "error",
+      "prefer-template": "error",
+      "quotes": [
+        "error",
+        "double",
+        {"allowTemplateLiterals": true, "avoidEscape": true},
+      ],
+      "react/prop-types": "off", // TypeScript provides type checking
+      "spaced-comment": "off", // Allow comments without space after //
+    },
   },
 
   // mdx

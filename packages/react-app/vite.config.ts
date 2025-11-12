@@ -27,4 +27,7 @@ export default defineConfig({
       "~widgets": resolve(__dirname, "./src/widgets"),
     },
   },
+  server: {
+    sourcemapIgnoreList: () => false,
+  },
 })

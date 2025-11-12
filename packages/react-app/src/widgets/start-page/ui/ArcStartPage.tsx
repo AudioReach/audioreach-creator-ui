@@ -12,11 +12,16 @@ import {
 import type {NotificationColor} from "@qui/base"
 import {QButton, QCombobox, QDivider, useNotification} from "@qui/react"
 
+import {
+  openProject,
+  openWorkspaceProject,
+} from "~entities/project/api/projectsApi"
 import ArcDeviceList from "~features/device-list/ui/ArcDeviceList"
 import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProjects"
 import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
 import {electronApi} from "~shared/api"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
+import {useApplicationStore} from "~shared/store"
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
@@ -58,12 +63,25 @@ export default function ArcStartPage({
     projects: recentProjects,
     removeFromRecent,
   } = useArcRecentProjects()
+  const createProjectGroup = useApplicationStore(
+    (state) => state.createProjectGroup,
+  )
   const filteredProjects = useMemo(() => {
     if (recentProjects === undefined) {
       return []
     }
 
     return recentProjects.filter((project: ArcProjectInfo) => {
+      // Check if searchTerm is valid
+      if (!searchTerm || searchTerm.trim() === "") {
+        return true
+      }
+
+      // Check if project.name exists before filtering
+      if (!project.name) {
+        return false
+      }
+
       return project.name.toLowerCase().includes(searchTerm.toLowerCase())
     })
   }, [recentProjects, searchTerm])
@@ -98,11 +116,46 @@ export default function ArcStartPage({
     return msg
   }
 
-  function handleOpenRecentWorkspaceProject(project: ArcProjectInfo) {
+  /**
+   * Common logic to handle successful project opening
+   * Called by both handleOpenWorkspaceProject and handleOpenRecentWorkspaceProject
+   */
+  const handleProjectOpenSuccess = (project: ArcProjectInfo) => {
+    // Add to recent projects
+    addToRecent(project)
+
+    // Create project group in the store
+    // This automatically sets it as active, creates tabs, and manages accordion behavior
+    createProjectGroup(
+      project.filepath,
+      project.name,
+      project.id,
+      undefined, // onClose callback (optional)
+    )
+
+    // Notify parent component to open the project
+    onOpenWorkspaceProject?.(project)
+
+    notifyMessage("Project opened successfully", "positive")
+  }
+
+  async function handleOpenRecentWorkspaceProject(project: ArcProjectInfo) {
     console.log(`Selected project: ${project.name}`)
 
-    // Open project in new tab
-    onOpenWorkspaceProject?.(project)
+    try {
+      // Call backend API to open/connect to the project
+      const result = await openProject(project.id)
+
+      if (result.success) {
+        // Use common handler
+        handleProjectOpenSuccess(project)
+      } else {
+        notifyMessage(result.message || "Failed to open project", "negative")
+      }
+    } catch (error) {
+      console.error("Error opening recent project:", error)
+      notifyMessage("Failed to open project", "negative")
+    }
   }
 
   async function handleOpenWorkspaceProject() {
@@ -111,33 +164,86 @@ export default function ArcStartPage({
       notifyMessage("Electron API not available", "negative")
       return
     }
-    // open file explorer to allow user to load new file
 
-    // call electron api to get filename and path
     try {
-      // Open a project file
+      // Open a project file using Electron API
       const response = await electronApi.send({
         data: null,
         requestType: ApiRequest.OpenProjectFile,
       })
 
-      const openDate = new Date()
-
-      // todo: Modified date should be the time the file was saved
-      const project: ArcProjectInfo = {
-        description: response.data.project.description,
-        filepath: response.data.project.filepath,
-        id: openDate.toISOString(), // todo: can be replaced with actual project ID, for now using date + time
-        lastModifiedDate: undefined,
-        name: response.data.project.name,
+      // Check if user cancelled the file selection
+      if (response.data.cancelled || !response.data.project) {
+        console.log("File selection cancelled")
+        return
       }
 
-      addToRecent(project)
+      const projectInfo = response.data.project
+      const workspaceFileData = response.data.workspaceFileData
+      const acdbFileData = response.data.acdbFileData
 
-      // Create new tab using project name
-      onOpenWorkspaceProject?.(project)
+      // Validate that we have the required binary data
+      if (!workspaceFileData) {
+        notifyMessage("Failed to read workspace file data", "negative")
+        return
+      }
+
+      if (!acdbFileData) {
+        notifyMessage(
+          "No .acdb file found in the project directory",
+          "negative",
+        )
+        return
+      }
+
+      // Convert Buffer data to File objects
+      const workspaceFileName =
+        projectInfo.filepath.split(/[\\/]/).pop() || "workspace.awsp"
+      const workspaceFile = new File(
+        [new Uint8Array(workspaceFileData)],
+        workspaceFileName,
+        {type: "application/octet-stream"},
+      )
+
+      // For acdb file, we don't have the exact filename from the response,
+      // but we know it's a .acdb file
+      const acdbFile = new File(
+        [new Uint8Array(acdbFileData)],
+        "project.acdb",
+        {type: "application/octet-stream"},
+      )
+
+      // Call the backend API to upload and open the project
+      const result = await openWorkspaceProject(
+        acdbFile,
+        workspaceFile,
+        projectInfo.name,
+        projectInfo.description,
+      )
+
+      if (result.success && result.data) {
+        const desc = result.data.description
+          ? result.data.description
+          : projectInfo.description
+        const name =
+          result.data.name !== undefined ? result.data.name : projectInfo.name
+        // Create project info for recent projects list
+        const project: ArcProjectInfo = {
+          description: desc,
+          filepath: projectInfo.filepath,
+          id: result.data.projectId,
+          lastModifiedDate: new Date(),
+          name,
+        }
+
+        // Use common handler
+        handleProjectOpenSuccess(project)
+      } else {
+        notifyMessage(result.message || "Failed to open project", "negative")
+      }
     } catch (error) {
-    } finally {
+      console.error("Error opening workspace project:", error)
+      notifyMessage("Failed to open workspace project", "negative")
     }
   }
 

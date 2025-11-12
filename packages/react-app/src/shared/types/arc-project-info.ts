@@ -1,4 +1,4 @@
-import type {SessionMode} from "~entities/project/model/types"
+import type {SessionMode} from "~entities/project/model/project.dto"
 
 // FIXME: rename to ArcRecentProjectInfo
 /** Contains project details used for display in the UI */

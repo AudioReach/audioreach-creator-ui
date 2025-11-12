@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build React App",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "@audioreach-creator-ui/react-app", "run", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
+      "label": "Build Electron App",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "@audioreach-creator-ui/electron-app", "run", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
+      "label": "Build All for Debug",
+      "dependsOn": ["Build React App", "Build Electron App"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    }
+  ]
+}

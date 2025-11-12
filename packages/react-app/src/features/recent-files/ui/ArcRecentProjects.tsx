@@ -1,3 +1,4 @@
+import {SessionMode} from "~entities/project/model/project.dto"
 import ArcProjectCard from "~shared/controls/ArcProjectCard"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
@@ -35,7 +36,9 @@ export default function ArcRecentProjects({
             // project.sessionMode = "DiffMerge"//testing diff/merge label
             const labelProp = {
               label:
-                project.sessionMode === "DiffMerge" ? "Diff/Merge" : undefined,
+                project.sessionMode === SessionMode.DIFF_MERGE
+                  ? "Diff/Merge"
+                  : undefined,
             }
             return (
               <ArcProjectCard

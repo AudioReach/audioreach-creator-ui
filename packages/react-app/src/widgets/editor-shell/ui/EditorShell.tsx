@@ -5,7 +5,8 @@ import {useApplicationStore} from "~shared/store"
 import ArcStartPage from "~widgets/start-page/ui/ArcStartPage"
 
 export const EditorShell: React.FC = () => {
-  const {addAppTab, appGroup, setActiveAppTab} = useApplicationStore()
+  const {addAppTab, appGroup, projectGroups, setActiveAppTab} =
+    useApplicationStore()
 
   const tabManagerRef = useRef<StoreFlexLayoutTabGroupManager>(null)
   const initializedRef = useRef(false)
@@ -30,16 +31,41 @@ export const EditorShell: React.FC = () => {
     }
   }, [appGroup.appTabs.length, addAppTab, setActiveAppTab])
 
-  // Register the Start tab component with the layout manager
+  // Register all tab components with the layout manager
   useEffect(() => {
     if (!tabManagerRef.current) {
       return
     }
-    const startTab = appGroup.appTabs.find((t) => t.id === "start-page")
-    if (startTab) {
-      tabManagerRef.current.setTabComponent(startTab.id, startTab.component)
-    }
+
+    // Register app tabs
+    appGroup.appTabs.forEach((tab) => {
+      tabManagerRef.current?.setTabComponent(tab.id, tab.component)
+    })
   }, [appGroup.appTabs])
+
+  // Register project group main tabs and project tabs
+  useEffect(() => {
+    if (!tabManagerRef.current) {
+      return
+    }
+
+    projectGroups.forEach((projectGroup) => {
+      // Register main tab
+      if (projectGroup.mainTab.component) {
+        tabManagerRef.current?.setTabComponent(
+          projectGroup.mainTab.id,
+          projectGroup.mainTab.component,
+        )
+      }
+
+      // Register project tabs
+      projectGroup.projectTabs.forEach((tab) => {
+        if (tab.component) {
+          tabManagerRef.current?.setTabComponent(tab.id, tab.component)
+        }
+      })
+    })
+  }, [projectGroups])
 
   return (
     <div className="flex h-screen flex-col bg-white">

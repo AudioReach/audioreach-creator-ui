@@ -111,6 +111,8 @@ tsconfig.*.tsbuildinfo
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
 
 # Allow electron installer scripts (production deployment)
 packages/electron-app/installer/**

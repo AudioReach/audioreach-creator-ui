@@ -1,4 +1,5 @@
 export * from "./electron-api"
-export * from "./backend-api"
 export * from "./utils"
-export type * from "./types"
+export * from "./http-client"
+export * from "./register-client"
+export type {ApiResult} from "./types"

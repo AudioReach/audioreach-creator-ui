@@ -11,7 +11,8 @@ const config: Configuration = {
     }
   },
   appId: "com.qualcomm.audioreach-creator-ui",
-  artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
+  // eslint-disable-next-line no-template-curly-in-string -- electron-builder template variables
+  artifactName: "${productName}-${version}-${platform}-${arch}.${ext}",
 
   compression: "store",
 
