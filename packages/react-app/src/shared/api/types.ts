@@ -27,3 +27,41 @@ export interface ApiResult<T = unknown> {
    */
   warnings?: string[]
 }
+
+/**
+ * Log levels supported by the backend logging system
+ */
+export enum LogLevel {
+  VERBOSE = "verbose",
+  DEBUG = "debug",
+  INFO = "info",
+  WARN = "warn",
+  ERROR = "error",
+  CRITICAL = "critical",
+}
+
+/**
+ * Log request DTO matching backend UserLogRequestDto
+ */
+export interface UserLogRequestDto {
+  action: string
+  clientId: string
+  component?: string
+  error?: string
+  logLevel: LogLevel
+  msg: string
+  projectId?: string
+  tag?: string
+  timestamp: Date
+}
+
+/**
+ * Optional context that can be provided when logging
+ */
+export interface LogContext {
+  action?: string
+  component?: string
+  error?: string
+  projectId?: string
+  tag?: string
+}

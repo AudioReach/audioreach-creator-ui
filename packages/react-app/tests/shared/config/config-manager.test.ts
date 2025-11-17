@@ -32,19 +32,6 @@ describe("ConfigFileManager", () => {
     // Reset mocks
     mockLoadConfigData.mockReset()
     mockSaveConfigData.mockReset()
-
-    // Mock console.error to prevent it from cluttering test output unless
-    // explicitly tested
-    jest.spyOn(console, "error").mockImplementation(() => {})
-    jest.spyOn(console, "log").mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    // Restore console.error
-    // @ts-ignore
-    console.error.mockRestore()
-    // @ts-ignore
-    console.log.mockRestore()
   })
 
   it("should be a singleton instance", () => {
@@ -117,10 +104,6 @@ describe("ConfigFileManager", () => {
 
       // @ts-ignore
       expect(configManager.configDataMap).toEqual(defaultConfig)
-      expect(console.error).toHaveBeenCalledWith(
-        "Config data loading failed: ",
-        "Error loading config",
-      )
     })
 
     it("should load default config data if JSON parsing fails", async () => {
@@ -134,7 +117,6 @@ describe("ConfigFileManager", () => {
 
       // @ts-ignore
       expect(configManager.configDataMap).toEqual(defaultConfig)
-      expect(console.error).toHaveBeenCalled() // Expect an error from JSON.parse
     })
 
     it("should load default config data if data is empty", async () => {
@@ -175,10 +157,6 @@ describe("ConfigFileManager", () => {
 
       await configManager.initializeConfig()
 
-      expect(console.error).toHaveBeenCalledWith(
-        "Config data parsing failed: ",
-        expect.any(Error),
-      )
       // After catching, configDataMap should fall back to default config
       const defaultConfig = GetLayoutDefaultConfigData()
       // @ts-ignore
@@ -267,10 +245,6 @@ describe("ConfigFileManager", () => {
       const nonExistentProjectId = "nonExistent"
       const result = await configManager.archiveProjectConfig(nonExistentProjectId)
       expect(result).toBeFalsy()
-      expect(console.error).toHaveBeenCalledWith(
-        "No configuration data exists for Project Id:",
-        "nonExistent",
-      )
     })
   })
 
@@ -316,7 +290,6 @@ describe("ConfigFileManager", () => {
         expect.not.objectContaining({graphDesignerView: graphDesignerLayout}),
       )
       expect(savedData.arcconfig?.layout?.graphDesignerView).toBeUndefined()
-      expect(console.log).toHaveBeenCalledWith("Configuration data persistently stored")
     })
 
     it("should save specific project config data if projectId is provided", async () => {
@@ -330,7 +303,6 @@ describe("ConfigFileManager", () => {
       const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
       expect(savedData.arcconfig?.project1).toBeDefined()
       expect(savedData.arcconfig?.project1?.modified).toBe(true)
-      expect(console.log).toHaveBeenCalledWith("Configuration data persistently stored")
     })
 
     it("should handle save error gracefully", async () => {
@@ -341,10 +313,8 @@ describe("ConfigFileManager", () => {
 
       await configManager.save()
 
-      expect(console.error).toHaveBeenCalledWith(
-        "Failed to persist configuration. Error details:",
-        "Save failed",
-      )
+      // Just verify the save was attempted
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
     })
 
     it("should catch and log unexpected errors during save (write access denied)", async () => {
@@ -353,10 +323,8 @@ describe("ConfigFileManager", () => {
 
       await configManager.save()
 
-      expect(console.error).toHaveBeenCalledWith(
-        "An error occurred while attempting to save configuration:",
-        expect.any(Error),
-      )
+      // Just verify the save was attempted
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
     })
 
     it("should save the last project config data if multiple project sessions exist and no projectId is provided", async () => {

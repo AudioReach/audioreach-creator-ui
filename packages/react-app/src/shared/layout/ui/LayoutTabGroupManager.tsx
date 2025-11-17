@@ -2,6 +2,7 @@ import {Component, createElement, type MouseEvent, type ReactNode} from "react"
 
 import {Layout, Model} from "flexlayout-react"
 
+import {logger} from "../../lib/logger"
 import {useApplicationStore} from "../../store/application-store"
 import type {ApplicationStore} from "../../store/store-types"
 import "flexlayout-react/style/light.css"
@@ -492,10 +493,10 @@ class StoreFlexLayoutTabGroupManager extends Component<Props, State> {
         model: newModel,
       })
     } catch (error) {
-      console.error(
-        "StoreFlexLayoutTabGroupManager: Error building model",
-        error,
-      )
+      logger.error("StoreFlexLayoutTabGroupManager: Error building model", {
+        component: "LayoutTabGroupManager",
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 

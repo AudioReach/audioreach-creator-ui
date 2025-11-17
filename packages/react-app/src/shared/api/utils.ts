@@ -29,29 +29,3 @@ export async function processApiResponse<T>(
     }
   }
 }
-
-/**
- * Handle an ApiResult by logging warnings/errors and extracting data
- * @param apiResult The ApiResult to handle
- * @param context Description of the API call for logging
- * @returns The data from the ApiResult if successful, null otherwise
- */
-export function handleApiResult<T>(
-  apiResult: ApiResult<T>,
-  context: string,
-): T | null {
-  // Log warnings if any
-  if (apiResult.warnings?.length) {
-    console.warn(`[BackendAPI] ${context} - Warnings:`, apiResult.warnings)
-  }
-
-  // Log errors if any
-  if (!apiResult.success && apiResult.errors?.length) {
-    console.error(`[BackendAPI] ${context} - Errors:`, apiResult.errors)
-  }
-
-  // Return data if successful, null otherwise
-  return apiResult.success && apiResult.data !== undefined
-    ? apiResult.data
-    : null
-}

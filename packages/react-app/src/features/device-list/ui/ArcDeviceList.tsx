@@ -14,7 +14,6 @@ export default function ArcDeviceList({
 }: ArcDeviceSectionProps) {
   // handle showing as list view or as grid view
   function handleDeviceSelected(device: ArcDeviceInfo) {
-    console.log(device)
     onOpenDevice?.(device)
   }
 

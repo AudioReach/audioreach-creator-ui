@@ -1,3 +1,5 @@
+import {logger} from "../lib/logger"
+
 import {
   getConfigData,
   GetLayoutDefaultConfigData,
@@ -34,7 +36,12 @@ export class ConfigFileManager {
   async archiveProjectConfig(projectId: string): Promise<boolean> {
     const projectConfig = this.projectConfigMap.get(projectId)
     if (projectConfig === undefined) {
-      console.error("No configuration data exists for Project Id:", projectId)
+      logger.error("No configuration data exists for project", {
+        action: "archive_project_config",
+        component: "ConfigFileManager",
+        error: "Project config not found",
+        projectId,
+      })
       return false
     }
 
@@ -69,7 +76,11 @@ export class ConfigFileManager {
         JSON.stringify(this.configDataMap),
       ) as JSONDataMap
       this.projectConfigMap.set(projectId, projectConfig)
-      console.log("Project created with ID: ", projectId)
+      logger.verbose("Project config created", {
+        action: "create_project_config",
+        component: "ConfigFileManager",
+        projectId,
+      })
     }
 
     return getConfigData(projectConfig, path, this.rootKey)
@@ -84,7 +95,11 @@ export class ConfigFileManager {
     try {
       const result = await window.configApi.loadConfigData()
       if (!result.status) {
-        console.error("Config data loading failed: ", result.message)
+        logger.error("Config data loading failed", {
+          action: "initialize_config",
+          component: "ConfigFileManager",
+          error: result.message,
+        })
         return
       }
 
@@ -97,7 +112,11 @@ export class ConfigFileManager {
         isConfigSet = true
       }
     } catch (error) {
-      console.error("Config data parsing failed: ", error)
+      logger.error("Config data parsing failed", {
+        action: "initialize_config",
+        component: "ConfigFileManager",
+        error: error instanceof Error ? error.message : String(error),
+      })
     } finally {
       if (!isConfigSet) {
         this.configDataMap = GetLayoutDefaultConfigData()
@@ -140,20 +159,28 @@ export class ConfigFileManager {
         JSON.stringify(this.configDataMap, null, space),
       )
       if (res.status) {
-        console.log("Configuration data persistently stored")
+        logger.verbose("Configuration data persistently stored", {
+          action: "save_config",
+          component: "ConfigFileManager",
+          projectId,
+        })
         return true
       } else {
-        console.error(
-          "Failed to persist configuration. Error details:",
-          res.message,
-        )
+        logger.error("Failed to persist configuration", {
+          action: "save_config",
+          component: "ConfigFileManager",
+          error: res.message,
+          projectId,
+        })
         return false
       }
     } catch (error) {
-      console.error(
-        "An error occurred while attempting to save configuration:",
-        error,
-      )
+      logger.error("Error occurred while saving configuration", {
+        action: "save_config",
+        component: "ConfigFileManager",
+        error: error instanceof Error ? error.message : String(error),
+        projectId,
+      })
       return false
     }
   }
@@ -176,7 +203,11 @@ export class ConfigFileManager {
       setConfigData(projectConfig, path, newConfigData, this.rootKey)
       return true
     } else {
-      console.log(`No configuration data exists for Project Id: ${projectId}`)
+      logger.verbose("No configuration data exists for project", {
+        action: "set_project_config",
+        component: "ConfigFileManager",
+        projectId,
+      })
       return false
     }
   }

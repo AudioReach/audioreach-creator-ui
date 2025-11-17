@@ -4,6 +4,7 @@ import {ApiRequest} from "@audioreach-creator-ui/api-utils"
 import {toPng} from "html-to-image"
 
 import {electronApi} from "~shared/api"
+import {logger} from "~shared/lib/logger"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
 const MRU_LOCAL_STORE_KEY: string = "arc.mru.config"
@@ -61,7 +62,10 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
       try {
         mru = JSON.parse(data)
       } catch (error) {
-        console.error("Error parsing MRU configuration:", error)
+        logger.error("Error parsing MRU configuration", {
+          component: "useArcRecentProjects",
+          error: error instanceof Error ? error.message : String(error),
+        })
         return []
       }
 
@@ -81,7 +85,10 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
             name: project.name,
           } as ArcProjectInfo
         } catch (error) {
-          console.error(`Error processing project ${project.name}:`, error)
+          logger.error(`Error processing project ${project.name}`, {
+            component: "useArcRecentProjects",
+            error: error instanceof Error ? error.message : String(error),
+          })
           throw error
         }
       })
@@ -105,7 +112,10 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         const loadedProjects = await getRecentConfig()
         setRecentProjects(loadedProjects)
       } catch (error) {
-        console.error("Error loading recent projects:", error)
+        logger.error("Error loading recent projects", {
+          component: "useArcRecentProjects",
+          error: error instanceof Error ? error.message : String(error),
+        })
         setRecentProjects([])
       }
     }
@@ -171,8 +181,6 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
   }
 
   async function updateImage(projectId: string, htmlElem: HTMLElement) {
-    console.log(`updating image for project:${projectId}`)
-
     // Get current MRU configuration
     const currentMru = await getRecentConfig()
 
@@ -181,7 +189,9 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
     )
 
     if (project === undefined) {
-      console.log("Unable to update image. Project not found")
+      logger.warn("Unable to update image. Project not found", {
+        component: "useArcRecentProjects",
+      })
       return
     }
 
@@ -221,7 +231,9 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
   ): Promise<Date | undefined> {
     let date: Date = new Date()
     if (!electronApi) {
-      console.error("Electron API not available")
+      logger.error("Electron API not available", {
+        component: "useArcRecentProjects",
+      })
       return undefined
     }
 
@@ -233,13 +245,19 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
       })
 
       if (response.data.date === undefined) {
-        console.log(`Message:${response.message}. File: ${filepath}`)
+        logger.info(`Message: ${response.message}. File: ${filepath}`, {
+          component: "useArcRecentProjects",
+        })
       }
 
       date = response.data.date
     } catch (error) {
-      console.error(
-        `Encountered an error while trying to get file modification date: ${error}`,
+      logger.error(
+        "Encountered an error while trying to get file modification date",
+        {
+          component: "useArcRecentProjects",
+          error: error instanceof Error ? error.message : String(error),
+        },
       )
     } finally {
     }

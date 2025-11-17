@@ -1,5 +1,7 @@
+import {logger} from "~shared/lib/logger"
 import {useBackendConnectionStore} from "~shared/store/connection-store"
 
+import {ensureRegistered} from "./register-client"
 import type {ApiResult} from "./types"
 import {processApiResponse} from "./utils"
 
@@ -169,10 +171,24 @@ export class HttpClient {
     const url = `${baseRoot}${normalizedEndpoint}`
     const retries = options.retries ?? this.maxRetries
     const timeoutMs = options.timeoutMs ?? this.timeoutMs
-    console.log(`[request] url:`, url)
-    console.log("[request] method", options.method)
+    logger.verbose(`[request] url:${url}`)
+    logger.verbose(`[request] method ${options.method}`)
     if (options.body !== undefined) {
-      console.log("[request] body", JSON.stringify(options.body))
+      logger.verbose(`[request] body ${JSON.stringify(options.body)}`)
+    }
+
+    // Ensure backend is registered before making any request
+    // Skip this check for the registration endpoint itself to avoid circular dependency
+    const isRegistrationEndpoint = normalizedEndpoint.includes("/auth/register")
+    if (!isRegistrationEndpoint) {
+      const registered = await ensureRegistered()
+      if (!registered) {
+        logger.error("[http-client] Backend unavailable or registration failed")
+        return {
+          message: "Backend unavailable or registration failed",
+          success: false,
+        }
+      }
     }
     for (let attempt = 0; attempt <= retries; attempt++) {
       const controller = new AbortController()
@@ -200,8 +216,8 @@ export class HttpClient {
 
         const result = await processApiResponse<T>(response)
 
-        console.log("[request] parsing response result", result.success)
-        console.log("[request] Server error", isServerError)
+        logger.verbose(`[request] parsing response result ${result.success}`)
+        logger.verbose(`[request] Server error ${isServerError}`)
 
         // Update connection state based on response
         if (result.success) {
@@ -230,7 +246,7 @@ export class HttpClient {
           await sleep(delay)
           continue
         }
-        console.log("[request] return result", result.data)
+        logger.verbose(`[request] return result ${result.data}`)
         return result
       } catch (error) {
         clearTimeout(timer)

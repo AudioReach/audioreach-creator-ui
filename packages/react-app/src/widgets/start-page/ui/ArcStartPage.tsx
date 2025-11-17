@@ -21,6 +21,7 @@ import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProje
 import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
 import {electronApi} from "~shared/api"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
+import {logger} from "~shared/lib/logger"
 import {useApplicationStore} from "~shared/store"
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
@@ -99,7 +100,10 @@ export default function ArcStartPage({
   const {notify} = useNotification()
 
   function handleOpenDeviceProject(device: ArcDeviceInfo) {
-    console.log(`Selected a device: ${device.name}`)
+    logger.verbose(`Selected a device: ${device.name}`, {
+      action: "open_device_project",
+      component: "ArcStartPage",
+    })
     onOpenDeviceProject?.(device)
   }
 
@@ -140,7 +144,10 @@ export default function ArcStartPage({
   }
 
   async function handleOpenRecentWorkspaceProject(project: ArcProjectInfo) {
-    console.log(`Selected project: ${project.name}`)
+    logger.verbose(`Selected project: ${project.name}`, {
+      action: "open_recent_project",
+      component: "ArcStartPage",
+    })
 
     try {
       // Call backend API to open/connect to the project
@@ -153,14 +160,21 @@ export default function ArcStartPage({
         notifyMessage(result.message || "Failed to open project", "negative")
       }
     } catch (error) {
-      console.error("Error opening recent project:", error)
+      logger.error("Error opening recent project", {
+        action: "open_recent_project",
+        component: "ArcStartPage",
+        error: error instanceof Error ? error.message : String(error),
+      })
       notifyMessage("Failed to open project", "negative")
     }
   }
 
   async function handleOpenWorkspaceProject() {
     if (!electronApi) {
-      console.error("Electron API not available")
+      logger.error("Electron API not available", {
+        action: "open_workspace_project",
+        component: "ArcStartPage",
+      })
       notifyMessage("Electron API not available", "negative")
       return
     }
@@ -174,7 +188,10 @@ export default function ArcStartPage({
 
       // Check if user cancelled the file selection
       if (response.data.cancelled || !response.data.project) {
-        console.log("File selection cancelled")
+        logger.verbose("File selection cancelled", {
+          action: "open_workspace_project",
+          component: "ArcStartPage",
+        })
         return
       }
 
@@ -242,7 +259,11 @@ export default function ArcStartPage({
         notifyMessage(result.message || "Failed to open project", "negative")
       }
     } catch (error) {
-      console.error("Error opening workspace project:", error)
+      logger.error("Error opening workspace project", {
+        action: "open_workspace_project",
+        component: "ArcStartPage",
+        error: error instanceof Error ? error.message : String(error),
+      })
       notifyMessage("Failed to open workspace project", "negative")
     }
   }
@@ -263,7 +284,10 @@ export default function ArcStartPage({
 
   async function handleShowInExplorer(projectId: string) {
     if (!electronApi) {
-      console.error("Electron API not available")
+      logger.error("Electron API not available", {
+        action: "show_in_explorer",
+        component: "ArcStartPage",
+      })
       notifyMessage("Electron API not available", "negative")
       return
     }
@@ -277,13 +301,20 @@ export default function ArcStartPage({
         requestType: ApiRequest.ShowProjectFileInExplorer,
       })
     } catch (error) {
-      console.log(`An error occurred while trying to open the file explorer.`)
+      logger.error("Error occurred while trying to open the file explorer", {
+        action: "show_in_explorer",
+        component: "ArcStartPage",
+        error: error instanceof Error ? error.message : String(error),
+      })
       notifyMessage("Failed to open file in explorer", "negative")
     }
   }
 
   function handleOnFilterOptionChanged(value: string | undefined) {
-    console.log(value)
+    logger.verbose(`Filter option changed: ${value}`, {
+      action: "filter_option_changed",
+      component: "ArcStartPage",
+    })
     // filteredProjects = []
     // filteredDevices = []
   }

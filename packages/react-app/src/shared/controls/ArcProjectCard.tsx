@@ -16,6 +16,7 @@ import {
 } from "@qui/react"
 
 import qcLogoImg from "~assets/graph-view-screenshot.png" // todo: REMOVE THIS AND REPLACE WITH imgSource from ArcProjectCardProps when we support getting the image of the graph view
+import {logger} from "~shared/lib/logger"
 
 export interface ArcProjectCardProps {
   /** A short description */
@@ -95,7 +96,7 @@ export default function ArcProjectCard({
 
   function handleDoubleClick() {
     if (onDoubleClick === undefined) {
-      console.log("onDoubleClick needs to be provided to ArcCard")
+      logger.verbose("onDoubleClick needs to be provided to ArcCard")
     }
 
     onDoubleClick?.()

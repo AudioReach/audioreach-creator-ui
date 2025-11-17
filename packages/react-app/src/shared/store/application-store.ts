@@ -6,6 +6,7 @@ import {getAllUsecases} from "~entities/usecases/api/usecasesApi"
 import {mapUsecaseDtoToCategories} from "~entities/usecases/model/usecase.mapper"
 import type {UsecaseCategory} from "~shared/controls/usecase-selection-control/ui/types"
 import UsecaseSelectionControl from "~shared/controls/usecase-selection-control/ui/UsecaseSelectionControl"
+import {logger} from "~shared/lib/logger"
 
 import type {
   ActiveTab,
@@ -107,11 +108,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     projectId?: string,
     onClose?: ProjectGroupCloseCallback,
   ): string => {
-    console.log("[createProjectGroup] Called with:", {
-      filePath,
-      name,
-      projectId,
-    })
     const state = get()
 
     // Check if we can create a new Project Group
@@ -124,7 +120,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     // Check if project group already exists
     const existingProjectGroup = state.isProjectGroupAlreadyOpen(filePath)
     if (existingProjectGroup) {
-      console.log("[createProjectGroup] Project already open, switching to it")
       // Switch to existing project group instead of creating new one
       state.switchToProjectGroup(existingProjectGroup.id)
       return existingProjectGroup.id
@@ -134,12 +129,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     const projectGroupName =
       name || APP_CONFIG.DEFAULT_PROJECT_NAME_PATTERN(filePath)
     const defaultMainTab = createDefaultMainTab(projectGroupName)
-
-    console.log("[createProjectGroup] Created main tab:", {
-      hasComponent: !!defaultMainTab.component,
-      id: defaultMainTab.id,
-      title: defaultMainTab.title,
-    })
 
     // Determine if this is the first project group
     const isFirstGroup = state.projectGroups.length === 0
@@ -201,17 +190,10 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
 
     // Fetch usecase data asynchronously after project group creation
     // This is done in the background to avoid blocking the UI
-    console.log("[createProjectGroup] Checking projectId:", projectId)
     if (projectId) {
-      console.log(
-        "[createProjectGroup] Starting usecase fetch for projectId:",
-        projectId,
-      )
       getAllUsecases(projectId)
         .then((result) => {
-          console.log("[createProjectGroup] getAllUsecases result:", result)
           if (result.success && result.data) {
-            console.log("[createProjectGroup] fetch usecases is successful")
             const usecaseCategories = mapUsecaseDtoToCategories(result.data)
             const currentState = get()
             currentState.updateProjectGroupUsecaseData(
@@ -219,19 +201,27 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
               usecaseCategories,
             )
           } else {
-            console.warn(
-              "[createProjectGroup] Failed to fetch usecases:",
-              result.message,
-            )
+            logger.error("Failed to fetch usecases", {
+              action: "fetch_usecases",
+              component: "ApplicationStore",
+              error: result.message,
+              projectId,
+            })
           }
         })
         .catch((error) => {
-          console.error("[createProjectGroup] Error fetching usecases:", error)
+          logger.error("Error fetching usecases", {
+            action: "fetch_usecases",
+            component: "ApplicationStore",
+            error: error instanceof Error ? error.message : String(error),
+            projectId,
+          })
         })
     } else {
-      console.warn(
-        "[createProjectGroup] No projectId provided, skipping usecase fetch",
-      )
+      logger.warn("No projectId provided, skipping usecase fetch", {
+        action: "create_project_group",
+        component: "ApplicationStore",
+      })
     }
 
     return projectGroupId
@@ -516,7 +506,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     const appTab = state.appGroup.appTabs.find((tab) => tab.id === appTabId)
 
     if (!appTab) {
-      console.warn(`App tab with id ${appTabId} not found`)
       return
     }
 
@@ -533,7 +522,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     const projectGroup = state.getProjectGroupById(projectGroupId)
 
     if (!projectGroup) {
-      console.warn(`Project group with id ${projectGroupId} not found`)
       return
     }
 
@@ -544,9 +532,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     } else {
       const projectTab = projectGroup.projectTabs.find((t) => t.id === tabId)
       if (!projectTab) {
-        console.warn(
-          `Tab with id ${tabId} not found in project group ${projectGroupId}`,
-        )
         return
       }
       tabType = "project-tab"
@@ -580,7 +565,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     const targetProjectGroup = state.getProjectGroupById(projectGroupId)
 
     if (!targetProjectGroup) {
-      console.warn(`Project group with id ${projectGroupId} not found`)
       return
     }
 
@@ -611,11 +595,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     projectGroupId: string,
     usecaseData: UsecaseCategory[],
   ): void => {
-    console.log(
-      `[updateProjectGroupUsecaseData] Updating project group ${projectGroupId} with ${usecaseData.length} categories`,
-    )
-    console.log("[updateProjectGroupUsecaseData] Usecase data:", usecaseData)
-
     set((state) => {
       let newActiveTab = state.activeTab
 
@@ -624,21 +603,10 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
           return projectGroup
         }
 
-        console.log(
-          `[updateProjectGroupUsecaseData] Found project group, creating new main tab`,
-        )
-        console.log(
-          `[updateProjectGroupUsecaseData] Old main tab id: ${projectGroup.mainTab.id}`,
-        )
-
         // Create a new main tab with the updated usecase data
         const updatedMainTab = createDefaultMainTab(
           projectGroup.mainTab.title,
           usecaseData,
-        )
-
-        console.log(
-          `[updateProjectGroupUsecaseData] New main tab created with id: ${updatedMainTab.id}`,
         )
 
         // If the old main tab was active, update the active tab to point to the new main tab
@@ -647,9 +615,6 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
           state.activeTab.id === projectGroup.mainTab.id &&
           state.activeTab.projectGroupId === projectGroupId
         ) {
-          console.log(
-            `[updateProjectGroupUsecaseData] Updating active tab to new main tab id`,
-          )
           newActiveTab = {
             id: updatedMainTab.id,
             projectGroupId,
@@ -671,18 +636,11 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
         }
       })
 
-      console.log(
-        `[updateProjectGroupUsecaseData] State updated, returning new state`,
-      )
       return {
         activeTab: newActiveTab,
         projectGroups: updatedGroups,
       }
     })
-
-    console.log(
-      `[updateProjectGroupUsecaseData] Update complete for project group ${projectGroupId}`,
-    )
   },
 }))
 

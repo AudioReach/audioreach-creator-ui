@@ -659,7 +659,7 @@ describe("ARCKeyVectorSelector", () => {
 
     it("should handle rapid selection changes", async () => {
       const onSelectionChange = jest.fn()
-      const _user = userEvent.setup()
+      const user = userEvent.setup()
       render(
         <ARCKeyVectorSelector
           {...defaultProps}
@@ -669,20 +669,33 @@ describe("ARCKeyVectorSelector", () => {
       )
 
       const input = screen.getByTestId("combobox-input")
-      await _user.click(input)
-
+      
+      // First selection
+      await user.click(input)
       const option1 = screen.getByTestId("option-Option A")
-      await _user.click(option1)
-
-      // Wait for the dropdown to close and reopen
-      await _user.click(input)
-
-      const option2 = screen.getByTestId("option-Option B")
-      await _user.click(option2)
+      await user.click(option1)
 
       expect(onSelectionChange).toHaveBeenCalledWith("Option A", "testKey")
+      
+      // Second selection - reopen dropdown and select different option
+      await user.click(input)
+      const option2 = screen.getByTestId("option-Option B")
+      await user.click(option2)
+
       expect(onSelectionChange).toHaveBeenCalledWith("Option B", "testKey")
-      expect(onSelectionChange).toHaveBeenCalledTimes(2)
+      
+      // Third selection - reopen dropdown and select another option
+      await user.click(input)
+      const option3 = screen.getByTestId("option-Option C")
+      await user.click(option3)
+
+      expect(onSelectionChange).toHaveBeenCalledWith("Option C", "testKey")
+      
+      // Verify all selections were handled correctly
+      expect(onSelectionChange).toHaveBeenCalledTimes(3)
+      
+      // Verify component is still functional after multiple selections
+      expect(screen.getByTestId("arc-combobox")).toBeInTheDocument()
     })
 
     it("should handle special characters in values", async () => {
