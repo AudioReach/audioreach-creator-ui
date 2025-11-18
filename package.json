@@ -52,6 +52,7 @@
   },
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "@xyflow/react": "^12.8.2"
+    "@xyflow/react": "^12.8.2",
+    "elkjs": "^0.11.0"
   }
 }
