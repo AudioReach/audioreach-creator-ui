@@ -89,7 +89,7 @@ export interface ApplicationStore {
     name?: string,
     projectId?: string,
     onClose?: ProjectGroupCloseCallback,
-  ) => string
+  ) => Promise<string>
   expandProjectGroupAccordion: (projectGroupId: string) => void
 
   // Navigation

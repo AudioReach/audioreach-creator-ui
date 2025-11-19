@@ -1,7 +1,6 @@
 import {logger} from "~shared/lib/logger"
 import {useBackendConnectionStore} from "~shared/store/connection-store"
 
-import {ensureRegistered} from "./register-client"
 import type {ApiResult} from "./types"
 import {processApiResponse} from "./utils"
 
@@ -12,8 +11,8 @@ import {processApiResponse} from "./utils"
 export function getBackendBaseUrl(): string {
   // import.meta.env is provided by Vite at build time
   //const envUrl = import.meta.env?.VITE_API_BASE_URL as string | undefined
-  //return envUrl?.trim() ? envUrl : "http://localhost:3500/arc-api/v1"
-  return "http://localhost:3500/arc-api/v1"
+  //return envUrl?.trim() ? envUrl : "http://localhost:3000/arc-api/v1"
+  return "http://localhost:3000/arc-api/v1"
 }
 
 export interface HttpClientConfig {
@@ -179,17 +178,17 @@ export class HttpClient {
 
     // Ensure backend is registered before making any request
     // Skip this check for the registration endpoint itself to avoid circular dependency
-    const isRegistrationEndpoint = normalizedEndpoint.includes("/auth/register")
-    if (!isRegistrationEndpoint) {
-      const registered = await ensureRegistered()
-      if (!registered) {
-        logger.error("[http-client] Backend unavailable or registration failed")
-        return {
-          message: "Backend unavailable or registration failed",
-          success: false,
-        }
-      }
-    }
+    // const isRegistrationEndpoint = normalizedEndpoint.includes("/auth/register")
+    // if (!isRegistrationEndpoint) {
+    //   const registered = await ensureRegistered()
+    //   if (!registered) {
+    //     logger.error("[http-client] Backend unavailable or registration failed")
+    //     return {
+    //       message: "Backend unavailable or registration failed",
+    //       success: false,
+    //     }
+    //   }
+    // }
     for (let attempt = 0; attempt <= retries; attempt++) {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), timeoutMs)

@@ -102,12 +102,12 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
   },
 
   // Project Group management and Accept Callback Parameter
-  createProjectGroup: (
+  createProjectGroup: async (
     filePath: string,
     name?: string,
     projectId?: string,
     onClose?: ProjectGroupCloseCallback,
-  ): string => {
+  ): Promise<string> => {
     const state = get()
 
     // Check if we can create a new Project Group
@@ -188,35 +188,34 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
       }, 0)
     }
 
-    // Fetch usecase data asynchronously after project group creation
-    // This is done in the background to avoid blocking the UI
+    // Fetch usecase data and wait for the result
     if (projectId) {
-      getAllUsecases(projectId)
-        .then((result) => {
-          if (result.success && result.data) {
-            const usecaseCategories = mapUsecaseDtoToCategories(result.data)
-            const currentState = get()
-            currentState.updateProjectGroupUsecaseData(
-              projectGroupId,
-              usecaseCategories,
-            )
-          } else {
-            logger.error("Failed to fetch usecases", {
-              action: "fetch_usecases",
-              component: "ApplicationStore",
-              error: result.message,
-              projectId,
-            })
-          }
-        })
-        .catch((error) => {
-          logger.error("Error fetching usecases", {
+      try {
+        const result = await getAllUsecases(projectId)
+        if (result.success && result.data) {
+          logger.info("get all usecases call is successful")
+          const usecaseCategories = mapUsecaseDtoToCategories(result.data)
+          const currentState = get()
+          currentState.updateProjectGroupUsecaseData(
+            projectGroupId,
+            usecaseCategories,
+          )
+        } else {
+          logger.error("Failed to fetch usecases", {
             action: "fetch_usecases",
             component: "ApplicationStore",
-            error: error instanceof Error ? error.message : String(error),
+            error: result.message,
             projectId,
           })
+        }
+      } catch (error) {
+        logger.error("Error fetching usecases", {
+          action: "fetch_usecases",
+          component: "ApplicationStore",
+          error: error instanceof Error ? error.message : String(error),
+          projectId,
         })
+      }
     } else {
       logger.warn("No projectId provided, skipping usecase fetch", {
         action: "create_project_group",

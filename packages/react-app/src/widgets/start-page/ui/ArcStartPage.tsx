@@ -124,13 +124,13 @@ export default function ArcStartPage({
    * Common logic to handle successful project opening
    * Called by both handleOpenWorkspaceProject and handleOpenRecentWorkspaceProject
    */
-  const handleProjectOpenSuccess = (project: ArcProjectInfo) => {
+  const handleProjectOpenSuccess = async (project: ArcProjectInfo) => {
     // Add to recent projects
     addToRecent(project)
-
-    // Create project group in the store
+    logger.info("open project successful")
+    // Create project group in the store and wait for usecases to load
     // This automatically sets it as active, creates tabs, and manages accordion behavior
-    createProjectGroup(
+    await createProjectGroup(
       project.filepath,
       project.name,
       project.id,

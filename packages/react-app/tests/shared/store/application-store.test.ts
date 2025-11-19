@@ -123,10 +123,10 @@ describe("ApplicationStore", () => {
   })
 
   describe("Project Group Management", () => {
-    it("should create a new project group", () => {
+    it("should create a new project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -142,57 +142,57 @@ describe("ApplicationStore", () => {
       expect(state.activeProjectGroupId).toBe(projectGroupId)
     })
 
-    it("should create project group with default name when name not provided", () => {
+    it("should create project group with default name when name not provided", async () => {
       const store = useApplicationStore.getState()
-      store.createProjectGroup("/path/to/test.xml")
+      await store.createProjectGroup("/path/to/test.xml")
       const state = useApplicationStore.getState()
       expect(state.projectGroups[0].name).toBe("test")
     })
 
-    it("should handle different file extensions in default naming", () => {
+    it("should handle different file extensions in default naming", async () => {
       const store = useApplicationStore.getState()
 
-      store.createProjectGroup("/path/to/test.json")
-      store.createProjectGroup("/path/to/another.acdb")
+      await store.createProjectGroup("/path/to/test.json")
+      await store.createProjectGroup("/path/to/another.acdb")
 
       const state = useApplicationStore.getState()
       expect(state.projectGroups[0].name).toBe("test")
       expect(state.projectGroups[1].name).toBe("another")
     })
 
-    it("should handle file paths with backslashes", () => {
+    it("should handle file paths with backslashes", async () => {
       const store = useApplicationStore.getState()
 
-      store.createProjectGroup("C:\\path\\to\\test.xml")
+      await store.createProjectGroup("C:\\path\\to\\test.xml")
 
       const state = useApplicationStore.getState()
       expect(state.projectGroups[0].name).toBe("test")
     })
 
-    it("should not create project group if max project groups reached", () => {
+    it("should not create project group if max project groups reached", async () => {
       const store = useApplicationStore.getState()
 
       // Create max number of project groups
       for (let i = 0; i < APP_CONFIG.MAX_PROJECT_GROUPS; i++) {
-        store.createProjectGroup(`/path/to/test${i}.xml`, `Project ${i}`)
+        await store.createProjectGroup(`/path/to/test${i}.xml`, `Project ${i}`)
       }
 
       // Try to create one more
-      expect(() => {
-        store.createProjectGroup("/path/to/overflow.xml", "Overflow Project")
-      }).toThrow(
+      await expect(async () => {
+        await store.createProjectGroup("/path/to/overflow.xml", "Overflow Project")
+      }).rejects.toThrow(
         `Maximum number of project groups (${APP_CONFIG.MAX_PROJECT_GROUPS}) reached`,
       )
     })
 
-    it("should return existing project group if already open", () => {
+    it("should return existing project group if already open", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId1 = store.createProjectGroup(
+      const projectGroupId1 = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
-      const projectGroupId2 = store.createProjectGroup(
+      const projectGroupId2 = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -204,25 +204,25 @@ describe("ApplicationStore", () => {
       expect(state.activeProjectGroupId).toBe(projectGroupId1)
     })
 
-    it("should check if project group can be created", () => {
+    it("should check if project group can be created", async () => {
       const store = useApplicationStore.getState()
 
       expect(store.canCreateNewProjectGroup()).toBe(true)
 
       // Create max number of project groups
       for (let i = 0; i < APP_CONFIG.MAX_PROJECT_GROUPS; i++) {
-        store.createProjectGroup(`/path/to/test${i}.xml`, `Project ${i}`)
+        await store.createProjectGroup(`/path/to/test${i}.xml`, `Project ${i}`)
       }
 
       expect(store.canCreateNewProjectGroup()).toBe(false)
     })
 
-    it("should check if project group is already open", () => {
+    it("should check if project group is already open", async () => {
       const store = useApplicationStore.getState()
 
       expect(store.isProjectGroupAlreadyOpen("/path/to/test.xml")).toBeNull()
 
-      store.createProjectGroup("/path/to/test.xml", "Test Project")
+      await store.createProjectGroup("/path/to/test.xml", "Test Project")
 
       const existingProjectGroup =
         store.isProjectGroupAlreadyOpen("/path/to/test.xml")
@@ -230,10 +230,10 @@ describe("ApplicationStore", () => {
       expect(existingProjectGroup?.filePath).toBe("/path/to/test.xml")
     })
 
-    it("should get project group by id", () => {
+    it("should get project group by id", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -246,12 +246,12 @@ describe("ApplicationStore", () => {
       expect(nonExistentProjectGroup).toBeNull()
     })
 
-    it("should get active project group", () => {
+    it("should get active project group", async () => {
       const store = useApplicationStore.getState()
 
       expect(store.getActiveProjectGroup()).toBeNull()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -261,14 +261,14 @@ describe("ApplicationStore", () => {
       expect(activeProjectGroup?.id).toBe(projectGroupId)
     })
 
-    it("should remove project group", () => {
+    it("should remove project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId1 = store.createProjectGroup(
+      const projectGroupId1 = await store.createProjectGroup(
         "/path/to/test1.xml",
         "Project 1",
       )
-      const projectGroupId2 = store.createProjectGroup(
+      const projectGroupId2 = await store.createProjectGroup(
         "/path/to/test2.xml",
         "Project 2",
       )
@@ -281,10 +281,10 @@ describe("ApplicationStore", () => {
       expect(state.activeProjectGroupId).toBe(projectGroupId2)
     })
 
-    it("should handle removing active project group", () => {
+    it("should handle removing active project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -296,10 +296,10 @@ describe("ApplicationStore", () => {
       expect(state.activeProjectGroupId).toBeNull()
     })
 
-    it("should rename project group", () => {
+    it("should rename project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Original Name",
       )
@@ -322,10 +322,10 @@ describe("ApplicationStore", () => {
   })
 
   describe("Tab Management", () => {
-    it("should add tab to project group", () => {
+    it("should add tab to project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -346,10 +346,10 @@ describe("ApplicationStore", () => {
       expect(projectGroup?.activeTabId).toBe(newTab.id)
     })
 
-    it("should remove tab from project group", () => {
+    it("should remove tab from project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -371,10 +371,10 @@ describe("ApplicationStore", () => {
       expect(projectGroup?.activeTabId).toBe(projectGroup?.mainTab.id)
     })
 
-    it("should update active tab when removing active project tab", () => {
+    it("should update active tab when removing active project tab", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -408,10 +408,10 @@ describe("ApplicationStore", () => {
       expect(updatedProjectGroup?.activeTabId).toBe(newTab1.id)
     })
 
-    it("should set active tab in project group", () => {
+    it("should set active tab in project group", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -435,10 +435,10 @@ describe("ApplicationStore", () => {
       expect(projectGroup?.activeTabId).toBe(mainTabId)
     })
 
-    it("should set active project tab (main tab)", () => {
+    it("should set active project tab (main tab)", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -453,10 +453,10 @@ describe("ApplicationStore", () => {
       expect(updatedState.activeTab?.projectGroupId).toBe(projectGroupId)
     })
 
-    it("should set active project tab (project tab)", () => {
+    it("should set active project tab (project tab)", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -485,10 +485,10 @@ describe("ApplicationStore", () => {
       expect(state.activeTab).toBeNull()
     })
 
-    it("should warn when setting non-existent tab as active", () => {
+    it("should warn when setting non-existent tab as active", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -502,12 +502,12 @@ describe("ApplicationStore", () => {
       expect(state.activeTab).toEqual(currentActiveTab)
     })
 
-    it("should get active tab", () => {
+    it("should get active tab", async () => {
       const store = useApplicationStore.getState()
 
       expect(store.getActiveTab()).toBeNull()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -518,20 +518,20 @@ describe("ApplicationStore", () => {
       expect(activeTab?.projectGroupId).toBe(projectGroupId)
     })
 
-    it("should get active tab content for main tab", () => {
+    it("should get active tab content for main tab", async () => {
       const store = useApplicationStore.getState()
 
-      store.createProjectGroup("/path/to/test.xml", "Test Project")
+      await store.createProjectGroup("/path/to/test.xml", "Test Project")
 
       const activeTabContent = store.getActiveTabContent()
       expect(activeTabContent).not.toBeNull()
       expect((activeTabContent as any)?.title).toBe("Test Project")
     })
 
-    it("should get active tab content for project tab", () => {
+    it("should get active tab content for project tab", async () => {
       const store = useApplicationStore.getState()
 
-      const projectGroupId = store.createProjectGroup(
+      const projectGroupId = await store.createProjectGroup(
         "/path/to/test.xml",
         "Test Project",
       )
@@ -604,7 +604,7 @@ describe("ApplicationStore", () => {
   })
 
   describe("Visible Tabs", () => {
-    it("should return app tabs and expanded project group tabs", () => {
+    it("should return app tabs and expanded project group tabs", async () => {
       const store = useApplicationStore.getState()
 
       // Manually add an app tab for testing
@@ -625,7 +625,7 @@ describe("ApplicationStore", () => {
         },
       })
 
-      store.createProjectGroup("/path/to/test.xml", "Test Project")
+      await store.createProjectGroup("/path/to/test.xml", "Test Project")
 
       const visibleTabs = store.getVisibleTabs()
 

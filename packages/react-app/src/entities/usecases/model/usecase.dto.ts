@@ -1,24 +1,23 @@
 export interface UsecaseResponseDto {
-  filteredKV?: FilteredKV
-  isFiltered: boolean
-  usecases: UsecaseIdentifier[]
+  _usecases: UsecaseIdentifier[]
 }
 
 export interface UsecaseIdentifier {
-  keyValueCollection: KeyValueInfo[]
-  relatedEndPointLinks?: RelatedEndPointLink[]
-  systemId: string
-  usecaseAliasId?: number
-  usecaseAliasName?: string
-  usecaseCategory?: string
-  usecaseType: "SubsystemFiltered" | "Ec" | "Regular" | "Manual"
+  _keyValueCollection: KeyValueInfo[]
+  _relatedEndPointLinks?: RelatedEndPointLink[]
+  _systemId: string
+  _usecaseAliasId?: number
+  _usecaseAliasName?: string
+  _usecaseCategory?: string
+  _usecaseType: "Ec" | "Regular" | "Manual"
+  filteredKV?: FilteredKV
 }
 
 export interface KeyValueInfo {
-  keyId: number
-  keyLabel: string
-  valueId: number
-  valueLabel: string
+  _keyId: number
+  _keyLabel: string
+  _valueId: number
+  _valueLabel: string
 }
 
 export interface FilteredKV {
@@ -27,7 +26,7 @@ export interface FilteredKV {
 }
 
 export interface RelatedEndPointLink {
-  description: string
-  hypertextRef: string
-  method: string
+  _description: string
+  _hypertextRef: string
+  _method: string
 }

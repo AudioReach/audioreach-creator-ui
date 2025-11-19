@@ -143,13 +143,13 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                             <span className="ml-2">{formattedUsecase}</span>
                           </label>
                           <div className="ml-6 mt-1 space-y-0.5 text-xs text-gray-500">
-                            {usecase.keyValueCollection.map(
+                            {usecase._keyValueCollection.map(
                               (kv: KeyValue, kvIndex: number) => (
                                 <div key={kvIndex}>
                                   <span className="font-medium text-gray-600">
-                                    {kv.keyLabel}:
+                                    {kv._keyLabel}:
                                   </span>{" "}
-                                  {kv.valueLabel}
+                                  {kv._valueLabel}
                                 </div>
                               ),
                             )}

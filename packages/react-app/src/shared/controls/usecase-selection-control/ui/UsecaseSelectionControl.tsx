@@ -7,8 +7,8 @@ import UsecaseListPanel from "./UsecaseListPanel"
 
 // Utility to format a Usecase's keyValueCollection into a display string
 const formatUsecaseDisplay = (usecase: Usecase): string => {
-  return usecase.keyValueCollection
-    .map((kv: KeyValue) => kv.valueLabel)
+  return usecase._keyValueCollection
+    .map((kv: KeyValue) => kv._valueLabel)
     .join(" • ")
 }
 

@@ -20,7 +20,7 @@ export const useUsecaseStore = create<ApplicationStore>((set, get) => ({
   getUsecases: (projectGroupId: string): Usecase[] => {
     const state = get()
     const usecaseList = state.usecaseLists[projectGroupId]
-    return usecaseList?.usecases || []
+    return usecaseList?._usecases || []
   },
 
   setUsecaseList: (projectGroupId: string, usecaseList: UsecaseList): void => {
