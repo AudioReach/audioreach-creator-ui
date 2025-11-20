@@ -3,7 +3,7 @@ import type {
   ControlLinkDto,
   DataLinkDto,
   UsecaseComponentsDto,
-} from "~features/usecase-visualizer/model/api-types"
+} from "~entities/usecases/model/usecase.component.dto"
 import {
   EDGE_KIND,
   type GraphSpec,
@@ -23,28 +23,73 @@ const edgeId = (kind: string, src: string, dst: string, idx = 0) =>
   `e-${kind}-${src}-${dst}-${idx}`
 
 export function buildGraphViewFromUsecase(
-  dto: UsecaseComponentsDto,
+  dtoArray: UsecaseComponentsDto[],
   _spec: GraphSpec,
 ): GraphView {
   const nodes: RFNode[] = []
   const edges: RFEdge[] = []
 
   // Validate input data
-  if (!dto || typeof dto !== "object") {
-    logger.error("[Adapter] Invalid DTO provided")
+  if (!Array.isArray(dtoArray) || dtoArray.length === 0) {
+    logger.error("[Adapter] Invalid DTO array provided")
     return {edges, nodes}
   }
 
-  const modules = Array.isArray(dto.moduleInstances) ? dto.moduleInstances : []
-  const subsystems = Array.isArray(dto.subsystems) ? dto.subsystems : []
+  // Merge data from all DTOs
+  const modules = dtoArray.flatMap((dto) =>
+    Array.isArray(dto.moduleInstances) ? dto.moduleInstances : [],
+  )
+  const subsystems = dtoArray.flatMap((dto) =>
+    Array.isArray(dto.subsystems) ? dto.subsystems : [],
+  )
 
   if (modules.length === 0) {
     logger.warn("[Adapter] No modules found in use case")
   }
 
   // Build sets for endpoint type deduction
-  const moduleIdSet = new Set(modules.map((m) => m.id))
   const subsystemIdSet = new Set(subsystems.map((s) => s.id))
+
+  // Build lookup map from systemId to ReactFlow node ID
+  const systemIdToNodeId = new Map<string, string>()
+  for (const m of modules) {
+    systemIdToNodeId.set(m._systemId, nodeId("module", m._id))
+  }
+  for (const ss of subsystems) {
+    systemIdToNodeId.set(ss.systemId, nodeId("subsystem", ss.id))
+  }
+
+  // Build lookup maps for port systemIds (strings) to numeric port IDs
+  const dataPortSystemIdToPortId = new Map<string, number>()
+  const controlPortSystemIdToPortId = new Map<string, number>()
+
+  for (const m of modules) {
+    if (Array.isArray(m._dataPorts)) {
+      for (const port of m._dataPorts) {
+        // Store mapping: port systemId (string) -> port numeric ID
+        dataPortSystemIdToPortId.set(String(port._systemId), port._id)
+      }
+    }
+    if (Array.isArray(m._controlPorts)) {
+      for (const port of m._controlPorts) {
+        // Store mapping: port systemId (string) -> port numeric ID
+        controlPortSystemIdToPortId.set(String(port.systemId), port.id)
+      }
+    }
+  }
+
+  for (const ss of subsystems) {
+    if (Array.isArray(ss.dataPorts)) {
+      for (const port of ss.dataPorts) {
+        dataPortSystemIdToPortId.set(String(port._systemId), port._id)
+      }
+    }
+    if (Array.isArray(ss.controlPorts)) {
+      for (const port of ss.controlPorts) {
+        controlPortSystemIdToPortId.set(String(port.systemId), port.id)
+      }
+    }
+  }
 
   // Infer subgraphs from modules
   const subgraphIds = Array.from(
@@ -137,74 +182,142 @@ export function buildGraphViewFromUsecase(
       data: {
         alias: m.alias,
         containerId: m.containerId,
-        controlPorts: Array.isArray(m.controlPorts)
-          ? m.controlPorts.map((p) => ({
+        controlPorts: Array.isArray(m._controlPorts)
+          ? m._controlPorts.map((p) => ({
               id: p.id,
               intents: p.intents,
               name: p.controlPortName,
               portType: p.portType,
             }))
           : [],
-        dataPorts: Array.isArray(m.dataPorts)
-          ? m.dataPorts.map((p) => ({
-              id: p.id,
-              name: p.dataPortName,
-              portIoType: p.portIoType,
-              portType: p.portType,
+        dataPorts: Array.isArray(m._dataPorts)
+          ? m._dataPorts.map((p) => ({
+              id: p._id,
+              name: p._name,
+              portIoType: p._portIoType,
+              portType: p._portType,
             }))
           : [],
         kind: NODE_KIND.MODULE,
-        label: m.alias || m.name,
-        name: m.name,
+        label: m.alias || m._name,
+        name: m._name,
         parentId: m.parentId,
         showPortLabels: false,
         subgraphId: m.subgraphId,
       },
       extent: "parent" as const,
-      id: nodeId("module", m.id),
+      id: nodeId("module", m._id),
       parentId: parent,
       position: {x: 0, y: 0},
       type: "module",
     } as RFNode)
   }
 
-  // Helper to deduce node id from component id
-  const idToNodeId = (componentId: number): string => {
-    if (moduleIdSet.has(componentId)) {
-      return nodeId("module", componentId)
-    }
-    // Future: check switchIdSet here
-    return nodeId("module", componentId) // fallback
-  }
-
-  // Data edges
-  const dataLinks = Array.isArray(dto.dataLinks) ? dto.dataLinks : []
+  // Data edges - merge from all DTOs
+  const dataLinks = dtoArray.flatMap((dto) =>
+    Array.isArray(dto.dataLinks) ? dto.dataLinks : [],
+  )
   dataLinks.forEach((dl: DataLinkDto, idx) => {
-    const src = idToNodeId(dl.sourceId)
-    const dst = idToNodeId(dl.destinationId)
+    // For data links, we need to find the source and destination using the link's properties
+    // The sourceId and destinationId in the DTO are numeric IDs that need to be mapped
+    const srcModule = modules.find((m) => m._id === dl.sourceId)
+    const dstModule = modules.find((m) => m._id === dl.destinationId)
+    const srcSubsystem = subsystems.find((s) => s.id === dl.sourceId)
+    const dstSubsystem = subsystems.find((s) => s.id === dl.destinationId)
+
+    const src = srcModule
+      ? nodeId("module", srcModule._id)
+      : srcSubsystem
+        ? nodeId("subsystem", srcSubsystem.id)
+        : null
+    const dst = dstModule
+      ? nodeId("module", dstModule._id)
+      : dstSubsystem
+        ? nodeId("subsystem", dstSubsystem.id)
+        : null
+
+    if (!src || !dst) {
+      logger.warn(
+        `[Adapter] Data link endpoints not found: source=${dl.sourceId}, dest=${dl.destinationId}`,
+      )
+      return
+    }
+
+    // Look up the actual numeric port IDs from the systemIds
+    const sourcePortId = dataPortSystemIdToPortId.get(String(dl.sourcePortId))
+    const destinationPortId = dataPortSystemIdToPortId.get(
+      String(dl.destinationPortId),
+    )
+
+    if (sourcePortId === undefined || destinationPortId === undefined) {
+      logger.warn(
+        `[Adapter] Data link port IDs not found: sourcePortId=${dl.sourcePortId}, destPortId=${dl.destinationPortId}`,
+      )
+      return
+    }
+
     edges.push({
       data: {kind: EDGE_KIND.DATA, label: "Data"},
       id: edgeId("data", src, dst, idx),
       source: src,
-      sourceHandle: makeHandleId("Data", dl.sourcePortId),
+      sourceHandle: makeHandleId("Data", sourcePortId),
       target: dst,
-      targetHandle: makeHandleId("Data", dl.destinationPortId),
+      targetHandle: makeHandleId("Data", destinationPortId),
       type: "data-link",
     })
   })
 
-  // Control edges
-  const controlLinks = Array.isArray(dto.controlLinks) ? dto.controlLinks : []
+  // Control edges - merge from all DTOs
+  const controlLinks = dtoArray.flatMap((dto) =>
+    Array.isArray(dto.controlLinks) ? dto.controlLinks : [],
+  )
   controlLinks.forEach((cl: ControlLinkDto, idx) => {
-    const src = idToNodeId(cl.sourceId)
-    const dst = idToNodeId(cl.destinationId)
+    // For control links, use the numeric IDs to find the components
+    const srcModule = modules.find((m) => m._id === cl.sourceId)
+    const dstModule = modules.find((m) => m._id === cl.destinationId)
+    const srcSubsystem = subsystems.find((s) => s.id === cl.sourceId)
+    const dstSubsystem = subsystems.find((s) => s.id === cl.destinationId)
+
+    const src = srcModule
+      ? nodeId("module", srcModule._id)
+      : srcSubsystem
+        ? nodeId("subsystem", srcSubsystem.id)
+        : null
+    const dst = dstModule
+      ? nodeId("module", dstModule._id)
+      : dstSubsystem
+        ? nodeId("subsystem", dstSubsystem.id)
+        : null
+
+    if (!src || !dst) {
+      logger.warn(
+        `[Adapter] Control link endpoints not found: source=${cl.sourceId}, dest=${cl.destinationId}`,
+      )
+      return
+    }
+
+    // Look up the actual numeric port IDs from the systemIds
+    const sourcePortId = controlPortSystemIdToPortId.get(
+      String(cl.sourcePortId),
+    )
+    const destinationPortId = controlPortSystemIdToPortId.get(
+      String(cl.destinationPortId),
+    )
+
+    if (sourcePortId === undefined || destinationPortId === undefined) {
+      logger.warn(
+        `[Adapter] Control link port IDs not found: sourcePortId=${cl.sourcePortId}, destPortId=${cl.destinationPortId}`,
+      )
+      return
+    }
+
     edges.push({
       data: {kind: EDGE_KIND.CONTROL, label: "Control"},
       id: edgeId("control", src, dst, idx),
       source: src,
-      sourceHandle: `${makeHandleId("Control", cl.sourcePortId)}-source`,
+      sourceHandle: `${makeHandleId("Control", sourcePortId)}-source`,
       target: dst,
-      targetHandle: `${makeHandleId("Control", cl.destinationPortId)}-target`,
+      targetHandle: `${makeHandleId("Control", destinationPortId)}-target`,
       type: "control-link",
     })
   })

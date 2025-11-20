@@ -74,7 +74,7 @@ export class HttpClient {
 
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl ?? getBackendBaseUrl()
-    this.timeoutMs = config.timeoutMs ?? 10000 // 10s default
+    this.timeoutMs = config.timeoutMs ?? 30000 // 30s default
     this.maxRetries = config.maxRetries ?? 3
     this.retryBaseDelayMs = config.retryBaseDelayMs ?? 500
     this.retryJitterMs = config.retryJitterMs ?? 250

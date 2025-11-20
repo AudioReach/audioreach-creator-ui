@@ -4,9 +4,9 @@ import {create} from "zustand"
 
 import {getAllUsecases} from "~entities/usecases/api/usecasesApi"
 import {mapUsecaseDtoToCategories} from "~entities/usecases/model/usecase.mapper"
-import type {UsecaseCategory} from "~shared/controls/usecase-selection-control/ui/types"
-import UsecaseSelectionControl from "~shared/controls/usecase-selection-control/ui/UsecaseSelectionControl"
+import type {UsecaseCategory} from "~features/usecase-selection"
 import {logger} from "~shared/lib/logger"
+import GraphDesigner from "~widgets/graph-designer/ui/GraphDesigner"
 
 import type {
   ActiveTab,
@@ -39,9 +39,12 @@ const generateId = (): string => {
 // Default main tab creation function
 const createDefaultMainTab = (
   title: string = "Graph",
+  projectGroupId: string,
   usecaseData: UsecaseCategory[] = [],
 ): MainTab => ({
-  component: createElement(UsecaseSelectionControl, {
+  component: createElement(GraphDesigner, {
+    key: projectGroupId, // Add key to prevent remounting
+    projectGroupId,
     usecaseData,
   }),
   id: generateId(),
@@ -128,7 +131,10 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     const projectGroupId = projectId || generateId()
     const projectGroupName =
       name || APP_CONFIG.DEFAULT_PROJECT_NAME_PATTERN(filePath)
-    const defaultMainTab = createDefaultMainTab(projectGroupName)
+    const defaultMainTab = createDefaultMainTab(
+      projectGroupName,
+      projectGroupId,
+    )
 
     // Determine if this is the first project group
     const isFirstGroup = state.projectGroups.length === 0
@@ -589,54 +595,25 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
     }))
   },
 
-  // Update usecase data for a project group and refresh the main tab component
+  // Update usecase data for a project group - store it in the project group
+  // The GraphDesigner component will read this data from the store
   updateProjectGroupUsecaseData: (
     projectGroupId: string,
     usecaseData: UsecaseCategory[],
   ): void => {
     set((state) => {
-      let newActiveTab = state.activeTab
-
       const updatedGroups = state.projectGroups.map((projectGroup) => {
         if (projectGroup.id !== projectGroupId) {
           return projectGroup
         }
 
-        // Create a new main tab with the updated usecase data
-        const updatedMainTab = createDefaultMainTab(
-          projectGroup.mainTab.title,
-          usecaseData,
-        )
-
-        // If the old main tab was active, update the active tab to point to the new main tab
-        if (
-          state.activeTab?.type === "main-tab" &&
-          state.activeTab.id === projectGroup.mainTab.id &&
-          state.activeTab.projectGroupId === projectGroupId
-        ) {
-          newActiveTab = {
-            id: updatedMainTab.id,
-            projectGroupId,
-            type: "main-tab" as const,
-          }
-        }
-
-        // Update activeTabId if it was pointing to the old main tab
-        const newActiveTabId =
-          projectGroup.activeTabId === projectGroup.mainTab.id
-            ? updatedMainTab.id
-            : projectGroup.activeTabId
-
         return {
           ...projectGroup,
-          activeTabId: newActiveTabId,
-          mainTab: updatedMainTab,
-          usecaseData, // Store the data in the project group as well
+          usecaseData, // Store the data in the project group
         }
       })
 
       return {
-        activeTab: newActiveTab,
         projectGroups: updatedGroups,
       }
     })

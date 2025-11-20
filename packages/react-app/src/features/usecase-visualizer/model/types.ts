@@ -1,7 +1,11 @@
 // Normalized ReactFlow types for UseCaseVisualizer
 import type {Edge, Node} from "@xyflow/react"
 
-import type {ControlPortIntentDto, PortIOType, PortType} from "./api-types"
+import type {
+  ControlPortIntentDto,
+  PortIOType,
+  PortType,
+} from "~entities/usecases/model/usecase.component.dto"
 
 export const NODE_KIND = {
   CONTAINER: "CONTAINER",

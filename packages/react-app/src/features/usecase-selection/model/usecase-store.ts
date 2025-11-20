@@ -1,6 +1,6 @@
 import {create} from "zustand"
 
-import type {Usecase, UsecaseList} from "../ui/types"
+import type {Usecase, UsecaseList} from "./types"
 
 interface ApplicationStore {
   // Usecase management

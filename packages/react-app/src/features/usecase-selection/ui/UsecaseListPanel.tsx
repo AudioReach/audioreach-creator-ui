@@ -9,7 +9,7 @@ import {
 
 import {QCheckbox, QIconButton} from "@qui/react"
 
-import type {KeyValue, Usecase, UsecaseCategory} from "./types"
+import type {KeyValue, Usecase, UsecaseCategory} from "../model/types"
 
 interface UsecaseListPanelProps {
   expandedCategories: string[]
@@ -17,6 +17,7 @@ interface UsecaseListPanelProps {
   handleSelectAll: (isSelected: boolean) => void
   handleSelectUsecase: (formattedUsecase: string, isSelected: boolean) => void
   isUsecaseChecked: (usecase: Usecase) => boolean
+  onClose: () => void
   selectedUsecases: string[]
   toggleCategoryExpansion: (categoryName: string) => void
   usecaseData: UsecaseCategory[]
@@ -28,6 +29,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   handleSelectAll,
   handleSelectUsecase,
   isUsecaseChecked,
+  onClose,
   selectedUsecases,
   toggleCategoryExpansion,
   usecaseData,
@@ -48,7 +50,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             />
             <span className="ml-2">Select All</span>
           </label>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
             <QIconButton
               color="neutral"
               size="s"
@@ -81,6 +83,13 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             >
               <Settings className="h-5 w-5" />
             </QIconButton>
+            <button
+              className="ml-2 rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={onClose}
+              type="button"
+            >
+              Done
+            </button>
           </div>
         </div>
       </div>
@@ -89,6 +98,16 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
       <div className="flex-grow overflow-y-auto p-4">
         {usecaseData.map((category) => {
           const isCategoryExpanded = expandedCategories.includes(category.name)
+          const checkedUsecasesInCategory = category.usecases.filter(
+            (uc: Usecase) => isUsecaseChecked(uc),
+          ).length
+          const totalUsecasesInCategory = category.usecases.length
+          const allChecked =
+            checkedUsecasesInCategory === totalUsecasesInCategory
+          const someChecked =
+            checkedUsecasesInCategory > 0 &&
+            checkedUsecasesInCategory < totalUsecasesInCategory
+
           return (
             <div key={category.name} className="mb-4 last:mb-0">
               <div className="mb-2 flex items-center">
@@ -106,9 +125,8 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                 </QIconButton>
                 <label className="flex cursor-pointer items-center text-sm font-semibold text-gray-800">
                   <QCheckbox
-                    checked={category.usecases.every((uc: Usecase) =>
-                      isUsecaseChecked(uc),
-                    )}
+                    checked={allChecked}
+                    indeterminate={someChecked}
                     onChange={(e) => {
                       category.usecases.forEach((uc: Usecase) =>
                         handleSelectUsecase(

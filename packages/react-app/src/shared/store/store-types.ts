@@ -1,6 +1,6 @@
 import type {ReactNode} from "react"
 
-import type {UsecaseCategory} from "~shared/controls/usecase-selection-control/ui/types"
+import type {UsecaseCategory} from "~features/usecase-selection"
 
 export type ProjectGroupCloseCallback = (
   groupId: string,

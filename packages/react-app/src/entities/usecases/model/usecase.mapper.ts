@@ -1,4 +1,4 @@
-import type {UsecaseCategory} from "~shared/controls/usecase-selection-control/ui/types"
+import type {UsecaseCategory} from "~features/usecase-selection"
 
 import type {UsecaseIdentifier, UsecaseResponseDto} from "./usecase.dto"
 

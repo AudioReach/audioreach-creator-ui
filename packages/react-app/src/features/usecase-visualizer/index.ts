@@ -15,14 +15,6 @@ export type {
   RFSubsystemNodeData,
 } from "./model/types"
 
-export type {
-  UsecaseComponentsDto,
-  ModuleInstanceDto,
-  DataLinkDto,
-  ControlLinkDto,
-  SubsystemDto,
-} from "./model/api-types"
-
 // Export adapter and layout functions
 export {buildGraphViewFromUsecase} from "./lib/adapter"
 export {layoutWithELK} from "./lib/elk-layout"

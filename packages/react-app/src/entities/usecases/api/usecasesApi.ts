@@ -1,5 +1,6 @@
 import {type ApiResult, httpClient} from "~shared/api"
 
+import type {UsecaseComponentsDto} from "../model/usecase.component.dto"
 import type {UsecaseResponseDto} from "../model/usecase.dto"
 
 /**
@@ -12,5 +13,15 @@ export async function getAllUsecases(
 ): Promise<ApiResult<UsecaseResponseDto[]>> {
   return httpClient.get<UsecaseResponseDto[]>(
     `/projects/${projectId}/usecases/allUsecases`,
+  )
+}
+
+export async function getUsecaseComponents(
+  projectId: string,
+  systemIds: string[],
+): Promise<ApiResult<UsecaseComponentsDto[]>> {
+  return httpClient.post<UsecaseComponentsDto[]>(
+    `/projects/${projectId}/usecases/components/get`,
+    {systemIds},
   )
 }
