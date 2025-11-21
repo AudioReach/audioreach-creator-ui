@@ -245,7 +245,6 @@ export class HttpClient {
           await sleep(delay)
           continue
         }
-        logger.verbose(`[request] return result ${result.data}`)
         return result
       } catch (error) {
         clearTimeout(timer)

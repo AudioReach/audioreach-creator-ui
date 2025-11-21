@@ -23,40 +23,44 @@ export const ModuleNode: FC<NodeProps> = ({data}) => {
   }
 
   return (
-    <div className="relative min-w-[80px] rounded border border-green-300 bg-green-50 px-3 py-2 shadow-sm">
-      <div className="text-xs font-semibold text-green-700">Module</div>
-      <div className="truncate text-sm">{moduleData.label}</div>
-
-      {/* Control handles on top - both source and target for flexibility */}
-      {controlPorts.map((p, i) => (
-        <div key={`Control:${p.id}`}>
-          <Handle
-            className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-purple-500"
-            id={`Control:${p.id}-source`}
-            position={Position.Top}
-            style={getTopHandleStyle(i, controlPorts.length)}
-            type="source"
-          />
-          <Handle
-            className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-purple-500"
-            id={`Control:${p.id}-target`}
-            position={Position.Top}
-            style={getTopHandleStyle(i, controlPorts.length)}
-            type="target"
-          />
+    <div className="bg-contrast-4 rounded border px-0.5 py-0.5">
+      <div className="bg-4 relative flex min-h-[60px] w-[100px] items-center justify-center rounded border shadow-sm">
+        {/* <div className="text-primary text-xs font-semibold">Module</div> */}
+        <div className="text-primary text-xxs break-words text-center">
+          {moduleData.label}
         </div>
-      ))}
 
-      {/* Data handles: inputs left, outputs right */}
-      {dataPorts.map((p) => (
-        <Handle
-          key={`Data:${p.id}`}
-          className="h-2 w-2 rounded-full border border-white bg-green-500"
-          id={`Data:${p.id}`}
-          position={ioToPosition(p.portIoType)}
-          type={p.portIoType === "Input" ? "target" : "source"}
-        />
-      ))}
+        {/* Control handles on top - both source and target for flexibility */}
+        {controlPorts.map((p, i) => (
+          <div key={`Control:${p.id}`}>
+            <Handle
+              className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-gray-500"
+              id={`Control:${p.id}-source`}
+              position={Position.Top}
+              style={getTopHandleStyle(i, controlPorts.length)}
+              type="source"
+            />
+            <Handle
+              className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-gray-500"
+              id={`Control:${p.id}-target`}
+              position={Position.Top}
+              style={getTopHandleStyle(i, controlPorts.length)}
+              type="target"
+            />
+          </div>
+        ))}
+
+        {/* Data handles: inputs left, outputs right */}
+        {dataPorts.map((p) => (
+          <Handle
+            key={`Data:${p.id}`}
+            className="h-2 w-2 rounded-full border border-white bg-gray-500"
+            id={`Data:${p.id}`}
+            position={ioToPosition(p.portIoType)}
+            type={p.portIoType === "Input" ? "target" : "source"}
+          />
+        ))}
+      </div>
     </div>
   )
 }

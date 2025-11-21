@@ -59,6 +59,8 @@ export default function ArcStartPage({
   const [showOnlyProjects, setShowOnlyProjects] = useState(false)
   const [showOnlyDevices, setShowOnlyDevices] = useState(false)
   const [searchTerm, setSearchTerm] = useState<string>("")
+  const [isLoadingProject, setIsLoadingProject] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState<string>("")
   const {
     addToRecent,
     projects: recentProjects,
@@ -149,13 +151,16 @@ export default function ArcStartPage({
       component: "ArcStartPage",
     })
 
+    setIsLoadingProject(true)
+    setLoadingMessage(`Opening project: ${project.name}`)
+
     try {
       // Call backend API to open/connect to the project
       const result = await openProject(project.id)
 
       if (result.success) {
-        // Use common handler
-        handleProjectOpenSuccess(project)
+        setLoadingMessage("Loading project data...")
+        await handleProjectOpenSuccess(project)
       } else {
         notifyMessage(result.message || "Failed to open project", "negative")
       }
@@ -166,6 +171,9 @@ export default function ArcStartPage({
         error: error instanceof Error ? error.message : String(error),
       })
       notifyMessage("Failed to open project", "negative")
+    } finally {
+      setIsLoadingProject(false)
+      setLoadingMessage("")
     }
   }
 
@@ -213,6 +221,9 @@ export default function ArcStartPage({
         return
       }
 
+      setIsLoadingProject(true)
+      setLoadingMessage(`Processing project: ${projectInfo.name}`)
+
       // Convert Buffer data to File objects
       const workspaceFileName =
         projectInfo.filepath.split(/[\\/]/).pop() || "workspace.awsp"
@@ -221,6 +232,8 @@ export default function ArcStartPage({
         workspaceFileName,
         {type: "application/octet-stream"},
       )
+
+      setLoadingMessage("Processing AWSP/ACDB files in the project ...")
 
       // For acdb file, we don't have the exact filename from the response,
       // but we know it's a .acdb file
@@ -253,8 +266,8 @@ export default function ArcStartPage({
           name,
         }
 
-        // Use common handler
-        handleProjectOpenSuccess(project)
+        setLoadingMessage("Loading project data...")
+        await handleProjectOpenSuccess(project)
       } else {
         notifyMessage(result.message || "Failed to open project", "negative")
       }
@@ -265,6 +278,9 @@ export default function ArcStartPage({
         error: error instanceof Error ? error.message : String(error),
       })
       notifyMessage("Failed to open workspace project", "negative")
+    } finally {
+      setIsLoadingProject(false)
+      setLoadingMessage("")
     }
   }
 
@@ -320,7 +336,26 @@ export default function ArcStartPage({
   }
 
   return (
-    <div className="">
+    <div className="relative">
+      {/* Loading Overlay */}
+      {isLoadingProject && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="rounded-lg bg-white p-8 shadow-xl">
+            <div className="text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+              </div>
+              <div className="mb-2 text-lg font-semibold text-gray-800">
+                {loadingMessage || "Processing..."}
+              </div>
+              <div className="text-sm text-gray-600">
+                Please wait for the files to be processed ...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Buttons */}
       <div className="flex flex-row gap-2.5 p-2.5">
         <QButton
