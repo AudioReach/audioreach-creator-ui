@@ -26,6 +26,7 @@ import {
   ProjectTab,
   useProjectLayoutStore,
 } from "../store/ProjectLayoutMgr.store"
+import {getColorName} from "../utils/color-utils"
 import "flexlayout-react/style/light.css"
 
 interface Props {}
@@ -77,7 +78,7 @@ class ProjectLayoutManager extends Component<Props, State> {
 
       // Always add app group label (whether collapsed or not)
       const appGroupLabel = {
-        className: `group-label-tab group-label-color-${colorNumber}`,
+        className: `group-label-tab bg-${getColorName(colorNumber)} text-white`,
         component: "group-label",
         enableClose: false,
         enableDrag: false,
@@ -93,7 +94,7 @@ class ProjectLayoutManager extends Component<Props, State> {
         // Add all app tabs from the array
         appGroup.appTabs.forEach((appTab) => {
           children.push({
-            className: `group-color-${colorNumber}`,
+            className: `border-t-2 border-${getColorName(colorNumber)}`,
             component: "app-tab",
             enableClose: true,
             enableDrag: true,
@@ -112,12 +113,12 @@ class ProjectLayoutManager extends Component<Props, State> {
 
     // Add Project Groups using fresh store
     freshStore.projectGroups.forEach((project, _index) => {
-      const colorNumber = project.colorId // Use stored colorId instead of array index
+      const colorNumber = project.colorId // Use stored colorId
 
       // Add project group label
       // This creates the clickable group headers in the UI
       const groupLabel = {
-        className: `group-label-tab group-label-color-${colorNumber}`,
+        className: `group-label-tab bg-${getColorName(colorNumber)} text-white`,
         component: "group-label",
         enableClose: false,
         enableDrag: false,
@@ -132,7 +133,7 @@ class ProjectLayoutManager extends Component<Props, State> {
       if (!project.isCollapsed) {
         // Add main tab first
         const mainTabDef = {
-          className: `group-color-${colorNumber}`,
+          className: `border-t-2 border-${getColorName(colorNumber)}`,
           component: "project-tab",
           enableClose: true,
           enableDrag: false, // Main tab cannot be dragged (would empty group)
@@ -156,7 +157,7 @@ class ProjectLayoutManager extends Component<Props, State> {
         project.projectTabs.forEach((projectTab, _tabIndex) => {
           // This converts each project tab from  store into FlexLayout tab format
           const tabDef = {
-            className: `group-color-${colorNumber}`,
+            className: `border-t-2 border-${getColorName(colorNumber)}`,
             component: "project-tab",
             enableClose: true,
             enableDrag: true, // Project tabs can be dragged
@@ -631,28 +632,32 @@ class ProjectLayoutManager extends Component<Props, State> {
       // Determine if this is app group or project group using the extracted group ID
       let isCollapsed = false
       let targetGroup = null
+      let colorNumber = 1
 
       // Check if this is an app group by ID
       const appGroup = this.store.appGroups.find((ag) => ag.id === groupId)
       if (appGroup) {
         isCollapsed = appGroup.isCollapsed
         targetGroup = appGroup
+        colorNumber = appGroup.colorId
       } else {
         // Check if this is a project group by ID
         const project = this.store.projectGroups.find((p) => p.id === groupId)
         if (project) {
           isCollapsed = project.isCollapsed
           targetGroup = project
+          colorNumber = project.colorId
         }
       }
 
-      // Create the interactive group label content
+      // Create the interactive group label content with Tailwind colors
       const showTooltip = !this.store.showGroupTitle // false = show tooltip, true = no tooltip
+      const bgColor = `bg-${getColorName(colorNumber)}`
 
       renderValues.content = createElement(
         "div",
         {
-          className: "group-label-tab-button",
+          className: `cursor-pointer px-0.5 py-0.5 rounded  inline-flex  gap-0.5 mb-0.1  text-xs  ${bgColor} text-white`,
           ...(showTooltip && {title: groupName}), // Add tooltip only if showGroupTitle is false
           onClick: (e: MouseEvent) => {
             e.stopPropagation()

@@ -5,6 +5,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+
+  /* Make project tabs smaller */
+  .flexlayout__tab_button {
+    @apply text-xs  h-5 leading-3 min-h-5;
+  }
+}
+
 :root {
   font-family: "Roboto Flex", system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
