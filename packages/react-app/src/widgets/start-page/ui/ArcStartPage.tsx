@@ -8,6 +8,7 @@ import {
   NotebookTabs,
   Smartphone,
 } from "lucide-react"
+import {createPortal} from "react-dom"
 
 import type {NotificationColor} from "@qui/base"
 import {QButton, QCombobox, QDivider, useNotification} from "@qui/react"
@@ -22,7 +23,11 @@ import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
 import {electronApi} from "~shared/api"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
 import {logger} from "~shared/lib/logger"
-import {useApplicationStore} from "~shared/store"
+import {
+  ProjectMainTab,
+  useApplicationStore,
+  useProjectLayoutStore,
+} from "~shared/store"
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
@@ -130,13 +135,49 @@ export default function ArcStartPage({
     // Add to recent projects
     addToRecent(project)
     logger.info("open project successful")
-    // Create project group in the store and wait for usecases to load
-    // This automatically sets it as active, creates tabs, and manages accordion behavior
+
+    // Create project group in the old store (for usecase data management)
     await createProjectGroup(
       project.filepath,
       project.name,
       project.id,
       undefined, // onClose callback (optional)
+    )
+
+    // Create project group in the new ProjectLayoutStore (for layout management)
+    const layoutStore = useProjectLayoutStore.getState()
+
+    // Create a simple main tab with GraphDesigner
+    const emptyLayout = {
+      global: {},
+      layout: {
+        children: [],
+        type: "row",
+      },
+    }
+
+    const mainTab = new ProjectMainTab(
+      `project_${project.id}`,
+      {flexLayoutData: emptyLayout},
+      () => true, // onClose callback
+    )
+
+    // Store the GraphDesigner component directly in the main tab
+    const GraphDesigner = (
+      await import("~widgets/graph-designer/ui/GraphDesigner")
+    ).default
+    ;(mainTab as any).reactiveComponent = (
+      <GraphDesigner projectGroupId={project.id} usecaseData={[]} />
+    )
+
+    // Create the project group in layout store
+    layoutStore.createProjectGroup(
+      project.id,
+      project.filepath,
+      project.name,
+      mainTab,
+      project.description,
+      undefined, // onClose callback
     )
 
     // Notify parent component to open the project
@@ -336,135 +377,139 @@ export default function ArcStartPage({
   }
 
   return (
-    <div className="relative">
-      {/* Loading Overlay */}
-      {isLoadingProject && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="rounded-lg bg-white p-8 shadow-xl">
-            <div className="text-center">
-              <div className="mb-4 flex justify-center">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
-              </div>
-              <div className="mb-2 text-lg font-semibold text-gray-800">
-                {loadingMessage || "Processing..."}
-              </div>
-              <div className="text-sm text-gray-600">
-                Please wait for the files to be processed ...
+    <>
+      {/* Loading Overlay - Rendered as Portal to cover entire application */}
+      {isLoadingProject &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+            <div className="rounded-lg bg-white p-8 shadow-xl">
+              <div className="text-center">
+                <div className="mb-4 flex justify-center">
+                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+                </div>
+                <div className="mb-2 text-lg font-semibold text-gray-800">
+                  {loadingMessage || "Processing..."}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Please wait for the files to be processed ...
+                </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
+        )}
+
+      <div>
+        {/* Top Buttons */}
+        <div className="flex flex-row gap-2.5 p-2.5">
+          <QButton
+            className="rounded-xl"
+            size="s"
+            startIcon={NotebookTabs}
+            variant="outline"
+          >
+            Release Notes
+          </QButton>
+          <QButton
+            className="rounded-xl"
+            size="s"
+            startIcon={NotebookTabs}
+            variant="outline"
+          >
+            User Guide
+          </QButton>
         </div>
-      )}
 
-      {/* Top Buttons */}
-      <div className="flex flex-row gap-2.5 p-2.5">
-        <QButton
-          className="rounded-xl"
-          size="s"
-          startIcon={NotebookTabs}
-          variant="outline"
-        >
-          Release Notes
-        </QButton>
-        <QButton
-          className="rounded-xl"
-          size="s"
-          startIcon={NotebookTabs}
-          variant="outline"
-        >
-          User Guide
-        </QButton>
-      </div>
+        <QDivider />
 
-      <QDivider />
-
-      <div className="flex flex-col gap-2.5 p-2.5">
-        {/* Search, Open File, and Device Manager */}
-        <div className="flex flex-row gap-2.5">
-          <h1 className="q-font-heading-sm-subtle content-center">
-            Workspaces & Devices
-          </h1>
-          <ArcSearchBar
-            onSearchChange={setSearchTerm}
-            searchTerm={searchTerm}
-          />
-          <QButton
-            className="rounded-xl"
-            onClick={handleOpenWorkspaceProject}
-            startIcon={Folder}
-            variant="outline"
-          >
-            Open File
-          </QButton>
-          <QButton
-            className="rounded-xl"
-            startIcon={Smartphone}
-            variant="outline"
-          >
-            Device Manager
-          </QButton>
-          {/* Hide Grid View and List view for now, but needs to be implemented later */}
-          {/* <QButtonGroup>
+        <div className="flex flex-col gap-2.5 p-2.5">
+          {/* Search, Open File, and Device Manager */}
+          <div className="flex flex-row gap-2.5">
+            <h1 className="q-font-heading-sm-subtle content-center">
+              Workspaces & Devices
+            </h1>
+            <ArcSearchBar
+              onSearchChange={setSearchTerm}
+              searchTerm={searchTerm}
+            />
+            <QButton
+              className="rounded-xl"
+              onClick={handleOpenWorkspaceProject}
+              startIcon={Folder}
+              variant="outline"
+            >
+              Open File
+            </QButton>
+            <QButton
+              className="rounded-xl"
+              startIcon={Smartphone}
+              variant="outline"
+            >
+              Device Manager
+            </QButton>
+            {/* Hide Grid View and List view for now, but needs to be implemented later */}
+            {/* <QButtonGroup>
           <QButton startIcon={LayoutGrid} />
           <QButton startIcon={LayoutList} />
         </QButtonGroup> */}
-        </div>
+          </div>
 
-        <div className="flex justify-end gap-2.5">
-          <QButton
-            className="rounded-xl"
-            onClick={handleShowOnlyProjects}
-            selected={showOnlyProjects}
-            size="s"
-            startIcon={Database}
-            variant="outline"
-          >
-            Workspaces
-          </QButton>
-          <QButton
-            className="rounded-xl"
-            onClick={handleShowOnlyDevices}
-            selected={showOnlyDevices}
-            size="s"
-            startIcon={Smartphone}
-            variant="outline"
-          >
-            Devices
-          </QButton>
-          <QCombobox
-            className="w-[150px]"
-            onChange={(event, value) =>
-              handleOnFilterOptionChanged(value?.name)
-            }
-            optionLabel="name"
-            options={[
-              {name: "Active"},
-              {name: "Inactive"},
-              {name: "Diff/Merge"},
-            ]}
-            placeholder="Filter by..."
-            size="s"
-            startIcon={FilterIcon}
-          >
-            Test
-          </QCombobox>
+          <div className="flex justify-end gap-2.5">
+            <QButton
+              className="rounded-xl"
+              onClick={handleShowOnlyProjects}
+              selected={showOnlyProjects}
+              size="s"
+              startIcon={Database}
+              variant="outline"
+            >
+              Workspaces
+            </QButton>
+            <QButton
+              className="rounded-xl"
+              onClick={handleShowOnlyDevices}
+              selected={showOnlyDevices}
+              size="s"
+              startIcon={Smartphone}
+              variant="outline"
+            >
+              Devices
+            </QButton>
+            <QCombobox
+              className="w-[150px]"
+              onChange={(event, value) =>
+                handleOnFilterOptionChanged(value?.name)
+              }
+              optionLabel="name"
+              options={[
+                {name: "Active"},
+                {name: "Inactive"},
+                {name: "Diff/Merge"},
+              ]}
+              placeholder="Filter by..."
+              size="s"
+              startIcon={FilterIcon}
+            >
+              Test
+            </QCombobox>
+          </div>
+          {/* Recent Workspace and Device Project Lists */}
+          {!showOnlyDevices && (
+            <ArcRecentProjects
+              onOpenProject={handleOpenRecentWorkspaceProject}
+              onRemoveFromRecent={handleRemoveFromRecent}
+              onShowInExplorer={handleShowInExplorer}
+              projects={filteredProjects}
+            />
+          )}
+          {!showOnlyProjects && (
+            <ArcDeviceList
+              devices={filteredDevices}
+              onOpenDevice={handleOpenDeviceProject}
+            />
+          )}
         </div>
-        {/* Recent Workspace and Device Project Lists */}
-        {!showOnlyDevices && (
-          <ArcRecentProjects
-            onOpenProject={handleOpenRecentWorkspaceProject}
-            onRemoveFromRecent={handleRemoveFromRecent}
-            onShowInExplorer={handleShowInExplorer}
-            projects={filteredProjects}
-          />
-        )}
-        {!showOnlyProjects && (
-          <ArcDeviceList
-            devices={filteredDevices}
-            onOpenDevice={handleOpenDeviceProject}
-          />
-        )}
       </div>
-    </div>
+    </>
   )
 }

@@ -153,6 +153,26 @@ export default tseslint.config(
     },
   },
 
+  // Zustand stores - Strict immutability rules
+  {
+    files: [
+      "packages/**/store/**/*.store.{ts,tsx}",
+      "packages/**/stores/**/*.{ts,tsx}",
+    ],
+    languageOptions,
+    rules: {
+      "no-param-reassign": [
+        "error",
+        {
+          "ignorePropertyModificationsFor": [
+            "draft", // for immer draft state (if used)
+          ],
+          "props": true,
+        },
+      ],
+    },
+  },
+
   // mdx
   {
     extends: [quiEslintMdx.configs.recommended],

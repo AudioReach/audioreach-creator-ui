@@ -550,24 +550,39 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
           title: projectGroupName,
         }
         set((state) => {
-          const updatedProjectGroups = [...state.projectGroups, newProjectGroup]
+          let updatedProjectGroups = [...state.projectGroups, newProjectGroup]
           // If this is the second project group and auto-collapse is enabled, collapse the first one
           if (
             updatedProjectGroups.length > 1 &&
             APP_CONFIG.AUTO_COLLAPSE_ON_NEW_PROJECT
           ) {
-            updatedProjectGroups.forEach((projectGroup) => {
+            updatedProjectGroups = updatedProjectGroups.map((projectGroup) => {
               if (projectGroup.id !== Id) {
-                projectGroup.isCollapsed = true
+                return {...projectGroup, isCollapsed: true}
               }
+              return projectGroup
             })
           }
+
+          // Collapse all app groups when opening a new project
+          const updatedAppGroups = state.appGroups.map((appGroup) => ({
+            ...appGroup,
+            isCollapsed: true,
+          }))
+
           // For accordion behavior: always set new group as active
           const updatedTabGroups = new Map(state.tabGroups)
           updatedTabGroups.set(Id, newProjectGroup)
 
+          // Update tabGroups map with collapsed app groups
+          updatedAppGroups.forEach((appGroup) => {
+            updatedTabGroups.set(appGroup.id, appGroup)
+          })
+
           const newState = {
+            activeTab: mainTab, // Set the main tab as the active tab
             activeTabGroup: newProjectGroup, // Always set new group as active
+            appGroups: updatedAppGroups, // Update app groups with collapsed state
             nextColorId, // Update next available color ID
             previousActiveProjectGroupId: state.activeTabGroup?.id,
             projectGroups: updatedProjectGroups,
@@ -609,6 +624,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         }
 
         let newActiveTab = state.activeTab
+        let updatedClickedGroup = clickedGroup
 
         // Handle both App Groups and Project Groups
         if (clickedGroup.groupType === TabGroupType.AppGroup) {
@@ -624,12 +640,14 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
               newActiveTab = foundAppTab
             } else {
               // Fallback to first tab if activeTabId doesn't match any tab
-              appGroup.activeTabId = appGroup.appTabs[0].id
+              const newActiveTabId = appGroup.appTabs[0].id
+              updatedClickedGroup = {...appGroup, activeTabId: newActiveTabId}
               newActiveTab = appGroup.appTabs[0]
             }
           } else {
             // No activeTabId set, default to first tab
-            appGroup.activeTabId = appGroup.appTabs[0].id
+            const newActiveTabId = appGroup.appTabs[0].id
+            updatedClickedGroup = {...appGroup, activeTabId: newActiveTabId}
             newActiveTab = appGroup.appTabs[0]
           }
         } else if (clickedGroup.groupType === TabGroupType.ProjectGroup) {
@@ -649,55 +667,70 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
                 newActiveTab = storedProjectTab
               } else {
                 // Stored tab doesn't exist, fallback to main tab
-                projGroup.activeTabId = projGroup.mainTab.id
+                const newActiveTabId = projGroup.mainTab.id
+                updatedClickedGroup = {
+                  ...projGroup,
+                  activeTabId: newActiveTabId,
+                }
                 newActiveTab = projGroup.mainTab
               }
             }
           } else {
             // No activeTabId stored, default to main tab
-            projGroup.activeTabId = projGroup.mainTab.id
+            const newActiveTabId = projGroup.mainTab.id
+            updatedClickedGroup = {...projGroup, activeTabId: newActiveTabId}
             newActiveTab = projGroup.mainTab
           }
         }
 
         // Update all project groups - expand clicked, collapse others
         const updatedProjectGroups = state.projectGroups.map((projectGroup) => {
-          const shouldExpand = projectGroup.id === groupId
+          if (projectGroup.id === groupId) {
+            return {
+              ...updatedClickedGroup,
+              isCollapsed: false,
+            } as ProjectGroupInterface
+          }
           return {
             ...projectGroup,
-            isCollapsed: !shouldExpand, // Expand clicked group, collapse all others
+            isCollapsed: true,
           }
         })
 
         // Update all app groups - expand clicked, collapse others
         const updatedAppGroups = state.appGroups.map((appGroup) => {
-          const shouldExpand = appGroup.id === groupId
+          if (appGroup.id === groupId) {
+            return {
+              ...updatedClickedGroup,
+              isCollapsed: false,
+            } as AppGroupInterface
+          }
           return {
             ...appGroup,
-            isCollapsed: !shouldExpand, // Expand clicked group, collapse all others
+            isCollapsed: true,
           }
         })
 
         // Update tabGroups map - collapse ALL other groups (both app and project)
         const updatedTabGroups = new Map(state.tabGroups)
-        updatedTabGroups.forEach((_tabGroup) => {})
 
-        updatedTabGroups.forEach((tabGroup) => {
+        // Create new map with updated collapse states
+        const finalTabGroups = new Map<string, TabGroupInterface>()
+        updatedTabGroups.forEach((tabGroup, key) => {
           if (tabGroup.id !== groupId) {
-            tabGroup.isCollapsed = true // Collapse everything except clicked group
+            finalTabGroups.set(key, {...tabGroup, isCollapsed: true})
           } else {
-            tabGroup.isCollapsed = false // Expand the clicked group
+            finalTabGroups.set(key, {...tabGroup, isCollapsed: false})
           }
         })
-        updatedTabGroups.forEach((_tabGroup, _key) => {})
 
         const newState = {
           activeTab: newActiveTab, // Set appropriate active tab
-          activeTabGroup: clickedGroup, // Always set clicked group as active
+          activeTabGroup: updatedClickedGroup, // Always set clicked group as active
           appGroups: updatedAppGroups,
           previousActiveProjectGroupId: state.activeTabGroup?.id, // Track previous
           projectGroups: updatedProjectGroups,
-          tabGroups: updatedTabGroups,
+          tabGroups: finalTabGroups,
         }
 
         return newState
@@ -868,7 +901,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
               }),
             )
 
-            const firstProject = updatedProjectGroups[0]
+            let firstProject = updatedProjectGroups[0]
             newActiveTabGroup = firstProject
 
             // Set active tab in the expanded group
@@ -885,22 +918,30 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
               newActiveTab =
                 firstProject.projectTabs.find((t) => t.id === targetTabId) ||
                 null
-              firstProject.activeTabId = targetTabId
+              firstProject = {...firstProject, activeTabId: targetTabId}
             } else {
               // Use main tab
               newActiveTab = firstProject.mainTab
-              firstProject.activeTabId = firstProject.mainTab.id
+              firstProject = {
+                ...firstProject,
+                activeTabId: firstProject.mainTab.id,
+              }
             }
 
             // Update tabGroups map with expanded project group
             updatedTabGroups.set(firstProject.id, firstProject)
+
+            // Return updated project groups with the modified first project
+            const finalProjectGroups = updatedProjectGroups.map((pg, index) =>
+              index === 0 ? firstProject : pg,
+            )
 
             // Return updated project groups
             return {
               activeTab: newActiveTab,
               activeTabGroup: newActiveTabGroup,
               appGroups: updatedAppGroups,
-              projectGroups: updatedProjectGroups,
+              projectGroups: finalProjectGroups,
               tabGroups: updatedTabGroups,
             }
           } else {
@@ -951,16 +992,18 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
 
       // Remove from border panels
       if (flexData.borders) {
-        flexData.borders.forEach((border: any) => {
+        flexData.borders = flexData.borders.map((border: any) => {
           if (border.children) {
             const initialLength = border.children.length
-            border.children = border.children.filter(
+            const filteredChildren = border.children.filter(
               (tab: any) => tab.id !== tabId,
             )
-            if (border.children.length < initialLength) {
+            if (filteredChildren.length < initialLength) {
               updated = true
+              return {...border, children: filteredChildren}
             }
           }
+          return border
         })
 
         // Remove empty borders
@@ -1060,7 +1103,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
           newLayouts.delete(tab.id)
         })
 
-        const updatedProjectGroups = state.projectGroups.filter(
+        let updatedProjectGroups = state.projectGroups.filter(
           (projectGroup) => {
             if (projectGroup.id === projectGroupId) {
               removed = true
@@ -1077,20 +1120,22 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
 
         if (updatedProjectGroups.length > 0) {
           // Try to use previous active group if it still exists
-          let groupToExpand = null
+          let groupToExpandIndex = -1
           if (state.previousActiveProjectGroupId) {
-            groupToExpand = updatedProjectGroups.find(
+            groupToExpandIndex = updatedProjectGroups.findIndex(
               (g) => g.id === state.previousActiveProjectGroupId,
             )
           }
 
           // Fallback to first available group if previous not found
-          if (!groupToExpand) {
-            groupToExpand = updatedProjectGroups[0]
+          if (groupToExpandIndex === -1) {
+            groupToExpandIndex = 0
           }
 
-          // Expand the group
-          groupToExpand.isCollapsed = false
+          let groupToExpand = updatedProjectGroups[groupToExpandIndex]
+
+          // Expand the group (immutably)
+          groupToExpand = {...groupToExpand, isCollapsed: false}
 
           // Set it as active project group
           newActiveTabGroup = groupToExpand
@@ -1110,14 +1155,25 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
               groupToExpand.projectTabs.find((t) => t.id === targetTabId) ||
               null
 
-            // Update the group's active tab
-            groupToExpand.activeTabId = targetTabId
+            // Update the group's active tab (immutably)
+            groupToExpand = {...groupToExpand, activeTabId: targetTabId}
           } else {
             // Use main tab
             newActiveTab = groupToExpand.mainTab
 
-            groupToExpand.activeTabId = groupToExpand.mainTab.id
+            groupToExpand = {
+              ...groupToExpand,
+              activeTabId: groupToExpand.mainTab.id,
+            }
           }
+
+          // Update the project groups array with the modified group
+          updatedProjectGroups = updatedProjectGroups.map((pg, index) =>
+            index === groupToExpandIndex ? groupToExpand : pg,
+          )
+
+          // Update tabGroups map with the final groupToExpand state
+          updatedTabGroups.set(groupToExpand.id, groupToExpand)
         } else {
           // No project groups remain - expand app group if available
           if (state.appGroups.length > 0) {

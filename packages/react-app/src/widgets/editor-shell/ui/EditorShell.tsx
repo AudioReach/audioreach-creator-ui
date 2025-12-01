@@ -1,71 +1,36 @@
 import {useEffect, useRef} from "react"
 
-import StoreFlexLayoutTabGroupManager from "~shared/layout/ui/LayoutTabGroupManager"
-import {useApplicationStore} from "~shared/store"
+import ProjectLayoutManager from "~shared/layout/ProjectLayoutMgr"
+import {
+  AppTab,
+  useProjectLayoutStore,
+} from "~shared/store/ProjectLayoutMgr.store"
 import ArcStartPage from "~widgets/start-page/ui/ArcStartPage"
 
 export const EditorShell: React.FC = () => {
-  const {addAppTab, appGroup, projectGroups, setActiveAppTab} =
-    useApplicationStore()
-
-  const tabManagerRef = useRef<StoreFlexLayoutTabGroupManager>(null)
+  const store = useProjectLayoutStore()
   const initializedRef = useRef(false)
 
-  // Initialize with a single Start tab using the StartPage widget
+  // Initialize with a default app group and Start tab
   useEffect(() => {
     if (initializedRef.current) {
       return
     }
     initializedRef.current = true
 
-    if (appGroup.appTabs.length === 0) {
-      const startTab = {
-        component: <ArcStartPage />,
-        id: "start-page",
-        isCloseable: true,
-        tabKey: "start-page",
-        title: "Start",
-      }
-      addAppTab(startTab)
-      setActiveAppTab(startTab.id)
+    // Check if default app group already exists
+    const defaultAppGroup = store.appGroups.find(
+      (ag) => ag.id === "default-app-group",
+    )
+
+    if (!defaultAppGroup) {
+      // Create Start tab
+      const startTab = new AppTab("Start", <ArcStartPage />)
+
+      // Create default app group with Start tab
+      store.createAppGroup("default-app-group", "Application", [startTab])
     }
-  }, [appGroup.appTabs.length, addAppTab, setActiveAppTab])
-
-  // Register all tab components with the layout manager
-  useEffect(() => {
-    if (!tabManagerRef.current) {
-      return
-    }
-
-    // Register app tabs
-    appGroup.appTabs.forEach((tab) => {
-      tabManagerRef.current?.setTabComponent(tab.id, tab.component)
-    })
-  }, [appGroup.appTabs])
-
-  // Register project group main tabs and project tabs
-  useEffect(() => {
-    if (!tabManagerRef.current) {
-      return
-    }
-
-    projectGroups.forEach((projectGroup) => {
-      // Register main tab
-      if (projectGroup.mainTab.component) {
-        tabManagerRef.current?.setTabComponent(
-          projectGroup.mainTab.id,
-          projectGroup.mainTab.component,
-        )
-      }
-
-      // Register project tabs
-      projectGroup.projectTabs.forEach((tab) => {
-        if (tab.component) {
-          tabManagerRef.current?.setTabComponent(tab.id, tab.component)
-        }
-      })
-    })
-  }, [projectGroups])
+  })
 
   return (
     <div className="flex h-screen flex-col bg-white">
@@ -78,7 +43,7 @@ export const EditorShell: React.FC = () => {
       </div>
 
       <div className="flex-1">
-        <StoreFlexLayoutTabGroupManager ref={tabManagerRef} />
+        <ProjectLayoutManager />
       </div>
     </div>
   )

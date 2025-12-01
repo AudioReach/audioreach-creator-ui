@@ -16,6 +16,8 @@ import {
 } from "flexlayout-react"
 import {Files} from "lucide-react"
 
+import {logger} from "~shared/lib/logger"
+
 import type {
   OnProjectClose,
   OnTabClose,
@@ -27,6 +29,7 @@ import {
   useProjectLayoutStore,
 } from "../store/ProjectLayoutMgr.store"
 import {getColorName} from "../utils/color-utils"
+
 import "flexlayout-react/style/light.css"
 
 interface Props {}
@@ -761,10 +764,11 @@ class ProjectLayoutManager extends Component<Props, State> {
         model: newModel,
       })
     } catch (error) {
-      console.error(
-        "StoreFlexLayoutTabGroupManager: Error building model",
-        error,
-      )
+      logger.error("ProjectLayoutManager: Error building model", {
+        action: "rebuild_model",
+        component: "ProjectLayoutManager",
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
@@ -886,7 +890,9 @@ export class PanelIntegration {
 
         return () => {
           mounted = false
-          unsubscribe()
+          if (unsubscribe) {
+            unsubscribe()
+          }
         }
       }, [])
 
@@ -1117,7 +1123,9 @@ export class PanelIntegration {
 
           return () => {
             mounted = false
-            unsubscribe()
+            if (unsubscribe) {
+              unsubscribe()
+            }
           }
         }, [])
 
