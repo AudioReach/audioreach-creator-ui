@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from "react"
 
-import {QTextInput} from "@qui/react"
+import {TextInput} from "@qualcomm-ui/react/text-input"
+import {Search} from "lucide-react"
 
 import {useUsecaseStore} from "~shared/store/usecase-store"
 
@@ -144,16 +145,15 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
     <div ref={containerRef} className="relative">
       {/* Search Bar */}
       <div className="relative">
-        <QTextInput
+        <TextInput
           clearable
-          fullWidth
           inputProps={{
             onFocus: () => setIsDropdownOpen(true),
           }}
-          onChange={(e, value) => setSearchTerm(value)}
-          onClear={() => setSearchTerm("")}
+          onValueChange={(value) => setSearchTerm(value)}
           placeholder="Search for usecases..."
-          size="m"
+          size="md"
+          startIcon={Search}
           value={searchTerm}
         />
       </div>

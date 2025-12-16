@@ -1,29 +1,9 @@
-import React from "react"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import SubsystemTreeView from "~features/subsystem-browser/ui/SubsystemTreeView"
 import type { SubsystemBrowserTreeNode } from "~features/subsystem-browser/model/subsystem-browser-types"
 import { ConvertStringToNumber } from "~shared/utils/converter-utils"
 import "@testing-library/jest-dom"
 import { act } from "react"
-
-// Mock QIconButton from @qui/react to a simple button with aria-label and onClick
-jest.mock("@qui/react", () => ({
-  QIconButton: ({
-    ariaLabel,
-    onClick,
-    title,
-    icon,
-  }: {
-    ariaLabel?: string
-    title?: string
-    onClick?: () => void
-    icon?: React.ReactNode
-  }) => (
-    <button aria-label={ariaLabel ?? title} title={title} onClick={onClick} data-testid="toggle-all">
-      {icon}
-    </button>
-  ),
-}))
 
 // Update SearchBox mock to a real input so we can simulate typing
 jest.mock("~features/subsystem-browser/ui/SearchBox", () => ({
@@ -128,7 +108,7 @@ describe("SubsystemTreeView", () => {
     render(<SubsystemTreeView data={sampleTree} onClick={() => {}} />)
 
     // Initially should show "Expand all"
-    const toggleBtn = screen.getByTestId("toggle-all")
+    const toggleBtn = screen.getByTestId("inline-icon-button")
     expect(toggleBtn).toHaveAttribute("aria-label", "Expand all")
 
     // Click to expand all -> label should change to "Collapse all"

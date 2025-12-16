@@ -1,6 +1,12 @@
 import {useMemo, useState} from "react"
 
 import {ApiRequest} from "@audioreach-creator-ui/api-utils"
+import {Button} from "@qualcomm-ui/react/button"
+import {Combobox} from "@qualcomm-ui/react/combobox"
+import {Divider} from "@qualcomm-ui/react/divider"
+import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
+import {useListCollection} from "@qualcomm-ui/react-core/collection"
+import {useFilter} from "@qualcomm-ui/react-core/locale"
 import {
   Database,
   FilterIcon,
@@ -9,9 +15,6 @@ import {
   Smartphone,
 } from "lucide-react"
 import {createPortal} from "react-dom"
-
-import type {NotificationColor} from "@qui/base"
-import {QButton, QCombobox, QDivider, useNotification} from "@qui/react"
 
 import {
   openProject,
@@ -22,6 +25,7 @@ import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProje
 import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
 import {electronApi} from "~shared/api"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
+import {showToast} from "~shared/controls/GlobalToaster"
 import {logger} from "~shared/lib/logger"
 import {
   ProjectMainTab,
@@ -50,6 +54,8 @@ const deviceList: ArcDeviceInfo[] = [
   },
 ]
 
+const projectTypes = ["Active", "Inactive", "Diff/Merge"]
+
 export type ArcStartPageProps = {
   /** An event triggered by double-clicking a device card */
   onOpenDeviceProject?: (device: ArcDeviceInfo) => void
@@ -74,6 +80,14 @@ export default function ArcStartPage({
   const createProjectGroup = useApplicationStore(
     (state) => state.createProjectGroup,
   )
+
+  // Hooks for Combobox collection
+  const {contains} = useFilter({sensitivity: "base"})
+  const {collection} = useListCollection({
+    filter: contains,
+    initialItems: projectTypes,
+  })
+
   const filteredProjects = useMemo(() => {
     if (recentProjects === undefined) {
       return []
@@ -104,27 +118,12 @@ export default function ArcStartPage({
     })
   }, [searchTerm])
 
-  const {notify} = useNotification()
-
   function handleOpenDeviceProject(device: ArcDeviceInfo) {
     logger.verbose(`Selected a device: ${device.name}`, {
       action: "open_device_project",
       component: "ArcStartPage",
     })
     onOpenDeviceProject?.(device)
-  }
-
-  const notifyMessage = (
-    msg: string,
-    msgType: NotificationColor | undefined,
-  ): string => {
-    notify({
-      notification: {
-        color: msgType,
-        label: <span>{msg}</span>,
-      },
-    })
-    return msg
   }
 
   /**
@@ -183,7 +182,7 @@ export default function ArcStartPage({
     // Notify parent component to open the project
     onOpenWorkspaceProject?.(project)
 
-    notifyMessage("Project opened successfully", "positive")
+    showToast("Project opened successfully", "success")
   }
 
   async function handleOpenRecentWorkspaceProject(project: ArcProjectInfo) {
@@ -203,7 +202,7 @@ export default function ArcStartPage({
         setLoadingMessage("Loading project data...")
         await handleProjectOpenSuccess(project)
       } else {
-        notifyMessage(result.message || "Failed to open project", "negative")
+        showToast(result.message || "Failed to open project", "danger")
       }
     } catch (error) {
       logger.error("Error opening recent project", {
@@ -211,7 +210,7 @@ export default function ArcStartPage({
         component: "ArcStartPage",
         error: error instanceof Error ? error.message : String(error),
       })
-      notifyMessage("Failed to open project", "negative")
+      showToast("Failed to open project", "danger")
     } finally {
       setIsLoadingProject(false)
       setLoadingMessage("")
@@ -224,7 +223,7 @@ export default function ArcStartPage({
         action: "open_workspace_project",
         component: "ArcStartPage",
       })
-      notifyMessage("Electron API not available", "negative")
+      showToast("Electron API not available", "danger")
       return
     }
 
@@ -250,15 +249,12 @@ export default function ArcStartPage({
 
       // Validate that we have the required binary data
       if (!workspaceFileData) {
-        notifyMessage("Failed to read workspace file data", "negative")
+        showToast("Failed to read workspace file data", "danger")
         return
       }
 
       if (!acdbFileData) {
-        notifyMessage(
-          "No .acdb file found in the project directory",
-          "negative",
-        )
+        showToast("No .acdb file found in the project directory", "danger")
         return
       }
 
@@ -310,7 +306,7 @@ export default function ArcStartPage({
         setLoadingMessage("Loading project data...")
         await handleProjectOpenSuccess(project)
       } else {
-        notifyMessage(result.message || "Failed to open project", "negative")
+        showToast(result.message || "Failed to open project", "danger")
       }
     } catch (error) {
       logger.error("Error opening workspace project", {
@@ -318,7 +314,7 @@ export default function ArcStartPage({
         component: "ArcStartPage",
         error: error instanceof Error ? error.message : String(error),
       })
-      notifyMessage("Failed to open workspace project", "negative")
+      showToast("Failed to open workspace project", "danger")
     } finally {
       setIsLoadingProject(false)
       setLoadingMessage("")
@@ -345,7 +341,7 @@ export default function ArcStartPage({
         action: "show_in_explorer",
         component: "ArcStartPage",
       })
-      notifyMessage("Electron API not available", "negative")
+      showToast("Electron API not available", "danger")
       return
     }
 
@@ -363,7 +359,7 @@ export default function ArcStartPage({
         component: "ArcStartPage",
         error: error instanceof Error ? error.message : String(error),
       })
-      notifyMessage("Failed to open file in explorer", "negative")
+      showToast("Failed to open file in explorer", "danger")
     }
   }
 
@@ -385,7 +381,7 @@ export default function ArcStartPage({
             <div className="rounded-lg bg-white p-8 shadow-xl">
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
-                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+                  <ProgressRing />
                 </div>
                 <div className="mb-2 text-lg font-semibold text-gray-800">
                   {loadingMessage || "Processing..."}
@@ -402,25 +398,27 @@ export default function ArcStartPage({
       <div>
         {/* Top Buttons */}
         <div className="flex flex-row gap-2.5 p-2.5">
-          <QButton
+          <Button
             className="rounded-xl"
-            size="s"
+            emphasis="neutral"
+            size="md"
             startIcon={NotebookTabs}
-            variant="outline"
+            variant="fill"
           >
             Release Notes
-          </QButton>
-          <QButton
+          </Button>
+          <Button
             className="rounded-xl"
-            size="s"
+            emphasis="neutral"
+            size="md"
             startIcon={NotebookTabs}
-            variant="outline"
+            variant="fill"
           >
             User Guide
-          </QButton>
+          </Button>
         </div>
 
-        <QDivider />
+        <Divider />
 
         <div className="flex flex-col gap-2.5 p-2.5">
           {/* Search, Open File, and Device Manager */}
@@ -430,23 +428,26 @@ export default function ArcStartPage({
             </h1>
             <ArcSearchBar
               onSearchChange={setSearchTerm}
+              placeholder="Search"
               searchTerm={searchTerm}
             />
-            <QButton
+            <Button
               className="rounded-xl"
+              emphasis="neutral"
               onClick={handleOpenWorkspaceProject}
               startIcon={Folder}
-              variant="outline"
+              variant="fill"
             >
               Open File
-            </QButton>
-            <QButton
+            </Button>
+            <Button
               className="rounded-xl"
+              emphasis="neutral"
               startIcon={Smartphone}
-              variant="outline"
+              variant="fill"
             >
               Device Manager
-            </QButton>
+            </Button>
             {/* Hide Grid View and List view for now, but needs to be implemented later */}
             {/* <QButtonGroup>
           <QButton startIcon={LayoutGrid} />
@@ -455,43 +456,38 @@ export default function ArcStartPage({
           </div>
 
           <div className="flex justify-end gap-2.5">
-            <QButton
+            <Button
               className="rounded-xl"
+              emphasis="neutral"
               onClick={handleShowOnlyProjects}
-              selected={showOnlyProjects}
-              size="s"
+              size="md"
               startIcon={Database}
-              variant="outline"
+              variant="fill"
             >
               Workspaces
-            </QButton>
-            <QButton
+            </Button>
+            <Button
               className="rounded-xl"
+              emphasis="neutral"
               onClick={handleShowOnlyDevices}
-              selected={showOnlyDevices}
-              size="s"
+              size="md"
               startIcon={Smartphone}
-              variant="outline"
+              variant="fill"
             >
               Devices
-            </QButton>
-            <QCombobox
-              className="w-[150px]"
-              onChange={(event, value) =>
-                handleOnFilterOptionChanged(value?.name)
+            </Button>
+          </div>
+          <div className="flex justify-end gap-2.5">
+            <Combobox
+              className="w-[250px]"
+              collection={collection}
+              icon={FilterIcon}
+              onInputValueChange={(value) =>
+                handleOnFilterOptionChanged(value.inputValue)
               }
-              optionLabel="name"
-              options={[
-                {name: "Active"},
-                {name: "Inactive"},
-                {name: "Diff/Merge"},
-              ]}
               placeholder="Filter by..."
-              size="s"
-              startIcon={FilterIcon}
-            >
-              Test
-            </QCombobox>
+              size="sm"
+            />
           </div>
           {/* Recent Workspace and Device Project Lists */}
           {!showOnlyDevices && (

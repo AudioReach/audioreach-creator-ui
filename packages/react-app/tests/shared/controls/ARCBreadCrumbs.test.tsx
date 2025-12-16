@@ -8,60 +8,14 @@ import {
   ARCBreadCrumbs,
 } from "~shared/controls/ARCBreadCrumbs"
 
-// Mock QBreadcrumbs and related components
-jest.mock("@qui/react", () => {
-  const MockQBreadcrumbs = forwardRef<
-    HTMLElement,
-    {className?: string; items: {render: React.ReactNode}[]}
-  >(({className, items}, ref) => {
-    return (
-      <nav
-        ref={ref}
-        className={`q-breadcrumbs ${className || ""}`}
-        role="navigation"
-      >
-        {items.map((item: {render: React.ReactNode}, index: number) => {
-          const isLast = index === items.length - 1
-          return (
-            <span key={index}>
-              <span className="q-breadcrumbs__el q-breadcrumbs__el--link">
-                {item.render}
-              </span>
-              {!isLast && (
-                <span aria-hidden="true" className="q-breadcrumbs__separator">
-                  /
-                </span>
-              )}
-            </span>
-          )
-        })}
-      </nav>
-    )
-  })
-
-  MockQBreadcrumbs.displayName = "MockQBreadcrumbs"
-
-  return {
-    QBreadcrumbs: MockQBreadcrumbs,
-    QButton: jest.fn().mockImplementation(({children, onClick, ...props}) => (
-      <button onClick={onClick} {...props}>
-        {children}
-      </button>
-    )),
-    QPopover: jest
-      .fn()
-      .mockImplementation(({children}) => (
-        <div className="q-popover">{children}</div>
-      )),
-  }
-})
+// The mocks are now in test-setup.ts
 
 describe("ARCBreadCrumbs - Generic Controls API", () => {
   const mockItems: ARCBreadCrumbItem[] = [
     {label: "Home"},
     {label: "Products"},
     {label: "Electronics"},
-    {disabled: true, label: "Laptops"},
+    {label: "Laptops"},
   ]
 
   beforeEach(() => {
@@ -74,7 +28,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs).toBeInTheDocument()
-      expect(breadcrumbs).toHaveClass("q-breadcrumbs")
+      // The component renders a nav element without specific CSS classes by default
     })
 
     it("should render with className prop", () => {
@@ -121,7 +75,11 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs).toBeInTheDocument()
-      expect(breadcrumbs.children).toHaveLength(0)
+      // The nav contains an ol element even when empty
+      expect(breadcrumbs.children).toHaveLength(1)
+      const list = breadcrumbs.querySelector('ol')
+      expect(list).toBeInTheDocument()
+      expect(list?.children).toHaveLength(0)
     })
   })
 
@@ -185,10 +143,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
         {label: "Home"},
         {label: "Products"},
         {label: "Electronics"},
-        {
-          disabled: true,
-          label: "Laptops",
-        },
+        {label: "Laptops"},
       ]
 
       render(<ARCBreadCrumbs items={breadcrumbItems} />)
@@ -235,8 +190,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
     it("should render dynamic breadcrumbs example", () => {
       const path = ["Home", "Products", "Electronics"]
-      const breadcrumbItems = path.map((segment, index) => ({
-        disabled: index === path.length - 1,
+      const breadcrumbItems = path.map((segment) => ({
         label: segment,
       }))
 
@@ -253,12 +207,10 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       const customOnClick = jest.fn()
       const itemsWithAllProps: ARCBreadCrumbItem[] = [
         {
-          disabled: false,
           label: "Home",
           onClick: customOnClick,
         },
         {
-          disabled: true,
           label: "Disabled Item",
         },
       ]
@@ -291,7 +243,10 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       // Should render as a nav with proper structure
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs).toBeInTheDocument()
-      expect(breadcrumbs.children.length).toBe(mockItems.length)
+      // The nav contains an ol, and the ol contains the li elements
+      expect(breadcrumbs.children).toHaveLength(1)
+      const list = breadcrumbs.querySelector('ol')
+      expect(list?.children).toHaveLength(mockItems.length)
     })
   })
 
@@ -324,7 +279,11 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs).toBeInTheDocument()
-      expect(breadcrumbs.children).toHaveLength(0)
+      // The nav contains an ol element even when empty
+      expect(breadcrumbs.children).toHaveLength(1)
+      const list = breadcrumbs.querySelector('ol')
+      expect(list).toBeInTheDocument()
+      expect(list?.children).toHaveLength(0)
     })
 
     it("should handle items with missing properties", () => {
@@ -338,7 +297,9 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       expect(screen.getByText("Home")).toBeInTheDocument()
       // Empty label should still render the structure
       const breadcrumbs = screen.getByRole("navigation")
-      expect(breadcrumbs.children).toHaveLength(2)
+      expect(breadcrumbs.children).toHaveLength(1)
+      const list = breadcrumbs.querySelector('ol')
+      expect(list?.children).toHaveLength(2)
     })
 
     it("should handle component unmounting gracefully", () => {
@@ -378,7 +339,9 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       render(<ARCBreadCrumbs items={manyItems} />)
 
       const breadcrumbs = screen.getByRole("navigation")
-      expect(breadcrumbs.children).toHaveLength(100)
+      expect(breadcrumbs.children).toHaveLength(1)
+      const list = breadcrumbs.querySelector('ol')
+      expect(list?.children).toHaveLength(100)
       expect(screen.getByText("Item 1")).toBeInTheDocument()
       expect(screen.getByText("Item 100")).toBeInTheDocument()
     })
@@ -455,11 +418,12 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
       render(<ARCBreadCrumbs items={itemsWithDropdown} />)
 
-      // Should render the dropdown trigger as a button (without dropdown arrow in
+      // Should render the dropdown trigger as a span with button role (without dropdown arrow in
       // the text)
       const homeButton = screen.getByText("Home")
       expect(homeButton).toBeInTheDocument()
-      expect(homeButton.tagName).toBe("BUTTON")
+      expect(homeButton.tagName).toBe("SPAN")
+      expect(homeButton).toHaveAttribute("role", "button")
     })
   })
 })

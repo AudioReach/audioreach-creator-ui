@@ -1,9 +1,8 @@
 /* eslint-disable react/prop-types */
 import {useEffect, useMemo, useRef, useState} from "react"
 
+import {Button} from "@qualcomm-ui/react/button"
 import {X} from "lucide-react"
-
-import {QButton} from "@qui/react"
 
 import ARCCombobox from "./ARCCombobox"
 import ARCTextInput from "./ARCTextInput"
@@ -286,15 +285,15 @@ const ARCChannelConfigDialog: React.FC<ARCChannelConfigDialogProps> = ({
           <h2 className="arc-popup-title" id="arc-popup-title">
             Channel Configuration
           </h2>
-          <QButton
+          <Button
             aria-label="Close"
             color="neutral"
             onClick={onClose}
-            size="s"
+            size="sm"
             variant="ghost"
           >
             <X size={16} />
-          </QButton>
+          </Button>
         </div>
 
         <div className="arc-popup-body">
@@ -308,7 +307,7 @@ const ARCChannelConfigDialog: React.FC<ARCChannelConfigDialogProps> = ({
                   max={maxChannelCount}
                   min={0}
                   onChange={handleChannelCountChange}
-                  size="s"
+                  size="sm"
                   type="number"
                   value={channelCount.toString()}
                 />
@@ -339,12 +338,12 @@ const ARCChannelConfigDialog: React.FC<ARCChannelConfigDialogProps> = ({
 
         <div className="arc-popup-footer">
           <div className="arc-popup-footer-buttons">
-            <QButton color="neutral" onClick={onClose} variant="fill">
+            <Button color="neutral" onClick={onClose} variant="fill">
               Cancel
-            </QButton>
-            <QButton color="primary" onClick={handleSave} variant="fill">
+            </Button>
+            <Button color="primary" onClick={handleSave} variant="fill">
               Save
-            </QButton>
+            </Button>
           </div>
         </div>
       </div>

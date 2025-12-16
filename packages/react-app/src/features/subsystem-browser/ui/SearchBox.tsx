@@ -1,8 +1,7 @@
 import type {FC} from "react"
 
+import {TextInput} from "@qualcomm-ui/react/text-input"
 import {Search} from "lucide-react"
-
-import {QTextInput} from "@qui/react"
 
 interface SearchProps {
   onChange: (value: string) => void
@@ -10,18 +9,27 @@ interface SearchProps {
   searchTerm: string
 }
 
-const SearchBox: FC<SearchProps> = ({onChange, onClear, searchTerm}) => (
-  <div style={{alignItems: "center", display: "flex"}}>
-    <QTextInput
-      fullWidth
-      onChange={(_event, value, _reason) => onChange(value)}
-      onClear={() => onClear()}
-      placeholder="Search..."
-      size="s"
-      startIcon={Search}
-      value={searchTerm}
-    />
-  </div>
-)
+const SearchBox: FC<SearchProps> = ({onChange, onClear, searchTerm}) => {
+  const handleValueChange = (value: string) => {
+    onChange(value)
+    // If value is empty, also call onClear
+    if (!value) {
+      onClear()
+    }
+  }
+
+  return (
+    <div style={{alignItems: "center", display: "flex"}}>
+      <TextInput
+        clearable
+        onValueChange={handleValueChange}
+        placeholder="Search..."
+        size="sm"
+        startIcon={Search}
+        value={searchTerm}
+      />
+    </div>
+  )
+}
 
 export default SearchBox

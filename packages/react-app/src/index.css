@@ -1,15 +1,20 @@
 @import "@qui/styles/dist/all.min.css";
 @import "@qui/base/dist/all.min.css";
 
+@import "@qualcomm-ui/qds-core/styles/components.css";
+@import "@qualcomm-ui/qds-core/themes/qualcomm-dark.css";
+@import "@qualcomm-ui/qds-core/themes/qualcomm-light.css";
+@import "@qualcomm-ui/qds-core/themes/snapdragon-light.css";
+@import "@qualcomm-ui/qds-core/themes/snapdragon-dark.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer components {
-
   /* Make project tabs smaller */
   .flexlayout__tab_button {
-    @apply text-xs  h-5 leading-3 min-h-5;
+    @apply h-5·min-h-5·text-xs·leading-3;
   }
 }
 

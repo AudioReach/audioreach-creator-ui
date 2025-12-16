@@ -7,99 +7,7 @@ import ARCTextInput, {
   type ARCTextInputProps,
 } from "~shared/controls/ARCTextInput"
 
-// Mock QTextInput component
-jest.mock("@qui/react", () => ({
-  QTextInput: jest
-    .fn()
-    .mockImplementation(
-      ({
-        autoFocus,
-        className,
-        clearable,
-        defaultValue,
-        disabled,
-        error,
-        fullWidth,
-        hint,
-        id,
-        inputProps,
-        label,
-        name,
-        onBlur,
-        onChange,
-        onClear,
-        onFocus,
-        placeholder,
-        readOnly,
-        size,
-        style,
-        value,
-        ...restProps
-      }) => {
-        const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-          if (onChange) {
-            onChange(event, event.target.value)
-          }
-        }
-
-        const handleClear = () => {
-          if (onClear) {
-            onClear()
-          }
-        }
-
-        return (
-          <div
-            className={className}
-            data-testid="q-text-input"
-            style={style}
-            {...restProps}
-          >
-            {label && <label data-testid="input-label">{label}</label>}
-            <input
-              autoFocus={autoFocus}
-              data-full-width={fullWidth}
-              data-size={size}
-              data-testid="text-input"
-              defaultValue={defaultValue}
-              disabled={disabled}
-              id={id}
-              max={inputProps?.max}
-              maxLength={inputProps?.maxLength}
-              min={inputProps?.min}
-              minLength={inputProps?.minLength}
-              name={name}
-              onBlur={onBlur}
-              onChange={handleChange}
-              onFocus={onFocus}
-              pattern={inputProps?.pattern}
-              placeholder={placeholder}
-              readOnly={readOnly}
-              step={inputProps?.step}
-              type={inputProps?.type || "text"}
-              value={value}
-            />
-            {clearable && (
-              <button
-                aria-label="Clear input"
-                data-testid="clear-button"
-                onClick={handleClear}
-                type="button"
-              >
-                ×
-              </button>
-            )}
-            {error && (
-              <div data-testid="error-message" role="alert">
-                {error}
-              </div>
-            )}
-            {hint && <div data-testid="hint-message">{hint}</div>}
-          </div>
-        )
-      },
-    ),
-}))
+// Note: TextInput mock is now in test-setup.ts
 
 describe("ARCTextInput - Generic Controls API", () => {
   const defaultProps: ARCTextInputProps = {}
@@ -214,7 +122,7 @@ describe("ARCTextInput - Generic Controls API", () => {
       render(
         <ARCTextInput
           {...(defaultProps as any)}
-          error="Username is required"
+          errorText="Username is required"
           required
           value=""
         />,
@@ -317,7 +225,7 @@ describe("ARCTextInput - Generic Controls API", () => {
       render(
         <ARCTextInput
           {...({
-            error: "Please enter a valid email address",
+            errorText: "Please enter a valid email address",
             label: "Email",
             onChange: () => {},
             placeholder: "Enter your email",
@@ -339,7 +247,7 @@ describe("ARCTextInput - Generic Controls API", () => {
       render(
         <ARCTextInput
           {...({
-            error: "Password must be at least 8 characters long",
+            errorText: "Password must be at least 8 characters long",
             label: "Password",
             minLength: 8,
             onChange: () => {},
@@ -426,59 +334,13 @@ describe("ARCTextInput - Generic Controls API", () => {
       render(
         <ARCTextInput
           {...(defaultProps as any)}
-          error="This field is required"
+          errorText="This field is required"
         />,
       )
 
       const errorMessage = screen.getByTestId("error-message")
       expect(errorMessage).toHaveAttribute("role", "alert")
       expect(errorMessage).toHaveTextContent("This field is required")
-    })
-  })
-
-  describe("Integration with QTextInput", () => {
-    it("should pass through QTextInput specific props", () => {
-      render(
-        <ARCTextInput
-          {...({
-            ...defaultProps,
-            clearable: true,
-            fullWidth: true,
-            hint: "This is a hint message",
-            size: "l",
-          } as any)}
-        />,
-      )
-
-      const input = screen.getByTestId("text-input")
-      expect(input).toHaveAttribute("data-size", "l")
-      expect(input).toHaveAttribute("data-full-width", "true")
-
-      expect(screen.getByTestId("clear-button")).toBeInTheDocument()
-      expect(screen.getByTestId("hint-message")).toHaveTextContent(
-        "This is a hint message",
-      )
-    })
-
-    it("should handle onClear callback", async () => {
-      const onClear = jest.fn()
-      const user = userEvent.setup()
-
-      render(
-        <ARCTextInput
-          {...({
-            ...defaultProps,
-            clearable: true,
-            onClear,
-            value: "test value",
-          } as any)}
-        />,
-      )
-
-      const clearButton = screen.getByTestId("clear-button")
-      await user.click(clearButton)
-
-      expect(onClear).toHaveBeenCalledTimes(1)
     })
   })
 

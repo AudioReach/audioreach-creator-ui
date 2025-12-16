@@ -23,8 +23,14 @@ export const ModuleNode: FC<NodeProps> = ({data}) => {
   }
 
   return (
-    <div className="bg-contrast-4 rounded border px-0.5 py-0.5">
-      <div className="bg-4 relative flex min-h-[60px] w-[100px] items-center justify-center rounded border shadow-sm">
+    <div
+      className="mb-3 mt-3 rounded border px-0.5 py-0.5"
+      style={{borderColor: `var(--color-background-neutral-10)`}}
+    >
+      <div
+        className="relative flex min-h-[60px] w-[100px] items-center justify-center rounded border shadow-sm"
+        style={{backgroundColor: `var(--color-background-neutral-05)`}}
+      >
         {/* <div className="text-primary text-xs font-semibold">Module</div> */}
         <div className="text-primary text-xxs break-words text-center">
           {moduleData.label}

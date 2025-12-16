@@ -14,7 +14,7 @@ export interface ARCKeyVectorSelectorProps
   fullWidth?: boolean
   hint?: string
   keyName: string // The fixed key name for this control
-  label?: React.ReactNode // Allow custom label override
+  label?: string
   minWidth?: string | number
   onSelectionChange?: (selectedValue: string, keyName: string) => void
   required?: boolean
@@ -74,6 +74,7 @@ export const ARCKeyVectorSelector = forwardRef<
     }
 
     // Create the display label with key name prefix or use custom label
+    // Convert to string since ARCCombobox expects string label
     const displayLabel = label || `${keyName} Selector`
 
     // Convert the controlled value to "key: value" format for display
@@ -88,22 +89,22 @@ export const ARCKeyVectorSelector = forwardRef<
     }
 
     return (
-      <ARCCombobox<string>
-        {...restProps}
-        ref={ref}
-        clearable={false}
-        error={error}
-        filterable={false}
-        fullWidth={fullWidth}
-        hint={hint}
-        label={displayLabel}
-        minWidth={minWidth}
-        onChange={handleSelectionChange}
-        options={displayOptions}
-        required={required}
-        style={containerStyle}
-        value={displayValue}
-      />
+      <div ref={ref}>
+        <ARCCombobox<string>
+          {...restProps}
+          error={error}
+          filterable={false}
+          fullWidth={fullWidth}
+          hint={hint}
+          label={displayLabel}
+          minWidth={minWidth}
+          onChange={handleSelectionChange}
+          options={displayOptions}
+          required={required}
+          style={containerStyle}
+          value={displayValue}
+        />
+      </div>
     )
   },
 )

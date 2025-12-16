@@ -3,13 +3,11 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react"
 
-import {type QBreadcrumbItem, QBreadcrumbs, QButton, QPopover} from "@qui/react"
-
-import "./ARCBreadCrumbs.css"
+import {Breadcrumbs} from "@qualcomm-ui/react/breadcrumbs"
+import {Popover} from "@qualcomm-ui/react/popover"
 
 export interface ARCBreadcrumbDropdownItem {
   disabled?: boolean
@@ -18,11 +16,15 @@ export interface ARCBreadcrumbDropdownItem {
   onClick?: (event: React.MouseEvent<HTMLElement>) => void
 }
 
-export interface ARCBreadCrumbItem extends Omit<QBreadcrumbItem, "render"> {
+export interface ARCBreadCrumbItem {
   /**
    * Optional dropdown items to show when this breadcrumb is clicked
    */
   dropdownItems?: ARCBreadcrumbDropdownItem[]
+  /**
+   * The label text for the breadcrumb
+   */
+  label: string
   /**
    * Custom click handler for the breadcrumb item
    */
@@ -49,20 +51,14 @@ export interface ARCBreadCrumbsProps {
 }
 
 /**
- * ARCBreadCrumbs - A breadcrumb control that inherits from QBreadcrumbs
- * with enhanced functionality for click handling and customization
+ * ARCBreadCrumbs - A breadcrumb control using the new Breadcrumbs from qualcomm-ui
+ * with enhanced functionality for click handling and dropdown support
  */
-export const ARCBreadCrumbs = forwardRef<HTMLUListElement, ARCBreadCrumbsProps>(
+export const ARCBreadCrumbs = forwardRef<HTMLElement, ARCBreadCrumbsProps>(
   ({className, items = [], onItemClick}, ref) => {
     const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
       null,
     )
-    const [dropdownPosition, setDropdownPosition] = useState<{
-      left: number
-      top: number
-    }>({left: 0, top: 0})
-    const containerRef = useRef<HTMLDivElement>(null)
-    const topMargin = 4
 
     // Handle dropdown item click
     const handleDropdownItemClick = useCallback(
@@ -89,19 +85,6 @@ export const ARCBreadCrumbs = forwardRef<HTMLUListElement, ARCBreadCrumbsProps>(
         if (hasDropdown) {
           event.preventDefault()
           event.stopPropagation()
-
-          // Calculate position relative to container
-          if (containerRef.current) {
-            const clickedElement = event.currentTarget
-            const containerRect = containerRef.current.getBoundingClientRect()
-            const elementRect = clickedElement.getBoundingClientRect()
-
-            setDropdownPosition({
-              left: elementRect.left - containerRect.left,
-              top: elementRect.bottom - containerRect.top + topMargin,
-            })
-          }
-
           setOpenDropdownIndex(openDropdownIndex === index ? null : index)
         } else {
           item.onClick?.(event)
@@ -115,109 +98,164 @@ export const ARCBreadCrumbs = forwardRef<HTMLUListElement, ARCBreadCrumbsProps>(
     // Close dropdown when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        if (openDropdownIndex !== null && containerRef.current) {
+        if (openDropdownIndex !== null) {
           const target = event.target as Node
-          if (!containerRef.current.contains(target)) {
-            setOpenDropdownIndex(null)
-          }
+          requestAnimationFrame(() => {
+            const dropdownContent = document.querySelector(
+              `[data-dropdown-index="${openDropdownIndex}"]`,
+            )
+            if (dropdownContent && !dropdownContent.contains(target)) {
+              setOpenDropdownIndex(null)
+            }
+          })
         }
       }
 
       if (openDropdownIndex !== null) {
-        document.addEventListener("click", handleClickOutside)
+        document.addEventListener("mousedown", handleClickOutside)
       }
 
       return () => {
-        document.removeEventListener("click", handleClickOutside)
+        document.removeEventListener("mousedown", handleClickOutside)
       }
     }, [openDropdownIndex])
 
-    // Transform our items to QBreadcrumbItem format
-    const qBreadcrumbItems: QBreadcrumbItem[] = items.map((item, index) => {
-      const {dropdownItems, onClick, ...qBreadcrumbProps} = item
-      const hasDropdown = dropdownItems && dropdownItems.length > 0
-
-      // Create the render element
-      let renderElement: React.ReactElement
-
-      if (hasDropdown || onClick || onItemClick) {
-        // If has dropdown or click handlers are provided, create a clickable element
-        renderElement = (
-          <button
-            onClick={(event) => handleBreadcrumbClick(event, item, index)}
-            type="button"
-          >
-            {item.label}
-          </button>
-        )
-      } else {
-        // Default: just render the label as text
-        renderElement = <span>{item.label}</span>
+    const handleKeyDown = (
+      event: React.KeyboardEvent<HTMLElement>,
+      item: ARCBreadCrumbItem,
+      index: number,
+    ) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault()
+        handleBreadcrumbClick(event as any, item, index)
       }
+    }
 
-      return {
-        ...qBreadcrumbProps,
-        render: renderElement,
-      }
-    })
+    const handleDropdownKeyDown = useCallback(
+      (
+        event: React.KeyboardEvent<HTMLDivElement>,
+        dropdownItem: ARCBreadcrumbDropdownItem,
+      ) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          if (!dropdownItem.disabled) {
+            handleDropdownItemClick(event as any, dropdownItem)
+          }
+        }
+      },
+      [handleDropdownItemClick],
+    )
 
     return (
-      <div ref={containerRef} className="arc-breadcrumbs-container">
-        <QBreadcrumbs
-          ref={ref}
-          className={className}
-          items={qBreadcrumbItems}
-        />
+      <div className="relative min-h-8 w-full overflow-visible">
+        <Breadcrumbs.Root ref={ref} className={className}>
+          <Breadcrumbs.List>
+            {items.map((item, index) => {
+              const hasDropdown =
+                item.dropdownItems && item.dropdownItems.length > 0
 
-        {/* Render dropdown overlays using QPopover for theming */}
-        {items.map((item, index) => {
-          const hasDropdown =
-            item.dropdownItems && item.dropdownItems.length > 0
-          const isDropdownOpen = openDropdownIndex === index
-
-          if (!isDropdownOpen || !hasDropdown) {
-            return null
-          }
-
-          return (
-            <div
-              key={`dropdown-${index}`}
-              className="arc-dropdown-overlay"
-              style={
-                {
-                  "--dropdown-left": `${dropdownPosition.left}px`,
-                  "--dropdown-top": `${dropdownPosition.top}px`,
-                } as React.CSSProperties
-              }
-            >
-              <QPopover>
-                <div className="arc-dropdown-container">
-                  {item.dropdownItems!.map((dropdownItem, dropdownIndex) => (
-                    <QButton
-                      key={`dropdown-${dropdownIndex}`}
-                      disabled={dropdownItem.disabled}
-                      onClick={(event) => {
-                        if (!dropdownItem.disabled) {
-                          handleDropdownItemClick(event, dropdownItem)
+              return (
+                <Breadcrumbs.Item key={index}>
+                  {hasDropdown ? (
+                    // For items with dropdown, use Popover outside of Breadcrumbs structure
+                    <Popover.Root
+                      onOpenChange={(open: boolean) => {
+                        if (!open) {
+                          setOpenDropdownIndex(null)
                         }
                       }}
-                      variant="ghost"
+                      open={openDropdownIndex === index}
+                      positioning={{
+                        gutter: 4,
+                        placement: "bottom-start",
+                        strategy: "absolute",
+                      }}
                     >
-                      {dropdownItem.icon && (
-                        <span className="arc-dropdown-item-icon">
-                          {dropdownItem.icon}
-                        </span>
-                      )}
-                      <span className="arc-dropdown-item-label">
-                        {dropdownItem.label}
-                      </span>
-                    </QButton>
-                  ))}
-                </div>
-              </QPopover>
-            </div>
-          )
-        })}
+                      <Popover.Trigger>
+                        {(triggerProps) => (
+                          <span
+                            {...triggerProps}
+                            className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
+                            onClick={(event: React.MouseEvent<HTMLElement>) => {
+                              handleBreadcrumbClick(event, item, index)
+                              triggerProps.onClick?.(event as any)
+                            }}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            {item.label}
+                          </span>
+                        )}
+                      </Popover.Trigger>
+                      <Popover.Content
+                        className="bg-background-1 border-border-1 z-[9999] min-w-[150px] rounded-md border p-2 shadow-lg"
+                        data-dropdown-index={index}
+                      >
+                        <div className="flex flex-col gap-1">
+                          {item.dropdownItems!.map(
+                            (dropdownItem, dropdownIndex) => (
+                              <div
+                                key={`dropdown-${dropdownIndex}`}
+                                className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
+                                  dropdownItem.disabled
+                                    ? "text-text-3 cursor-not-allowed opacity-50"
+                                    : "text-text-1 hover:bg-background-3 cursor-pointer"
+                                }`}
+                                onClick={(
+                                  event: React.MouseEvent<HTMLDivElement>,
+                                ) => {
+                                  if (!dropdownItem.disabled) {
+                                    handleDropdownItemClick(event, dropdownItem)
+                                  }
+                                }}
+                                onKeyDown={(
+                                  event: React.KeyboardEvent<HTMLDivElement>,
+                                ) => {
+                                  handleDropdownKeyDown(event, dropdownItem)
+                                }}
+                                role="menuitem"
+                                tabIndex={dropdownItem.disabled ? -1 : 0}
+                              >
+                                {dropdownItem.icon && (
+                                  <span className="mr-2 text-base">
+                                    {dropdownItem.icon}
+                                  </span>
+                                )}
+                                <span className="flex-1">
+                                  {dropdownItem.label}
+                                </span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </Popover.Content>
+                    </Popover.Root>
+                  ) : item.onClick || onItemClick ? (
+                    // For clickable items without dropdown
+                    <span
+                      className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
+                      onClick={(event: React.MouseEvent<HTMLElement>) =>
+                        handleBreadcrumbClick(event, item, index)
+                      }
+                      onKeyDown={(event: React.KeyboardEvent<HTMLElement>) =>
+                        handleKeyDown(event, item, index)
+                      }
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {item.label}
+                    </span>
+                  ) : (
+                    // For non-clickable items
+                    <span className="font-body-md text-text-1 inline-flex items-center px-2 py-1">
+                      {item.label}
+                    </span>
+                  )}
+                </Breadcrumbs.Item>
+              )
+            })}
+          </Breadcrumbs.List>
+        </Breadcrumbs.Root>
       </div>
     )
   },

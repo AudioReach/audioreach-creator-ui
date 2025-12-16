@@ -10,10 +10,16 @@ export const ContainerNode: FC<NodeProps> = ({data}) => {
 
   return (
     <div
-      className="bg-2 rounded-md border-2 border-dotted shadow-sm"
-      style={{height: "100%", position: "relative", width: "100%"}}
+      className="rounded-md border-2 border-dotted shadow-sm"
+      style={{
+        backgroundColor: `var(--color-background-neutral-02)`,
+        borderColor: `var(--color-background-neutral-07)`,
+        height: "100%",
+        position: "relative",
+        width: "100%",
+      }}
     >
-      <div className="text-disabled text-xxs absolute left-2 top-1 rounded px-1 font-semibold">
+      <div className="text-disabled text-xxs absolute left-2 top-2 rounded font-semibold">
         {containerData.label}
       </div>
     </div>

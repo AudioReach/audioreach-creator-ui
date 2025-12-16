@@ -1,12 +1,12 @@
 import {type ChangeEvent, Component, type KeyboardEvent} from "react"
 
-import {QTextInput, type QTextInputProps} from "@qui/react"
+import {TextInput, type TextInputProps} from "@qualcomm-ui/react/text-input"
 
 /**
  * Props interface for ARCTextInput component
  * Extends QTextInputProps but overrides onChange for enhanced functionality
  */
-export interface ARCTextInputProps extends Omit<QTextInputProps, "onChange"> {
+export interface ARCTextInputProps extends Omit<TextInputProps, "onChange"> {
   // Enhanced numeric features
   /** Allow hexadecimal input (e.g., "0xFF" or "FF") for numeric types */
   acceptHex?: boolean
@@ -110,20 +110,17 @@ export class ARCTextInput extends Component<
    * Enhanced change handler that validates input and provides error feedback
    */
   private handleChange = (
-    event: React.SyntheticEvent<Element, Event>,
     newValue: string,
+    event?: ChangeEvent<HTMLInputElement>,
   ) => {
-    const {onChange} = this.props
-
-    if (onChange) {
-      // Create a proper ChangeEvent for the callback
-      const changeEvent = event as unknown as ChangeEvent<HTMLInputElement>
-      onChange(newValue, changeEvent)
-    }
-
     // Validate the new value and update error state
     const validationError = this.validateValue(newValue)
     this.setState({validationError})
+
+    // Call the user's onChange callback if provided
+    if (this.props.onChange && event) {
+      this.props.onChange(newValue, event)
+    }
   }
 
   /**
@@ -171,8 +168,7 @@ export class ARCTextInput extends Component<
       clearable,
       defaultValue,
       disabled,
-      error,
-      fullWidth,
+      errorText,
       hint,
       id,
       label,
@@ -180,7 +176,6 @@ export class ARCTextInput extends Component<
       min,
       name,
       onBlur,
-      onClear,
       onFocus,
       placeholder,
       readOnly,
@@ -192,7 +187,7 @@ export class ARCTextInput extends Component<
     const {validationError} = this.state
 
     // Determine final error message (manual error prop takes precedence)
-    const finalError = error || validationError
+    const finalError = errorText || validationError
 
     const inputType = this.getInputType()
     const stepValue = this.getStepValue()
@@ -207,23 +202,22 @@ export class ARCTextInput extends Component<
     }
 
     return (
-      <QTextInput
+      <TextInput
         autoFocus={autoFocus}
         className={className}
         clearable={clearable}
         defaultValue={defaultValue ? String(defaultValue) : undefined}
         disabled={disabled}
-        error={finalError}
-        fullWidth={fullWidth}
+        errorText={finalError}
         hint={hint}
         id={id}
         inputProps={inputProps}
+        invalid={!!finalError}
         label={label}
         name={name}
         onBlur={onBlur}
-        onChange={this.handleChange}
-        onClear={onClear}
         onFocus={onFocus}
+        onValueChange={this.handleChange}
         placeholder={placeholder}
         readOnly={readOnly}
         size={size}

@@ -1,8 +1,7 @@
 import {type FC, useEffect, useMemo, useState} from "react"
 
+import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
 import {ChevronsDown, ChevronsUp} from "lucide-react"
-
-import {QIconButton} from "@qui/react"
 
 import type {SubsystemBrowserTreeNode} from "~features/subsystem-browser/model/subsystem-browser-types"
 import {ConvertStringToNumber} from "~shared/utils/converter-utils"
@@ -128,10 +127,8 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
         />
 
         {/* Single toggle button for Collapse all and Expand all */}
-        <QIconButton
+        <InlineIconButton
           aria-label={isFullyExpanded ? "Collapse all" : "Expand all"}
-          color="neutral"
-          dense
           icon={
             isFullyExpanded ? (
               <ChevronsUp size={20} />
@@ -140,12 +137,12 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
             )
           }
           onClick={toggleAll}
-          size="s"
+          size="sm"
           style={{
             background: "#fff",
           }}
           title={isFullyExpanded ? "Collapse all" : "Expand all"}
-          variant="outline"
+          variant="scale"
         />
       </div>
       {data.map((treeNode) => (

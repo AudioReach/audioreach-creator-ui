@@ -1,3 +1,5 @@
+import {Button, IconButton} from "@qualcomm-ui/react/button"
+import {Checkbox} from "@qualcomm-ui/react/checkbox"
 import {
   ChevronDown,
   ChevronRight,
@@ -6,8 +8,6 @@ import {
   Settings,
   Trash2,
 } from "lucide-react"
-
-import {QCheckbox, QIconButton} from "@qui/react"
 
 import type {KeyValue, Usecase, UsecaseCategory} from "../model/types"
 
@@ -35,61 +35,54 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   usecaseData,
 }) => {
   return (
-    <div className="flex w-2/3 flex-col">
+    <div className="flex w-full flex-col">
       {/* Top controls - Sticky header */}
       <div className="flex-shrink-0 border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <label className="flex cursor-pointer items-center text-sm text-gray-700">
-            <QCheckbox
+          <label className="text-md flex cursor-pointer items-center text-gray-700">
+            <Checkbox
               checked={
                 selectedUsecases.length ===
                   usecaseData.flatMap((cat) => cat.usecases).length &&
                 usecaseData.flatMap((cat) => cat.usecases).length > 0
               }
-              onChange={(e) => handleSelectAll(e.target.checked)}
+              onCheckedChange={handleSelectAll}
+              size="sm"
             />
             <span className="ml-2">Select All</span>
           </label>
           <div className="flex items-center space-x-2">
-            <QIconButton
-              color="neutral"
-              size="s"
+            <IconButton
+              emphasis="neutral"
+              icon={PanelTopOpen}
+              size="md"
               title="Expand All"
               variant="ghost"
-            >
-              <PanelTopOpen className="h-5 w-5" />
-            </QIconButton>
-            <QIconButton
-              color="neutral"
-              size="s"
+            />
+            <IconButton
+              emphasis="neutral"
+              icon={PanelTopClose}
+              size="md"
               title="Collapse All"
               variant="ghost"
-            >
-              <PanelTopClose className="h-5 w-5" />
-            </QIconButton>
-            <QIconButton
-              color="neutral"
-              size="s"
+            />
+            <IconButton
+              emphasis="neutral"
+              icon={Trash2}
+              size="md"
               title="Delete"
               variant="ghost"
-            >
-              <Trash2 className="h-5 w-5" />
-            </QIconButton>
-            <QIconButton
-              color="neutral"
-              size="s"
+            />
+            <IconButton
+              emphasis="neutral"
+              icon={Settings}
+              size="md"
               title="Settings"
               variant="ghost"
-            >
-              <Settings className="h-5 w-5" />
-            </QIconButton>
-            <button
-              className="ml-2 rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              onClick={onClose}
-              type="button"
-            >
+            />
+            <Button onClick={onClose} size="md" variant="outline">
               Done
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -107,34 +100,27 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
           const someChecked =
             checkedUsecasesInCategory > 0 &&
             checkedUsecasesInCategory < totalUsecasesInCategory
-
+          const icon = isCategoryExpanded ? ChevronDown : ChevronRight
           return (
             <div key={category.name} className="mb-4 last:mb-0">
               <div className="mb-2 flex items-center">
-                <QIconButton
-                  color="neutral"
+                <IconButton
+                  emphasis="neutral"
+                  icon={icon}
                   onClick={() => toggleCategoryExpansion(category.name)}
-                  size="s"
+                  size="md"
                   variant="ghost"
-                >
-                  {isCategoryExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </QIconButton>
-                <label className="flex cursor-pointer items-center text-sm font-semibold text-gray-800">
-                  <QCheckbox
+                />
+                <label className="text-md flex cursor-pointer items-center font-semibold text-gray-800">
+                  <Checkbox
                     checked={allChecked}
                     indeterminate={someChecked}
-                    onChange={(e) => {
+                    onCheckedChange={(checked) => {
                       category.usecases.forEach((uc: Usecase) =>
-                        handleSelectUsecase(
-                          formatUsecaseDisplay(uc),
-                          e.target.checked,
-                        ),
+                        handleSelectUsecase(formatUsecaseDisplay(uc), checked),
                       )
                     }}
+                    size="sm"
                   />
                   <span className="ml-2">{category.name}</span>
                 </label>
@@ -146,17 +132,15 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                       const formattedUsecase = formatUsecaseDisplay(usecase)
                       return (
                         <div key={usecaseIndex} className="mb-3 last:mb-0">
-                          <label className="flex cursor-pointer items-center text-sm text-gray-700">
-                            <QCheckbox
+                          <label className="text-md flex cursor-pointer items-center text-gray-700">
+                            <Checkbox
                               checked={selectedUsecases.includes(
                                 formattedUsecase,
                               )}
-                              onChange={(e) =>
-                                handleSelectUsecase(
-                                  formattedUsecase,
-                                  e.target.checked,
-                                )
+                              onCheckedChange={(checked) =>
+                                handleSelectUsecase(formattedUsecase, checked)
                               }
+                              size="sm"
                             />
                             <span className="ml-2">{formattedUsecase}</span>
                           </label>

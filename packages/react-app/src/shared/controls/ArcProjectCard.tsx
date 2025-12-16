@@ -1,10 +1,12 @@
 import {useRef, useState} from "react"
 
+import {Avatar} from "@qualcomm-ui/react/avatar"
+import {Badge} from "@qualcomm-ui/react/badge"
+import {Menu} from "@qualcomm-ui/react/menu"
+import {Portal} from "@qualcomm-ui/react-core/portal"
 import {Database} from "lucide-react"
 
 import {
-  QAvatar,
-  QBadge,
   QCard,
   QCardAdornment,
   QCardContent,
@@ -12,7 +14,6 @@ import {
   QCardMedia,
   QCardSubtitle,
   QCardTitle,
-  QMenu,
 } from "@qui/react"
 
 import qcLogoImg from "~assets/graph-view-screenshot.png" // todo: REMOVE THIS AND REPLACE WITH imgSource from ArcProjectCardProps when we support getting the image of the graph view
@@ -41,7 +42,7 @@ export interface ArcProjectCardProps {
 
 export default function ArcProjectCard({
   description,
-  isActive = false,
+  //isActive = false,
   label,
   lastModifiedDate,
   onDoubleClick,
@@ -51,7 +52,7 @@ export default function ArcProjectCard({
 }: ArcProjectCardProps) {
   // State for context menu
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const cardRef = useRef(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   function getTimeStampMesage(): string {
     // If no lastModifiedDate is provided, return a default message
@@ -122,6 +123,7 @@ export default function ArcProjectCard({
 
   async function handleShowInExplorer() {
     await onShowInExplorer?.()
+    setIsContextMenuOpen(false)
   }
 
   return (
@@ -146,7 +148,7 @@ export default function ArcProjectCard({
 
         {label !== undefined && (
           <QCardAdornment placement="top-right-outer">
-            <QBadge color="yellow">{label}</QBadge>
+            <Badge color="yellow">{label}</Badge>
           </QCardAdornment>
         )}
 
@@ -159,38 +161,45 @@ export default function ArcProjectCard({
             )}
           </div>
 
-          <QAvatar
+          <Avatar.Root
             className="place-self-center"
-            color={isActive ? "kiwi" : "neutral"}
-            icon={Database}
-            shape="square"
-            size="l"
-            variant="icon"
-          />
+            size="lg"
+            variant="neutral"
+          >
+            <Avatar.Content>
+              <Database />
+            </Avatar.Content>
+          </Avatar.Root>
         </QCardContent>
       </QCard>
 
-      <QMenu
-        anchor={cardRef}
-        items={[
-          {
-            id: "removeRecentsMenuItem",
-            label: "Remove from recent",
-            render: <button onClick={handleRemoveFromRecent}></button>,
-          },
-          {
-            id: "openContainingFolderMenuItem",
-            label: "Show in explorer",
-            render: <button onClick={handleShowInExplorer}></button>,
-          },
-        ]}
-        offset={{alignmentAxis: 0, crossAxis: 0, mainAxis: 0}}
-        onOpenChange={(value: boolean) => {
-          setIsContextMenuOpen(value)
-        }}
-        open={isContextMenuOpen}
-        placement="bottom-start"
-      />
+      {isContextMenuOpen && (
+        <Portal>
+          <Menu.Root
+            onOpenChange={(open: boolean) => {
+              setIsContextMenuOpen(open)
+            }}
+            open={isContextMenuOpen}
+          >
+            <Menu.Positioner>
+              <Menu.Content>
+                <Menu.Item
+                  onClick={handleRemoveFromRecent}
+                  value="removeRecentsMenuItem"
+                >
+                  <Menu.ItemLabel>Remove from recent</Menu.ItemLabel>
+                </Menu.Item>
+                <Menu.Item
+                  onClick={handleShowInExplorer}
+                  value="openContainingFolderMenuItem"
+                >
+                  <Menu.ItemLabel>Show in explorer</Menu.ItemLabel>
+                </Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Portal>
+      )}
     </div>
   )
 }

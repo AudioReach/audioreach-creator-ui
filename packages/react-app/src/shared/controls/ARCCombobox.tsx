@@ -1,82 +1,154 @@
-import {QCombobox} from "@qui/react"
+import {useMemo} from "react"
+
+import {Combobox} from "@qualcomm-ui/react/combobox"
+import {useListCollection} from "@qualcomm-ui/react-core/collection"
 
 /**
- * ARCCombobox - A simple wrapper around QCombobox that leverages its
- * object support and provides consistent styling
+ * ARCCombobox - A wrapper around the new Combobox from qualcomm-ui
+ * Maintains backward compatibility with the old QCombobox API
  */
-export interface ARCComboboxProps<T = string>
-  extends Omit<React.ComponentProps<typeof QCombobox>, "onChange"> {
+export interface ARCComboboxProps<T = string> {
+  /** Custom CSS class name */
+  className?: string
+  /** Whether the combobox is disabled */
+  disabled?: boolean
+  /** Error state - boolean or error message string */
   error?: boolean | string
+  /** Enable filtering/search functionality */
+  filterable?: boolean
+  /** Make the combobox take full width of container */
   fullWidth?: boolean
+  /** Helper text displayed below the input */
   hint?: string
+  /** Unique identifier */
+  id?: string
+  /** Label text for the combobox */
+  label?: string
+  /** Minimum width of the combobox */
   minWidth?: string | number
+  /** Enable multiple selection */
+  multiple?: boolean
+  /** Change handler - called when selection changes */
   onChange?: (value: T | T[]) => void
-  ref?: React.Ref<HTMLDivElement>
+  /** Array of options to display */
+  options?: T[]
+  /** Placeholder text */
+  placeholder?: string
+  /** Whether the field is required */
   required?: boolean
+  /** Custom inline styles */
+  style?: React.CSSProperties
+  /** Current selected value(s) */
+  value?: T | T[]
+  /** Width of the combobox */
   width?: string | number
 }
 
-export const ARCCombobox = <T = string,>(props: ARCComboboxProps<T>) => {
+export const ARCCombobox = <T extends string = string>(
+  props: ARCComboboxProps<T>,
+) => {
   const {
+    className,
+    disabled = false,
     error,
-    fullWidth,
+    filterable = false,
+    fullWidth = false,
     hint,
+    id,
+    label,
     minWidth,
+    multiple = false,
     onChange,
-    ref,
-    required,
+    options = [],
+    placeholder,
+    required = false,
     style,
+    value,
     width,
-    ...restProps
   } = props
 
-  const handleChange: React.ComponentProps<typeof QCombobox>["onChange"] = (
-    event,
-    value,
-  ) => {
+  // Create collection from options array using the hook
+  const {collection} = useListCollection({
+    initialItems: options.map((option) => ({
+      label: String(option),
+      value: String(option),
+    })),
+  })
+
+  // Handle value change
+  const handleValueChange = (details: {value: string[]}) => {
     if (onChange) {
-      // Always call onChange, even for null/undefined values (when clearing)
-      onChange(value as T | T[])
+      if (multiple) {
+        // For multiple selection, return array
+        onChange(details.value as T | T[])
+      } else {
+        // For single selection, return single value or empty string
+        onChange((details.value[0] || "") as T | T[])
+      }
     }
   }
 
-  // Combine width prop with existing style
+  // Normalize value to array format for the Combobox
+  const normalizedValue = useMemo(() => {
+    if (!value) {
+      return []
+    }
+    return Array.isArray(value) ? value.map(String) : [String(value)]
+  }, [value])
+
+  // Determine error state
+  const isInvalid = typeof error === "boolean" ? error : !!error
+  const errorMessage = typeof error === "string" ? error : undefined
+
+  // Container styles
   const containerStyle: React.CSSProperties = {
-    minWidth: minWidth || width || (fullWidth ? undefined : "200px"), // Default minimum width
+    minWidth: minWidth || width || (fullWidth ? undefined : "200px"),
     width: width || (fullWidth ? "100%" : undefined),
     ...style,
   }
 
-  // Prepare QCombobox props - pass through all props except our custom ones
-  const finalQComboboxProps = {
-    ...restProps,
-    error: typeof error === "boolean" ? error : !!error,
-    onChange: handleChange,
-    style: {
-      minWidth: minWidth || width || (fullWidth ? undefined : "200px"),
-      width: width || (fullWidth ? "100%" : undefined),
-    },
-  } as unknown as React.ComponentProps<typeof QCombobox>
-
   return (
     <div
-      ref={ref}
-      className="arc-combobox-container"
+      className={`arc-combobox-container ${className || ""}`}
       data-testid="arc-combobox"
       style={containerStyle}
     >
-      <QCombobox {...finalQComboboxProps} />
-      {hint && !error && (
-        <div className="arc-combobox-hint" data-testid="combobox-hint">
-          {hint}
-        </div>
-      )}
-      {typeof error === "string" && (
-        <div className="arc-combobox-error" data-testid="combobox-error">
-          {error}
-        </div>
-      )}
-      {required && (
+      <Combobox.Root
+        collection={collection}
+        disabled={disabled}
+        id={id}
+        inputBehavior={filterable ? "autocomplete" : "none"}
+        invalid={isInvalid}
+        multiple={multiple}
+        onValueChange={handleValueChange}
+        positioning={{sameWidth: true}}
+        value={normalizedValue}
+      >
+        {label && <Combobox.Label>{label}</Combobox.Label>}
+
+        <Combobox.Control>
+          <Combobox.Input placeholder={placeholder} />
+          <Combobox.Trigger />
+        </Combobox.Control>
+
+        {hint && !isInvalid && (
+          <Combobox.Hint data-testid="combobox-hint">{hint}</Combobox.Hint>
+        )}
+
+        {isInvalid && errorMessage && (
+          <Combobox.ErrorText data-testid="combobox-error">
+            {errorMessage}
+          </Combobox.ErrorText>
+        )}
+
+        <Combobox.Positioner>
+          <Combobox.Content>
+            <Combobox.Items />
+          </Combobox.Content>
+        </Combobox.Positioner>
+      </Combobox.Root>
+
+      {required && !label && (
         <div className="arc-combobox-required" data-testid="combobox-required">
           * Required
         </div>
