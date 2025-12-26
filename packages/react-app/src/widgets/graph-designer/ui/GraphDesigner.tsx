@@ -14,18 +14,19 @@ import type {
   RFNode,
 } from "~features/usecase-visualizer/model/types"
 import {logger} from "~shared/lib/logger"
-import {useApplicationStore} from "~shared/store"
 import {useUsecaseStore} from "~shared/store/usecase-store"
 
 const EMPTY_SELECTED_USECASES: string[] = []
 
 interface GraphDesignerProps {
   projectGroupId: string
+  screenshotRegistry: Map<string, () => Promise<string | null>>
   usecaseData: UsecaseCategory[]
 }
 
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectGroupId,
+  screenshotRegistry,
   usecaseData: initialUsecaseData,
 }) => {
   // Get selected usecases directly for this project group - use a stable selector
@@ -34,22 +35,38 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       state.selectedUsecases[projectGroupId] ?? EMPTY_SELECTED_USECASES,
   )
 
-  // Get project group data directly - use a stable selector
-  const projectGroup = useApplicationStore((state) =>
-    state.projectGroups.find((pg) => pg.id === projectGroupId),
-  )
-
-  // Use usecaseData from store if available, otherwise use initial prop
-  const usecaseData = useMemo(
-    () => projectGroup?.usecaseData || initialUsecaseData,
-    [projectGroup?.usecaseData, initialUsecaseData],
-  )
+  // Use usecaseData from initial prop (passed from parent)
+  const usecaseData = useMemo(() => initialUsecaseData, [initialUsecaseData])
 
   // Local state for graph visualization
   const [nodes, setNodes] = useState<RFNode[]>([])
   const [edges, setEdges] = useState<RFEdge[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Handle screenshot function registration - directly register with passed registry
+  const handleScreenshotReady = (
+    screenshotFn: () => Promise<string | null>,
+  ) => {
+    screenshotRegistry.set(projectGroupId, screenshotFn)
+    logger.verbose("Screenshot function registered", {
+      action: "register_screenshot",
+      component: "GraphDesigner",
+      projectId: projectGroupId,
+    })
+  }
+
+  // Cleanup screenshot registration on unmount
+  useEffect(() => {
+    return () => {
+      screenshotRegistry.delete(projectGroupId)
+      logger.verbose("Screenshot function unregistered", {
+        action: "unregister_screenshot",
+        component: "GraphDesigner",
+        projectId: projectGroupId,
+      })
+    }
+  }, [projectGroupId, screenshotRegistry])
 
   // Fetch graph data when selected usecases change
   useEffect(() => {
@@ -80,9 +97,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         return
       }
 
-      // Get projectId from file path or use projectGroupId as fallback
-      // The projectId should be stored in the project group
-      const projectId = projectGroup?.id || projectGroupId
+      // Use projectGroupId as the projectId
+      const projectId = projectGroupId
 
       setIsLoading(true)
 
@@ -139,7 +155,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     }
 
     fetchGraphData()
-  }, [selectedUsecases, usecaseData, projectGroupId, projectGroup?.id])
+  }, [selectedUsecases, usecaseData, projectGroupId])
 
   return (
     <div className="flex h-full flex-col">
@@ -196,7 +212,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             </div>
           </div>
         ) : (
-          <UseCaseVisualizer edges={edges} nodes={nodes} />
+          <UseCaseVisualizer
+            edges={edges}
+            nodes={nodes}
+            onScreenshotReady={handleScreenshotReady}
+          />
         )}
       </div>
     </div>

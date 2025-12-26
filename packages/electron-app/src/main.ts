@@ -3,8 +3,10 @@ import {
   type ApiRequestType,
   type ApiResponse,
   type ConfigResult,
+  type MruProjectInfo,
 } from "@audioreach-creator-ui/api-utils"
 import {app, BrowserWindow, ipcMain} from "electron"
+import Store from "electron-store"
 import {existsSync, readFileSync, writeFileSync} from "node:fs"
 import {join, resolve} from "node:path"
 import {setTimeout} from "node:timers/promises"
@@ -17,6 +19,42 @@ import {
 
 let win: BrowserWindow
 const CONFIG_FILE = "config.json"
+const MAX_RECENT_PROJECTS = 20
+
+// #region MRU Store Setup
+
+/** Schema for the electron-store */
+interface StoreSchema {
+  recentProjects: MruProjectInfo[]
+}
+
+/** Initialize electron-store for MRU (Most Recently Used) projects */
+const mruStore = new Store<StoreSchema>({
+  defaults: {
+    recentProjects: [],
+  },
+  name: "arc-mru",
+  // Optional: Add schema validation
+  schema: {
+    recentProjects: {
+      items: {
+        properties: {
+          description: {type: "string"},
+          filepath: {type: "string"},
+          id: {type: "string"},
+          image: {type: "string"},
+          lastModifiedDate: {type: "string"},
+          name: {type: "string"},
+        },
+        required: ["id", "name", "filepath"],
+        type: "object",
+      },
+      type: "array",
+    },
+  },
+})
+
+// #endregion MRU Store Setup
 
 const appUrl = "http://localhost:5173"
 
@@ -217,3 +255,124 @@ ipcMain.handle(
   },
 )
 //  #endregion Configuration file handling
+
+//  #region MRU Store IPC Handlers
+
+/** Get all recent projects from MRU store */
+ipcMain.handle("mru:get-recent-projects", (): MruProjectInfo[] => {
+  try {
+    return mruStore.get("recentProjects", [])
+  } catch (error) {
+    console.error("Error getting recent projects from MRU store:", error)
+    return []
+  }
+})
+
+/** Add a project to the MRU store */
+ipcMain.handle(
+  "mru:add-project",
+  (_event, project: MruProjectInfo): boolean => {
+    try {
+      const recentProjects = mruStore.get("recentProjects", [])
+
+      // Check if project already exists (by filepath)
+      const existingIndex = recentProjects.findIndex(
+        (p) => p.filepath === project.filepath,
+      )
+
+      if (existingIndex !== -1) {
+        // Update existing project and move to front
+        recentProjects.splice(existingIndex, 1)
+      }
+
+      // Add to the beginning of the array (most recent)
+      recentProjects.unshift(project)
+
+      // Optional: Limit to last 20 projects
+      const limitedProjects = recentProjects.slice(0, MAX_RECENT_PROJECTS)
+
+      mruStore.set("recentProjects", limitedProjects)
+      return true
+    } catch (error) {
+      console.error("Error adding project to MRU store:", error)
+      return false
+    }
+  },
+)
+
+/** Remove a project from the MRU store by ID */
+ipcMain.handle("mru:remove-project", (_event, projectId: string): boolean => {
+  try {
+    const recentProjects = mruStore.get("recentProjects", [])
+    const filteredProjects = recentProjects.filter((p) => p.id !== projectId)
+    mruStore.set("recentProjects", filteredProjects)
+    return true
+  } catch (error) {
+    console.error("Error removing project from MRU store:", error)
+    return false
+  }
+})
+
+/** Update a project's image in the MRU store */
+ipcMain.handle(
+  "mru:update-project-image",
+  (_event, projectId: string, image: string): boolean => {
+    try {
+      const recentProjects = mruStore.get("recentProjects", [])
+      const projectIndex = recentProjects.findIndex((p) => p.id === projectId)
+
+      console.debug(
+        "[MRU] update-project-image called",
+        JSON.stringify({
+          foundIndex: projectIndex,
+          imageLength: typeof image === "string" ? image.length : 0,
+          projectId,
+          recentCount: recentProjects.length,
+        }),
+      )
+
+      if (projectIndex !== -1) {
+        recentProjects[projectIndex].image = image
+        mruStore.set("recentProjects", recentProjects)
+        console.debug(
+          "[MRU] Image updated successfully",
+          JSON.stringify({
+            projectId,
+            storePath: mruStore.path,
+          }),
+        )
+        return true
+      }
+
+      console.warn(
+        "[MRU] Project not found when updating image",
+        JSON.stringify({
+          projectId,
+          storePath: mruStore.path,
+        }),
+      )
+      return false
+    } catch (error) {
+      console.error("Error updating project image in MRU store:", error)
+      return false
+    }
+  },
+)
+
+/** Clear all recent projects from MRU store */
+ipcMain.handle("mru:clear-all", (): boolean => {
+  try {
+    mruStore.set("recentProjects", [])
+    return true
+  } catch (error) {
+    console.error("Error clearing MRU store:", error)
+    return false
+  }
+})
+
+/** Get the path where MRU data is stored (useful for debugging) */
+ipcMain.handle("mru:get-store-path", (): string => {
+  return mruStore.path
+})
+
+//  #endregion MRU Store IPC Handlers

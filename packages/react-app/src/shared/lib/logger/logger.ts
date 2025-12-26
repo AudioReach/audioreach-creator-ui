@@ -1,5 +1,6 @@
+import {useProjectLayoutStore} from "~shared/store"
+
 import {type LogContext, LogLevel} from "../../api/types"
-import {useApplicationStore} from "../../store/application-store"
 
 /**
  * Main logger class providing convenient logging methods
@@ -50,7 +51,7 @@ export class Logger {
    */
   private getCurrentProjectId(): string | undefined {
     try {
-      const state = useApplicationStore.getState()
+      const state = useProjectLayoutStore.getState()
       const activeProjectGroup = state.getActiveProjectGroup()
       return activeProjectGroup?.id || undefined
     } catch (error) {

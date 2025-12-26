@@ -4,6 +4,8 @@ import type {
   ConfigApi,
   ConfigResult,
   ElectronApi,
+  MruProjectInfo,
+  MruStoreApi,
 } from "@audioreach-creator-ui/api-utils"
 import {contextBridge, ipcRenderer} from "electron"
 
@@ -28,3 +30,23 @@ const configApi: ConfigApi = {
 }
 
 contextBridge.exposeInMainWorld("configApi", configApi)
+
+const mruStoreApi: MruStoreApi = {
+  addProject: (project: MruProjectInfo) =>
+    ipcRenderer.invoke("mru:add-project", project) as Promise<boolean>,
+  clearAll: () => ipcRenderer.invoke("mru:clear-all") as Promise<boolean>,
+  getRecentProjects: () =>
+    ipcRenderer.invoke("mru:get-recent-projects") as Promise<MruProjectInfo[]>,
+  getStorePath: () =>
+    ipcRenderer.invoke("mru:get-store-path") as Promise<string>,
+  removeProject: (projectId: string) =>
+    ipcRenderer.invoke("mru:remove-project", projectId) as Promise<boolean>,
+  updateProjectImage: (projectId: string, image: string) =>
+    ipcRenderer.invoke(
+      "mru:update-project-image",
+      projectId,
+      image,
+    ) as Promise<boolean>,
+}
+
+contextBridge.exposeInMainWorld("mruStoreApi", mruStoreApi)

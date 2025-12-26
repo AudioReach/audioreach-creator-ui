@@ -1,6 +1,5 @@
 export {default as UsecaseSelectionControl} from "./ui/UsecaseSelectionControl"
 export {default as UsecaseListPanel} from "./ui/UsecaseListPanel"
-export {useUsecaseStore} from "./model/usecase-store"
 export type {
   UsecaseCategory,
   Usecase,

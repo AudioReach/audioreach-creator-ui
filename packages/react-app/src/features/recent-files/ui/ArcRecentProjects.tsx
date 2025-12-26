@@ -44,6 +44,7 @@ export default function ArcRecentProjects({
               <ArcProjectCard
                 key={project.id}
                 description={project.description}
+                imgSource={project.image}
                 isActive={false}
                 lastModifiedDate={project.lastModifiedDate}
                 onDoubleClick={() => handleDoubleClick(project)}

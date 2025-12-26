@@ -25,7 +25,8 @@
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",
     "@audioreach-creator-ui/react-app": "workspace:*",
-    "@audioreach-creator-ui/tsconfig": "workspace:*"
+    "@audioreach-creator-ui/tsconfig": "workspace:*",
+    "electron-store": "^11.0.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

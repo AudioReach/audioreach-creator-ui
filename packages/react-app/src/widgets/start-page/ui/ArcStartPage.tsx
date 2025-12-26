@@ -1,6 +1,5 @@
 import {useMemo, useState} from "react"
 
-import {ApiRequest} from "@audioreach-creator-ui/api-utils"
 import {Button} from "@qualcomm-ui/react/button"
 import {Combobox} from "@qualcomm-ui/react/combobox"
 import {Divider} from "@qualcomm-ui/react/divider"
@@ -16,43 +15,20 @@ import {
 } from "lucide-react"
 import {createPortal} from "react-dom"
 
-import {
-  openProject,
-  openWorkspaceProject,
-} from "~entities/project/api/projectsApi"
+import {ProjectService} from "~entities/project/services"
 import ArcDeviceList from "~features/device-list/ui/ArcDeviceList"
+import {useDeviceManager} from "~features/device-operations"
+import {
+  useProjectLifecycle,
+  useProjectOpener,
+} from "~features/project-operations"
 import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProjects"
 import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
-import {electronApi} from "~shared/api"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
 import {showToast} from "~shared/controls/GlobalToaster"
 import {logger} from "~shared/lib/logger"
-import {
-  ProjectMainTab,
-  useApplicationStore,
-  useProjectLayoutStore,
-} from "~shared/store"
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
-
-// todo: this device list should come from the backend. remove this hardcoded list once we get to connected mode tasks
-const deviceList: ArcDeviceInfo[] = [
-  {
-    description: "Qualcomm HS-USB Diagnostic 90DB (COM10)",
-    id: "0",
-    name: "Device 1",
-  },
-  {
-    description: "127.0.0.1:5558",
-    id: "1",
-    name: "RaspberryPi 4",
-  },
-  {
-    description: "127.0.0.1:5558",
-    id: "2",
-    name: "Device 2 TCPIP",
-  },
-]
 
 const projectTypes = ["Active", "Inactive", "Diff/Merge"]
 
@@ -70,16 +46,25 @@ export default function ArcStartPage({
   const [showOnlyProjects, setShowOnlyProjects] = useState(false)
   const [showOnlyDevices, setShowOnlyDevices] = useState(false)
   const [searchTerm, setSearchTerm] = useState<string>("")
-  const [isLoadingProject, setIsLoadingProject] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState<string>("")
-  const {
-    addToRecent,
-    projects: recentProjects,
-    removeFromRecent,
-  } = useArcRecentProjects()
-  const createProjectGroup = useApplicationStore(
-    (state) => state.createProjectGroup,
-  )
+
+  const {projects: recentProjects, removeFromRecent} = useArcRecentProjects()
+
+  // Project lifecycle management (screenshot capture on close)
+  const {handleProjectClose, screenshotRegistry} = useProjectLifecycle()
+
+  // Project opening operations
+  const {loadingState, openRecentProject, openWorkspaceProject} =
+    useProjectOpener({
+      onProjectClose: handleProjectClose,
+      onProjectOpened: onOpenWorkspaceProject,
+      screenshotRegistry,
+    })
+
+  // Device management
+  const {filteredDevices, openDevice} = useDeviceManager({
+    onDeviceOpened: onOpenDeviceProject,
+    searchTerm,
+  })
 
   // Hooks for Combobox collection
   const {contains} = useFilter({sensitivity: "base"})
@@ -108,253 +93,26 @@ export default function ArcStartPage({
     })
   }, [recentProjects, searchTerm])
 
-  const filteredDevices = useMemo(() => {
-    if (deviceList === undefined) {
-      return []
-    }
-
-    return deviceList.filter((device: ArcDeviceInfo) => {
-      return device.name.toLowerCase().includes(searchTerm.toLowerCase())
-    })
-  }, [searchTerm])
-
-  function handleOpenDeviceProject(device: ArcDeviceInfo) {
-    logger.verbose(`Selected a device: ${device.name}`, {
-      action: "open_device_project",
-      component: "ArcStartPage",
-    })
-    onOpenDeviceProject?.(device)
-  }
-
-  /**
-   * Common logic to handle successful project opening
-   * Called by both handleOpenWorkspaceProject and handleOpenRecentWorkspaceProject
-   */
-  const handleProjectOpenSuccess = async (project: ArcProjectInfo) => {
-    // Add to recent projects
-    addToRecent(project)
-    logger.info("open project successful")
-
-    // Create project group in the old store (for usecase data management)
-    await createProjectGroup(
-      project.filepath,
-      project.name,
-      project.id,
-      undefined, // onClose callback (optional)
-    )
-
-    // Create project group in the new ProjectLayoutStore (for layout management)
-    const layoutStore = useProjectLayoutStore.getState()
-
-    // Create a simple main tab with GraphDesigner
-    const emptyLayout = {
-      global: {},
-      layout: {
-        children: [],
-        type: "row",
-      },
-    }
-
-    const mainTab = new ProjectMainTab(
-      `project_${project.id}`,
-      {flexLayoutData: emptyLayout},
-      () => true, // onClose callback
-    )
-
-    // Store the GraphDesigner component directly in the main tab
-    const GraphDesigner = (
-      await import("~widgets/graph-designer/ui/GraphDesigner")
-    ).default
-    ;(mainTab as any).reactiveComponent = (
-      <GraphDesigner projectGroupId={project.id} usecaseData={[]} />
-    )
-
-    // Create the project group in layout store
-    layoutStore.createProjectGroup(
-      project.id,
-      project.filepath,
-      project.name,
-      mainTab,
-      project.description,
-      undefined, // onClose callback
-    )
-
-    // Notify parent component to open the project
-    onOpenWorkspaceProject?.(project)
-
-    showToast("Project opened successfully", "success")
-  }
-
-  async function handleOpenRecentWorkspaceProject(project: ArcProjectInfo) {
-    logger.verbose(`Selected project: ${project.name}`, {
-      action: "open_recent_project",
-      component: "ArcStartPage",
-    })
-
-    setIsLoadingProject(true)
-    setLoadingMessage(`Opening project: ${project.name}`)
-
-    try {
-      // Call backend API to open/connect to the project
-      const result = await openProject(project.id)
-
-      if (result.success) {
-        setLoadingMessage("Loading project data...")
-        await handleProjectOpenSuccess(project)
-      } else {
-        showToast(result.message || "Failed to open project", "danger")
-      }
-    } catch (error) {
-      logger.error("Error opening recent project", {
-        action: "open_recent_project",
-        component: "ArcStartPage",
-        error: error instanceof Error ? error.message : String(error),
-      })
-      showToast("Failed to open project", "danger")
-    } finally {
-      setIsLoadingProject(false)
-      setLoadingMessage("")
-    }
-  }
-
-  async function handleOpenWorkspaceProject() {
-    if (!electronApi) {
-      logger.error("Electron API not available", {
-        action: "open_workspace_project",
-        component: "ArcStartPage",
-      })
-      showToast("Electron API not available", "danger")
-      return
-    }
-
-    try {
-      // Open a project file using Electron API
-      const response = await electronApi.send({
-        data: null,
-        requestType: ApiRequest.OpenProjectFile,
-      })
-
-      // Check if user cancelled the file selection
-      if (response.data.cancelled || !response.data.project) {
-        logger.verbose("File selection cancelled", {
-          action: "open_workspace_project",
-          component: "ArcStartPage",
-        })
-        return
-      }
-
-      const projectInfo = response.data.project
-      const workspaceFileData = response.data.workspaceFileData
-      const acdbFileData = response.data.acdbFileData
-
-      // Validate that we have the required binary data
-      if (!workspaceFileData) {
-        showToast("Failed to read workspace file data", "danger")
-        return
-      }
-
-      if (!acdbFileData) {
-        showToast("No .acdb file found in the project directory", "danger")
-        return
-      }
-
-      setIsLoadingProject(true)
-      setLoadingMessage(`Processing project: ${projectInfo.name}`)
-
-      // Convert Buffer data to File objects
-      const workspaceFileName =
-        projectInfo.filepath.split(/[\\/]/).pop() || "workspace.awsp"
-      const workspaceFile = new File(
-        [new Uint8Array(workspaceFileData)],
-        workspaceFileName,
-        {type: "application/octet-stream"},
-      )
-
-      setLoadingMessage("Processing AWSP/ACDB files in the project ...")
-
-      // For acdb file, we don't have the exact filename from the response,
-      // but we know it's a .acdb file
-      const acdbFile = new File(
-        [new Uint8Array(acdbFileData)],
-        "project.acdb",
-        {type: "application/octet-stream"},
-      )
-
-      // Call the backend API to upload and open the project
-      const result = await openWorkspaceProject(
-        acdbFile,
-        workspaceFile,
-        projectInfo.name,
-        projectInfo.description,
-      )
-
-      if (result.success && result.data) {
-        const desc = result.data.description
-          ? result.data.description
-          : projectInfo.description
-        const name =
-          result.data.name !== undefined ? result.data.name : projectInfo.name
-        // Create project info for recent projects list
-        const project: ArcProjectInfo = {
-          description: desc,
-          filepath: projectInfo.filepath,
-          id: result.data.projectId,
-          lastModifiedDate: new Date(),
-          name,
-        }
-
-        setLoadingMessage("Loading project data...")
-        await handleProjectOpenSuccess(project)
-      } else {
-        showToast(result.message || "Failed to open project", "danger")
-      }
-    } catch (error) {
-      logger.error("Error opening workspace project", {
-        action: "open_workspace_project",
-        component: "ArcStartPage",
-        error: error instanceof Error ? error.message : String(error),
-      })
-      showToast("Failed to open workspace project", "danger")
-    } finally {
-      setIsLoadingProject(false)
-      setLoadingMessage("")
-    }
-  }
-
   function handleShowOnlyProjects() {
-    setShowOnlyProjects(showOnlyProjects ? false : true)
+    setShowOnlyProjects(!showOnlyProjects)
     setShowOnlyDevices(false)
   }
 
   function handleShowOnlyDevices() {
-    setShowOnlyDevices(showOnlyDevices ? false : true)
+    setShowOnlyDevices(!showOnlyDevices)
     setShowOnlyProjects(false)
   }
 
-  function handleRemoveFromRecent(projectId: string) {
-    removeFromRecent(projectId)
-  }
-
   async function handleShowInExplorer(projectId: string) {
-    if (!electronApi) {
-      logger.error("Electron API not available", {
-        action: "show_in_explorer",
-        component: "ArcStartPage",
-      })
-      showToast("Electron API not available", "danger")
+    const project = recentProjects.find((p) => p.id === projectId)
+    if (!project) {
       return
     }
 
-    const project = recentProjects.find((p) => p.id === projectId)!
-
     try {
-      // Open a project file
-      await electronApi.send({
-        data: project.filepath,
-        requestType: ApiRequest.ShowProjectFileInExplorer,
-      })
+      await ProjectService.showInExplorer(project.filepath)
     } catch (error) {
-      logger.error("Error occurred while trying to open the file explorer", {
+      logger.error("Error showing project in explorer", {
         action: "show_in_explorer",
         component: "ArcStartPage",
         error: error instanceof Error ? error.message : String(error),
@@ -368,14 +126,13 @@ export default function ArcStartPage({
       action: "filter_option_changed",
       component: "ArcStartPage",
     })
-    // filteredProjects = []
-    // filteredDevices = []
+    // TODO: Implement filter logic when needed
   }
 
   return (
     <>
       {/* Loading Overlay - Rendered as Portal to cover entire application */}
-      {isLoadingProject &&
+      {loadingState.isLoading &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
             <div className="rounded-lg bg-white p-8 shadow-xl">
@@ -384,7 +141,7 @@ export default function ArcStartPage({
                   <ProgressRing />
                 </div>
                 <div className="mb-2 text-lg font-semibold text-gray-800">
-                  {loadingMessage || "Processing..."}
+                  {loadingState.message || "Processing..."}
                 </div>
                 <div className="text-sm text-gray-600">
                   Please wait for the files to be processed ...
@@ -434,7 +191,7 @@ export default function ArcStartPage({
             <Button
               className="rounded-xl"
               emphasis="neutral"
-              onClick={handleOpenWorkspaceProject}
+              onClick={openWorkspaceProject}
               startIcon={Folder}
               variant="fill"
             >
@@ -448,11 +205,6 @@ export default function ArcStartPage({
             >
               Device Manager
             </Button>
-            {/* Hide Grid View and List view for now, but needs to be implemented later */}
-            {/* <QButtonGroup>
-          <QButton startIcon={LayoutGrid} />
-          <QButton startIcon={LayoutList} />
-        </QButtonGroup> */}
           </div>
 
           <div className="flex justify-end gap-2.5">
@@ -492,8 +244,8 @@ export default function ArcStartPage({
           {/* Recent Workspace and Device Project Lists */}
           {!showOnlyDevices && (
             <ArcRecentProjects
-              onOpenProject={handleOpenRecentWorkspaceProject}
-              onRemoveFromRecent={handleRemoveFromRecent}
+              onOpenProject={openRecentProject}
+              onRemoveFromRecent={removeFromRecent}
               onShowInExplorer={handleShowInExplorer}
               projects={filteredProjects}
             />
@@ -501,7 +253,7 @@ export default function ArcStartPage({
           {!showOnlyProjects && (
             <ArcDeviceList
               devices={filteredDevices}
-              onOpenDevice={handleOpenDeviceProject}
+              onOpenDevice={openDevice}
             />
           )}
         </div>

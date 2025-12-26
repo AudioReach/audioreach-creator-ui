@@ -1,19 +1,11 @@
 import {useCallback, useEffect, useState} from "react"
 
-import {ApiRequest} from "@audioreach-creator-ui/api-utils"
+import type {MruProjectInfo} from "@audioreach-creator-ui/api-utils"
 import {toPng} from "html-to-image"
 
-import {electronApi} from "~shared/api"
+import {getProjects} from "~entities/project/api/projectsApi"
 import {logger} from "~shared/lib/logger"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
-
-const MRU_LOCAL_STORE_KEY: string = "arc.mru.config"
-
-/** The Most Recently Used (MRU) configuration */
-interface MruConfiguration {
-  /** A list of in-active projects ordered by  most recent (first index) to least recent (last index) */
-  projects: ArcProjectInfo[]
-}
 
 interface ArcRecentProjectsApi {
   /** Adds a new project to the recent files list. The project will be ignored
@@ -48,61 +40,119 @@ interface ArcRecentProjectsApi {
  */
 export default function useArcRecentProjects(): ArcRecentProjectsApi {
   const [recentProjects, setRecentProjects] = useState<ArcProjectInfo[]>([])
-  /** Retrieves a list of previously opened projects in the order of most to least recent */
+
+  /**
+   * Retrieves and merges projects from backend and MRU store
+   * - Backend contains ONLY currently active/open projects
+   * - MRU contains ALL projects (open + closed) with persistent metadata
+   * - Returns: All MRU projects (in MRU order) enriched with backend data if active
+   */
   const getRecentConfig: () => Promise<ArcProjectInfo[]> =
     useCallback(async () => {
-      let mru: MruConfiguration = {projects: []}
-
-      const data = window.localStorage.getItem(MRU_LOCAL_STORE_KEY)
-
-      if (data === null) {
-        return []
-      }
-
       try {
-        mru = JSON.parse(data)
+        // 1. Get MRU projects (master list - contains all projects)
+        if (!window.mruStoreApi) {
+          logger.warn("MRU Store API not available", {
+            component: "useArcRecentProjects",
+          })
+          return []
+        }
+
+        const mruProjects = await window.mruStoreApi.getRecentProjects()
+
+        // 2. Get currently active projects from backend
+        const backendResult = await getProjects()
+
+        if (!backendResult.success) {
+          logger.warn(
+            `Failed to fetch active projects from backend: ${backendResult.message}`,
+            {
+              component: "useArcRecentProjects",
+            },
+          )
+          // Backend unavailable - return MRU projects only (all marked as inactive)
+          return mruProjects.map((mruProject) => ({
+            description: mruProject.description || "",
+            filepath: mruProject.filepath,
+            id: mruProject.id,
+            image: mruProject.image,
+            lastModifiedDate: mruProject.lastModifiedDate
+              ? new Date(mruProject.lastModifiedDate)
+              : undefined,
+            name: mruProject.name,
+          }))
+        }
+
+        const activeProjects = backendResult.data || []
+
+        // 3. Create a map of active projects by ID for quick lookup
+        const activeProjectMap = new Map(
+          activeProjects.map((p) => [p.projectId, p]),
+        )
+
+        // 4. Build merged list: All MRU projects enriched with backend data if active
+        const mergedProjects: ArcProjectInfo[] = []
+        const processedIds = new Set<string>()
+
+        // Process all MRU projects (in MRU order)
+        for (const mruProject of mruProjects) {
+          const activeProject = activeProjectMap.get(mruProject.id)
+
+          if (activeProject) {
+            // Project is OPEN - merge backend data with MRU metadata
+            mergedProjects.push({
+              description:
+                activeProject.description || mruProject.description || "",
+              filepath: mruProject.filepath,
+              id: activeProject.projectId,
+              image: mruProject.image, // Always from MRU (persistent)
+              lastModifiedDate: mruProject.lastModifiedDate
+                ? new Date(mruProject.lastModifiedDate)
+                : undefined,
+              name: activeProject.name || mruProject.name,
+              sessionMode: activeProject.sessionMode,
+            })
+          } else {
+            // Project is CLOSED - use MRU data only
+            mergedProjects.push({
+              description: mruProject.description || "",
+              filepath: mruProject.filepath,
+              id: mruProject.id,
+              image: mruProject.image,
+              lastModifiedDate: mruProject.lastModifiedDate
+                ? new Date(mruProject.lastModifiedDate)
+                : undefined,
+              name: mruProject.name,
+            })
+          }
+
+          processedIds.add(mruProject.id)
+        }
+
+        // 5. Add any NEW active projects not yet in MRU (edge case - just opened)
+        // Note: These won't have filepath or lastModifiedDate until added to MRU
+        for (const activeProject of activeProjects) {
+          if (!processedIds.has(activeProject.projectId)) {
+            mergedProjects.push({
+              description: activeProject.description || "",
+              filepath: "", // Will be set when project is added to MRU
+              id: activeProject.projectId,
+              image: undefined, // No image yet for new projects
+              lastModifiedDate: undefined, // Will be set when added to MRU
+              name: activeProject.name || "Unnamed Project",
+              sessionMode: activeProject.sessionMode,
+            })
+          }
+        }
+
+        return mergedProjects
       } catch (error) {
-        logger.error("Error parsing MRU configuration", {
+        logger.error("Error loading and merging projects", {
           component: "useArcRecentProjects",
           error: error instanceof Error ? error.message : String(error),
         })
         return []
       }
-
-      // Create an array of promises for each project
-      const projectPromises = mru.projects.map(async (project) => {
-        try {
-          const modificationDate = await getFileModificationDate(
-            project.filepath,
-          )
-
-          return {
-            description: project.description,
-            filepath: project.filepath,
-            // Use project's existing ID or filepath as a fallback
-            id: project.id || project.filepath,
-            lastModifiedDate: modificationDate,
-            name: project.name,
-          } as ArcProjectInfo
-        } catch (error) {
-          logger.error(`Error processing project ${project.name}`, {
-            component: "useArcRecentProjects",
-            error: error instanceof Error ? error.message : String(error),
-          })
-          throw error
-        }
-      })
-
-      // Wait for all promises to settle and filter out the rejected ones
-      const results = await Promise.allSettled(projectPromises)
-
-      // Filter to only include fulfilled promises and extract their values
-      return results
-        .filter(
-          (result): result is PromiseFulfilledResult<ArcProjectInfo> =>
-            result.status === "fulfilled",
-        )
-        .map((result) => result.value)
     }, [])
 
   // Load projects when the component mounts
@@ -129,21 +179,25 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @returns n/a
    */
   async function removeFromRecent(projectId: string) {
-    // Get current MRU configuration
-    const currentMru = await getRecentConfig()
+    if (!window.mruStoreApi) {
+      logger.error("MRU Store API not available", {
+        component: "useArcRecentProjects",
+      })
+      return
+    }
 
-    // Filter out the project with the matching ID
-    const updatedMru = currentMru.filter(
-      (project: ArcProjectInfo) => project.id !== projectId,
-    )
+    try {
+      await window.mruStoreApi.removeProject(projectId)
 
-    // Update the MRU configuration
-    createRecentConfig(updatedMru)
-
-    // Update the state
-    setRecentProjects(updatedMru)
-
-    return updatedMru
+      // Update local state
+      const updatedProjects = await getRecentConfig()
+      setRecentProjects(updatedProjects)
+    } catch (error) {
+      logger.error("Error removing project from MRU", {
+        component: "useArcRecentProjects",
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
   /** Adds a new project to the recent files list. The project will be ignored
@@ -153,116 +207,60 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @returns n/a
    */
   async function addToRecent(project: ArcProjectInfo) {
-    const currentMru = await getRecentConfig()
-
-    // prevent adding the same project to the mru
-    if (-1 !== currentMru.findIndex((p) => p.filepath === project.filepath)) {
-      return
-    }
-
-    project.lastModifiedDate = await getFileModificationDate(project.filepath)
-
-    setRecentProjects((currentProjects) => {
-      const updatedProjects = [project, ...currentProjects]
-
-      // Also update the stored configuration
-      createRecentConfig(updatedProjects)
-
-      return updatedProjects
-    })
-    // const updatedMru = [...currentMru, project]
-
-    // createMruConfig(updatedMru)
-
-    // // Update the state
-    // setProjectMru(updatedMru)
-
-    // return updatedMru
-  }
-
-  async function updateImage(projectId: string, htmlElem: HTMLElement) {
-    // Get current MRU configuration
-    const currentMru = await getRecentConfig()
-
-    const project = currentMru.find(
-      (project: ArcProjectInfo) => project.id === projectId,
-    )
-
-    if (project === undefined) {
-      logger.warn("Unable to update image. Project not found", {
+    if (!window.mruStoreApi) {
+      logger.error("MRU Store API not available", {
         component: "useArcRecentProjects",
       })
       return
-    }
-
-    // use toPng to convert the html element to a base64 encoded png string
-    project.image = await toPng(htmlElem)
-
-    // Update the MRU configuration
-    createRecentConfig(currentMru)
-
-    // Update the state
-    setRecentProjects(currentMru)
-  }
-
-  /** Converts a list of projects to JSON to store in the localstore
-   *
-   * @param projects A list of projects to add to the localstore
-   */
-  function createRecentConfig(projects: ArcProjectInfo[]) {
-    // generate the MRU configuration file
-
-    const config: MruConfiguration = {
-      projects: [...projects],
-    }
-
-    const configData = JSON.stringify(config)
-
-    window.localStorage.setItem(MRU_LOCAL_STORE_KEY, configData)
-  }
-
-  /** Retrieves the last modified date of the provided file
-   *
-   * @param filepath The file to retrieve the modification date for
-   * @returns A date object on success, otherwise undefined
-   */
-  async function getFileModificationDate(
-    filepath: string,
-  ): Promise<Date | undefined> {
-    let date: Date = new Date()
-    if (!electronApi) {
-      logger.error("Electron API not available", {
-        component: "useArcRecentProjects",
-      })
-      return undefined
     }
 
     try {
-      // Open a project file
-      const response = await electronApi.send({
-        data: {filepath},
-        requestType: ApiRequest.GetProjectFileModificationDate,
-      })
-
-      if (response.data.date === undefined) {
-        logger.info(`Message: ${response.message}. File: ${filepath}`, {
-          component: "useArcRecentProjects",
-        })
+      // Convert ArcProjectInfo to MruProjectInfo
+      const mruProject: MruProjectInfo = {
+        description: project.description,
+        filepath: project.filepath,
+        id: project.id,
+        image: project.image,
+        lastModifiedDate: project.lastModifiedDate?.toISOString(),
+        name: project.name,
       }
 
-      date = response.data.date
+      await window.mruStoreApi.addProject(mruProject)
+
+      // Update local state
+      const updatedProjects = await getRecentConfig()
+      setRecentProjects(updatedProjects)
     } catch (error) {
-      logger.error(
-        "Encountered an error while trying to get file modification date",
-        {
-          component: "useArcRecentProjects",
-          error: error instanceof Error ? error.message : String(error),
-        },
-      )
-    } finally {
+      logger.error("Error adding project to MRU", {
+        component: "useArcRecentProjects",
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  async function updateImage(projectId: string, htmlElem: HTMLElement) {
+    if (!window.mruStoreApi) {
+      logger.error("MRU Store API not available", {
+        component: "useArcRecentProjects",
+      })
+      return
     }
 
-    return date
+    try {
+      // Convert the html element to a base64 encoded png string
+      const imageData = await toPng(htmlElem)
+
+      await window.mruStoreApi.updateProjectImage(projectId, imageData)
+
+      // Update local state
+      const updatedProjects = await getRecentConfig()
+      setRecentProjects(updatedProjects)
+    } catch (error) {
+      logger.error("Error updating project image in MRU", {
+        component: "useArcRecentProjects",
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
   return {

@@ -42,6 +42,7 @@ export interface ArcProjectCardProps {
 
 export default function ArcProjectCard({
   description,
+  imgSource,
   //isActive = false,
   label,
   lastModifiedDate,
@@ -142,7 +143,7 @@ export default function ArcProjectCard({
           alt="Auto"
           as="img"
           height={160}
-          src={qcLogoImg}
+          src={imgSource ?? qcLogoImg}
           width="400"
         />
 
