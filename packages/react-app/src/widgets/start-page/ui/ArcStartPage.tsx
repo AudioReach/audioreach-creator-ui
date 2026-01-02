@@ -7,10 +7,16 @@ import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
 import {useListCollection} from "@qualcomm-ui/react-core/collection"
 import {useFilter} from "@qualcomm-ui/react-core/locale"
 import {
+  BookOpen,
   Database,
+  FileText,
   FilterIcon,
   Folder,
+  HelpCircle,
+  Info,
+  Logs,
   NotebookTabs,
+  Search,
   Smartphone,
 } from "lucide-react"
 import {createPortal} from "react-dom"
@@ -27,6 +33,7 @@ import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
 import {showToast} from "~shared/controls/GlobalToaster"
 import {logger} from "~shared/lib/logger"
+import {useRegisterSideNav, useSideNav} from "~shared/lib/side-nav"
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
@@ -37,11 +44,14 @@ export type ArcStartPageProps = {
   onOpenDeviceProject?: (device: ArcDeviceInfo) => void
   /** An event triggered by double-clicking a project card */
   onOpenWorkspaceProject?: (project: ArcProjectInfo) => void
+  /** Tab ID for side nav registration */
+  tabId?: string
 }
 
 export default function ArcStartPage({
   onOpenDeviceProject,
   onOpenWorkspaceProject,
+  tabId,
 }: ArcStartPageProps) {
   const [showOnlyProjects, setShowOnlyProjects] = useState(false)
   const [showOnlyDevices, setShowOnlyDevices] = useState(false)
@@ -128,6 +138,122 @@ export default function ArcStartPage({
     })
     // TODO: Implement filter logic when needed
   }
+
+  // Side nav implementation - memoize items and handlers
+  const sideNavItems = useMemo(
+    () => [
+      {
+        icon: Search,
+        id: "search",
+        label: "Search",
+        shortcut: "Ctrl+F",
+      },
+      {
+        icon: Logs,
+        id: "log-folder",
+        label: "View Log Folder",
+      },
+      {
+        group: "Help",
+        icon: HelpCircle,
+        id: "help",
+        label: "Help",
+        shortcut: "F1",
+      },
+      {
+        group: "Help",
+        icon: FileText,
+        id: "release-notes",
+        label: "Release Notes",
+      },
+      {
+        group: "Help",
+        icon: BookOpen,
+        id: "user-guide",
+        label: "User Guide",
+      },
+      {
+        group: "Help",
+        icon: Info,
+        id: "about",
+        label: "About",
+      },
+    ],
+    [],
+  )
+
+  const sideNavHandlers = useMemo(
+    () => ({
+      about: () => {
+        logger.info("About action triggered", {
+          action: "about",
+          component: "ArcStartPage",
+        })
+        showToast("About AudioReach Creator", "info")
+      },
+      help: () => {
+        logger.info("Help action triggered", {
+          action: "help",
+          component: "ArcStartPage",
+        })
+        showToast("Help opened", "info")
+      },
+      "log-folder": () => {
+        logger.info("Log folder triggered", {
+          action: "log-folder",
+          component: "ArcStartPage",
+        })
+        showToast("Log folder opened", "info")
+      },
+      "release-notes": () => {
+        logger.info("Release notes action triggered", {
+          action: "release_notes",
+          component: "ArcStartPage",
+        })
+        showToast("Opening release notes", "info")
+      },
+      search: () => {
+        logger.info("Search action triggered", {
+          action: "search",
+          component: "ArcStartPage",
+        })
+        showToast("Search functionality", "info")
+      },
+      "user-guide": () => {
+        logger.info("User guide action triggered", {
+          action: "user_guide",
+          component: "ArcStartPage",
+        })
+        showToast("Opening user guide", "info")
+      },
+    }),
+    [],
+  )
+
+  const sideNavShortcuts = useMemo(
+    () => ({
+      "Ctrl+f": () => {
+        logger.info("Search shortcut triggered", {
+          action: "search",
+          component: "ArcStartPage",
+        })
+        showToast("Search functionality", "info")
+      },
+      "F1": () => {
+        logger.info("Help shortcut triggered", {
+          action: "help",
+          component: "ArcStartPage",
+        })
+        showToast("Help opened", "info")
+      },
+    }),
+    [],
+  )
+
+  const sideNav = useSideNav(sideNavItems, sideNavHandlers, sideNavShortcuts)
+
+  // Register side nav with provider
+  useRegisterSideNav(tabId, sideNav)
 
   return (
     <>

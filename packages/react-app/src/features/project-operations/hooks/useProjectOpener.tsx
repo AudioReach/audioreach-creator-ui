@@ -78,6 +78,7 @@ export function useProjectOpener({
       <GraphDesigner
         projectGroupId={project.id}
         screenshotRegistry={screenshotRegistry}
+        tabId={mainTab.id}
         usecaseData={usecaseData}
       />
     )

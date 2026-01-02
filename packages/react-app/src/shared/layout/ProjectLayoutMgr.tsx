@@ -362,6 +362,13 @@ class ProjectLayoutManager extends Component<Props, State> {
       // Check if it's one of the app tabs
       const appTab = appGroup.appTabs.find((tab) => tab.id === tabId)
       if (appTab) {
+        // Inject tabId prop into the component
+        if (appTab.component && typeof appTab.component === "object") {
+          return createElement((appTab.component as any).type, {
+            ...(appTab.component as any).props,
+            tabId: appTab.id,
+          })
+        }
         return appTab.component
       }
     }
