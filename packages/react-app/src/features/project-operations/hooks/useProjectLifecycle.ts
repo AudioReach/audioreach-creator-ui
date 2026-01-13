@@ -1,6 +1,7 @@
 import {useRef} from "react"
 
 import {ProjectImageService} from "~entities/project/services/projectImageService"
+import {ConfigFileManager} from "~shared/config/config-manager"
 import {logger} from "~shared/lib/logger"
 
 import type {ProjectLifecycleHook} from "../model/types"
@@ -16,7 +17,7 @@ export function useProjectLifecycle(): ProjectLifecycleHook {
   >(new Map())
 
   /**
-   * Handles project close - captures screenshot and updates MRU
+   * Handles project close - captures screenshot, saves config, and updates MRU
    * This runs BEFORE the project is removed, while GraphDesigner is still mounted
    */
   const handleProjectClose = async (
@@ -44,6 +45,27 @@ export function useProjectLifecycle(): ProjectLifecycleHook {
         projectId,
       })
       // Don't block close on screenshot failure
+    }
+
+    // Save project configuration
+    try {
+      const saved =
+        await ConfigFileManager.instance.archiveProjectConfig(projectId)
+      if (!saved) {
+        logger.warn("Failed to archive project configuration", {
+          action: "close_project",
+          component: "useProjectLifecycle",
+          projectId,
+        })
+      }
+    } catch (error) {
+      logger.error("Failed to save project configuration during close", {
+        action: "close_project",
+        component: "useProjectLifecycle",
+        error: error instanceof Error ? error.message : String(error),
+        projectId,
+      })
+      // Don't block close on config save failure
     } finally {
       // Cleanup registry
       screenshotRegistryRef.current.delete(projectId)

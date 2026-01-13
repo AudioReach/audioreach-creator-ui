@@ -69,5 +69,8 @@ export async function openWorkspaceProject(
     formData.append("projectDescription", projectDescription)
   }
 
-  return httpClient.post<ProjectInfoResponseDto>("/offline/files", formData)
+  return httpClient.post<ProjectInfoResponseDto>(
+    "projects/offline/upload-files",
+    formData,
+  )
 }

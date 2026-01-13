@@ -1,5 +1,6 @@
-import {useEffect, useRef} from "react"
+import {useEffect, useRef, useState} from "react"
 
+import {ConfigFileManager} from "~shared/config/config-manager"
 import {ARCSideNav} from "~shared/controls/ARCSideNav"
 import {GlobalToaster} from "~shared/controls/GlobalToaster"
 import {
@@ -7,6 +8,7 @@ import {
   useSideNavContext,
 } from "~shared/controls/SideNavProvider"
 import ProjectLayoutManager from "~shared/layout/ProjectLayoutMgr"
+import {logger} from "~shared/lib/logger"
 import {useKeyboardShortcuts} from "~shared/lib/side-nav"
 import {
   AppTab,
@@ -49,9 +51,34 @@ const EditorShellContent: React.FC = () => {
 export const EditorShell: React.FC = () => {
   const store = useProjectLayoutStore()
   const initializedRef = useRef(false)
+  const [configReady, setConfigReady] = useState(false)
+
+  // Initialize configuration on app startup
+  useEffect(() => {
+    const initConfig = async () => {
+      try {
+        await ConfigFileManager.instance.initializeConfig()
+        setConfigReady(true)
+      } catch (error) {
+        logger.error("Failed to initialize config", {
+          action: "initialize_config",
+          component: "EditorShell",
+          error: error instanceof Error ? error.message : String(error),
+        })
+        // Still set ready to allow app to function with defaults
+        setConfigReady(true)
+      }
+    }
+    initConfig()
+  }, [])
 
   // Initialize with a default app group and Start tab
   useEffect(() => {
+    // Wait for config to be ready
+    if (!configReady) {
+      return
+    }
+
     // Ensure initialization happens only once (important for React 18 Strict Mode)
     if (initializedRef.current) {
       return
@@ -73,7 +100,40 @@ export const EditorShell: React.FC = () => {
       // Create default app group with Start tab
       store.createAppGroup("default-app-group", "Application", [startTab])
     }
-  }, [store]) // Empty dependency array is safe with the ref guard
+  }, [store, configReady])
+
+  // Save configuration on app exit
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      try {
+        await ConfigFileManager.instance.save()
+      } catch (error) {
+        logger.error(`Failed to save configuration on exit:${error}`)
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+      // Also save on component unmount
+      ConfigFileManager.instance.save().catch((error) => {
+        logger.error("Failed to save configuration on unmount", {
+          action: "save_config_on_unmount",
+          component: "EditorShell",
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+    }
+  }, [])
+
+  if (!configReady) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Loading configuration...</div>
+      </div>
+    )
+  }
 
   return (
     <SideNavProvider>

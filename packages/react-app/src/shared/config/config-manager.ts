@@ -1,5 +1,10 @@
 import {logger} from "../lib/logger"
+import {deepEqual} from "../utils/deep-equality"
 
+import {
+  DEFAULT_USER_PREFERENCES,
+  type UserPreferences,
+} from "./user-preferences-types"
 import {
   getConfigData,
   GetLayoutDefaultConfigData,
@@ -11,12 +16,15 @@ import {
 export class ConfigFileManager {
   private static _instance: ConfigFileManager
   private configDataMap: JSONDataMap
+
   private projectConfigMap: Map<string, JSONDataMap>
   private readonly rootKey: string = "arcconfig"
+  private userPreferencesCache: Map<string, UserPreferences>
 
   private constructor() {
     this.configDataMap = {}
     this.projectConfigMap = new Map<string, JSONDataMap>()
+    this.userPreferencesCache = new Map<string, UserPreferences>()
   }
 
   static get instance(): ConfigFileManager {
@@ -46,7 +54,11 @@ export class ConfigFileManager {
     }
 
     const result = await this.save(projectId)
-    this.projectConfigMap.delete(projectId)
+    if (result) {
+      this.projectConfigMap.delete(projectId)
+      // Invalidate preferences cache for this project
+      this.userPreferencesCache.delete(projectId)
+    }
     return result
   }
 
@@ -84,6 +96,71 @@ export class ConfigFileManager {
     }
 
     return getConfigData(projectConfig, path, this.rootKey)
+  }
+
+  /**
+   * Retrieves user preferences for the specified project.
+   * If preferences don't exist, returns default preferences.
+   * Uses memoization to return the same object reference when preferences haven't changed.
+   *
+   * @param projectId - ID of the project to retrieve preferences for.
+   * @returns The user preferences for the project.
+   */
+  getUserPreferences(projectId: string): UserPreferences {
+    const projectConfig = this.projectConfigMap.get(projectId)
+    if (!projectConfig) {
+      logger.verbose(
+        "No configuration data exists for project, returning defaults",
+        {
+          action: "get_user_preferences",
+          component: "ConfigFileManager",
+          projectId,
+        },
+      )
+      return DEFAULT_USER_PREFERENCES
+    }
+
+    const preferences = getConfigData(
+      projectConfig,
+      "userPreferences",
+      this.rootKey,
+    )
+
+    // If preferences don't exist or are incomplete, merge with defaults
+    if (!preferences) {
+      return DEFAULT_USER_PREFERENCES
+    }
+
+    const newPreferences: UserPreferences = {
+      display: {
+        ...DEFAULT_USER_PREFERENCES.display,
+        ...preferences.display,
+      },
+      usecases: {
+        ...DEFAULT_USER_PREFERENCES.usecases,
+        ...preferences.usecases,
+      },
+      visualization: {
+        ...DEFAULT_USER_PREFERENCES.visualization,
+        ...preferences.visualization,
+      },
+    }
+
+    // Check cache for existing preferences
+    const cachedUserPreferences = this.userPreferencesCache.get(projectId)
+
+    // If cached preferences exist and are equal to new preferences,
+    // return the cached object to maintain reference equality
+    if (
+      cachedUserPreferences &&
+      deepEqual(cachedUserPreferences, newPreferences)
+    ) {
+      return cachedUserPreferences
+    }
+
+    // Update cache with new preferences
+    this.userPreferencesCache.set(projectId, newPreferences)
+    return newPreferences
   }
 
   /**
@@ -210,5 +287,46 @@ export class ConfigFileManager {
       })
       return false
     }
+  }
+
+  /**
+   * Sets a specific user preference value for the specified project.
+   *
+   * @param projectId - ID of the project to update preferences for.
+   * @param path - Dot-notation path to the preference (e.g., 'visualization.showControlLinks').
+   * @param value - The new value for the preference.
+   * @returns `true` if the preference was successfully set, `false` otherwise.
+   */
+  setUserPreference(projectId: string, path: string, value: any): boolean {
+    const projectConfig = this.projectConfigMap.get(projectId)
+    if (!projectConfig) {
+      logger.verbose("No configuration data exists for project", {
+        action: "set_user_preference",
+        component: "ConfigFileManager",
+        projectId,
+      })
+      return false
+    }
+
+    // Ensure userPreferences exists
+    if (!projectConfig[this.rootKey]?.userPreferences) {
+      if (!projectConfig[this.rootKey]) {
+        projectConfig[this.rootKey] = {}
+      }
+      projectConfig[this.rootKey].userPreferences = DEFAULT_USER_PREFERENCES
+    }
+
+    setConfigData(projectConfig, `userPreferences.${path}`, value, this.rootKey)
+
+    // Invalidate cache since preferences have changed
+    this.userPreferencesCache.delete(projectId)
+
+    logger.verbose("User preference updated", {
+      action: "set_user_preference",
+      component: "ConfigFileManager",
+      projectId,
+    })
+
+    return true
   }
 }

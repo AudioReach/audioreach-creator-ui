@@ -7,7 +7,14 @@ import {
 } from "@audioreach-creator-ui/api-utils"
 import {app, BrowserWindow, ipcMain} from "electron"
 import Store from "electron-store"
-import {existsSync, readFileSync, writeFileSync} from "node:fs"
+import {
+  accessSync,
+  constants,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs"
 import {join, resolve} from "node:path"
 import {setTimeout} from "node:timers/promises"
 
@@ -188,28 +195,70 @@ ipcMain.handle(
 
 //  #region Configuration file handling
 
-function getConfigFilePath() {
-  return join(__dirname, CONFIG_FILE)
+function getConfigFilePath(): string {
+  try {
+    const userDataPath = app.getPath("userData")
+
+    // Validate that the userData path is accessible
+    if (!existsSync(userDataPath)) {
+      console.warn(
+        `userData directory does not exist, attempting to create: ${userDataPath}`,
+      )
+      try {
+        mkdirSync(userDataPath, {recursive: true})
+        console.log(`Successfully created userData directory: ${userDataPath}`)
+      } catch (mkdirError) {
+        const errorMsg = `Failed to create userData directory: ${mkdirError instanceof Error ? mkdirError.message : String(mkdirError)}`
+        console.error(errorMsg)
+        return "" // Return empty string instead of throwing
+      }
+    }
+
+    // Verify write permissions on the userData directory
+    try {
+      accessSync(userDataPath, constants.W_OK)
+    } catch (accessError) {
+      const errorMsg = `No write permission to userData directory (${userDataPath}): ${accessError instanceof Error ? accessError.message : String(accessError)}`
+      console.error(errorMsg)
+      return "" // Return empty string instead of throwing
+    }
+
+    const configPath = join(userDataPath, CONFIG_FILE)
+    console.log(`Using config file path: ${configPath}`)
+    return configPath
+  } catch (error) {
+    const errorMsg = `Critical error accessing userData path: ${error instanceof Error ? error.message : String(error)}`
+    console.error(errorMsg)
+    return "" // Return empty string instead of throwing
+  }
 }
 
 function ensureConfigFileExists(): string {
-  const filePath = getConfigFilePath()
   try {
+    const filePath = getConfigFilePath()
+
     if (!existsSync(filePath)) {
-      writeFileSync(filePath, "", "utf8")
-      console.log(
-        `Configuration file does not exist. A new empty file has been created at ${filePath}`,
-      )
+      try {
+        writeFileSync(filePath, "", "utf8")
+        console.log(
+          `Configuration file does not exist. A new empty file has been created at ${filePath}`,
+        )
+      } catch (writeError) {
+        const errorMsg = `Failed to create configuration file: ${writeError instanceof Error ? writeError.message : String(writeError)}`
+        console.error(errorMsg)
+        return ""
+      }
     }
+
+    console.log(`Config file path: ${filePath}`)
+    return filePath
   } catch (error) {
-    console.log(
-      "Failed to create an empty configuration file due to an error:",
+    console.error(
+      "Failed to get configuration file path due to an error:",
       error,
     )
     return ""
   }
-
-  return filePath
 }
 
 ipcMain.handle("load-config-data", (): ConfigResult => {

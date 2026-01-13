@@ -29,6 +29,7 @@ import type {
   RFEdge,
   RFNode,
 } from "~features/usecase-visualizer/model/types"
+import {useUserPreferences} from "~shared/config/hooks"
 import {showToast} from "~shared/controls/GlobalToaster"
 import {logger} from "~shared/lib/logger"
 import {useRegisterSideNav, useSideNav} from "~shared/lib/side-nav"
@@ -49,6 +50,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   tabId,
   usecaseData: initialUsecaseData,
 }) => {
+  // Get user preferences for this project
+  const {preferences} = useUserPreferences(projectGroupId)
+
   // Get selected usecases directly for this project group - use a stable selector
   const selectedUsecases = useUsecaseStore(
     (state) =>
@@ -495,6 +499,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             edges={edges}
             nodes={nodes}
             onScreenshotReady={handleScreenshotReady}
+            userPreferences={preferences}
           />
         )}
       </div>

@@ -1,3 +1,5 @@
+import {DEFAULT_USER_PREFERENCES} from "./user-preferences-types"
+
 export type JSONDataMap = {
   [key: string]: any
 }
@@ -36,6 +38,7 @@ export function GetLayoutDefaultConfigData(): JSONDataMap {
           },
         },
       },
+      userPreferences: DEFAULT_USER_PREFERENCES,
     },
   }
 }

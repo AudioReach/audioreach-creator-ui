@@ -826,7 +826,7 @@ export class PanelIntegration {
       return
     }
     // The store will handle cleanup automatically when project groups are removed
-    console.log(`Cleaning up project panels for group: ${projectGroupId}`)
+    logger.info(`Cleaning up project panels for group: ${projectGroupId}`)
   }
 
   /**
@@ -1024,9 +1024,8 @@ export class PanelIntegration {
           },
           onModelChange: (newModel: any) => {
             const layoutJson = newModel.toJson()
-            console.log(
-              `Layout Updated (Main Tab: ${mainTab.title}):`,
-              JSON.stringify(layoutJson, null, 2),
+            logger.info(
+              `Layout Updated (Main Tab: ${mainTab.title}):${JSON.stringify(layoutJson, null, 2)}`,
             )
             useProjectLayoutStore
               .getState()
@@ -1254,9 +1253,12 @@ export class PanelIntegration {
             },
             onModelChange: (newModel: any) => {
               const layoutJson = newModel.toJson()
-              console.log(
-                ` Panel Layout Updated (Project Tab: ${projectTab.title}):`,
-                JSON.stringify(layoutJson, null, 2),
+              logger.info(
+                ` Panel Layout Updated (Project Tab: ${projectTab.title}):${JSON.stringify(
+                  layoutJson,
+                  null,
+                  2,
+                )}`,
               )
               useProjectLayoutStore
                 .getState()

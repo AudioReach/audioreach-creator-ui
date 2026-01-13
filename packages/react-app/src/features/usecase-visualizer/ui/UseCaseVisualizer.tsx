@@ -14,6 +14,7 @@ import {toPng} from "html-to-image"
 import "@xyflow/react/dist/style.css"
 
 import type {RFEdge, RFNode} from "~features/usecase-visualizer/model/types"
+import type {UserPreferences} from "~shared/config/user-preferences-types"
 
 import {ControlLinkEdge} from "./edge-types/ControlLinkEdge"
 import {DataLinkEdge} from "./edge-types/DataLinkEdge"
@@ -38,6 +39,7 @@ export interface UseCaseVisualizerProps {
   edges: RFEdge[]
   nodes: RFNode[]
   onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void
+  userPreferences: UserPreferences
 }
 
 // Inner component that has access to useReactFlow hook - must be child of ReactFlow
@@ -124,12 +126,26 @@ const FlowContent: FC<UseCaseVisualizerProps> = ({
   edges,
   nodes,
   onScreenshotReady,
+  userPreferences,
 }) => {
+  // Filter edges based on user preferences
+  const filteredEdges = edges.filter((edge) => {
+    // Filter control links if preference is disabled
+    if (
+      edge.type === "control-link" &&
+      !userPreferences.visualization.showControlLinks
+    ) {
+      return false
+    }
+    // Add more edge filtering logic as needed
+    return true
+  })
+
   return (
     <div className="h-full w-full bg-white">
       <ReactFlow
         edgeTypes={edgeTypes}
-        edges={edges}
+        edges={filteredEdges}
         elementsSelectable={false}
         fitView
         maxZoom={1.5}
@@ -152,6 +168,7 @@ export const UseCaseVisualizer: FC<UseCaseVisualizerProps> = ({
   edges,
   nodes,
   onScreenshotReady,
+  userPreferences,
 }) => {
   return (
     <ReactFlowProvider>
@@ -159,6 +176,7 @@ export const UseCaseVisualizer: FC<UseCaseVisualizerProps> = ({
         edges={edges}
         nodes={nodes}
         onScreenshotReady={onScreenshotReady}
+        userPreferences={userPreferences}
       />
     </ReactFlowProvider>
   )
