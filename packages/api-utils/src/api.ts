@@ -4,6 +4,7 @@ export enum ApiRequest {
   GetProjectFileModificationDate = "file-prop-get-mod-date",
   OpenProjectFile = "open-project-file",
   ShowProjectFileInExplorer = "show-project-file-in-explorer",
+  SaveValidationResults = "save-validation-results",
 }
 
 /**

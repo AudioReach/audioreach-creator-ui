@@ -1,9 +1,11 @@
 import type {
   ArcWorkspaceFileProperties,
   OpenProjectFileResponseData,
+  SaveValidationResultsRequest,
+  SaveValidationResultsResponseData,
 } from "@audioreach-creator-ui/api-utils/src/project-file-api-types"
 import {dialog, shell} from "electron"
-import {readFileSync, statSync} from "fs"
+import {readFileSync, statSync, writeFileSync} from "fs"
 import {readdir} from "fs/promises"
 import {dirname, join} from "path"
 
@@ -114,5 +116,54 @@ function getProjectFileInfo(filepath: string): ArcWorkspaceFileProperties {
   }
 
   return fileProps
+}
+/** Save validation results to a file using save dialog */
+export async function saveValidationResults(
+  win: Electron.BaseWindow,
+  request: SaveValidationResultsRequest,
+): Promise<{data: SaveValidationResultsResponseData; response: string}> {
+  let response = ""
+  let data: SaveValidationResultsResponseData
+
+  try {
+    const currentDateTime = new Date()
+      .toISOString()
+      .replace(/[T:]/g, "-")
+      .split(".")[0] // YYYY-MM-DD-HH-MM-SS format
+    const defaultFilename =
+      request.defaultFilename || `validation_results_${currentDateTime}.txt`
+
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: defaultFilename,
+      filters: [
+        {extensions: ["txt"], name: "Text Files"},
+        {extensions: ["*"], name: "All Files"},
+      ],
+      title: "Save Validation Results",
+    })
+
+    if (result.canceled) {
+      response = "Save dialog cancelled"
+      data = {cancelled: true}
+    } else {
+      const filepath = result.filePath!
+
+      // Write the validation results content to the selected file
+      writeFileSync(filepath, request.content, "utf8")
+
+      response = `Validation results saved to: ${filepath}`
+      data = {
+        cancelled: false,
+        filepath,
+      }
+      console.log(response)
+    }
+  } catch (error) {
+    console.error("File save error:", error)
+    response = "Failed to save validation results"
+    data = {cancelled: true}
+  }
+
+  return {data, response}
 }
 // #endregion

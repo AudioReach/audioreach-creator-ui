@@ -4,6 +4,7 @@ import {IconButton} from "@qualcomm-ui/react/button"
 import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
 import {Menu} from "@qualcomm-ui/react/menu"
 import {TextInput} from "@qualcomm-ui/react/text-input"
+import {Tooltip} from "@qualcomm-ui/react/tooltip"
 import {
   Ban,
   Copy,
@@ -18,8 +19,8 @@ import {
 
 import {logger} from "~shared/lib/logger"
 
-import {ALL_TYPES, LogType} from "./LogView.interface"
-import {useLogViewStore} from "./LogView.store"
+import {useLogViewStore} from "./LogView-store"
+import {ALL_TYPES, LogType} from "./LogView-types"
 
 //function to get the appropriate icon for each log type
 const getLogTypeIcon = (logType: LogType) => {
@@ -187,14 +188,21 @@ const LogViewToolbar: React.FC = () => {
             <TextInput.ClearTrigger />
 
             <Menu.Root>
-              <Menu.Trigger>
-                <InlineIconButton
-                  aria-label="Filter logs"
-                  icon={ListFilter}
-                  size="sm"
-                  title="Filter logs"
-                />
-              </Menu.Trigger>
+              <Tooltip
+                trigger={
+                  <span>
+                    <Menu.Trigger>
+                      <InlineIconButton
+                        aria-label="Filter logs"
+                        icon={ListFilter}
+                        size="sm"
+                      />
+                    </Menu.Trigger>
+                  </span>
+                }
+              >
+                Filter logs
+              </Tooltip>
               <Menu.Positioner>
                 <Menu.Content>
                   {[ALL_TYPES, ...Object.values(LogType)].map((type) => (
@@ -246,48 +254,61 @@ const LogViewToolbar: React.FC = () => {
       </div>
       {/* Copy Selected Log Button - only visible when a log is selected */}
       {selectedRowLogId && (
-        <IconButton
-          aria-label="Copy selected log"
-          emphasis="neutral"
-          icon={Copy}
-          onClick={copySelectedLog}
-          size="sm"
-          title="Copy selected log"
-          variant="ghost"
-        />
+        <Tooltip
+          trigger={
+            <IconButton
+              aria-label="Copy selected log"
+              emphasis="neutral"
+              icon={Copy}
+              onClick={copySelectedLog}
+              size="sm"
+              variant="ghost"
+            />
+          }
+        >
+          Copy selected log
+        </Tooltip>
       )}
 
       <div className="flex-1" />
       {/* Save All/Filtered Logs Button */}
-      <IconButton
-        aria-label={
-          searchLogQuery.trim() || selectedLogTypes.length > 0
-            ? `Save ${filteredLogs.length} filtered logs`
-            : `Save all ${filteredLogs.length} logs`
+      <Tooltip
+        trigger={
+          <IconButton
+            aria-label={
+              searchLogQuery.trim() || selectedLogTypes.length > 0
+                ? `Save ${filteredLogs.length} filtered logs`
+                : `Save all ${filteredLogs.length} logs`
+            }
+            disabled={filteredLogs.length === 0}
+            emphasis="neutral"
+            icon={Save}
+            onClick={saveAllFilteredLogs}
+            size="sm"
+            variant="ghost"
+          />
         }
-        disabled={filteredLogs.length === 0}
-        emphasis="neutral"
-        icon={Save}
-        onClick={saveAllFilteredLogs}
-        size="sm"
-        title={
-          searchLogQuery.trim() || selectedLogTypes.length > 0
-            ? `Save ${filteredLogs.length} filtered logs`
-            : `Save all ${filteredLogs.length} logs`
-        }
-        variant="ghost"
-      />
+      >
+        {searchLogQuery.trim() || selectedLogTypes.length > 0
+          ? `Save ${filteredLogs.length} filtered logs`
+          : `Save all ${filteredLogs.length} logs`}
+      </Tooltip>
       {/* Clear All Logs Button */}
-      <IconButton
-        aria-label="Clear all logs"
-        disabled={logs.length === 0} // Disabled when no logs exist
-        emphasis="neutral"
-        icon={Ban}
-        onClick={clearLogs}
-        size="sm"
-        title="Clear all logs"
-        variant="ghost"
-      />
+      <Tooltip
+        trigger={
+          <IconButton
+            aria-label="Clear all logs"
+            disabled={logs.length === 0} // Disabled when no logs exist
+            emphasis="neutral"
+            icon={Ban}
+            onClick={clearLogs}
+            size="sm"
+            variant="ghost"
+          />
+        }
+      >
+        Clear all logs
+      </Tooltip>
     </div>
   )
 }

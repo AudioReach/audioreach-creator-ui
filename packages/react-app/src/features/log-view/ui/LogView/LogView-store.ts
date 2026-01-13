@@ -2,7 +2,7 @@ import {create} from "zustand"
 
 import {logger} from "~shared/lib/logger"
 
-import {LogType, type LogViewStore} from "./LogView.interface"
+import {LogType, type LogViewStore} from "./LogView-types"
 
 // Zustand store for log viewer state management
 export const useLogViewStore = create<LogViewStore>((set) => ({

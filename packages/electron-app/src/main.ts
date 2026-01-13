@@ -14,6 +14,7 @@ import {setTimeout} from "node:timers/promises"
 import {
   getFileModificationDateSync,
   openProjectFile,
+  saveValidationResults,
   showProjectInExplorer,
 } from "./project-file-api"
 
@@ -170,6 +171,12 @@ ipcMain.handle(
         console.debug(`Showing project file in explorer: ${args.data}`)
         showProjectInExplorer(args.data)
         response = ""
+        break
+      case ApiRequest.SaveValidationResults:
+        const saveFileResponse = await saveValidationResults(win, args.data)
+
+        response = saveFileResponse.response
+        data = saveFileResponse.data
         break
       default:
         response = "Unknown request type"

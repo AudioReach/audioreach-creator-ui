@@ -1,4 +1,11 @@
-import {Fragment, useEffect, useMemo, useRef, useState} from "react"
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   type Cell,
@@ -11,10 +18,11 @@ import {
 } from "@qualcomm-ui/core/table"
 import {Icon} from "@qualcomm-ui/react/icon"
 import {flexRender, Table, useReactTable} from "@qualcomm-ui/react/table"
+import {Tooltip} from "@qualcomm-ui/react/tooltip"
 import {Info, MessageSquareText, TriangleAlert, X} from "lucide-react"
 
-import {type LogEntry, LogType} from "./LogView.interface"
-import {useLogViewStore} from "./LogView.store"
+import {useLogViewStore} from "./LogView-store"
+import {type LogEntry, LogType} from "./LogView-types"
 
 // React Table column helper for type-safe column definitions
 const columnHelper = createColumnHelper<LogEntry>()
@@ -65,12 +73,28 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
   const spanRef = useRef<HTMLSpanElement>(null)
   const [isOverflowing, setIsOverflowing] = useState(false)
 
-  useEffect(() => {
+  const checkOverflow = useCallback(() => {
     const element = spanRef.current
     if (element) {
       setIsOverflowing(element.scrollWidth > element.clientWidth)
     }
-  }, [logEntry.message])
+  }, [])
+
+  useEffect(() => {
+    const element = spanRef.current
+    if (!element) {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      checkOverflow()
+    })
+
+    resizeObserver.observe(element)
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [checkOverflow])
 
   return (
     <div className="flex w-full max-w-full items-center gap-1">
@@ -92,13 +116,29 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
           />
         )}
       </div>
-      <span
-        ref={spanRef}
-        className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? "font-bold" : ""}`}
-        title={isOverflowing ? logEntry.message : undefined}
+      <Tooltip
+        disabled={!isOverflowing}
+        positioning={{
+          placement: "bottom",
+        }}
+        trigger={
+          <span
+            ref={spanRef}
+            className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? "font-bold" : ""}`}
+          >
+            {logEntry.message}
+          </span>
+        }
       >
-        {logEntry.message}
-      </span>
+        <div
+          style={{
+            maxWidth: "400px",
+            wordWrap: "break-word",
+          }}
+        >
+          {logEntry.message}
+        </div>
+      </Tooltip>
     </div>
   )
 }
@@ -181,7 +221,7 @@ function LogViewTable() {
         ),
         header: "Message",
         minSize: 150,
-        size: 1150,
+        size: 870,
       }),
     ],
     [selectedRowLogId],
