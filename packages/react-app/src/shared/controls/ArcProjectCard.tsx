@@ -4,7 +4,7 @@ import {Avatar} from "@qualcomm-ui/react/avatar"
 import {Badge} from "@qualcomm-ui/react/badge"
 import {Menu} from "@qualcomm-ui/react/menu"
 import {Portal} from "@qualcomm-ui/react-core/portal"
-import {Database} from "lucide-react"
+import {Database, Smartphone} from "lucide-react"
 
 import {
   QCard,
@@ -38,6 +38,8 @@ export interface ArcProjectCardProps {
   onShowInExplorer?: () => Promise<void>
   /** The title of the card */
   title: string
+  /** Type indicator badge to show if this is a project or device */
+  typeIndicator?: "project" | "device"
 }
 
 export default function ArcProjectCard({
@@ -50,6 +52,7 @@ export default function ArcProjectCard({
   onRemoveFromRecent,
   onShowInExplorer,
   title,
+  typeIndicator,
 }: ArcProjectCardProps) {
   // State for context menu
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
@@ -168,7 +171,7 @@ export default function ArcProjectCard({
             variant="neutral"
           >
             <Avatar.Content>
-              <Database />
+              {typeIndicator === "device" ? <Smartphone /> : <Database />}
             </Avatar.Content>
           </Avatar.Root>
         </QCardContent>

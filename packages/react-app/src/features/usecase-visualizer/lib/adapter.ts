@@ -53,7 +53,7 @@ export function buildGraphViewFromUsecase(
   // Build lookup map from systemId to ReactFlow node ID
   const systemIdToNodeId = new Map<string, string>()
   for (const m of modules) {
-    systemIdToNodeId.set(m._systemId, nodeId("module", m._id))
+    systemIdToNodeId.set(m.systemId, nodeId("module", m.id))
   }
   for (const ss of subsystems) {
     systemIdToNodeId.set(ss.systemId, nodeId("subsystem", ss.id))
@@ -64,14 +64,14 @@ export function buildGraphViewFromUsecase(
   const controlPortSystemIdToPortId = new Map<string, number>()
 
   for (const m of modules) {
-    if (Array.isArray(m._dataPorts)) {
-      for (const port of m._dataPorts) {
+    if (Array.isArray(m.dataPorts)) {
+      for (const port of m.dataPorts) {
         // Store mapping: port systemId (string) -> port numeric ID
-        dataPortSystemIdToPortId.set(String(port._systemId), port._id)
+        dataPortSystemIdToPortId.set(String(port.systemId), port.id)
       }
     }
-    if (Array.isArray(m._controlPorts)) {
-      for (const port of m._controlPorts) {
+    if (Array.isArray(m.controlPorts)) {
+      for (const port of m.controlPorts) {
         // Store mapping: port systemId (string) -> port numeric ID
         controlPortSystemIdToPortId.set(String(port.systemId), port.id)
       }
@@ -81,7 +81,7 @@ export function buildGraphViewFromUsecase(
   for (const ss of subsystems) {
     if (Array.isArray(ss.dataPorts)) {
       for (const port of ss.dataPorts) {
-        dataPortSystemIdToPortId.set(String(port._systemId), port._id)
+        dataPortSystemIdToPortId.set(String(port.systemId), port.id)
       }
     }
     if (Array.isArray(ss.controlPorts)) {
@@ -182,31 +182,31 @@ export function buildGraphViewFromUsecase(
       data: {
         alias: m.alias,
         containerId: m.containerId,
-        controlPorts: Array.isArray(m._controlPorts)
-          ? m._controlPorts.map((p) => ({
+        controlPorts: Array.isArray(m.controlPorts)
+          ? m.controlPorts.map((p) => ({
               id: p.id,
               intents: p.intents,
               name: p.controlPortName,
               portType: p.portType,
             }))
           : [],
-        dataPorts: Array.isArray(m._dataPorts)
-          ? m._dataPorts.map((p) => ({
-              id: p._id,
-              name: p._name,
-              portIoType: p._portIoType,
-              portType: p._portType,
+        dataPorts: Array.isArray(m.dataPorts)
+          ? m.dataPorts.map((p) => ({
+              id: p.id,
+              name: p.name,
+              portIoType: p.portIoType,
+              portType: p.portType,
             }))
           : [],
         kind: NODE_KIND.MODULE,
-        label: m.alias || m._name,
-        name: m._name,
+        label: m.alias || m.name,
+        name: m.name,
         parentId: m.parentId,
         showPortLabels: false,
         subgraphId: m.subgraphId,
       },
       extent: "parent" as const,
-      id: nodeId("module", m._id),
+      id: nodeId("module", m.id),
       parentId: parent,
       position: {x: 0, y: 0},
       type: "module",
@@ -220,18 +220,18 @@ export function buildGraphViewFromUsecase(
   dataLinks.forEach((dl: DataLinkDto, idx) => {
     // For data links, we need to find the source and destination using the link's properties
     // The sourceId and destinationId in the DTO are numeric IDs that need to be mapped
-    const srcModule = modules.find((m) => m._id === dl.sourceId)
-    const dstModule = modules.find((m) => m._id === dl.destinationId)
+    const srcModule = modules.find((m) => m.id === dl.sourceId)
+    const dstModule = modules.find((m) => m.id === dl.destinationId)
     const srcSubsystem = subsystems.find((s) => s.id === dl.sourceId)
     const dstSubsystem = subsystems.find((s) => s.id === dl.destinationId)
 
     const src = srcModule
-      ? nodeId("module", srcModule._id)
+      ? nodeId("module", srcModule.id)
       : srcSubsystem
         ? nodeId("subsystem", srcSubsystem.id)
         : null
     const dst = dstModule
-      ? nodeId("module", dstModule._id)
+      ? nodeId("module", dstModule.id)
       : dstSubsystem
         ? nodeId("subsystem", dstSubsystem.id)
         : null
@@ -273,18 +273,18 @@ export function buildGraphViewFromUsecase(
   )
   controlLinks.forEach((cl: ControlLinkDto, idx) => {
     // For control links, use the numeric IDs to find the components
-    const srcModule = modules.find((m) => m._id === cl.sourceId)
-    const dstModule = modules.find((m) => m._id === cl.destinationId)
+    const srcModule = modules.find((m) => m.id === cl.sourceId)
+    const dstModule = modules.find((m) => m.id === cl.destinationId)
     const srcSubsystem = subsystems.find((s) => s.id === cl.sourceId)
     const dstSubsystem = subsystems.find((s) => s.id === cl.destinationId)
 
     const src = srcModule
-      ? nodeId("module", srcModule._id)
+      ? nodeId("module", srcModule.id)
       : srcSubsystem
         ? nodeId("subsystem", srcSubsystem.id)
         : null
     const dst = dstModule
-      ? nodeId("module", dstModule._id)
+      ? nodeId("module", dstModule.id)
       : dstSubsystem
         ? nodeId("subsystem", dstSubsystem.id)
         : null

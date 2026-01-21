@@ -13,8 +13,8 @@ import UsecaseListPanel from "./UsecaseListPanel"
 
 // Utility to format a Usecase's keyValueCollection into a display string
 const formatUsecaseDisplay = (usecase: Usecase): string => {
-  return usecase._keyValueCollection
-    .map((kv: KeyValue) => kv._valueLabel)
+  return usecase.keyValueCollection
+    .map((kv: KeyValue) => kv.valueLabel)
     .join(" • ")
 }
 
@@ -131,10 +131,10 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
         const searchLower = searchTerm.toLowerCase()
         return (
           formattedUsecase.includes(searchLower) ||
-          usecase._keyValueCollection.some(
+          usecase.keyValueCollection.some(
             (kv: KeyValue) =>
-              kv._keyLabel.toLowerCase().includes(searchLower) ||
-              kv._valueLabel.toLowerCase().includes(searchLower),
+              kv.keyLabel.toLowerCase().includes(searchLower) ||
+              kv.valueLabel.toLowerCase().includes(searchLower),
           )
         )
       }),
@@ -160,7 +160,13 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
 
       {/* Dropdown Content */}
       {isDropdownOpen && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 flex max-h-96 rounded-md border border-gray-300 bg-white shadow-lg">
+        <div
+          className="absolute left-0 right-0 top-full z-10 mt-1 flex max-h-96 rounded-md shadow-lg"
+          style={{
+            backgroundColor: "var(--color-surface-raised)",
+            border: "1px solid var(--color-border-neutral-02)",
+          }}
+        >
           <UsecaseListPanel
             expandedCategories={expandedCategories}
             formatUsecaseDisplay={formatUsecaseDisplay}

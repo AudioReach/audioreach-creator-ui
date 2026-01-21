@@ -30,7 +30,7 @@ import {
 } from "../store/ProjectLayoutMgr.store"
 import {getColorName} from "../utils/color-utils"
 
-import "flexlayout-react/style/light.css"
+import "flexlayout-react/style/combined.css"
 
 interface Props {}
 
@@ -81,7 +81,7 @@ class ProjectLayoutManager extends Component<Props, State> {
 
       // Always add app group label (whether collapsed or not)
       const appGroupLabel = {
-        className: `group-label-tab bg-${getColorName(colorNumber)} text-white`,
+        className: `group-label-tab bg-${getColorName(colorNumber)}`,
         component: "group-label",
         enableClose: false,
         enableDrag: false,
@@ -121,7 +121,7 @@ class ProjectLayoutManager extends Component<Props, State> {
       // Add project group label
       // This creates the clickable group headers in the UI
       const groupLabel = {
-        className: `group-label-tab bg-${getColorName(colorNumber)} text-white`,
+        className: `group-label-tab bg-${getColorName(colorNumber)}`,
         component: "group-label",
         enableClose: false,
         enableDrag: false,
@@ -667,7 +667,8 @@ class ProjectLayoutManager extends Component<Props, State> {
       renderValues.content = createElement(
         "div",
         {
-          className: `cursor-pointer px-0.5 py-0.5 rounded  inline-flex  gap-0.5 mb-0.1  text-xs  ${bgColor} text-white`,
+          className: `cursor-pointer px-0.5 py-0.5 rounded  inline-flex  gap-0.5 mb-0.1  text-xs  ${bgColor}`,
+          style: {color: "white"},
           ...(showTooltip && {title: groupName}), // Add tooltip only if showGroupTitle is false
           onClick: (e: MouseEvent) => {
             e.stopPropagation()
@@ -799,7 +800,9 @@ class ProjectLayoutManager extends Component<Props, State> {
       )
     }
 
-    // Render FlexLayout with all  features
+    // Render FlexLayout with all features
+    // Note: We need to get the theme from the wrapper component
+    // The Layout component itself doesn't accept className, so we rely on the wrapper
     return createElement(Layout, {
       factory: this.factory,
       model,

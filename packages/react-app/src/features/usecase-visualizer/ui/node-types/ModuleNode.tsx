@@ -40,17 +40,25 @@ export const ModuleNode: FC<NodeProps> = ({data}) => {
         {controlPorts.map((p, i) => (
           <div key={`Control:${p.id}`}>
             <Handle
-              className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-gray-500"
+              className="absolute -top-1 h-2 w-2 rounded-full"
               id={`Control:${p.id}-source`}
               position={Position.Top}
-              style={getTopHandleStyle(i, controlPorts.length)}
+              style={{
+                ...getTopHandleStyle(i, controlPorts.length),
+                backgroundColor: "var(--color-background-neutral-06)",
+                border: "1px solid var(--color-border-neutral-10)",
+              }}
               type="source"
             />
             <Handle
-              className="absolute -top-1 h-2 w-2 rounded-full border border-white bg-gray-500"
+              className="absolute -top-1 h-2 w-2 rounded-full"
               id={`Control:${p.id}-target`}
               position={Position.Top}
-              style={getTopHandleStyle(i, controlPorts.length)}
+              style={{
+                ...getTopHandleStyle(i, controlPorts.length),
+                backgroundColor: "var(--color-background-neutral-06)",
+                border: "1px solid var(--color-border-neutral-10)",
+              }}
               type="target"
             />
           </div>
@@ -60,9 +68,13 @@ export const ModuleNode: FC<NodeProps> = ({data}) => {
         {dataPorts.map((p) => (
           <Handle
             key={`Data:${p.id}`}
-            className="h-2 w-2 rounded-full border border-white bg-gray-500"
+            className="h-2 w-2 rounded-full"
             id={`Data:${p.id}`}
             position={ioToPosition(p.portIoType)}
+            style={{
+              backgroundColor: "var(--color-background-neutral-06)",
+              border: "1px solid var(--color-border-neutral-10)",
+            }}
             type={p.portIoType === "Input" ? "target" : "source"}
           />
         ))}

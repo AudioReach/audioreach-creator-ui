@@ -17,7 +17,6 @@ export interface VisualizationPreferences {
  */
 export interface DisplayPreferences {
   portVisibilityMode: "all" | "active"
-  theme: "dark" | "light" | "system"
 }
 
 /**
@@ -57,7 +56,6 @@ export const DEFAULT_VISUALIZATION_PREFERENCES: VisualizationPreferences = {
  */
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
   portVisibilityMode: "active",
-  theme: "system",
 }
 
 /**

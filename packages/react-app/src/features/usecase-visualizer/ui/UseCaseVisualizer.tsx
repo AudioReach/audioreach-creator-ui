@@ -3,6 +3,7 @@ import {type FC, useCallback, useEffect} from "react"
 
 import {
   Background,
+  type ColorMode,
   Controls,
   getViewportForBounds,
   ReactFlow,
@@ -15,6 +16,7 @@ import "@xyflow/react/dist/style.css"
 
 import type {RFEdge, RFNode} from "~features/usecase-visualizer/model/types"
 import type {UserPreferences} from "~shared/config/user-preferences-types"
+import {Theme, useTheme} from "~shared/providers/ThemeProvider"
 
 import {ControlLinkEdge} from "./edge-types/ControlLinkEdge"
 import {DataLinkEdge} from "./edge-types/DataLinkEdge"
@@ -47,6 +49,7 @@ const ScreenshotHandler: FC<{
   onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void
 }> = ({onScreenshotReady}) => {
   const {getNodes, getNodesBounds} = useReactFlow()
+  const [theme] = useTheme()
 
   const captureScreenshot = useCallback(async (): Promise<string | null> => {
     try {
@@ -84,9 +87,12 @@ const ScreenshotHandler: FC<{
         0.1,
       )
 
+      // Use theme-aware background color for screenshot
+      const backgroundColor = theme === Theme.DARK ? "#000000" : "#ffffff"
+
       // Capture the viewport with proper transformation (ReactFlow standard approach)
       const dataUrl = await toPng(viewport, {
-        backgroundColor: "#ffffff",
+        backgroundColor,
         cacheBust: true,
         filter: (node) => {
           if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
@@ -110,7 +116,7 @@ const ScreenshotHandler: FC<{
       console.error("Failed to capture ReactFlow screenshot:", error)
       return null
     }
-  }, [getNodes, getNodesBounds])
+  }, [getNodes, getNodesBounds, theme])
 
   // Notify parent when screenshot function is ready
   useEffect(() => {
@@ -128,6 +134,9 @@ const FlowContent: FC<UseCaseVisualizerProps> = ({
   onScreenshotReady,
   userPreferences,
 }) => {
+  const [theme] = useTheme()
+  const colorMode: ColorMode = theme === Theme.DARK ? "dark" : "light"
+
   // Filter edges based on user preferences
   const filteredEdges = edges.filter((edge) => {
     // Filter control links if preference is disabled
@@ -142,8 +151,9 @@ const FlowContent: FC<UseCaseVisualizerProps> = ({
   })
 
   return (
-    <div className="h-full w-full bg-white">
+    <div className="h-full w-full">
       <ReactFlow
+        colorMode={colorMode}
         edgeTypes={edgeTypes}
         edges={filteredEdges}
         elementsSelectable={false}

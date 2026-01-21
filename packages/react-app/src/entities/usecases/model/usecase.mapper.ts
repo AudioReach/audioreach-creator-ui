@@ -15,9 +15,9 @@ export function mapUsecaseDtoToCategories(
   const categoryMap = new Map<string, UsecaseIdentifier[]>()
 
   dtoArray.forEach((dto) => {
-    dto._usecases.forEach((usecaseIdentifier) => {
+    dto.usecases.forEach((usecaseIdentifier) => {
       // Determine category based on usecase type or alias
-      const categoryName = usecaseIdentifier._usecaseAliasName
+      const categoryName = usecaseIdentifier.usecaseAliasName
         ? "Recently Selected"
         : "Default"
 

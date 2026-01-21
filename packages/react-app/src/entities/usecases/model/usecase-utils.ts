@@ -7,7 +7,7 @@ import type {UsecaseIdentifier} from "./usecase.dto"
  * This matches the format used in UsecaseSelectionControl
  */
 export function formatUsecaseDisplay(usecase: UsecaseIdentifier): string {
-  return usecase._keyValueCollection.map((kv) => kv._valueLabel).join(" • ")
+  return usecase.keyValueCollection.map((kv) => kv.valueLabel).join(" • ")
 }
 
 /**
@@ -43,8 +43,8 @@ export function getSystemIdsFromFormattedUsecases(
       (usecase) => formatUsecaseDisplay(usecase) === formattedUsecase,
     )
 
-    if (matchingUsecase && matchingUsecase._systemId) {
-      systemIds.push(matchingUsecase._systemId)
+    if (matchingUsecase && matchingUsecase.systemId) {
+      systemIds.push(matchingUsecase.systemId)
     }
   }
 

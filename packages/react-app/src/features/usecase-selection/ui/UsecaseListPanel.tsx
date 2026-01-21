@@ -37,9 +37,15 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   return (
     <div className="flex w-full flex-col">
       {/* Top controls - Sticky header */}
-      <div className="flex-shrink-0 border-b border-gray-200 p-4">
+      <div
+        className="flex-shrink-0 px-3 py-2"
+        style={{borderBottom: "1px solid var(--color-border-neutral-02)"}}
+      >
         <div className="flex items-center justify-between">
-          <label className="text-md flex cursor-pointer items-center text-gray-700">
+          <label
+            className="flex cursor-pointer items-center text-sm"
+            style={{color: "var(--color-text-neutral-primary)"}}
+          >
             <Checkbox
               checked={
                 selectedUsecases.length ===
@@ -51,7 +57,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             />
             <span className="ml-2">Select All</span>
           </label>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <IconButton
               emphasis="neutral"
               icon={PanelTopOpen}
@@ -67,7 +73,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               variant="ghost"
             />
             <IconButton
-              emphasis="neutral"
+              emphasis="danger"
               icon={Trash2}
               size="md"
               title="Delete"
@@ -80,7 +86,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               title="Settings"
               variant="ghost"
             />
-            <Button onClick={onClose} size="md" variant="outline">
+            <Button onClick={onClose} size="sm" variant="outline">
               Done
             </Button>
           </div>
@@ -88,7 +94,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
       </div>
 
       {/* Usecase Categories - Scrollable content */}
-      <div className="flex-grow overflow-y-auto p-4">
+      <div className="flex-grow overflow-y-auto px-3 py-2">
         {usecaseData.map((category) => {
           const isCategoryExpanded = expandedCategories.includes(category.name)
           const checkedUsecasesInCategory = category.usecases.filter(
@@ -102,16 +108,19 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             checkedUsecasesInCategory < totalUsecasesInCategory
           const icon = isCategoryExpanded ? ChevronDown : ChevronRight
           return (
-            <div key={category.name} className="mb-4 last:mb-0">
-              <div className="mb-2 flex items-center">
+            <div key={category.name} className="mb-3 last:mb-0">
+              <div className="mb-1 flex items-center">
                 <IconButton
                   emphasis="neutral"
                   icon={icon}
                   onClick={() => toggleCategoryExpansion(category.name)}
-                  size="md"
+                  size="sm"
                   variant="ghost"
                 />
-                <label className="text-md flex cursor-pointer items-center font-semibold text-gray-800">
+                <label
+                  className="flex cursor-pointer items-center text-sm font-semibold"
+                  style={{color: "var(--color-text-neutral-primary)"}}
+                >
                   <Checkbox
                     checked={allChecked}
                     indeterminate={someChecked}
@@ -126,13 +135,21 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                 </label>
               </div>
               {isCategoryExpanded && (
-                <div className="ml-8 border-l border-gray-200 pl-4">
+                <div
+                  className="ml-6 pl-3"
+                  style={{
+                    borderLeft: "1px solid var(--color-border-neutral-02)",
+                  }}
+                >
                   {category.usecases.map(
                     (usecase: Usecase, usecaseIndex: number) => {
                       const formattedUsecase = formatUsecaseDisplay(usecase)
                       return (
-                        <div key={usecaseIndex} className="mb-3 last:mb-0">
-                          <label className="text-md flex cursor-pointer items-center text-gray-700">
+                        <div key={usecaseIndex} className="mb-2 last:mb-0">
+                          <label
+                            className="flex cursor-pointer items-center text-sm"
+                            style={{color: "var(--color-text-neutral-primary)"}}
+                          >
                             <Checkbox
                               checked={selectedUsecases.includes(
                                 formattedUsecase,
@@ -144,14 +161,25 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                             />
                             <span className="ml-2">{formattedUsecase}</span>
                           </label>
-                          <div className="ml-6 mt-1 space-y-0.5 text-xs text-gray-500">
-                            {usecase._keyValueCollection.map(
+                          <div
+                            className="ml-6 mt-0.5 space-y-0.5 text-xs"
+                            style={{
+                              color: "var(--color-text-neutral-secondary)",
+                            }}
+                          >
+                            {usecase.keyValueCollection.map(
                               (kv: KeyValue, kvIndex: number) => (
                                 <div key={kvIndex}>
-                                  <span className="font-medium text-gray-600">
-                                    {kv._keyLabel}:
+                                  <span
+                                    className="font-medium"
+                                    style={{
+                                      color:
+                                        "var(--color-text-neutral-primary)",
+                                    }}
+                                  >
+                                    {kv.keyLabel}:
                                   </span>{" "}
-                                  {kv._valueLabel}
+                                  {kv.valueLabel}
                                 </div>
                               ),
                             )}

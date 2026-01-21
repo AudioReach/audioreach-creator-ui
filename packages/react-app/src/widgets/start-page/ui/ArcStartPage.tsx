@@ -1,35 +1,36 @@
 import {useMemo, useState} from "react"
 
-import {Button} from "@qualcomm-ui/react/button"
+import {Button, IconButton} from "@qualcomm-ui/react/button"
 import {Combobox} from "@qualcomm-ui/react/combobox"
-import {Divider} from "@qualcomm-ui/react/divider"
 import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
 import {useListCollection} from "@qualcomm-ui/react-core/collection"
 import {useFilter} from "@qualcomm-ui/react-core/locale"
 import {
   BookOpen,
+  ChevronRight,
   Database,
   FileText,
   FilterIcon,
   Folder,
+  Grid3x3,
   HelpCircle,
   Info,
+  List,
   Logs,
-  NotebookTabs,
   Search,
   Smartphone,
 } from "lucide-react"
 import {createPortal} from "react-dom"
 
 import {ProjectService} from "~entities/project/services"
-import ArcDeviceList from "~features/device-list/ui/ArcDeviceList"
 import {useDeviceManager} from "~features/device-operations"
 import {
   useProjectLifecycle,
   useProjectOpener,
 } from "~features/project-operations"
 import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProjects"
-import ArcRecentProjects from "~features/recent-files/ui/ArcRecentProjects"
+import UnifiedGridView from "~features/recent-files/ui/UnifiedGridView"
+import UnifiedListView from "~features/recent-files/ui/UnifiedListView"
 import ArcSearchBar from "~shared/controls/ArcSearchBar"
 import {showToast} from "~shared/controls/GlobalToaster"
 import {logger} from "~shared/lib/logger"
@@ -53,8 +54,12 @@ export default function ArcStartPage({
   onOpenWorkspaceProject,
   tabId,
 }: ArcStartPageProps) {
-  const [showOnlyProjects, setShowOnlyProjects] = useState(false)
-  const [showOnlyDevices, setShowOnlyDevices] = useState(false)
+  const [showProjects, setShowProjects] = useState(true)
+  const [showDevices, setShowDevices] = useState(true)
+  const [activeTab, setActiveTab] = useState<
+    "release-notes" | "user-guide" | null
+  >(null)
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [searchTerm, setSearchTerm] = useState<string>("")
 
   const {projects: recentProjects, removeFromRecent} = useArcRecentProjects()
@@ -103,16 +108,6 @@ export default function ArcStartPage({
     })
   }, [recentProjects, searchTerm])
 
-  function handleShowOnlyProjects() {
-    setShowOnlyProjects(!showOnlyProjects)
-    setShowOnlyDevices(false)
-  }
-
-  function handleShowOnlyDevices() {
-    setShowOnlyDevices(!showOnlyDevices)
-    setShowOnlyProjects(false)
-  }
-
   async function handleShowInExplorer(projectId: string) {
     const project = recentProjects.find((p) => p.id === projectId)
     if (!project) {
@@ -159,18 +154,6 @@ export default function ArcStartPage({
         id: "help",
         label: "Help",
         shortcut: "F1",
-      },
-      {
-        group: "Help",
-        icon: FileText,
-        id: "release-notes",
-        label: "Release Notes",
-      },
-      {
-        group: "Help",
-        icon: BookOpen,
-        id: "user-guide",
-        label: "User Guide",
       },
       {
         group: "Help",
@@ -260,16 +243,31 @@ export default function ArcStartPage({
       {/* Loading Overlay - Rendered as Portal to cover entire application */}
       {loadingState.isLoading &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
-            <div className="rounded-lg bg-white p-8 shadow-xl">
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            style={{
+              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            <div
+              className="rounded-lg p-8 shadow-xl"
+              style={{backgroundColor: "var(--color-surface-raised)"}}
+            >
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   <ProgressRing />
                 </div>
-                <div className="mb-2 text-lg font-semibold text-gray-800">
+                <div
+                  className="mb-2 text-lg font-semibold"
+                  style={{color: "var(--color-text-neutral-primary)"}}
+                >
                   {loadingState.message || "Processing..."}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div
+                  className="text-sm"
+                  style={{color: "var(--color-text-neutral-secondary)"}}
+                >
                   Please wait for the files to be processed ...
                 </div>
               </div>
@@ -279,108 +277,199 @@ export default function ArcStartPage({
         )}
 
       <div>
-        {/* Top Buttons */}
-        <div className="flex flex-row gap-2.5 p-2.5">
+        {/* Top Navigation Bar */}
+        <div
+          className="flex gap-2 p-2.5"
+          style={{borderBottom: "1px solid var(--color-border-neutral-02)"}}
+        >
           <Button
-            className="rounded-xl"
-            emphasis="neutral"
+            emphasis={showProjects ? "primary" : "neutral"}
+            onClick={() => {
+              setShowProjects(!showProjects)
+              setActiveTab(null)
+            }}
             size="md"
-            startIcon={NotebookTabs}
-            variant="fill"
+            startIcon={Database}
+            variant={showProjects ? "fill" : "outline"}
+          >
+            Projects
+          </Button>
+          <Button
+            emphasis={showDevices ? "primary" : "neutral"}
+            onClick={() => {
+              setShowDevices(!showDevices)
+              setActiveTab(null)
+            }}
+            size="md"
+            startIcon={Smartphone}
+            variant={showDevices ? "fill" : "outline"}
+          >
+            Devices
+          </Button>
+          <Button
+            emphasis={activeTab === "release-notes" ? "primary" : "neutral"}
+            onClick={() => {
+              setActiveTab("release-notes")
+              setShowProjects(false)
+              setShowDevices(false)
+            }}
+            size="md"
+            startIcon={FileText}
+            variant={activeTab === "release-notes" ? "fill" : "outline"}
           >
             Release Notes
           </Button>
           <Button
-            className="rounded-xl"
-            emphasis="neutral"
+            emphasis={activeTab === "user-guide" ? "primary" : "neutral"}
+            onClick={() => {
+              setActiveTab("user-guide")
+              setShowProjects(false)
+              setShowDevices(false)
+            }}
             size="md"
-            startIcon={NotebookTabs}
-            variant="fill"
+            startIcon={BookOpen}
+            variant={activeTab === "user-guide" ? "fill" : "outline"}
           >
             User Guide
           </Button>
         </div>
 
-        <Divider />
-
-        <div className="flex flex-col gap-2.5 p-2.5">
-          {/* Search, Open File, and Device Manager */}
-          <div className="flex flex-row gap-2.5">
-            <h1 className="q-font-heading-sm-subtle content-center">
-              Workspaces & Devices
-            </h1>
+        {/* Main Control Row */}
+        <div className="flex items-center gap-3 p-2.5">
+          {/* Search */}
+          <div className="flex-1">
             <ArcSearchBar
               onSearchChange={setSearchTerm}
               placeholder="Search"
               searchTerm={searchTerm}
             />
-            <Button
-              className="rounded-xl"
-              emphasis="neutral"
-              onClick={openWorkspaceProject}
-              startIcon={Folder}
-              variant="fill"
-            >
-              Open File
-            </Button>
-            <Button
-              className="rounded-xl"
-              emphasis="neutral"
-              startIcon={Smartphone}
-              variant="fill"
-            >
-              Device Manager
-            </Button>
           </div>
 
-          <div className="flex justify-end gap-2.5">
-            <Button
-              className="rounded-xl"
-              emphasis="neutral"
-              onClick={handleShowOnlyProjects}
-              size="md"
-              startIcon={Database}
-              variant="fill"
-            >
-              Workspaces
-            </Button>
-            <Button
-              className="rounded-xl"
-              emphasis="neutral"
-              onClick={handleShowOnlyDevices}
-              size="md"
-              startIcon={Smartphone}
-              variant="fill"
-            >
-              Devices
-            </Button>
-          </div>
-          <div className="flex justify-end gap-2.5">
-            <Combobox
-              className="w-[250px]"
-              collection={collection}
-              icon={FilterIcon}
-              onInputValueChange={(value) =>
-                handleOnFilterOptionChanged(value.inputValue)
-              }
-              placeholder="Filter by..."
-              size="sm"
-            />
-          </div>
-          {/* Recent Workspace and Device Project Lists */}
-          {!showOnlyDevices && (
-            <ArcRecentProjects
-              onOpenProject={openRecentProject}
-              onRemoveFromRecent={removeFromRecent}
-              onShowInExplorer={handleShowInExplorer}
-              projects={filteredProjects}
-            />
+          {/* Open File */}
+          <Button
+            emphasis="neutral"
+            endIcon={ChevronRight}
+            onClick={openWorkspaceProject}
+            size="md"
+            startIcon={Folder}
+            variant="fill"
+          >
+            Open File
+          </Button>
+
+          {/* Device Manager */}
+          <Button
+            emphasis="neutral"
+            endIcon={ChevronRight}
+            size="md"
+            startIcon={Smartphone}
+            variant="fill"
+          >
+            Device Manager
+          </Button>
+
+          {/* List View Toggle */}
+          <IconButton
+            emphasis={viewMode === "list" ? "primary" : "neutral"}
+            icon={List}
+            onClick={() => setViewMode("list")}
+            size="md"
+            title="List View"
+            variant={viewMode === "list" ? "fill" : "outline"}
+          />
+
+          {/* Grid View Toggle */}
+          <IconButton
+            emphasis={viewMode === "grid" ? "primary" : "neutral"}
+            icon={Grid3x3}
+            onClick={() => setViewMode("grid")}
+            size="md"
+            title="Grid View"
+            variant={viewMode === "grid" ? "fill" : "outline"}
+          />
+
+          {/* Filter */}
+          <Combobox
+            className="w-48"
+            collection={collection}
+            icon={FilterIcon}
+            onInputValueChange={(value) =>
+              handleOnFilterOptionChanged(value.inputValue)
+            }
+            placeholder="Filter by..."
+            size="md"
+          />
+        </div>
+
+        {/* Content Area */}
+        <div className="p-2.5">
+          {/* Unified Projects & Devices View */}
+          {!activeTab && (
+            <>
+              {viewMode === "grid" ? (
+                <UnifiedGridView
+                  devices={filteredDevices}
+                  onOpenDevice={openDevice}
+                  onOpenProject={openRecentProject}
+                  onRemoveFromRecent={removeFromRecent}
+                  onShowInExplorer={handleShowInExplorer}
+                  projects={filteredProjects}
+                  showDevices={showDevices}
+                  showProjects={showProjects}
+                />
+              ) : (
+                <UnifiedListView
+                  devices={filteredDevices}
+                  onOpenDevice={openDevice}
+                  onOpenProject={openRecentProject}
+                  onRemoveFromRecent={removeFromRecent}
+                  onShowInExplorer={handleShowInExplorer}
+                  projects={filteredProjects}
+                  showDevices={showDevices}
+                  showProjects={showProjects}
+                />
+              )}
+            </>
           )}
-          {!showOnlyProjects && (
-            <ArcDeviceList
-              devices={filteredDevices}
-              onOpenDevice={openDevice}
-            />
+
+          {/* Release Notes Tab */}
+          {activeTab === "release-notes" && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <FileText
+                className="mb-4"
+                size={48}
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              />
+              <h2
+                className="mb-2 text-xl font-semibold"
+                style={{color: "var(--color-text-neutral-primary)"}}
+              >
+                Release Notes
+              </h2>
+              <p style={{color: "var(--color-text-neutral-secondary)"}}>
+                Release notes content will be displayed here.
+              </p>
+            </div>
+          )}
+
+          {/* User Guide Tab */}
+          {activeTab === "user-guide" && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <BookOpen
+                className="mb-4"
+                size={48}
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              />
+              <h2
+                className="mb-2 text-xl font-semibold"
+                style={{color: "var(--color-text-neutral-primary)"}}
+              >
+                User Guide
+              </h2>
+              <p style={{color: "var(--color-text-neutral-secondary)"}}>
+                User guide content will be displayed here.
+              </p>
+            </div>
           )}
         </div>
       </div>

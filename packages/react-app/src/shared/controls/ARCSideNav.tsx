@@ -15,9 +15,10 @@ export function ARCSideNav() {
   const {items, onItemSelect} = useSideNavContext()
 
   // Dynamically discover groups in order of appearance
+  // Ungrouped items appear last (at the bottom)
   const groupOrder = useMemo(() => {
-    const groups: string[] = ["ungrouped"] // Always start with ungrouped
-    const seen = new Set<string>(["ungrouped"])
+    const groups: string[] = []
+    const seen = new Set<string>()
 
     items.forEach((item) => {
       if (item.group && !seen.has(item.group)) {
@@ -25,6 +26,9 @@ export function ARCSideNav() {
         seen.add(item.group)
       }
     })
+
+    // Add ungrouped at the end so default items appear at bottom
+    groups.push("ungrouped")
 
     return groups
   }, [items])
@@ -94,7 +98,10 @@ export function ARCSideNav() {
       onSelectedValueChange={() => {}}
       open={open}
       selectedValue={[]}
-      style={{backgroundColor: `var(--color-background-neutral-01)`}}
+      style={{
+        backgroundColor: "var(--color-surface-secondary)",
+        color: "var(--color-text-neutral-primary)",
+      }}
     >
       <SideNav.Header>
         <SideNav.HeaderTitle>Menu</SideNav.HeaderTitle>

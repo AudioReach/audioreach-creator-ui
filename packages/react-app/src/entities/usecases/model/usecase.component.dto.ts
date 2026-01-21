@@ -7,18 +7,18 @@ export type ConnectionType =
   | "SUBSYSTEM_SUBSYSTEM"
 
 export interface EndPointLink {
-  _description: string
-  _hypertextRef: string
-  _method: string
+  description: string
+  hypertextRef: string
+  method: string
 }
 
 export interface DataPortDto {
-  _id: number
-  _name: string
-  _portIoType: PortIOType
-  _portType: PortType
-  _relatedEndPointLinks: EndPointLink[]
-  _systemId: string
+  id: number
+  name: string
+  portIoType: PortIOType
+  portType: PortType
+  relatedEndPointLinks: EndPointLink[]
+  systemId: string
 }
 
 export interface ControlPortIntentDto {
@@ -36,21 +36,21 @@ export interface ControlPortDto {
 }
 
 export interface ModuleInstanceDto {
-  _controlPorts: ControlPortDto[]
-  _dataPorts: DataPortDto[]
-  _id: number
-  _name: string
-  _relatedEndPointLinks: EndPointLink[]
-  _systemId: string
   alias: string
   containerId: number
+  controlPorts: ControlPortDto[]
+  dataPorts: DataPortDto[]
   heapId: number
+  id: number
   maxControlPortsSupported: number
   maxInputPortsSupported: number
   maxOutputPortsSupported: number
   moduleId: number
+  name: string
   parentId?: number // optional: subsystem
+  relatedEndPointLinks: EndPointLink[]
   subgraphId: number
+  systemId: string
 }
 
 export interface KeyInfo {
@@ -70,16 +70,16 @@ export interface SubsystemDto {
 }
 
 export interface DataLinkDto {
-  _name: string
-  _relatedEndPointLinks: EndPointLink[]
-  _systemId: string
   connectionType: ConnectionType
   destinationId: number
   destinationPortId: number
   isDangling: boolean
+  name: string
   parentId?: number
+  relatedEndPointLinks: EndPointLink[]
   sourceId: number
   sourcePortId: number
+  systemId: string
 }
 
 export interface ControlLinkDto {

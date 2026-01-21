@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react"
+import {useEffect, useRef} from "react"
 
 import {ConfigFileManager} from "~shared/config/config-manager"
 import {ARCSideNav} from "~shared/controls/ARCSideNav"
@@ -10,6 +10,7 @@ import {
 import ProjectLayoutManager from "~shared/layout/ProjectLayoutMgr"
 import {logger} from "~shared/lib/logger"
 import {useKeyboardShortcuts} from "~shared/lib/side-nav"
+import {Theme, useTheme} from "~shared/providers/ThemeProvider"
 import {
   AppTab,
   useProjectLayoutStore,
@@ -18,16 +19,31 @@ import ArcStartPage from "~widgets/start-page/ui/ArcStartPage"
 
 const EditorShellContent: React.FC = () => {
   const {keyboardShortcuts} = useSideNavContext()
+  const [theme] = useTheme()
+  const flexLayoutThemeClass =
+    theme === Theme.DARK ? "flexlayout__theme_dark" : "flexlayout__theme_light"
 
   // Enable keyboard shortcuts for the active tab
   useKeyboardShortcuts(keyboardShortcuts, true)
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div
+      className={`flex h-screen flex-col ${flexLayoutThemeClass}`}
+      style={{backgroundColor: "var(--color-surface-primary)"}}
+    >
       <GlobalToaster />
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2">
+      <div
+        className="flex items-center justify-between px-4 py-2"
+        style={{
+          borderBottom: "1px solid var(--color-border-neutral-02)",
+          color: "var(--color-text-neutral-primary)",
+        }}
+      >
         <div className="flex items-center gap-4">
-          <div className="text-lg font-semibold text-gray-800">
+          <div
+            className="text-lg font-semibold"
+            style={{color: "var(--color-text-neutral-primary)"}}
+          >
             AudioReach™ Creator
           </div>
         </div>
@@ -35,7 +51,7 @@ const EditorShellContent: React.FC = () => {
 
       <div
         className="relative flex flex-1"
-        style={{backgroundColor: `var(--color-background-neutral-01)`}}
+        style={{backgroundColor: "var(--color-surface-primary)"}}
       >
         <div className="relative z-10">
           <ARCSideNav />
@@ -51,34 +67,9 @@ const EditorShellContent: React.FC = () => {
 export const EditorShell: React.FC = () => {
   const store = useProjectLayoutStore()
   const initializedRef = useRef(false)
-  const [configReady, setConfigReady] = useState(false)
-
-  // Initialize configuration on app startup
-  useEffect(() => {
-    const initConfig = async () => {
-      try {
-        await ConfigFileManager.instance.initializeConfig()
-        setConfigReady(true)
-      } catch (error) {
-        logger.error("Failed to initialize config", {
-          action: "initialize_config",
-          component: "EditorShell",
-          error: error instanceof Error ? error.message : String(error),
-        })
-        // Still set ready to allow app to function with defaults
-        setConfigReady(true)
-      }
-    }
-    initConfig()
-  }, [])
 
   // Initialize with a default app group and Start tab
   useEffect(() => {
-    // Wait for config to be ready
-    if (!configReady) {
-      return
-    }
-
     // Ensure initialization happens only once (important for React 18 Strict Mode)
     if (initializedRef.current) {
       return
@@ -100,16 +91,20 @@ export const EditorShell: React.FC = () => {
       // Create default app group with Start tab
       store.createAppGroup("default-app-group", "Application", [startTab])
     }
-  }, [store, configReady])
+  }, [store])
 
   // Save configuration on app exit
   useEffect(() => {
-    const handleBeforeUnload = async () => {
-      try {
-        await ConfigFileManager.instance.save()
-      } catch (error) {
-        logger.error(`Failed to save configuration on exit:${error}`)
-      }
+    const handleBeforeUnload = () => {
+      // beforeunload is synchronous, so we can't reliably await async operations
+      // Just trigger the save without waiting
+      ConfigFileManager.instance.save().catch((error) => {
+        logger.error("Failed to save configuration on exit", {
+          action: "save_config_on_exit",
+          component: "EditorShell",
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload)
@@ -126,14 +121,6 @@ export const EditorShell: React.FC = () => {
       })
     }
   }, [])
-
-  if (!configReady) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading configuration...</div>
-      </div>
-    )
-  }
 
   return (
     <SideNavProvider>

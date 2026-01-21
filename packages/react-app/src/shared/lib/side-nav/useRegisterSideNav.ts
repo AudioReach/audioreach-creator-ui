@@ -1,9 +1,8 @@
 import {useEffect} from "react"
 
+import {useSideNavContext} from "~shared/controls/SideNavProvider"
 import {logger} from "~shared/lib/logger"
 import type {TabWithSideNav} from "~shared/types/side-nav-types"
-
-import {useSideNavContext} from "../../controls/SideNavProvider"
 
 /**
  * Hook to register a widget's side nav implementation with the provider

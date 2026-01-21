@@ -443,7 +443,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   return (
     <div className="flex h-full flex-col">
       {/* Usecase Selection Control at the top */}
-      <div className="flex-shrink-0 border-b border-gray-200 p-4">
+      <div
+        className="flex-shrink-0 p-4"
+        style={{
+          backgroundColor: "var(--color-surface-primary)",
+          borderBottom: "1px solid var(--color-border-neutral-02)",
+        }}
+      >
         <UsecaseSelectionControl
           projectGroupId={projectGroupId}
           usecaseData={usecaseData}
@@ -451,14 +457,23 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       </div>
 
       {/* Graph Visualizer below */}
-      <div className="flex-1 overflow-hidden">
+      <div
+        className="flex-1 overflow-hidden"
+        style={{backgroundColor: "var(--color-surface-primary)"}}
+      >
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div className="mb-2 text-lg font-semibold text-gray-700">
+              <div
+                className="mb-2 text-lg font-semibold"
+                style={{color: "var(--color-text-neutral-primary)"}}
+              >
                 Loading graph...
               </div>
-              <div className="text-sm text-gray-500">
+              <div
+                className="text-sm"
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              >
                 Fetching usecase components
               </div>
             </div>
@@ -466,19 +481,33 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : error ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div className="mb-2 text-lg font-semibold text-red-600">
+              <div
+                className="mb-2 text-lg font-semibold"
+                style={{color: "var(--color-border-support-danger)"}}
+              >
                 Error loading graph
               </div>
-              <div className="text-sm text-gray-600">{error}</div>
+              <div
+                className="text-sm"
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              >
+                {error}
+              </div>
             </div>
           </div>
         ) : selectedUsecases.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div className="mb-2 text-lg font-semibold text-gray-700">
+              <div
+                className="mb-2 text-lg font-semibold"
+                style={{color: "var(--color-text-neutral-primary)"}}
+              >
                 No usecases selected
               </div>
-              <div className="text-sm text-gray-500">
+              <div
+                className="text-sm"
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              >
                 Select usecases from the control above to view the graph
               </div>
             </div>
@@ -486,10 +515,16 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : nodes.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div className="mb-2 text-lg font-semibold text-gray-700">
+              <div
+                className="mb-2 text-lg font-semibold"
+                style={{color: "var(--color-text-neutral-primary)"}}
+              >
                 No graph data available
               </div>
-              <div className="text-sm text-gray-500">
+              <div
+                className="text-sm"
+                style={{color: "var(--color-text-neutral-secondary)"}}
+              >
                 The selected usecases do not have any components to display
               </div>
             </div>

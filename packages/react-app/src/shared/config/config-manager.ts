@@ -73,6 +73,27 @@ export class ConfigFileManager {
   }
 
   /**
+   * Gets the global theme preference (not project-specific)
+   * @returns The theme value ('light' | 'dark') or default 'light'
+   */
+  getGlobalTheme(): "light" | "dark" {
+    const theme = getConfigData(
+      this.configDataMap,
+      "globalPreferences.theme",
+      this.rootKey,
+    )
+    // Validate and log if invalid value found
+    if (theme !== "dark" && theme !== "light" && theme !== undefined) {
+      logger.warn("Invalid theme value in config, defaulting to light", {
+        action: "get_global_theme",
+        component: "ConfigFileManager",
+      })
+    }
+    // Ensure only valid values are returned
+    return theme === "dark" ? "dark" : "light"
+  }
+
+  /**
    * Retrieves the configuration data for the given project ID.
    * If no project exists, initializes a new project configuration.
    *
@@ -260,6 +281,19 @@ export class ConfigFileManager {
       })
       return false
     }
+  }
+
+  /**
+   * Sets the global theme preference (not project-specific)
+   * @param theme - The theme to set ('light' | 'dark')
+   */
+  setGlobalTheme(theme: "light" | "dark"): void {
+    setConfigData(
+      this.configDataMap,
+      "globalPreferences.theme",
+      theme,
+      this.rootKey,
+    )
   }
 
   /**
