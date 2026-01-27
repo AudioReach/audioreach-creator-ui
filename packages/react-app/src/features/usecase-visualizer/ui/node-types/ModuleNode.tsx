@@ -8,7 +8,7 @@ import type {RFModuleNodeData} from "~features/usecase-visualizer/model/types"
 const ioToPosition = (io: "Input" | "Output") =>
   io === "Input" ? Position.Left : Position.Right
 
-export const ModuleNode: FC<NodeProps> = ({data}) => {
+export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
   const moduleData = data as RFModuleNodeData
   const dataPorts = moduleData.dataPorts ?? []
   const controlPorts = moduleData.controlPorts ?? []
@@ -25,11 +25,20 @@ export const ModuleNode: FC<NodeProps> = ({data}) => {
   return (
     <div
       className="mb-3 mt-3 rounded border px-0.5 py-0.5"
-      style={{borderColor: `var(--color-background-neutral-10)`}}
+      style={{
+        borderColor: selected
+          ? "var(--color-border-support-info)"
+          : "var(--color-background-neutral-10)",
+        borderWidth: selected ? "2px" : "1px",
+      }}
     >
       <div
         className="relative flex min-h-[60px] w-[100px] items-center justify-center rounded border shadow-sm"
-        style={{backgroundColor: `var(--color-background-neutral-05)`}}
+        style={{
+          backgroundColor: selected
+            ? "var(--color-background-support-info-subtle)"
+            : "var(--color-background-neutral-05)",
+        }}
       >
         {/* <div className="text-primary text-xs font-semibold">Module</div> */}
         <div className="text-primary text-xxs break-words text-center">

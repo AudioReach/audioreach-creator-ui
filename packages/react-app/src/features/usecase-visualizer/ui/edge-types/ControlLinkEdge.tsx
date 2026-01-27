@@ -5,6 +5,7 @@ import {type EdgeProps, getSmoothStepPath} from "@xyflow/react"
 
 export const ControlLinkEdge: FC<EdgeProps> = (props) => {
   const [isHovered, setIsHovered] = useState(false)
+  const {selected} = props
 
   // Generate the curved path with vertical offset
   const [pathData] = getSmoothStepPath({
@@ -30,9 +31,9 @@ export const ControlLinkEdge: FC<EdgeProps> = (props) => {
       <path
         d={pathData}
         fill="none"
-        stroke={isHovered ? "#777777" : "#cccccc"} // Darker purple on hover
+        stroke={selected ? "#3b82f6" : isHovered ? "#777777" : "#cccccc"} // Blue when selected, darker on hover
         strokeDasharray="5 5"
-        strokeWidth={isHovered ? 3 : 2}
+        strokeWidth={selected || isHovered ? 3 : 2}
         style={{
           pointerEvents: "none",
           transition: "stroke 0.2s ease, stroke-width 0.2s ease",

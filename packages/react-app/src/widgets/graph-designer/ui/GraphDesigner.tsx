@@ -534,6 +534,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             edges={edges}
             nodes={nodes}
             onScreenshotReady={handleScreenshotReady}
+            projectId={projectGroupId}
             userPreferences={preferences}
           />
         )}

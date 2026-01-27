@@ -6,14 +6,17 @@ export type {UseCaseVisualizerProps} from "./ui/UseCaseVisualizer"
 export type {
   GraphSpec,
   GraphView,
-  RFNode,
-  RFEdge,
-  RFNodeData,
-  RFModuleNodeData,
   RFContainerNodeData,
+  RFEdge,
+  RFModuleNodeData,
+  RFNode,
+  RFNodeData,
   RFSubgraphNodeData,
   RFSubsystemNodeData,
 } from "./model/types"
+
+// Export selection store
+export {useVisualizerSelectionStore} from "./model/visualizer-selection-store"
 
 // Export adapter and layout functions
 export {buildGraphViewFromUsecase} from "./lib/adapter"

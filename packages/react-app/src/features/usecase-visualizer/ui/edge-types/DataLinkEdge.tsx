@@ -5,6 +5,7 @@ import type {EdgeProps} from "@xyflow/react"
 
 export const DataLinkEdge: FC<EdgeProps> = (props) => {
   const [isHovered, setIsHovered] = useState(false)
+  const {selected} = props
 
   // Calculate offset based on connection metadata for visual separation
   const data = props.data as Record<string, unknown>
@@ -60,8 +61,8 @@ export const DataLinkEdge: FC<EdgeProps> = (props) => {
       <path
         d={pathData}
         fill="none"
-        stroke={isHovered ? "#555555" : "#999999"} // Darker gray on hover
-        strokeWidth={isHovered ? 3 : 2}
+        stroke={selected ? "#3b82f6" : isHovered ? "#555555" : "#999999"} // Blue when selected, darker gray on hover
+        strokeWidth={selected || isHovered ? 3 : 2}
         style={{
           pointerEvents: "none",
           transition: "stroke 0.2s ease, stroke-width 0.2s ease",
@@ -70,7 +71,7 @@ export const DataLinkEdge: FC<EdgeProps> = (props) => {
 
       {/* Arrow near target (input port) - positioned 8px before target */}
       <polygon
-        fill={isHovered ? "#555555" : "#777777"}
+        fill={selected ? "#3b82f6" : isHovered ? "#555555" : "#777777"}
         points={`${targetX - 8},${targetY - 3.5} ${targetX},${targetY} ${targetX - 8},${targetY + 3.5}`}
         stroke="black"
         strokeWidth="1"
