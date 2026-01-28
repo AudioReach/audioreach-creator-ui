@@ -1,3 +1,4 @@
+import {TabType} from "~shared/store/ProjectLayoutMgr.interface"
 import {
   APP_CONFIG,
   AppTab,
@@ -5,17 +6,16 @@ import {
   ProjectTab,
   useProjectLayoutStore,
 } from "~shared/store/ProjectLayoutMgr.store"
-import {TabType} from "~shared/store/ProjectLayoutMgr.interface"
 
 describe("ProjectLayoutStore", () => {
   // Helper function to create a minimal valid FlexLayout configuration
   const createMinimalLayout = () => ({
     flexLayoutData: {
-      global: {},
       borders: [],
+      global: {},
       layout: {
-        type: "row",
         children: [],
+        type: "row",
       },
     },
   })
@@ -77,11 +77,9 @@ describe("ProjectLayoutStore", () => {
       const store = useProjectLayoutStore.getState()
 
       const testTab = new AppTab("Test Tab", null)
-      const success = store.createAppGroup(
-        "test-app-group",
-        "Application",
-        [testTab],
-      )
+      const success = store.createAppGroup("test-app-group", "Application", [
+        testTab,
+      ])
 
       expect(success).toBe(true)
 
@@ -122,7 +120,10 @@ describe("ProjectLayoutStore", () => {
 
       const testTab1 = new AppTab("Test Tab 1", null)
       const testTab2 = new AppTab("Test Tab 2", null)
-      store.createAppGroup("test-app-group", "Application", [testTab1, testTab2])
+      store.createAppGroup("test-app-group", "Application", [
+        testTab1,
+        testTab2,
+      ])
 
       expect(store.isAppTabOpen(testTab1.id)).toBe(true)
 
@@ -256,7 +257,10 @@ describe("ProjectLayoutStore", () => {
 
       // Create max number of project groups
       for (let i = 0; i < APP_CONFIG.MAX_PROJECT_GROUPS; i++) {
-        const mainTab = new ProjectMainTab(`Project ${i}`, createMinimalLayout())
+        const mainTab = new ProjectMainTab(
+          `Project ${i}`,
+          createMinimalLayout(),
+        )
         store.createProjectGroup(
           `project-${i}`,
           `/path/to/test${i}.xml`,
@@ -266,7 +270,10 @@ describe("ProjectLayoutStore", () => {
       }
 
       // Try to create one more
-      const mainTab = new ProjectMainTab("Overflow Project", createMinimalLayout())
+      const mainTab = new ProjectMainTab(
+        "Overflow Project",
+        createMinimalLayout(),
+      )
       const success = store.createProjectGroup(
         "overflow-project",
         "/path/to/overflow.xml",
@@ -317,9 +324,8 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const existingProjectGroup = store.isProjectGroupAlreadyOpen(
-        "/path/to/test.xml",
-      )
+      const existingProjectGroup =
+        store.isProjectGroupAlreadyOpen("/path/to/test.xml")
       expect(existingProjectGroup).not.toBeNull()
       expect(existingProjectGroup?.projectKey).toBe("/path/to/test.xml")
     })
@@ -477,7 +483,7 @@ describe("ProjectLayoutStore", () => {
 
       const newTab = new ProjectTab("New Tab", null)
       store.addTabToProjectGroup("test-project-id", newTab)
-      
+
       // Set the new tab as active before removing it
       store.setActiveTabInProjectGroup("test-project-id", newTab.id)
 

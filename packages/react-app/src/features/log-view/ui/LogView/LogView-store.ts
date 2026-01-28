@@ -102,7 +102,7 @@ export const useLogViewStore = create<LogViewStore>((set) => ({
     }
   },
 
-  //expansion toggle
+  // expansion toggle
   toggleLogExpansion: (logId) => {
     try {
       set((state) => ({

@@ -1,3 +1,5 @@
+import type {KeyInfo, ValueInfo} from "./usecase.component.dto"
+
 export interface UsecaseResponseDto {
   usecases: UsecaseIdentifier[]
 }
@@ -14,10 +16,8 @@ export interface UsecaseIdentifier {
 }
 
 export interface KeyValueInfo {
-  keyId: number
-  keyLabel: string
-  valueId: number
-  valueLabel: string
+  keyInfo: KeyInfo
+  valueInfo: ValueInfo
 }
 
 export interface FilteredKV {

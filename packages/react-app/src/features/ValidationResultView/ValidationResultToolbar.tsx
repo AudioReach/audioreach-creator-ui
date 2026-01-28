@@ -1,12 +1,5 @@
 import {useMemo} from "react"
 
-import {IconButton} from "@qualcomm-ui/react/button"
-import {Icon} from "@qualcomm-ui/react/icon"
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
-import {Menu} from "@qualcomm-ui/react/menu"
-import {TextInput} from "@qualcomm-ui/react/text-input"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
-import {Portal} from "@qualcomm-ui/react-core/portal"
 import {
   Ban,
   Copy,
@@ -17,6 +10,14 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react"
+
+import {IconButton} from "@qualcomm-ui/react/button"
+import {Icon} from "@qualcomm-ui/react/icon"
+import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
+import {Menu} from "@qualcomm-ui/react/menu"
+import {TextInput} from "@qualcomm-ui/react/text-input"
+import {Tooltip} from "@qualcomm-ui/react/tooltip"
+import {Portal} from "@qualcomm-ui/react-core/portal"
 
 import {logger} from "~shared/lib/logger"
 
@@ -83,8 +84,8 @@ const ValidationResultToolbar: React.FC = () => {
       }
       return
     }
-    //handles toggling individual severity checkboxes (Critical, Error, Warning)
-    //Toggle individual severity using fresh state
+    // handles toggling individual severity checkboxes (Critical, Error, Warning)
+    // Toggle individual severity using fresh state
     if (currentSelectedSeverities.includes(severity)) {
       // Remove this severity
       const newSeverities = currentSelectedSeverities.filter(
@@ -132,8 +133,8 @@ const ValidationResultToolbar: React.FC = () => {
    * Formats the result with severity, error code, description, and error details
    */
   const copySelectedResult = async () => {
-    //Find which validation error the user clicked on
-    //Searches through visible results to find the one with matching ID
+    // Find which validation error the user clicked on
+    // Searches through visible results to find the one with matching ID
     const selectedResult = filteredResults.find(
       (result) => result.id === selectedRowId,
     )
@@ -156,7 +157,7 @@ const ValidationResultToolbar: React.FC = () => {
    * Opens a save dialog to let user choose location and filename
    */
   const exportAllResults = async () => {
-    //Check if data exists
+    // Check if data exists
     if (filteredResults.length === 0) {
       return // No results to export
     }
@@ -197,7 +198,7 @@ const ValidationResultToolbar: React.FC = () => {
   }
 
   return (
-    <div className="bg-grey flex w-full items-center gap-1 px-1">
+    <div className="flex w-full items-center gap-1 bg-grey px-1">
       {/* Search and Filter Section */}
       <div className="max-w-48">
         <TextInput.Root
@@ -207,7 +208,10 @@ const ValidationResultToolbar: React.FC = () => {
           value={searchQuery}
         >
           <TextInput.InputGroup>
-            <TextInput.Input placeholder="Search validation results" />
+            <TextInput.Input
+              aria-label="Search validation results"
+              placeholder="Search validation results"
+            />
             <TextInput.ClearTrigger />
             <Menu.Root>
               <Tooltip
@@ -303,7 +307,7 @@ const ValidationResultToolbar: React.FC = () => {
             size={12}
             style={{color: "var(--color-icon-support-danger)"}}
           />
-          <span className="font-medium text-red-500">
+          <span className="text-red-500 font-medium">
             {criticalCount} Critical Errors
           </span>
         </div>
@@ -315,7 +319,7 @@ const ValidationResultToolbar: React.FC = () => {
             size={12}
             style={{color: "var(--color-icon-support-danger)"}}
           />
-          <span className="font-medium text-red-500">{errorCount} Errors</span>
+          <span className="text-red-500 font-medium">{errorCount} Errors</span>
         </div>
 
         {/* Warning Count with Icon */}
@@ -325,7 +329,7 @@ const ValidationResultToolbar: React.FC = () => {
             size={12}
             style={{color: "var(--color-icon-support-warning)"}}
           />
-          <span className="font-medium text-orange-500">
+          <span className="text-orange-500 font-medium">
             {warningCount} Warnings
           </span>
         </div>

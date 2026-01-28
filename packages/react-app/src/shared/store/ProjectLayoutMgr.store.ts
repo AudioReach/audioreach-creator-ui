@@ -310,7 +310,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
           }
         })
 
-        //Update tabGroups Map to keep it synchronized
+        // Update tabGroups Map to keep it synchronized
         const updatedTabGroups = new Map(state.tabGroups)
         const updatedProjectGroup = updatedProjectGroups.find(
           (p) => p.id === projectGroupId,
@@ -798,7 +798,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         : null
     },
 
-    //Finds and returns a specific ProjectGroup by its ID from the projectGroups array
+    // Finds and returns a specific ProjectGroup by its ID from the projectGroups array
     getProjectGroupById: (
       projectGroupId: string,
     ): ProjectGroupInterface | null => {

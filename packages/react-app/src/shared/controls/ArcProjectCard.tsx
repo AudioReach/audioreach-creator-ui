@@ -1,23 +1,24 @@
 import {useRef, useState} from "react"
 
+import {Database, Smartphone} from "lucide-react"
+
 import {Avatar} from "@qualcomm-ui/react/avatar"
 import {Badge} from "@qualcomm-ui/react/badge"
 import {Menu} from "@qualcomm-ui/react/menu"
 import {Portal} from "@qualcomm-ui/react-core/portal"
-import {Database, Smartphone} from "lucide-react"
-
-import {
-  QCard,
-  QCardAdornment,
-  QCardContent,
-  QCardDescription,
-  QCardMedia,
-  QCardSubtitle,
-  QCardTitle,
-} from "@qui/react"
 
 import qcLogoImg from "~assets/graph-view-screenshot.png" // todo: REMOVE THIS AND REPLACE WITH imgSource from ArcProjectCardProps when we support getting the image of the graph view
 import {logger} from "~shared/lib/logger"
+
+import {
+  Card,
+  CardAdornment,
+  CardContent,
+  CardDescription,
+  CardMedia,
+  CardSubtitle,
+  CardTitle,
+} from "./Card"
 
 export interface ArcProjectCardProps {
   /** A short description */
@@ -45,7 +46,7 @@ export interface ArcProjectCardProps {
 export default function ArcProjectCard({
   description,
   imgSource,
-  //isActive = false,
+  // isActive = false,
   label,
   lastModifiedDate,
   onDoubleClick,
@@ -132,36 +133,35 @@ export default function ArcProjectCard({
 
   return (
     <div>
-      <QCard
+      <Card
         ref={cardRef}
         alignment="left"
-        className="hover:border-focus h-full max-w-[350px] grow rounded-xl hover:border-2"
+        className="hover:border-focus relative h-full max-w-[350px] grow rounded-xl hover:border-2"
         elevation={0}
         onDoubleClick={handleDoubleClick}
         onMouseDown={(e) => {
           handleMouseDown(e)
         }}
       >
-        <QCardMedia
+        <CardMedia
           alt="Auto"
-          as="img"
           height={160}
           src={imgSource ?? qcLogoImg}
-          width="400"
+          width={400}
         />
 
         {label !== undefined && (
-          <QCardAdornment placement="top-right-outer">
+          <CardAdornment placement="top-right-outer">
             <Badge color="yellow">{label}</Badge>
-          </QCardAdornment>
+          </CardAdornment>
         )}
 
-        <QCardContent className="flex flex-row">
+        <CardContent className="flex flex-row">
           <div className="flex grow flex-col gap-2">
-            <QCardTitle>{title}</QCardTitle>
-            <QCardSubtitle>{description}</QCardSubtitle>
+            <CardTitle>{title}</CardTitle>
+            <CardSubtitle>{description}</CardSubtitle>
             {lastModifiedDate && (
-              <QCardDescription>{getTimeStampMesage()}</QCardDescription>
+              <CardDescription>{getTimeStampMesage()}</CardDescription>
             )}
           </div>
 
@@ -174,8 +174,8 @@ export default function ArcProjectCard({
               {typeIndicator === "device" ? <Smartphone /> : <Database />}
             </Avatar.Content>
           </Avatar.Root>
-        </QCardContent>
-      </QCard>
+        </CardContent>
+      </Card>
 
       {isContextMenuOpen && (
         <Portal>

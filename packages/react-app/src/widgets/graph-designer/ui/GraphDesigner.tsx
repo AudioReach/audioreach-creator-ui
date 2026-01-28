@@ -184,7 +184,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Side nav implementation
   const hasUnsavedChanges = false // TODO: Implement actual unsaved changes detection
   const hasSelection = nodes.length > 0 // Enable copy/paste when there are nodes
-  const canUndoRedo = false //TODO: Support undo/redo stack
+  const canUndoRedo = false // TODO: Support undo/redo stack
 
   const sideNavItems = useMemo(
     () => [

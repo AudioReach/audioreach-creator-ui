@@ -1,10 +1,5 @@
 import {useMemo, useState} from "react"
 
-import {Button, IconButton} from "@qualcomm-ui/react/button"
-import {Combobox} from "@qualcomm-ui/react/combobox"
-import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
-import {useListCollection} from "@qualcomm-ui/react-core/collection"
-import {useFilter} from "@qualcomm-ui/react-core/locale"
 import {
   BookOpen,
   ChevronRight,
@@ -21,6 +16,12 @@ import {
   Smartphone,
 } from "lucide-react"
 import {createPortal} from "react-dom"
+
+import {Button, IconButton} from "@qualcomm-ui/react/button"
+import {Combobox} from "@qualcomm-ui/react/combobox"
+import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
+import {useListCollection} from "@qualcomm-ui/react-core/collection"
+import {useFilter} from "@qualcomm-ui/react-core/locale"
 
 import {ProjectService} from "~entities/project/services"
 import {useDeviceManager} from "~features/device-operations"
@@ -339,7 +340,7 @@ export default function ArcStartPage({
           {/* Search */}
           <div className="flex-1">
             <ArcSearchBar
-              onSearchChange={setSearchTerm}
+              onSearchChange={(value) => setSearchTerm(value)}
               placeholder="Search"
               searchTerm={searchTerm}
             />
@@ -370,6 +371,7 @@ export default function ArcStartPage({
 
           {/* List View Toggle */}
           <IconButton
+            aria-label="List View"
             emphasis={viewMode === "list" ? "primary" : "neutral"}
             icon={List}
             onClick={() => setViewMode("list")}
@@ -380,6 +382,7 @@ export default function ArcStartPage({
 
           {/* Grid View Toggle */}
           <IconButton
+            aria-label="Grid View"
             emphasis={viewMode === "grid" ? "primary" : "neutral"}
             icon={Grid3x3}
             onClick={() => setViewMode("grid")}
@@ -390,6 +393,7 @@ export default function ArcStartPage({
 
           {/* Filter */}
           <Combobox
+            aria-label="Filter by"
             className="w-48"
             collection={collection}
             icon={FilterIcon}

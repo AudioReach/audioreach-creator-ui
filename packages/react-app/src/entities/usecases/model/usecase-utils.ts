@@ -7,7 +7,9 @@ import type {UsecaseIdentifier} from "./usecase.dto"
  * This matches the format used in UsecaseSelectionControl
  */
 export function formatUsecaseDisplay(usecase: UsecaseIdentifier): string {
-  return usecase.keyValueCollection.map((kv) => kv.valueLabel).join(" • ")
+  return usecase.keyValueCollection
+    .map((kv) => kv.valueInfo.valueLabel)
+    .join(" • ")
 }
 
 /**

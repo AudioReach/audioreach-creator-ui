@@ -9,7 +9,7 @@ export default interface ArcProjectInfo {
   filepath: string
   /** Unique id for rendering project info in a list */
   id: string
-  /** A base64 encoded image used for display on the start page*/
+  /** A base64 encoded image used for display on the start page */
   image?: string
   /** The date the project was last modified */
   lastModifiedDate: Date | undefined

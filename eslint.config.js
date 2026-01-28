@@ -1,181 +1,110 @@
-import tseslint from "typescript-eslint"
+import {defineConfig} from "eslint/config"
+import * as tseslint from "typescript-eslint"
 
-import quiEslintFsd from "@qui/eslint-config-fsd"
-import quiEslintMdx from "@qui/eslint-config-mdx"
-import quiEslintReact from "@qui/eslint-config-react"
-import quiEslint from "@qui/eslint-config-typescript"
+import quiEslintFsd from "@qualcomm-ui/eslint-config-fsd"
+import quiEslintMdx from "@qualcomm-ui/eslint-config-mdx"
+import quiEslintReact from "@qualcomm-ui/eslint-config-react"
+import quiEslintTs from "@qualcomm-ui/eslint-config-typescript"
+import quiEslintPluginReact from "@qualcomm-ui/eslint-plugin-react"
 
-const fsdFileGlob = [
-  "packages/react-app/src/entities/**/*.{ts,tsx}",
-  "packages/react-app/src/features/**/*.{ts,tsx}",
-  "packages/react-app/src/shared/**/*.{ts,tsx}",
-  "packages/react-app/src/widgets/**/*.{ts,tsx}",
-  "packages/react-app/src/pages/**/*.{ts,tsx}",
-  "packages/react-app/src/data/**/*.{ts,tsx}",
-]
-
-const languageOptions = {
+const tsLanguageOptions = {
   parser: tseslint.parser,
   parserOptions: {
     projectService: true,
   },
 }
 
-// Shared member ordering rule configuration
-const memberOrderingRule = {
-  "@typescript-eslint/member-ordering": [
-    "error",
+/**
+ * @param relativePkgPath {string} relative path to the fsd directory from the source root.
+ *
+ * @example
+ * ```js
+ * makeFsdConfig("packages/community-extension/src")
+ * makeFsdConfig("packages/tools/layout-checker")
+ * ```
+ */
+function makeFsdConfig(relativePkgPath) {
+  const fileGlob = [`${relativePkgPath}/**`]
+  return [
     {
-      default: {
-        memberTypes: [
-          // Variables/fields first (grouped together)
-          [
-            "public-static-field",
-            "protected-static-field",
-            "private-static-field",
-          ],
-          [
-            "public-instance-field",
-            "protected-instance-field",
-            "private-instance-field",
-          ],
-          ["public-abstract-field", "protected-abstract-field"],
-
-          // Then constructors
-          [
-            "public-constructor",
-            "protected-constructor",
-            "private-constructor",
-          ],
-
-          // Then methods/functions (grouped together)
-          [
-            "public-static-method",
-            "protected-static-method",
-            "private-static-method",
-          ],
-          [
-            "public-instance-method",
-            "protected-instance-method",
-            "private-instance-method",
-          ],
-          ["public-abstract-method", "protected-abstract-method"],
-        ],
-        order: "alphabetically-case-insensitive",
+      extends: [quiEslintFsd.configs.publicApi],
+      files: fileGlob,
+    },
+    {
+      extends: [quiEslintFsd.configs.layers, quiEslintFsd.configs.segments],
+      files: fileGlob,
+      languageOptions: tsLanguageOptions,
+      settings: {
+        "import/resolver": {
+          typescript: {
+            alwaysTryTypes: true,
+            project: `./${relativePkgPath}/tsconfig.json`,
+          },
+        },
       },
     },
-  ],
+  ]
 }
 
-export default tseslint.config(
+const eslintConfig = defineConfig([
   {
     ignores: [
-      ".aider.*",
-      "**/.react-router/",
-      "**/.turbo/",
-      "**/build/",
-      "**/coverage/",
       "**/dist/",
       "**/node_modules/",
+      "**/build/",
+      "**/coverage/",
+      "**/.turbo/",
       "**/out/",
-      "**/vite.config.ts.timestamp*",
-      "**/tests/",
+      "**/out-tsc/",
+      "**/temp/",
+      "**/.react-router/",
     ],
   },
-  {
-    languageOptions: {
-      ecmaVersion: "latest",
-      globals: {
-        EventListenerOrEventListenerObject: true,
-        FocusOptions: true,
-        JSX: true,
-      },
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-      sourceType: "module",
-    },
-  },
-  // fsd
-  {
-    extends: [quiEslintFsd.configs.publicApi],
-    files: fsdFileGlob,
-    languageOptions,
-  },
-  {
-    extends: [quiEslintFsd.configs.layers, quiEslintFsd.configs.segments],
-    files: fsdFileGlob,
-    languageOptions,
-  },
-  {
-    extends: [...quiEslint.configGroups.typeChecked],
-    files: ["scripts/*.ts"],
-    languageOptions,
-  },
-
   // JS
   {
-    extends: [quiEslint.configs.sortKeys, quiEslint.configs.styleGuide],
-    files: ["packages/**/*.{jsx,js,mjs,cjs}", "*.{jsx,js,mjs.cjs}"],
-    rules: {
-      "no-template-curly-in-string": "error",
-      "prefer-template": "error",
-      "quotes": [
-        "error",
-        "double",
-        {"allowTemplateLiterals": true, "avoidEscape": true},
-      ],
-      "spaced-comment": "off", // Allow comments without space after //
-    },
+    extends: [
+      quiEslintTs.configs.base,
+      quiEslintTs.configs.sortKeys,
+      quiEslintTs.configs.styleGuide,
+    ],
+    // recommendation: scope these to your source files in your package(s).
+    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
   },
-
-  // TS & React - Combined configuration with shared member ordering rule
+  // TS
   {
     extends: [
-      ...quiEslint.configGroups.typeCheckedPerformance,
-      quiEslintReact.configs.recommended,
+      ...quiEslintTs.configs.recommended,
+      quiEslintTs.configs.performance,
+      quiEslintTs.configs.strictExports,
     ],
-    files: ["packages/**/*.{ts,tsx}"],
-    languageOptions,
-    rules: {
-      ...memberOrderingRule,
-      "no-template-curly-in-string": "error",
-      "prefer-template": "error",
-      "quotes": [
-        "error",
-        "double",
-        {"allowTemplateLiterals": true, "avoidEscape": true},
-      ],
-      "react/prop-types": "off", // TypeScript provides type checking
-      "spaced-comment": "off", // Allow comments without space after //
-    },
+    // recommendation: scope these to your source files in your package(s).
+    files: ["**/*.ts"],
+    languageOptions: tsLanguageOptions,
   },
-
-  // Zustand stores - Strict immutability rules
+  // React
   {
-    files: [
-      "packages/**/store/**/*.store.{ts,tsx}",
-      "packages/**/stores/**/*.{ts,tsx}",
+    extends: [
+      ...quiEslintTs.configs.recommended,
+      quiEslintTs.configs.performance,
+      quiEslintReact.configs.base,
+      quiEslintReact.configs.recommended,
+      // optional: include the plugin as well
+      quiEslintPluginReact.config,
     ],
-    languageOptions,
-    rules: {
-      "no-param-reassign": [
-        "error",
-        {
-          "ignorePropertyModificationsFor": [
-            "draft", // for immer draft state (if used)
-          ],
-          "props": true,
-        },
-      ],
-    },
+    // recommendation: scope these to your source files in your package(s).
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: tsLanguageOptions,
+    rules:{
+      "react/prop-types": "off", // TypeScript provides type checking
+    }
   },
-
-  // mdx
+  // Markdown
   {
     extends: [quiEslintMdx.configs.recommended],
-    files: ["packages/**/*.{md,mdx}", "*.md"],
+    files: ["**/*.{md,mdx}", "*.md"],
   },
-)
+  // FSD (Feature-Sliced Design) Architecture Rules
+ // ...makeFsdConfig("packages/react-app/src"),
+])
+
+export default eslintConfig

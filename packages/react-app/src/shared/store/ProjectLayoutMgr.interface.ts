@@ -2,7 +2,7 @@ import type {ReactNode} from "react"
 
 import type {IJsonModel} from "flexlayout-react"
 
-//ProjectLayout Manager types and interfaces
+// ProjectLayout Manager types and interfaces
 
 // Tab close callback type
 export type OnTabClose = (
@@ -25,8 +25,8 @@ export type OnGroupClose = (
 export interface PanelTabInterface {
   component: ReactNode
   id: string
-  onProjectClose?: OnProjectClose //cleanup callback when project closes
-  onTabClose?: OnTabClose //return true if the tab can close, false if not
+  onProjectClose?: OnProjectClose // cleanup callback when project closes
+  onTabClose?: OnTabClose // return true if the tab can close, false if not
   title: string
 }
 
@@ -42,7 +42,7 @@ export type ProjectTabLayout = {
   flexLayoutData: IJsonModel //  FlexLayout JSON storage
 }
 
-//TabLayout Manager types and interfaces
+// TabLayout Manager types and interfaces
 // Enum to classify different types of tabs in the system
 export enum TabType {
   AppTab,
@@ -53,14 +53,14 @@ export enum TabType {
 // Base interface for all tab types with common properties
 export interface BaseTabInterface {
   id: string
-  onTabClose?: OnTabClose //return true if the tab can close, false if not
+  onTabClose?: OnTabClose // return true if the tab can close, false if not
   tabType: TabType
   title: string
 }
 // Application-level tabs (start, settings, help, etc.)
 export interface AppTabInterface extends BaseTabInterface {
   component: ReactNode
-  onAppClose?: OnTabClose //return true if the tab can close, false if not
+  onAppClose?: OnTabClose // return true if the tab can close, false if not
 }
 
 // Main tab within a project (closes all tabs in the group)
@@ -73,7 +73,7 @@ export interface ProjectMainTabInterface extends ProjectBaseTabInterface {
 // Additional tabs within a project (closeable)
 export interface ProjectTabInterface extends ProjectBaseTabInterface {
   component?: ReactNode // For simple tabs without layout
-  onProjectClose?: OnProjectClose //cleanup callback when project closes
+  onProjectClose?: OnProjectClose // cleanup callback when project closes
 }
 
 // Enum to distinguish between application and project tab groups
@@ -101,7 +101,7 @@ export interface ProjectGroupInterface extends TabGroupInterface {
   colorId: number
   description: string | null
   mainTab: ProjectMainTabInterface
-  projectKey: string //To prevent if a file/ device already opened
+  projectKey: string // To prevent if a file/ device already opened
   projectTabs: ProjectTabInterface[]
 }
 
@@ -135,7 +135,7 @@ export interface ProjectLayoutStoreInterface {
   // Close specific app tab with confirmation
   closeAppTab: (appTabID: string) => void
 
-  componentRegistry: Map<string, ReactNode> //Map of panel tab ID to React component
+  componentRegistry: Map<string, ReactNode> // Map of panel tab ID to React component
   // Create new application group with initial tabs
   createAppGroup: (
     Id: string,
@@ -170,7 +170,7 @@ export interface ProjectLayoutStoreInterface {
   // Get layout configuration for specific project
   getLayout: (projectGroupId: string) => ProjectTabLayout | null
 
-  //Layout config as JSON
+  // Layout config as JSON
   getLayoutConfig: (projectGroupId: string) => string | null
 
   // Find project group by ID
@@ -194,13 +194,13 @@ export interface ProjectLayoutStoreInterface {
   ) => ProjectGroupInterface | null
 
   nextColorId: number // Track next available color ID (1-20, cycles)
-  panelTabRegistry: Map<string, PanelTabInterface> //Map of PanelTabID and PanelTab object
+  panelTabRegistry: Map<string, PanelTabInterface> // Map of PanelTabID and PanelTab object
 
   previousActiveProjectGroupId: string | null // Tracks last active project group for fallback when groups are closed
 
   projectGroups: ProjectGroupInterface[] // Array of all project groups
 
-  projectTabLayouts: Map<string, ProjectTabLayout> //Map of tabid and projectlayout
+  projectTabLayouts: Map<string, ProjectTabLayout> // Map of tabid and projectlayout
 
   removeAppGroup: (appGroupId: string) => void // Remove entire app group and all its tabs
   removePanelTab: (projectGroupId: string, tabId: string) => boolean // Remove panel tab from project layout
@@ -225,7 +225,7 @@ export interface ProjectLayoutStoreInterface {
   setShowGroupTitle: (show: boolean) => void // Control whether to show tooltips on group headers
   showGroupTitle: boolean // false = show tooltip on hover (default), true = no tooltip
   switchToProjectGroup: (projectGroupId: string) => boolean // Switch focus to specific project group
-  tabGroups: Map<string, TabGroupInterface> //Map of GroupID and TabGroup
+  tabGroups: Map<string, TabGroupInterface> // Map of GroupID and TabGroup
   // Panel tab component management
   updatePanelTabComponent: (tabId: string, newComponent: ReactNode) => boolean
 }

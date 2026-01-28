@@ -101,7 +101,7 @@ function getProjectFileInfo(filepath: string): ArcWorkspaceFileProperties {
     const fileContent = readFileSync(filepath, "utf8")
 
     // Parse the JSON content
-    const jsonData: ArcWorkspaceFileProperties = JSON.parse(fileContent)
+    const jsonData = JSON.parse(fileContent) as ArcWorkspaceFileProperties
 
     // Extract name and description properties
     if (jsonData.name) {
@@ -146,7 +146,7 @@ export async function saveValidationResults(
       response = "Save dialog cancelled"
       data = {cancelled: true}
     } else {
-      const filepath = result.filePath!
+      const filepath = result.filePath
 
       // Write the validation results content to the selected file
       writeFileSync(filepath, request.content, "utf8")

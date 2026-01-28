@@ -41,6 +41,6 @@ export interface LogViewStore {
   setSearchLogQuery: (query: string) => boolean
   setSelectedLogTypes: (types: string[]) => boolean
 
-  //expansion toggle
+  // expansion toggle
   toggleLogExpansion: (logId: string) => boolean
 }

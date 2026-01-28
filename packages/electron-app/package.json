@@ -30,7 +30,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
-    "@qui/esbuild": "^1.0.0",
     "@types/mime": "^3.0.4",
     "@types/node": "^22.16.3",
     "electron": "37.2.1",

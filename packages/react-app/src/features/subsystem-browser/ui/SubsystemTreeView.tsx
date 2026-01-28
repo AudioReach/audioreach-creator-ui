@@ -1,7 +1,8 @@
 import {type FC, useEffect, useMemo, useState} from "react"
 
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
 import {ChevronsDown, ChevronsUp} from "lucide-react"
+
+import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
 
 import type {SubsystemBrowserTreeNode} from "~features/subsystem-browser/model/subsystem-browser-types"
 import {ConvertStringToNumber} from "~shared/utils/converter-utils"

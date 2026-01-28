@@ -7,6 +7,8 @@ import {
   useState,
 } from "react"
 
+import {Info, MessageSquareText, TriangleAlert, X} from "lucide-react"
+
 import {
   type Cell,
   type CellContext,
@@ -19,7 +21,6 @@ import {
 import {Icon} from "@qualcomm-ui/react/icon"
 import {flexRender, Table, useReactTable} from "@qualcomm-ui/react/table"
 import {Tooltip} from "@qualcomm-ui/react/tooltip"
-import {Info, MessageSquareText, TriangleAlert, X} from "lucide-react"
 
 import {useLogViewStore} from "./LogView-store"
 import {type LogEntry, LogType} from "./LogView-types"

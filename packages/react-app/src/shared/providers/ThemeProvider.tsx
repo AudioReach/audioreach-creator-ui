@@ -90,7 +90,7 @@ export function ThemeProvider({children}: ThemeProviderProps) {
         component: "ThemeProvider",
         error: error instanceof Error ? error.message : String(error),
       })
-      //revert to previous theme on save failure
+      // revert to previous theme on save failure
       setThemeState(theme)
     }
   }

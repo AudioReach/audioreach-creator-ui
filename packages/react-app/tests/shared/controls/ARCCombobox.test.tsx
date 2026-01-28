@@ -67,7 +67,6 @@ describe("ARCCombobox - Generic Controls API (ARCSearchBox)", () => {
 
       expect(screen.getByTestId("combobox-label")).toHaveTextContent("Search")
     })
-
   })
 
   describe("Behavior API", () => {

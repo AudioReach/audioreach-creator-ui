@@ -1,5 +1,6 @@
-import {Icon} from "@qualcomm-ui/react/icon"
 import {Info, TriangleAlert, X} from "lucide-react"
+
+import {Icon} from "@qualcomm-ui/react/icon"
 
 import {SeverityType} from "../validation-result-types"
 

@@ -20,7 +20,7 @@ export async function processApiResponse<T>(
   try {
     // Parse the response as JSON
     return await response.json()
-  } catch (error) {
+  } catch (_error) {
     // Handle JSON parsing errors
     return {
       errors: ["Invalid JSON response"],

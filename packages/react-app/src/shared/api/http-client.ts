@@ -10,8 +10,8 @@ import {processApiResponse} from "./utils"
  */
 export function getBackendBaseUrl(): string {
   // import.meta.env is provided by Vite at build time
-  //const envUrl = import.meta.env?.VITE_API_BASE_URL as string | undefined
-  //return envUrl?.trim() ? envUrl : "http://localhost:3000/arc-api/v1"
+  // const envUrl = import.meta.env?.VITE_API_BASE_URL as string | undefined
+  // return envUrl?.trim() ? envUrl : "http://localhost:3000/arc-api/v1"
   return "http://localhost:3000/arc-api/v1"
 }
 

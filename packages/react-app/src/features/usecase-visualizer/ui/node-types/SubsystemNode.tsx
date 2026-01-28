@@ -23,7 +23,7 @@ export const SubsystemNode: FC<NodeProps> = ({data, selected}) => {
         width: "100%",
       }}
     >
-      <div className="absolute left-2 top-1 rounded bg-yellow-50 px-2 py-1 text-sm font-semibold text-yellow-700">
+      <div className="bg-yellow-50 text-yellow-700 absolute left-2 top-1 rounded px-2 py-1 text-sm font-semibold">
         {subsystemData.label}
       </div>
     </div>

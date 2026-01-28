@@ -49,7 +49,7 @@ function ActionButtonCell({
       result.showControlsCallback(result)
     }
   }
-  //Decide if the button should be ENABLED or DISABLED
+  // Decide if the button should be ENABLED or DISABLED
   const isEnabled =
     type === "autoFix"
       ? result.canAutoFix && !!result.autoFixCallback
@@ -82,7 +82,7 @@ function TextCell({
   text: string
 }) {
   const spanRef = useRef<HTMLSpanElement>(null)
-  //Track whether text is truncated (cut off with ellipses)
+  // Track whether text is truncated (cut off with ellipses)
   const [isOverflowing, setIsOverflowing] = useState(false)
 
   const checkOverflow = useCallback(() => {
@@ -97,17 +97,17 @@ function TextCell({
     if (!element) {
       return
     }
-    //ResizeObserver_API that watches for size changes
-    //Callback Runs 'checkOverflow()' when element resizes
+    // ResizeObserver_API that watches for size changes
+    // Callback Runs 'checkOverflow()' when element resizes
     const resizeObserver = new ResizeObserver(() => {
       checkOverflow()
     })
-    //Watch the span element for size changes
-    //Triggers callback when column is resized, text changes, etc.
+    // Watch the span element for size changes
+    // Triggers callback when column is resized, text changes, etc.
     resizeObserver.observe(element)
     return () => {
-      //Cleanup function Runs when component unmounts
-      //Prevents memory leaks Stops observing
+      // Cleanup function Runs when component unmounts
+      // Prevents memory leaks Stops observing
       resizeObserver.disconnect()
     }
   }, [checkOverflow])

@@ -11,14 +11,14 @@ import ARCKeyVectorSelector, {
 jest.mock("~shared/controls/ARCCombobox", () => {
   return forwardRef<HTMLDivElement, any>(function MockARCCombobox(
     {
+      _clearable,
+      _hint,
       _multiple,
-      clearable,
       disabled,
       error: hasError,
       filterable: isFilterable,
       fullWidth,
       getSelectedDisplayText,
-      hint,
       id,
       label,
       minWidth,
@@ -88,12 +88,12 @@ jest.mock("~shared/controls/ARCCombobox", () => {
     return (
       <div
         ref={ref}
-        data-testid="arc-combobox"
-        style={style}
         data-error={hasError ? "true" : "false"}
         data-filterable={isFilterable ? "true" : "false"}
         data-fullwidth={fullWidth ? "true" : "false"}
         data-required={required ? "true" : "false"}
+        data-testid="arc-combobox"
+        style={style}
         {...props}
       >
         {label && <label data-testid="combobox-label">{label}</label>}
@@ -371,7 +371,7 @@ describe("ARCKeyVectorSelector", () => {
 
       const input = screen.getByTestId("combobox-input")
       await user.click(input)
-      
+
       // Since filterable is false, typing should not filter options
       // All options should remain visible
       expect(screen.getByTestId("option-Option A")).toBeInTheDocument()

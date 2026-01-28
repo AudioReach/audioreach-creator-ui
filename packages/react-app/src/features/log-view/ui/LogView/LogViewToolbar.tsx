@@ -1,10 +1,5 @@
 import {useMemo} from "react"
 
-import {IconButton} from "@qualcomm-ui/react/button"
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
-import {Menu} from "@qualcomm-ui/react/menu"
-import {TextInput} from "@qualcomm-ui/react/text-input"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
 import {
   Ban,
   Copy,
@@ -17,12 +12,18 @@ import {
   X,
 } from "lucide-react"
 
+import {IconButton} from "@qualcomm-ui/react/button"
+import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
+import {Menu} from "@qualcomm-ui/react/menu"
+import {TextInput} from "@qualcomm-ui/react/text-input"
+import {Tooltip} from "@qualcomm-ui/react/tooltip"
+
 import {logger} from "~shared/lib/logger"
 
 import {useLogViewStore} from "./LogView-store"
 import {ALL_TYPES, LogType} from "./LogView-types"
 
-//function to get the appropriate icon for each log type
+// function to get the appropriate icon for each log type
 const getLogTypeIcon = (logType: LogType) => {
   switch (logType) {
     case LogType.INFO:
@@ -44,7 +45,7 @@ const getLogTypeIcon = (logType: LogType) => {
 }
 
 const LogViewToolbar: React.FC = () => {
-  //Extract necessary state and actions from the log view store
+  // Extract necessary state and actions from the log view store
   const {
     clearLogs,
     logs,
@@ -57,10 +58,10 @@ const LogViewToolbar: React.FC = () => {
 
   // Calculate "All Types" checkbox state (checked, unchecked, or indeterminate)
   const allTypesState = useMemo(() => {
-    //Creates array of the 3 individual log types (excludes `LogType.ALL`)
+    // Creates array of the 3 individual log types (excludes `LogType.ALL`)
     const individualTypes = [LogType.INFO, LogType.WARNING, LogType.ERROR]
-    //selectedLogTypes = current state (e.g., `["info", "error"]`)
-    //filter() keeps only types that are in `selectedLogTypes`
+    // selectedLogTypes = current state (e.g., `["info", "error"]`)
+    // filter() keeps only types that are in `selectedLogTypes`
     const selectedCount = individualTypes.filter((type) =>
       selectedLogTypes.includes(type),
     ).length
@@ -175,7 +176,7 @@ const LogViewToolbar: React.FC = () => {
   }
 
   return (
-    <div className="bg-grey flex items-center gap-1 px-1">
+    <div className="flex items-center gap-1 bg-grey px-1">
       <div className="max-w-48">
         <TextInput.Root
           onValueChange={setSearchLogQuery}
@@ -184,7 +185,7 @@ const LogViewToolbar: React.FC = () => {
           value={searchLogQuery}
         >
           <TextInput.InputGroup>
-            <TextInput.Input placeholder="Search" />
+            <TextInput.Input aria-label="Search logs" placeholder="Search" />
             <TextInput.ClearTrigger />
 
             <Menu.Root>

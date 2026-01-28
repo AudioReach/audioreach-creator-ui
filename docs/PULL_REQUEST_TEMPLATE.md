@@ -60,6 +60,7 @@ Brief description of the changes made in this PR.
 ## Merge Strategy
 
 For this PR, I recommend:
+
 - [ ] **Squash and merge** (for small features, bug fixes, or when commits are not well-organized)
 - [ ] **Rebase and merge** (for well-crafted commits that tell a story)
 
@@ -71,6 +72,7 @@ For this PR, I recommend:
 - [ ] This branch is based on other feature branches (cleanup may be needed)
 
 **Dependent branches:** <!-- List any branches that depend on this one -->
+
 - `feature/branch-name` (depends on commits: abc123, def456)
 
 ## Post-Merge Actions
@@ -84,6 +86,7 @@ If this PR gets **squash merged**, the following developers need to clean up the
 **Cleanup guide:** [POST_MERGE_CLEANUP.md](../docs/POST_MERGE_CLEANUP.md)
 
 **Notification template:**
+
 ```
 🔀 PR #XXX merged (squash) into main
 📢 @dev1 @dev2 - cleanup needed for dependent branches

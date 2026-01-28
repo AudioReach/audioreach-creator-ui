@@ -42,7 +42,7 @@ export async function removeBinaries() {
           }
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Directory doesn't exist, skip
     }
   }

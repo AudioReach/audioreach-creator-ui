@@ -71,7 +71,7 @@ export async function ensureRegistered(): Promise<boolean> {
 
       if (result.success) {
         // Extract client ID from backend response
-        const clientId = result.data?.clientId as string | undefined
+        const clientId = result.data?.clientId
 
         if (!clientId) {
           logger.error("Registration succeeded but no client ID received", {
@@ -84,8 +84,8 @@ export async function ensureRegistered(): Promise<boolean> {
           useBackendConnectionStore
             .getState()
             .markUnavailable("No client ID received")
-          //TODO: Not returing false for the demo purpose. Backemd does not have the registration logic implemented yet.
-          //return false
+          // TODO: Not returing false for the demo purpose. Backemd does not have the registration logic implemented yet.
+          // return false
         } else {
           // Initialize logger with backend client ID (enables backend logging)
           logger.setClientId(clientId)

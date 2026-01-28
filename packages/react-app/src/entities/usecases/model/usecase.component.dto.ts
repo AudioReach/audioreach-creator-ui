@@ -53,9 +53,50 @@ export interface ModuleInstanceDto {
   systemId: string
 }
 
-export interface KeyInfo {
-  keyId: number
-  keyLabel: string
+export class KeyInfo {
+  readonly keyId!: number
+  readonly keyLabel!: string
+  readonly keySystemId!: string
+
+  constructor(keyId: number, keyLabel: string, keySystemId: string) {
+    this.keyId = keyId
+    this.keyLabel = keyLabel
+    this.keySystemId = keySystemId
+  }
+
+  equals(other: KeyInfo): boolean {
+    if (!other) {
+      return false
+    }
+    return (
+      this.keyId === other.keyId &&
+      this.keyLabel === other.keyLabel &&
+      this.keySystemId === other.keySystemId
+    )
+  }
+}
+
+export class ValueInfo {
+  readonly valueId!: number
+  readonly valueLabel!: string
+  readonly valueSystemId!: string
+
+  constructor(valueId: number, valueLabel: string, valueSystemId: string) {
+    this.valueId = valueId
+    this.valueLabel = valueLabel
+    this.valueSystemId = valueSystemId
+  }
+
+  equals(other: ValueInfo): boolean {
+    if (!other) {
+      return false
+    }
+    return (
+      this.valueId === other.valueId &&
+      this.valueLabel === other.valueLabel &&
+      this.valueSystemId === other.valueSystemId
+    )
+  }
 }
 
 export interface SubsystemDto {

@@ -1,4 +1,4 @@
-import {createRef, forwardRef} from "react"
+import {createRef} from "react"
 
 import {render, screen} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -77,7 +77,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       expect(breadcrumbs).toBeInTheDocument()
       // The nav contains an ol element even when empty
       expect(breadcrumbs.children).toHaveLength(1)
-      const list = breadcrumbs.querySelector('ol')
+      const list = breadcrumbs.querySelector("ol")
       expect(list).toBeInTheDocument()
       expect(list?.children).toHaveLength(0)
     })
@@ -245,7 +245,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       expect(breadcrumbs).toBeInTheDocument()
       // The nav contains an ol, and the ol contains the li elements
       expect(breadcrumbs.children).toHaveLength(1)
-      const list = breadcrumbs.querySelector('ol')
+      const list = breadcrumbs.querySelector("ol")
       expect(list?.children).toHaveLength(mockItems.length)
     })
   })
@@ -281,7 +281,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       expect(breadcrumbs).toBeInTheDocument()
       // The nav contains an ol element even when empty
       expect(breadcrumbs.children).toHaveLength(1)
-      const list = breadcrumbs.querySelector('ol')
+      const list = breadcrumbs.querySelector("ol")
       expect(list).toBeInTheDocument()
       expect(list?.children).toHaveLength(0)
     })
@@ -298,7 +298,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
       // Empty label should still render the structure
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs.children).toHaveLength(1)
-      const list = breadcrumbs.querySelector('ol')
+      const list = breadcrumbs.querySelector("ol")
       expect(list?.children).toHaveLength(2)
     })
 
@@ -340,7 +340,7 @@ describe("ARCBreadCrumbs - Generic Controls API", () => {
 
       const breadcrumbs = screen.getByRole("navigation")
       expect(breadcrumbs.children).toHaveLength(1)
-      const list = breadcrumbs.querySelector('ol')
+      const list = breadcrumbs.querySelector("ol")
       expect(list?.children).toHaveLength(100)
       expect(screen.getByText("Item 1")).toBeInTheDocument()
       expect(screen.getByText("Item 100")).toBeInTheDocument()

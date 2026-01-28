@@ -1,5 +1,3 @@
-import {Button, IconButton} from "@qualcomm-ui/react/button"
-import {Checkbox} from "@qualcomm-ui/react/checkbox"
 import {
   ChevronDown,
   ChevronRight,
@@ -8,6 +6,9 @@ import {
   Settings,
   Trash2,
 } from "lucide-react"
+
+import {Button, IconButton} from "@qualcomm-ui/react/button"
+import {Checkbox} from "@qualcomm-ui/react/checkbox"
 
 import type {KeyValue, Usecase, UsecaseCategory} from "../model/types"
 
@@ -47,6 +48,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             style={{color: "var(--color-text-neutral-primary)"}}
           >
             <Checkbox
+              aria-label="Select all usecases"
               checked={
                 selectedUsecases.length ===
                   usecaseData.flatMap((cat) => cat.usecases).length &&
@@ -59,6 +61,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
           </label>
           <div className="flex items-center space-x-1">
             <IconButton
+              aria-label="Expand All"
               emphasis="neutral"
               icon={PanelTopOpen}
               size="md"
@@ -66,6 +69,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               variant="ghost"
             />
             <IconButton
+              aria-label="Collapse All"
               emphasis="neutral"
               icon={PanelTopClose}
               size="md"
@@ -73,6 +77,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               variant="ghost"
             />
             <IconButton
+              aria-label="Delete"
               emphasis="danger"
               icon={Trash2}
               size="md"
@@ -80,6 +85,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               variant="ghost"
             />
             <IconButton
+              aria-label="Settings"
               emphasis="neutral"
               icon={Settings}
               size="md"
@@ -111,6 +117,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
             <div key={category.name} className="mb-3 last:mb-0">
               <div className="mb-1 flex items-center">
                 <IconButton
+                  aria-label={`${isCategoryExpanded ? "Collapse" : "Expand"} ${category.name}`}
                   emphasis="neutral"
                   icon={icon}
                   onClick={() => toggleCategoryExpansion(category.name)}
@@ -122,6 +129,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                   style={{color: "var(--color-text-neutral-primary)"}}
                 >
                   <Checkbox
+                    aria-label={`Select all usecases in ${category.name}`}
                     checked={allChecked}
                     indeterminate={someChecked}
                     onCheckedChange={(checked) => {
@@ -151,6 +159,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                             style={{color: "var(--color-text-neutral-primary)"}}
                           >
                             <Checkbox
+                              aria-label={`Select ${formattedUsecase}`}
                               checked={selectedUsecases.includes(
                                 formattedUsecase,
                               )}
@@ -177,9 +186,9 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                                         "var(--color-text-neutral-primary)",
                                     }}
                                   >
-                                    {kv.keyLabel}:
+                                    {kv.keyInfo.keyLabel}:
                                   </span>{" "}
-                                  {kv.valueLabel}
+                                  {kv.valueInfo.valueLabel}
                                 </div>
                               ),
                             )}

@@ -32,7 +32,10 @@ import {getColorName} from "../utils/color-utils"
 
 import "flexlayout-react/style/combined.css"
 
-interface Props {}
+interface Props {
+  // Empty props interface - using object type instead of empty interface
+  // to satisfy @typescript-eslint/no-empty-object-type
+}
 
 interface State {
   initialized: boolean

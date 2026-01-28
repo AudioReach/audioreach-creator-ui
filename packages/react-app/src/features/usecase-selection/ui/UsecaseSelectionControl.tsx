@@ -1,8 +1,10 @@
 import {useEffect, useRef, useState} from "react"
 
-import {TextInput} from "@qualcomm-ui/react/text-input"
 import {Search} from "lucide-react"
 
+import {TextInput} from "@qualcomm-ui/react/text-input"
+
+import type {KeyValueInfo} from "~entities/usecases/model/usecase.dto"
 import {useUsecaseStore} from "~shared/store/usecase-store"
 
 const EMPTY_SELECTED_USECASES: string[] = []
@@ -14,7 +16,7 @@ import UsecaseListPanel from "./UsecaseListPanel"
 // Utility to format a Usecase's keyValueCollection into a display string
 const formatUsecaseDisplay = (usecase: Usecase): string => {
   return usecase.keyValueCollection
-    .map((kv: KeyValue) => kv.valueLabel)
+    .map((kv: KeyValueInfo) => kv.valueInfo.valueLabel)
     .join(" • ")
 }
 
@@ -133,8 +135,8 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
           formattedUsecase.includes(searchLower) ||
           usecase.keyValueCollection.some(
             (kv: KeyValue) =>
-              kv.keyLabel.toLowerCase().includes(searchLower) ||
-              kv.valueLabel.toLowerCase().includes(searchLower),
+              kv.keyInfo.keyLabel.toLowerCase().includes(searchLower) ||
+              kv.valueInfo.valueLabel.toLowerCase().includes(searchLower),
           )
         )
       }),
@@ -146,6 +148,7 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
       {/* Search Bar */}
       <div className="relative">
         <TextInput
+          aria-label="Search for usecases"
           clearable
           inputProps={{
             onFocus: () => setIsDropdownOpen(true),

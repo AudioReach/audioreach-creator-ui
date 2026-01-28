@@ -1,7 +1,8 @@
 import type {FC} from "react"
 
-import {TextInput} from "@qualcomm-ui/react/text-input"
 import {Search} from "lucide-react"
+
+import {TextInput} from "@qualcomm-ui/react/text-input"
 
 interface SearchProps {
   onChange: (value: string) => void
@@ -21,6 +22,7 @@ const SearchBox: FC<SearchProps> = ({onChange, onClear, searchTerm}) => {
   return (
     <div style={{alignItems: "center", display: "flex"}}>
       <TextInput
+        aria-label="Search subsystems"
         clearable
         onValueChange={handleValueChange}
         placeholder="Search..."

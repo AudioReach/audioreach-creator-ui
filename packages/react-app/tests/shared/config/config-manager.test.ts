@@ -2,7 +2,6 @@ import {ConfigFileManager} from "~shared/config/config-manager"
 import {
   GetLayoutDefaultConfigData,
   graphDesignerLayout,
-  type JSONDataMap,
 } from "~shared/config/utils"
 
 // Mock the window.configApi
@@ -63,7 +62,7 @@ describe("ConfigFileManager", () => {
         otherData: "test",
       })
     })
-    
+
     it("should load config data successfully with arcconfig and add usecase layout", async () => {
       const mockConfig = {
         arcconfig: {
@@ -79,13 +78,13 @@ describe("ConfigFileManager", () => {
       })
 
       await configManager.initializeConfig()
-      
+
       // @ts-ignore - Accessing private member for testing
       expect(configManager.configDataMap).toEqual({
         arcconfig: {
           layout: {
-            someOtherKey: "value",
             graphDesignerView: graphDesignerLayout, // Should be added
+            someOtherKey: "value",
           },
         },
         otherData: "test",
@@ -202,11 +201,7 @@ describe("ConfigFileManager", () => {
       const newProjectId = "newProject"
       // @ts-ignore
       expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy()
-      configManager.setProjectConfigData(
-        newProjectId,
-        path,
-        newConfigData,
-      )
+      configManager.setProjectConfigData(newProjectId, path, newConfigData)
       // @ts-ignore
       expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy()
     })
@@ -243,7 +238,8 @@ describe("ConfigFileManager", () => {
 
     it("should return false and log error if project session details not found", async () => {
       const nonExistentProjectId = "nonExistent"
-      const result = await configManager.archiveProjectConfig(nonExistentProjectId)
+      const result =
+        await configManager.archiveProjectConfig(nonExistentProjectId)
       expect(result).toBeFalsy()
     })
   })
@@ -265,8 +261,8 @@ describe("ConfigFileManager", () => {
       })
       await configManager.initializeConfig()
 
-      configManager.getProjectConfigData(projectId1, "project1");
-      configManager.getProjectConfigData(projectId2, "project2");
+      configManager.getProjectConfigData(projectId1, "project1")
+      configManager.getProjectConfigData(projectId2, "project2")
 
       mockSaveConfigData.mockResolvedValue({status: true})
 
@@ -298,7 +294,7 @@ describe("ConfigFileManager", () => {
       configManager.setProjectConfigData(projectId1, "project1.modified", true)
 
       await configManager.save(projectId1)
-      
+
       expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
       const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
       expect(savedData.arcconfig?.project1).toBeDefined()

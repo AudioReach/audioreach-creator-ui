@@ -1,7 +1,8 @@
 import {useMemo} from "react"
 
-import {IconButton} from "@qualcomm-ui/react/button"
 import {Database, FolderOpen, Smartphone, Trash2} from "lucide-react"
+
+import {IconButton} from "@qualcomm-ui/react/button"
 
 import type ArcDeviceInfo from "~shared/types/arc-device-info"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
@@ -140,6 +141,7 @@ export default function UnifiedListView({
             {/* Actions */}
             <div className="flex gap-1">
               <IconButton
+                aria-label="Show in Explorer"
                 emphasis="neutral"
                 icon={FolderOpen}
                 onClick={(e) => {
@@ -151,6 +153,7 @@ export default function UnifiedListView({
                 variant="ghost"
               />
               <IconButton
+                aria-label="Remove from Recent"
                 emphasis="neutral"
                 icon={Trash2}
                 onClick={(e) => {

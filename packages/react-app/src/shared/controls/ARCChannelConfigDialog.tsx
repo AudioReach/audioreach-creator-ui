@@ -1,8 +1,8 @@
-/* eslint-disable react/prop-types */
 import {useEffect, useMemo, useRef, useState} from "react"
 
-import {Button} from "@qualcomm-ui/react/button"
 import {X} from "lucide-react"
+
+import {Button} from "@qualcomm-ui/react/button"
 
 import ARCCombobox from "./ARCCombobox"
 import ARCTextInput from "./ARCTextInput"

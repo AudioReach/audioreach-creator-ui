@@ -45,7 +45,7 @@ git rebase -i origin/main
 
 # 4. In the editor, you'll see something like:
 # pick a1b2c3d commit A (duplicate - should drop)
-# pick b2c3d4e commit B (duplicate - should drop)  
+# pick b2c3d4e commit B (duplicate - should drop)
 # pick c3d4e5f commit E (your work - keep)
 # pick d4e5f6g commit F (your work - keep)
 
@@ -122,6 +122,7 @@ git log --oneline --graph --all
 ### Phase 2: Identify Your Work
 
 Look at the commit list and identify:
+
 - ✅ **Keep**: Commits that contain YOUR unique work
 - ❌ **Drop**: Commits that were part of the squash-merged PR
 - ⚠️ **Review**: Commits you're unsure about
@@ -186,6 +187,7 @@ git rebase -i HEAD~n  # where n covers the duplicate commits
 ### For Individual Developers
 
 1. **Rebase Daily**
+
    ```bash
    git sync  # Updates main and rebases current branch
    ```
@@ -195,11 +197,12 @@ git rebase -i HEAD~n  # where n covers the duplicate commits
    - Easier to coordinate merges
 
 3. **Avoid Branching from Feature Branches**
+
    ```bash
    # Instead of:
    git checkout feature-A
    git checkout -b feature-B
-   
+
    # Do:
    git checkout main
    git checkout -b feature-B
@@ -212,6 +215,7 @@ git rebase -i HEAD~n  # where n covers the duplicate commits
 ### For Teams
 
 1. **Communicate Merges**
+
    ```bash
    # In team chat when merging:
    "🔀 Merged PR #123 (feature/audio-processing) into main
@@ -259,7 +263,7 @@ git add .
 git rebase --continue
 
 # During cherry-pick conflicts:
-git status  
+git status
 # Edit conflicted files
 git add .
 git cherry-pick --continue
@@ -289,7 +293,7 @@ git log --oneline --since="2 days ago" origin/main..HEAD
 **Original commits**: a1b2c3d, b2c3d4e, c3d4e5f
 **New commit**: f6g7h8i
 
-**Action needed**: 
+**Action needed**:
 @dev1 @dev2 - Please clean up branches that depend on these commits:
 - feature/audio-ui (depends on b2c3d4e)
 - feature/audio-tests (depends on c3d4e5f)

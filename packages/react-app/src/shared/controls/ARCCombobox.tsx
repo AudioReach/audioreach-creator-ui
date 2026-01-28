@@ -127,7 +127,10 @@ export const ARCCombobox = <T extends string = string>(
         {label && <Combobox.Label>{label}</Combobox.Label>}
 
         <Combobox.Control>
-          <Combobox.Input placeholder={placeholder} />
+          <Combobox.Input
+            aria-label={!label ? placeholder || "Select option" : undefined}
+            placeholder={placeholder}
+          />
           <Combobox.Trigger />
         </Combobox.Control>
 
