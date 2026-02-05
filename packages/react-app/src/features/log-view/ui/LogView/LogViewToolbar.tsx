@@ -20,7 +20,7 @@ import {Tooltip} from "@qualcomm-ui/react/tooltip"
 
 import {logger} from "~shared/lib/logger"
 
-import {useLogViewStore} from "./LogView-store"
+import {useLogViewStore} from "./LogView-store-manager"
 import {ALL_TYPES, LogType} from "./LogView-types"
 
 // function to get the appropriate icon for each log type
@@ -77,15 +77,11 @@ const LogViewToolbar: React.FC = () => {
 
   // Handles multiple selection logic for log type filters
   const handleFilterToggle = (type: string) => {
-    // Get fresh state from store
-    const currentState = useLogViewStore.getState()
-    const currentSelectedTypes = currentState.selectedLogTypes
-
     if (type === ALL_TYPES) {
       // Toggle "All Types"
       const individualTypes = [LogType.INFO, LogType.WARNING, LogType.ERROR]
-      const allToggled = individualTypes.every((t) =>
-        currentSelectedTypes.includes(t),
+      const allToggled = individualTypes.every((t: LogType) =>
+        selectedLogTypes.includes(t),
       )
 
       if (allToggled) {
@@ -96,14 +92,14 @@ const LogViewToolbar: React.FC = () => {
       return
     }
 
-    // Toggle individual type using fresh state
-    if (currentSelectedTypes.includes(type)) {
+    // Toggle individual type
+    if (selectedLogTypes.includes(type)) {
       // Remove this type
-      const newTypes = currentSelectedTypes.filter((t) => t !== type)
+      const newTypes = selectedLogTypes.filter((t: string) => t !== type)
       setSelectedLogTypes(newTypes)
     } else {
       // Add this type
-      const newTypes = [...currentSelectedTypes, type]
+      const newTypes = [...selectedLogTypes, type]
       setSelectedLogTypes(newTypes)
     }
   }

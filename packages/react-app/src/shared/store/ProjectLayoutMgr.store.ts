@@ -2,6 +2,8 @@ import type {ReactNode} from "react"
 
 import {create} from "zustand"
 
+import {logger} from "~shared/lib/logger"
+
 import {
   type AppGroupInterface,
   type ApplicationConfig,
@@ -176,7 +178,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       const layout = state.projectTabLayouts.get(tabId)
 
       if (!layout || !layout.flexLayoutData) {
-        console.warn(`Layout not found for tab ${tabId}`)
+        logger.warn(`Layout not found for tab ${tabId}`)
         return false
       }
 
@@ -241,6 +243,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
             border = {
               children: [],
               location: targetLocation,
+              selected: 0,
               size:
                 targetLocation === "top" || targetLocation === "bottom"
                   ? 150
@@ -253,6 +256,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
           // Add tab to border
           if (border.children) {
             border.children.push(newTab)
+            border.selected = border.children.length - 1
             updated = true
           }
         }
@@ -286,7 +290,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         return true
       }
 
-      console.warn(
+      logger.warn(
         `Failed to add panel tab "${panelTab.title}" to ${Object.keys(PanelID)[panelId]}`,
       )
       return false
@@ -337,7 +341,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       )
 
       if (!targetGroup) {
-        console.warn(`App tab with id ${appTabID} not found in any group`)
+        logger.warn(`App tab with id ${appTabID} not found in any group`)
         return
       }
 
@@ -359,7 +363,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
                 }
               })
               .catch((error) => {
-                console.error("Error in app group close callback:", error)
+                logger.error("Error in app group close callback:", error)
               })
             return
           } else {
@@ -441,9 +445,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
 
       // Validate minimum 1 tab requirement
       if (!initialTabs || initialTabs.length === 0) {
-        console.error(
-          "Cannot create app group with 0 tabs. Minimum 1 required.",
-        )
+        logger.error("Cannot create app group with 0 tabs. Minimum 1 required.")
         return false
       }
 
@@ -502,7 +504,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         })
         return true
       } catch (error) {
-        console.error("Failed to create layout config from JSON:", error)
+        logger.error(`Failed to create layout config from JSON:${error}`)
         return false
       }
     },
@@ -966,7 +968,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       const layout = state.projectTabLayouts.get(projectGroupId)
 
       if (!layout || !layout.flexLayoutData) {
-        console.warn(`Layout not found for project ${projectGroupId}`)
+        logger.warn(`Layout not found for project ${projectGroupId}`)
         return false
       }
 
@@ -1033,7 +1035,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         return true
       }
 
-      console.warn(
+      logger.warn(
         ` Panel tab "${tabId}" not found in project ${projectGroupId}`,
       )
       return false
@@ -1367,7 +1369,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
         })
         return true
       } catch (error) {
-        console.error("Failed to save layout config:", error)
+        logger.error(`Failed to save layout config:${error}`)
         return false
       }
     },
@@ -1389,7 +1391,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       }
 
       if (!appTab || !appGroup) {
-        console.warn(`App tab with id ${appTabId} not found`)
+        logger.warn(`App tab with id ${appTabId} not found`)
         return false
       } else {
         set({
@@ -1411,7 +1413,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       const projectGroup = state.getProjectGroupById(projectGroupId)
 
       if (!projectGroup) {
-        console.warn(`Project group with id ${projectGroupId} not found`)
+        logger.warn(`Project group with id ${projectGroupId} not found`)
         return false
       }
 
@@ -1466,7 +1468,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       const targetProjectGroup = state.getProjectGroupById(projectGroupId)
 
       if (!targetProjectGroup) {
-        console.warn(`Project group with id ${projectGroupId} not found`)
+        logger.warn(`Project group with id ${projectGroupId} not found`)
         return false
       }
 
@@ -1553,7 +1555,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStoreInterface>(
       }
 
       if (!panelExists) {
-        console.warn(`Panel tab with id ${tabId} not found in any layout`)
+        logger.warn(`Panel tab with id ${tabId} not found in any layout`)
         return false
       }
 

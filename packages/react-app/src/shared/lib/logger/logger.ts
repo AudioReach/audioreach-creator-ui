@@ -2,6 +2,8 @@ import {useProjectLayoutStore} from "~shared/store"
 
 import {type LogContext, LogLevel} from "../../api/types"
 
+import {logEventEmitter} from "./logger-events"
+
 /**
  * Main logger class providing convenient logging methods
  * Two-phase initialization:
@@ -75,6 +77,42 @@ export class Logger {
   }
 
   /**
+   * Emit log event for UI consumption (INFO/WARN/ERROR only)
+   */
+  private emitLogEvent(
+    logLevel: LogLevel,
+    msg: string,
+    context?: LogContext,
+  ): void {
+    try {
+      // Only emit events for visible log levels
+      if (
+        logLevel !== LogLevel.INFO &&
+        logLevel !== LogLevel.WARN &&
+        logLevel !== LogLevel.ERROR &&
+        logLevel !== LogLevel.CRITICAL
+      ) {
+        // Skip non-visible levels (verbose/debug)
+        return
+      }
+
+      // Get project ID from context or current active project
+      const projectId = context?.projectId || this.getCurrentProjectId()
+
+      // Emit log event with project context
+      logEventEmitter.emit({
+        context,
+        level: logLevel,
+        message: msg,
+        projectId,
+        timestamp: new Date(),
+      })
+    } catch {
+      // Swallow errors to avoid impacting normal logging
+    }
+  }
+
+  /**
    * Internal logging method
    * Fire-and-forget: sends log to backend without blocking
    * Only sends to backend if client ID is set (after registration)
@@ -100,6 +138,9 @@ export class Logger {
     } else {
       this.logToConsole(logLevel, msg, context)
     }
+
+    // Always emit log event for UI consumption
+    this.emitLogEvent(logLevel, msg, context)
   }
 
   /**

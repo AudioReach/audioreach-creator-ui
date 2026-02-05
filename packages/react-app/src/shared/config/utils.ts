@@ -1,46 +1,67 @@
-import {DEFAULT_USER_PREFERENCES} from "./user-preferences-types"
+import type {
+  IBorderLocation,
+  IJsonBorderNode,
+  IJsonModel,
+  IJsonTabNode,
+  IJsonTabSetNode,
+} from "flexlayout-react"
 
 export type JSONDataMap = {
   [key: string]: any
 }
 
+export const GRAPH_DESIGNER_COMPONENT_NAME = "usecase"
+
 export const graphDesignerLayout = {
-  component: "usecase",
+  component: GRAPH_DESIGNER_COMPONENT_NAME,
   position: {
     area: "center",
     weight: 100,
   },
 }
 
-export function GetLayoutDefaultConfigData(): JSONDataMap {
-  return {
-    arcconfig: {
-      layout: {
-        graphDesignerView: graphDesignerLayout,
-        logView: {
-          component: "log",
-          position: {
-            border: true,
-            borderLocation: "bottom",
-            borderSize: 150,
-            isCollapsed: false,
-            isPopOut: false,
-          },
-        },
-        propertiesView: {
-          component: "prop",
-          position: {
-            border: true,
-            borderLocation: "right",
-            borderSize: 150,
-            isCollapsed: false,
-            isPopOut: false,
-          },
-        },
-      },
-      userPreferences: DEFAULT_USER_PREFERENCES,
+/**
+ * Creates the complete FlexLayout JSON configuration for a project
+ * This includes the main tab (GraphDesigner) and border panels
+ * @returns Complete IJsonModel ready to use with FlexLayout
+ */
+export function GetFlexLayoutConfig(): IJsonModel {
+  const tabNode: IJsonTabNode = {
+    component: GRAPH_DESIGNER_COMPONENT_NAME,
+    id: "usecase-main",
+    name: "Graph Designer",
+    type: "tab",
+  }
+
+  const tabSet: IJsonTabSetNode = {
+    children: [tabNode],
+    enableTabStrip: false,
+    type: "tabset",
+  }
+
+  const borderBottom: IJsonBorderNode = {
+    children: [] as IJsonTabNode[],
+    location: "bottom" as IBorderLocation,
+    type: "border",
+  }
+
+  const borderRight: IJsonBorderNode = {
+    children: [] as IJsonTabNode[],
+    location: "right" as IBorderLocation,
+    type: "border",
+  }
+
+  const flexLayoutConfig: IJsonModel = {
+    borders: [borderBottom, borderRight],
+    global: {},
+    layout: {
+      children: [tabSet],
+      id: "root",
+      type: "row",
     },
   }
+
+  return flexLayoutConfig
 }
 
 /* returns either a primitive value (like true, 42, "bottom") or

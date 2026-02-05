@@ -29,6 +29,7 @@ import {
   useProjectLayoutStore,
 } from "../store/ProjectLayoutMgr.store"
 import {getColorName} from "../utils/color-utils"
+import {deepEqual} from "../utils/deep-equality"
 
 import "flexlayout-react/style/combined.css"
 
@@ -314,7 +315,7 @@ class ProjectLayoutManager extends Component<Props, State> {
 
         return Model.fromJson(flexLayoutData)
       } catch (error) {
-        console.error("Failed to parse FlexLayout JSON:", error)
+        logger.error(`Failed to parse FlexLayout JSON:${error}`)
       }
     }
 
@@ -551,7 +552,7 @@ class ProjectLayoutManager extends Component<Props, State> {
                   }
                 })
                 .catch((error) => {
-                  console.error("Error in project close callback:", error)
+                  logger.error(`Error in project close callback:${error}`)
                 })
               return
             } else {
@@ -929,11 +930,14 @@ export class PanelIntegration {
               }
             }
 
-            const customComponent = this.globalManager!.factory(node)
-            if (customComponent !== null) {
-              return customComponent
+            // Prefer the provided factory for custom components (e.g., GraphDesigner)
+            const providedComponent = factory(node)
+            if (providedComponent !== null) {
+              return providedComponent
             }
-            return factory(node)
+
+            // Fallback to global manager's factory
+            return this.globalManager!.factory(node)
           },
           model,
           onAction: (action: any) => {
@@ -1013,7 +1017,7 @@ export class PanelIntegration {
                     } else {
                     }
                   } catch (error) {
-                    console.error("Error parsing layout JSON:", error)
+                    logger.error(`Error parsing layout JSON:${error}`)
                   }
                 }
 
@@ -1030,6 +1034,41 @@ export class PanelIntegration {
           },
           onModelChange: (newModel: any) => {
             const layoutJson = newModel.toJson()
+
+            // Compare with previously saved layout (ignore ephemeral 'selected' indices)
+            const appStore = useProjectLayoutStore.getState()
+            const prevStr = appStore.getLayoutConfig(mainTab.id)
+
+            const stripSelected = (obj: any): any => {
+              if (obj == null || typeof obj !== "object") {
+                return obj
+              }
+              if (Array.isArray(obj)) {
+                return obj.map(stripSelected)
+              }
+              const out: any = {}
+              for (const key of Object.keys(obj)) {
+                if (key === "selected") {
+                  continue
+                }
+                out[key] = stripSelected(obj[key])
+              }
+              return out
+            }
+
+            try {
+              const prev = prevStr ? JSON.parse(prevStr) : null
+              const normalizedNew = stripSelected(layoutJson)
+              const normalizedPrev = prev ? stripSelected(prev) : null
+
+              if (normalizedPrev && deepEqual(normalizedNew, normalizedPrev)) {
+                // No meaningful change - skip logging/saving
+                return
+              }
+            } catch {
+              // If parse/compare fails, fall through to save/log
+            }
+
             logger.info(
               `Layout Updated (Main Tab: ${mainTab.title}):${JSON.stringify(layoutJson, null, 2)}`,
             )
@@ -1238,9 +1277,8 @@ export class PanelIntegration {
                         panelName = foundName
                       }
                     } catch (error) {
-                      console.error(
-                        `[PROJECT TAB ${projectTab.title}] Error parsing layout JSON:`,
-                        error,
+                      logger.error(
+                        `[PROJECT TAB ${projectTab.title}] Error parsing layout JSON: ${error}`,
                       )
                     }
                   }
@@ -1259,6 +1297,44 @@ export class PanelIntegration {
             },
             onModelChange: (newModel: any) => {
               const layoutJson = newModel.toJson()
+
+              // Compare with previously saved layout (ignore ephemeral 'selected' indices)
+              const appStore = useProjectLayoutStore.getState()
+              const prevStr = appStore.getLayoutConfig(projectTab.id)
+
+              const stripSelected = (obj: any): any => {
+                if (obj == null || typeof obj !== "object") {
+                  return obj
+                }
+                if (Array.isArray(obj)) {
+                  return obj.map(stripSelected)
+                }
+                const out: any = {}
+                for (const key of Object.keys(obj)) {
+                  if (key === "selected") {
+                    continue
+                  }
+                  out[key] = stripSelected(obj[key])
+                }
+                return out
+              }
+
+              try {
+                const prev = prevStr ? JSON.parse(prevStr) : null
+                const normalizedNew = stripSelected(layoutJson)
+                const normalizedPrev = prev ? stripSelected(prev) : null
+
+                if (
+                  normalizedPrev &&
+                  deepEqual(normalizedNew, normalizedPrev)
+                ) {
+                  // No meaningful change - skip logging/saving
+                  return
+                }
+              } catch {
+                // If parse/compare fails, fall through to save/log
+              }
+
               logger.info(
                 ` Panel Layout Updated (Project Tab: ${projectTab.title}):${JSON.stringify(
                   layoutJson,

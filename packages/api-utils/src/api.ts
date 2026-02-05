@@ -64,3 +64,14 @@ export interface MruStoreApi {
   removeProject: (projectId: string) => Promise<boolean>
   updateProjectImage: (projectId: string, image: string) => Promise<boolean>
 }
+
+/** Log View API exposed to renderer process */
+export interface LogViewApi {
+  onToggleLogView: (callback: () => void) => () => void
+  updateLogViewState: (isOpen: boolean) => Promise<void>
+}
+
+/** Project Context API exposed to renderer process */
+export interface ProjectContextApi {
+  setProjectContext: (isActive: boolean) => Promise<void>
+}

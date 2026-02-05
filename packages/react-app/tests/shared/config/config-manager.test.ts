@@ -1,8 +1,19 @@
 import {ConfigFileManager} from "~shared/config/config-manager"
-import {
-  GetLayoutDefaultConfigData,
-  graphDesignerLayout,
-} from "~shared/config/utils"
+import {DEFAULT_USER_PREFERENCES} from "~shared/config/user-preferences-types"
+import {GetFlexLayoutConfig, graphDesignerLayout} from "~shared/config/utils"
+
+// Helper function to create expected default config for tests
+function getExpectedDefaultConfig() {
+  return {
+    arcconfig: {
+      layout: {
+        flexLayout: GetFlexLayoutConfig(),
+        graphDesignerView: graphDesignerLayout,
+      },
+      userPreferences: DEFAULT_USER_PREFERENCES,
+    },
+  }
+}
 
 // Mock the window.configApi
 const mockLoadConfigData = jest.fn()
@@ -97,7 +108,7 @@ describe("ConfigFileManager", () => {
         message: "Error loading config",
         status: false,
       })
-      const defaultConfig = GetLayoutDefaultConfigData()
+      const defaultConfig = getExpectedDefaultConfig()
 
       await configManager.initializeConfig()
 
@@ -110,7 +121,7 @@ describe("ConfigFileManager", () => {
         data: "invalid json",
         status: true,
       })
-      const defaultConfig = GetLayoutDefaultConfigData()
+      const defaultConfig = getExpectedDefaultConfig()
 
       await configManager.initializeConfig()
 
@@ -123,7 +134,7 @@ describe("ConfigFileManager", () => {
         data: "",
         status: true,
       })
-      const defaultConfig = GetLayoutDefaultConfigData()
+      const defaultConfig = getExpectedDefaultConfig()
 
       await configManager.initializeConfig()
 
@@ -139,7 +150,7 @@ describe("ConfigFileManager", () => {
         data: JSON.stringify(mockConfig),
         status: true,
       })
-      const defaultConfig = GetLayoutDefaultConfigData()
+      const defaultConfig = getExpectedDefaultConfig()
 
       await configManager.initializeConfig()
 
@@ -157,7 +168,7 @@ describe("ConfigFileManager", () => {
       await configManager.initializeConfig()
 
       // After catching, configDataMap should fall back to default config
-      const defaultConfig = GetLayoutDefaultConfigData()
+      const defaultConfig = getExpectedDefaultConfig()
       // @ts-ignore
       expect(configManager.configDataMap).toEqual(defaultConfig)
     })
@@ -340,7 +351,7 @@ describe("ConfigFileManager", () => {
       // @ts-ignore
       ConfigFileManager._instance = undefined
       configManager = ConfigFileManager.instance
-      const defaultData = GetLayoutDefaultConfigData()
+      const defaultData = getExpectedDefaultConfig()
       delete defaultData?.arcconfig?.layout?.graphDesignerView
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(defaultData),

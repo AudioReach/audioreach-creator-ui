@@ -1,5 +1,6 @@
 import {useEffect, useRef} from "react"
 
+import {useLogView} from "~features/log-view"
 import {ConfigFileManager} from "~shared/config/config-manager"
 import {ARCSideNav} from "~shared/controls/ARCSideNav"
 import {GlobalToaster} from "~shared/controls/GlobalToaster"
@@ -11,6 +12,7 @@ import ProjectLayoutManager from "~shared/layout/ProjectLayoutMgr"
 import {logger} from "~shared/lib/logger"
 import {useKeyboardShortcuts} from "~shared/lib/side-nav"
 import {Theme, useTheme} from "~shared/providers/ThemeProvider"
+import {TabGroupType} from "~shared/store/ProjectLayoutMgr.interface"
 import {
   AppTab,
   useProjectLayoutStore,
@@ -67,6 +69,91 @@ const EditorShellContent: React.FC = () => {
 export const EditorShell: React.FC = () => {
   const store = useProjectLayoutStore()
   const initializedRef = useRef(false)
+  const {isLogViewOpen, toggleLogView} = useLogView()
+
+  // Set up IPC listener for log view toggle from menu
+  useEffect(() => {
+    if (!window.logViewApi) {
+      logger.warn("Log View API not available", {
+        action: "setup_log_view_listener",
+        component: "EditorShell",
+      })
+      return
+    }
+
+    const handleToggleLogView = () => {
+      // Determine target state before toggling to avoid race/negation issues
+      const targetOpen = !isLogViewOpen()
+
+      // Toggle the log view
+      toggleLogView()
+
+      // Update menu state to reflect the actual target state
+      window.logViewApi
+        .updateLogViewState(targetOpen)
+        .catch((error: unknown) => {
+          logger.error("Failed to update log view menu state", {
+            action: "update_menu_state",
+            component: "EditorShell",
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+    }
+
+    // Register listener
+    const cleanup = window.logViewApi.onToggleLogView(handleToggleLogView)
+
+    return cleanup
+  }, [toggleLogView, isLogViewOpen])
+
+  // Monitor active tab group and update menu state accordingly
+  useEffect(() => {
+    if (!window.projectContextApi || !window.logViewApi) {
+      return
+    }
+
+    const activeTabGroup = store.activeTabGroup
+
+    // Check if we're currently viewing a project tab (not Start page)
+    const isViewingProject =
+      activeTabGroup?.groupType === TabGroupType.ProjectGroup
+
+    // Update project context in menu
+    if (isViewingProject) {
+      window.projectContextApi
+        .setProjectContext(true)
+        .catch((error: unknown) => {
+          logger.error("Failed to set project context", {
+            action: "set_project_context",
+            component: "EditorShell",
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+
+      // Update log view menu state based on current project
+      const logViewOpen = isLogViewOpen()
+      window.logViewApi
+        .updateLogViewState(logViewOpen)
+        .catch((error: unknown) => {
+          logger.error("Failed to update log view state on project change", {
+            action: "update_log_view_state",
+            component: "EditorShell",
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+    } else {
+      // We're on Start page or no active group - hide menu
+      window.projectContextApi
+        .setProjectContext(false)
+        .catch((error: unknown) => {
+          logger.error("Failed to clear project context", {
+            action: "clear_project_context",
+            component: "EditorShell",
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+    }
+  }, [store.activeTabGroup, isLogViewOpen])
 
   // Initialize with a default app group and Start tab
   useEffect(() => {

@@ -7,7 +7,7 @@ import {
 } from "./user-preferences-types"
 import {
   getConfigData,
-  GetLayoutDefaultConfigData,
+  GetFlexLayoutConfig,
   graphDesignerLayout,
   type JSONDataMap,
   setConfigData,
@@ -217,7 +217,16 @@ export class ConfigFileManager {
       })
     } finally {
       if (!isConfigSet) {
-        this.configDataMap = GetLayoutDefaultConfigData()
+        // Initialize with default configuration using FlexLayout
+        this.configDataMap = {
+          arcconfig: {
+            layout: {
+              flexLayout: GetFlexLayoutConfig(),
+              graphDesignerView: graphDesignerLayout,
+            },
+            userPreferences: DEFAULT_USER_PREFERENCES,
+          },
+        }
       }
     }
   }

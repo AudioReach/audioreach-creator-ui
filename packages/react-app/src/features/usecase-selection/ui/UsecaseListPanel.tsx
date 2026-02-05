@@ -54,7 +54,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                   usecaseData.flatMap((cat) => cat.usecases).length &&
                 usecaseData.flatMap((cat) => cat.usecases).length > 0
               }
-              onCheckedChange={handleSelectAll}
+              onCheckedChange={(checked) => handleSelectAll(checked === true)}
               size="sm"
             />
             <span className="ml-2">Select All</span>
@@ -134,7 +134,10 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                     indeterminate={someChecked}
                     onCheckedChange={(checked) => {
                       category.usecases.forEach((uc: Usecase) =>
-                        handleSelectUsecase(formatUsecaseDisplay(uc), checked),
+                        handleSelectUsecase(
+                          formatUsecaseDisplay(uc),
+                          checked === true,
+                        ),
                       )
                     }}
                     size="sm"
@@ -164,7 +167,10 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                                 formattedUsecase,
                               )}
                               onCheckedChange={(checked) =>
-                                handleSelectUsecase(formattedUsecase, checked)
+                                handleSelectUsecase(
+                                  formattedUsecase,
+                                  checked === true,
+                                )
                               }
                               size="sm"
                             />

@@ -4,8 +4,10 @@ import type {
   ConfigApi,
   ConfigResult,
   ElectronApi,
+  LogViewApi,
   MruProjectInfo,
   MruStoreApi,
+  ProjectContextApi,
 } from "@audioreach-creator-ui/api-utils"
 import {contextBridge, ipcRenderer} from "electron"
 
@@ -50,3 +52,26 @@ const mruStoreApi: MruStoreApi = {
 }
 
 contextBridge.exposeInMainWorld("mruStoreApi", mruStoreApi)
+
+// Log View API
+const logViewApi: LogViewApi = {
+  onToggleLogView: (callback: () => void) => {
+    ipcRenderer.on("menu:toggle-log-view", callback)
+    // Return cleanup function
+    return () => {
+      ipcRenderer.removeListener("menu:toggle-log-view", callback)
+    }
+  },
+  updateLogViewState: (isOpen: boolean) =>
+    ipcRenderer.invoke("log-view:update-state", isOpen),
+}
+
+contextBridge.exposeInMainWorld("logViewApi", logViewApi)
+
+// Project Context API
+const projectContextApi: ProjectContextApi = {
+  setProjectContext: (isActive: boolean) =>
+    ipcRenderer.invoke("project-context:set", isActive),
+}
+
+contextBridge.exposeInMainWorld("projectContextApi", projectContextApi)

@@ -22,7 +22,7 @@ import {Icon} from "@qualcomm-ui/react/icon"
 import {flexRender, Table, useReactTable} from "@qualcomm-ui/react/table"
 import {Tooltip} from "@qualcomm-ui/react/tooltip"
 
-import {useLogViewStore} from "./LogView-store"
+import {useLogViewStore} from "./LogView-store-manager"
 import {type LogEntry, LogType} from "./LogView-types"
 
 // React Table column helper for type-safe column definitions

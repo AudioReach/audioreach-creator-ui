@@ -2,9 +2,14 @@ import {useState} from "react"
 
 import {ProjectService} from "~entities/project/services/projectService"
 import useArcRecentProjects from "~features/recent-files/hooks/useArcRecentProjects"
+import {
+  GetFlexLayoutConfig,
+  GRAPH_DESIGNER_COMPONENT_NAME,
+} from "~shared/config/utils"
 import {showToast} from "~shared/controls/GlobalToaster"
+import {PanelIntegration} from "~shared/layout/ProjectLayoutMgr"
 import {logger} from "~shared/lib/logger"
-import {ProjectMainTab, useProjectLayoutStore} from "~shared/store"
+import {useProjectLayoutStore} from "~shared/store"
 import type ArcProjectInfo from "~shared/types/arc-project-info"
 
 import type {ProjectLoadingState, ProjectOpenerHook} from "../model/types"
@@ -53,34 +58,38 @@ export function useProjectOpener({
     // Create project group in the ProjectLayoutStore
     const layoutStore = useProjectLayoutStore.getState()
 
-    // Create a simple main tab with GraphDesigner
-    const emptyLayout = {
-      global: {},
-      layout: {
-        children: [],
-        type: "row",
-      },
-    }
+    // Build default FlexLayout config (GraphDesigner center; borders available)
+    const flexLayoutConfig = GetFlexLayoutConfig()
 
-    const mainTab = new ProjectMainTab(
-      `project_${project.id}`,
-      {flexLayoutData: emptyLayout},
-      () => true, // onClose callback
-    )
-
-    // Dynamically import and store the GraphDesigner component
+    // Dynamically import GraphDesigner and create main tab via PanelIntegration
     const GraphDesigner = (
       await import("~widgets/graph-designer/ui/GraphDesigner")
     ).default
 
-    // Store the GraphDesigner component in the main tab
-    ;(mainTab as any).reactiveComponent = (
-      <GraphDesigner
-        projectGroupId={project.id}
-        screenshotRegistry={screenshotRegistry}
-        tabId={mainTab.id}
-        usecaseData={usecaseData}
-      />
+    const mainTab = PanelIntegration.createProjectMainTab(
+      `project_${project.id}`,
+      () => true, // onClose callback
+      (node: any) => {
+        const component = node.getComponent()
+        const name =
+          typeof node.getName === "function" ? node.getName() : undefined
+        // eslint-disable-next-line no-console
+        if (
+          component === GRAPH_DESIGNER_COMPONENT_NAME ||
+          name === "Graph Designer"
+        ) {
+          return (
+            <GraphDesigner
+              projectGroupId={project.id}
+              screenshotRegistry={screenshotRegistry}
+              tabId={mainTab.id}
+              usecaseData={usecaseData}
+            />
+          )
+        }
+        return null
+      },
+      flexLayoutConfig,
     )
 
     // Create the project group in layout store with screenshot callback

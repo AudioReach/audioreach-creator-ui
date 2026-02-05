@@ -1,7 +1,6 @@
 import {defineConfig} from "eslint/config"
 import * as tseslint from "typescript-eslint"
 
-import quiEslintFsd from "@qualcomm-ui/eslint-config-fsd"
 import quiEslintMdx from "@qualcomm-ui/eslint-config-mdx"
 import quiEslintReact from "@qualcomm-ui/eslint-config-react"
 import quiEslintTs from "@qualcomm-ui/eslint-config-typescript"
@@ -12,38 +11,6 @@ const tsLanguageOptions = {
   parserOptions: {
     projectService: true,
   },
-}
-
-/**
- * @param relativePkgPath {string} relative path to the fsd directory from the source root.
- *
- * @example
- * ```js
- * makeFsdConfig("packages/community-extension/src")
- * makeFsdConfig("packages/tools/layout-checker")
- * ```
- */
-function makeFsdConfig(relativePkgPath) {
-  const fileGlob = [`${relativePkgPath}/**`]
-  return [
-    {
-      extends: [quiEslintFsd.configs.publicApi],
-      files: fileGlob,
-    },
-    {
-      extends: [quiEslintFsd.configs.layers, quiEslintFsd.configs.segments],
-      files: fileGlob,
-      languageOptions: tsLanguageOptions,
-      settings: {
-        "import/resolver": {
-          typescript: {
-            alwaysTryTypes: true,
-            project: `./${relativePkgPath}/tsconfig.json`,
-          },
-        },
-      },
-    },
-  ]
 }
 
 const eslintConfig = defineConfig([
@@ -94,9 +61,9 @@ const eslintConfig = defineConfig([
     // recommendation: scope these to your source files in your package(s).
     files: ["**/*.{ts,tsx}"],
     languageOptions: tsLanguageOptions,
-    rules:{
+    rules: {
       "react/prop-types": "off", // TypeScript provides type checking
-    }
+    },
   },
   // Markdown
   {
@@ -104,7 +71,7 @@ const eslintConfig = defineConfig([
     files: ["**/*.{md,mdx}", "*.md"],
   },
   // FSD (Feature-Sliced Design) Architecture Rules
- // ...makeFsdConfig("packages/react-app/src"),
+  // ...makeFsdConfig("packages/react-app/src"),
 ])
 
 export default eslintConfig

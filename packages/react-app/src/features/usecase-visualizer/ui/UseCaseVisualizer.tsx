@@ -59,7 +59,7 @@ const ScreenshotHandler: FC<{
     try {
       const nodes = getNodes()
       if (nodes.length === 0) {
-        console.warn("No nodes to capture")
+        logger.warn("No nodes to capture")
         return null
       }
 
@@ -72,7 +72,7 @@ const ScreenshotHandler: FC<{
       ) as HTMLElement
 
       if (!viewport) {
-        console.error("ReactFlow viewport not found")
+        logger.error("ReactFlow viewport not found")
         return null
       }
 
@@ -117,7 +117,7 @@ const ScreenshotHandler: FC<{
 
       return dataUrl
     } catch (error) {
-      console.error("Failed to capture ReactFlow screenshot:", error)
+      logger.error(`Failed to capture ReactFlow screenshot:${error}`)
       return null
     }
   }, [getNodes, getNodesBounds, theme])
