@@ -1,6 +1,6 @@
 import {useProjectLayoutStore} from "~shared/store"
 
-import {type LogContext, LogLevel} from "../../api/types"
+import {type LogContext, LogLevel} from "../../api/logging.types"
 
 import {logEventEmitter} from "./logger-events"
 
@@ -31,21 +31,21 @@ export class Logger {
    * Log critical message (sent immediately)
    */
   critical(msg: string, context?: LogContext): void {
-    this.log(LogLevel.CRITICAL, msg, context)
+    this.log(LogLevel.Critical, msg, context)
   }
 
   /**
    * Log debug message
    */
   debug(msg: string, context?: LogContext): void {
-    this.log(LogLevel.DEBUG, msg, context)
+    this.log(LogLevel.Debug, msg, context)
   }
 
   /**
    * Log error message (sent immediately)
    */
   error(msg: string, context?: LogContext): void {
-    this.log(LogLevel.ERROR, msg, context)
+    this.log(LogLevel.Error, msg, context)
   }
 
   /**
@@ -66,7 +66,7 @@ export class Logger {
    * Log info message
    */
   info(msg: string, context?: LogContext): void {
-    this.log(LogLevel.INFO, msg, context)
+    this.log(LogLevel.Info, msg, context)
   }
 
   /**
@@ -87,10 +87,10 @@ export class Logger {
     try {
       // Only emit events for visible log levels
       if (
-        logLevel !== LogLevel.INFO &&
-        logLevel !== LogLevel.WARN &&
-        logLevel !== LogLevel.ERROR &&
-        logLevel !== LogLevel.CRITICAL
+        logLevel !== LogLevel.Info &&
+        logLevel !== LogLevel.Warn &&
+        logLevel !== LogLevel.Error &&
+        logLevel !== LogLevel.Critical
       ) {
         // Skip non-visible levels (verbose/debug)
         return
@@ -155,18 +155,18 @@ export class Logger {
     const logMessage = `[${logLevel.toUpperCase()}] ${msg}`
 
     switch (logLevel) {
-      case LogLevel.VERBOSE:
-      case LogLevel.DEBUG:
+      case LogLevel.Verbose:
+      case LogLevel.Debug:
         console.debug(logMessage, contextStr)
         break
-      case LogLevel.INFO:
+      case LogLevel.Info:
         console.info(logMessage, contextStr)
         break
-      case LogLevel.WARN:
+      case LogLevel.Warn:
         console.warn(logMessage, contextStr)
         break
-      case LogLevel.ERROR:
-      case LogLevel.CRITICAL:
+      case LogLevel.Error:
+      case LogLevel.Critical:
         console.error(logMessage, contextStr)
         break
       default:
@@ -191,13 +191,13 @@ export class Logger {
    * Log verbose message (detailed debug info)
    */
   verbose(msg: string, context?: LogContext): void {
-    this.log(LogLevel.VERBOSE, msg, context)
+    this.log(LogLevel.Verbose, msg, context)
   }
 
   /**
    * Log warning message
    */
   warn(msg: string, context?: LogContext): void {
-    this.log(LogLevel.WARN, msg, context)
+    this.log(LogLevel.Warn, msg, context)
   }
 }

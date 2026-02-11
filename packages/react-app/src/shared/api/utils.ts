@@ -1,4 +1,4 @@
-import type {ApiResult} from "./types"
+import type {ApiResult} from "./api-response.types"
 
 /**
  * Process an API response and convert it to an ApiResult

@@ -1,4 +1,4 @@
-import type {LogContext, LogLevel} from "../../api/types"
+import type {LogContext, LogLevel} from "../../api/logging.types"
 
 /**
  * Log event data structure for the event-driven logging system

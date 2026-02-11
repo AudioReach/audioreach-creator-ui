@@ -1,4 +1,4 @@
-import type {ProjectFileApiRequestTypes} from "./project-file-api-types"
+import type {ProjectFileApiRequestTypes} from "./project-file-api.types"
 
 export enum ApiRequest {
   GetProjectFileModificationDate = "file-prop-get-mod-date",

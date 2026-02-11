@@ -1,2 +1,2 @@
-export {useProjectOpener} from "./useProjectOpener"
-export {useProjectLifecycle} from "./useProjectLifecycle"
+export {useProjectOpener} from "./use-project-opener"
+export {useProjectLifecycle} from "./use-project-lifecycle"

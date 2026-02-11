@@ -1,1 +1,1 @@
-export * from "./LogView"
+export * from "./log-view"

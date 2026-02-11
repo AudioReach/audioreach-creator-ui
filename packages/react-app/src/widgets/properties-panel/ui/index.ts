@@ -1,1 +1,1 @@
-export * from "./PropertiesPanel"
+export * from "./properties-panel"

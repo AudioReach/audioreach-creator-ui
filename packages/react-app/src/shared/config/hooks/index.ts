@@ -1,1 +1,1 @@
-export {useUserPreferences} from "./useUserPreferences"
+export {useUserPreferences} from "./use-user-preferences"

@@ -1,11 +1,11 @@
-import {TabType} from "~shared/store/ProjectLayoutMgr.interface"
+import {TabType} from "~shared/store/project-layout.types"
 import {
   APP_CONFIG,
-  AppTab,
-  ProjectMainTab,
-  ProjectTab,
+  AppTabEntity,
+  ProjectMainTabEntity,
+  ProjectTabEntity,
   useProjectLayoutStore,
-} from "~shared/store/ProjectLayoutMgr.store"
+} from "~shared/store/use-project-layout-store"
 
 describe("ProjectLayoutStore", () => {
   // Helper function to create a minimal valid FlexLayout configuration
@@ -76,7 +76,7 @@ describe("ProjectLayoutStore", () => {
     it("should create app group with app tabs", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab = new AppTab("Test Tab", null)
+      const testTab = new AppTabEntity("Test Tab", null)
       const success = store.createAppGroup("test-app-group", "Application", [
         testTab,
       ])
@@ -103,10 +103,10 @@ describe("ProjectLayoutStore", () => {
     it("should add app tab to existing app group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab1 = new AppTab("Test Tab 1", null)
+      const testTab1 = new AppTabEntity("Test Tab 1", null)
       store.createAppGroup("test-app-group", "Application", [testTab1])
 
-      const testTab2 = new AppTab("Test Tab 2", null)
+      const testTab2 = new AppTabEntity("Test Tab 2", null)
       const success = store.addAppTab("test-app-group", testTab2)
 
       expect(success).toBe(true)
@@ -118,8 +118,8 @@ describe("ProjectLayoutStore", () => {
     it("should close app tab", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab1 = new AppTab("Test Tab 1", null)
-      const testTab2 = new AppTab("Test Tab 2", null)
+      const testTab1 = new AppTabEntity("Test Tab 1", null)
+      const testTab2 = new AppTabEntity("Test Tab 2", null)
       store.createAppGroup("test-app-group", "Application", [
         testTab1,
         testTab2,
@@ -137,7 +137,7 @@ describe("ProjectLayoutStore", () => {
     it("should remove app group when closing last tab", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab = new AppTab("Test Tab", null)
+      const testTab = new AppTabEntity("Test Tab", null)
       store.createAppGroup("test-app-group", "Application", [testTab])
 
       store.closeAppTab(testTab.id)
@@ -149,7 +149,7 @@ describe("ProjectLayoutStore", () => {
     it("should set active app tab", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab = new AppTab("Test Tab", null)
+      const testTab = new AppTabEntity("Test Tab", null)
       store.createAppGroup("test-app-group", "Application", [testTab])
 
       const success = store.setActiveAppTab(testTab.id)
@@ -177,7 +177,10 @@ describe("ProjectLayoutStore", () => {
     it("should create a new project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       const success = store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -201,7 +204,7 @@ describe("ProjectLayoutStore", () => {
     it("should create project group with default name pattern", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("test", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity("test", createMinimalLayout())
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -216,7 +219,7 @@ describe("ProjectLayoutStore", () => {
     it("should handle different file extensions in default naming", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab1 = new ProjectMainTab("test", createMinimalLayout())
+      const mainTab1 = new ProjectMainTabEntity("test", createMinimalLayout())
       store.createProjectGroup(
         "project-1",
         "/path/to/test.json",
@@ -224,7 +227,10 @@ describe("ProjectLayoutStore", () => {
         mainTab1,
       )
 
-      const mainTab2 = new ProjectMainTab("another", createMinimalLayout())
+      const mainTab2 = new ProjectMainTabEntity(
+        "another",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "project-2",
         "/path/to/another.acdb",
@@ -240,7 +246,7 @@ describe("ProjectLayoutStore", () => {
     it("should handle file paths with backslashes", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("test", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity("test", createMinimalLayout())
       store.createProjectGroup(
         "test-project-id",
         "C:\\path\\to\\test.xml",
@@ -257,7 +263,7 @@ describe("ProjectLayoutStore", () => {
 
       // Create max number of project groups
       for (let i = 0; i < APP_CONFIG.MAX_PROJECT_GROUPS; i++) {
-        const mainTab = new ProjectMainTab(
+        const mainTab = new ProjectMainTabEntity(
           `Project ${i}`,
           createMinimalLayout(),
         )
@@ -270,7 +276,7 @@ describe("ProjectLayoutStore", () => {
       }
 
       // Try to create one more
-      const mainTab = new ProjectMainTab(
+      const mainTab = new ProjectMainTabEntity(
         "Overflow Project",
         createMinimalLayout(),
       )
@@ -287,7 +293,10 @@ describe("ProjectLayoutStore", () => {
     it("should return true and switch to existing project group if already open", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab1 = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab1 = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       const success1 = store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -295,7 +304,10 @@ describe("ProjectLayoutStore", () => {
         mainTab1,
       )
 
-      const mainTab2 = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab2 = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       const success2 = store.createProjectGroup(
         "test-project-id-2",
         "/path/to/test.xml",
@@ -316,7 +328,10 @@ describe("ProjectLayoutStore", () => {
 
       expect(store.isProjectGroupAlreadyOpen("/path/to/test.xml")).toBeNull()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -333,7 +348,10 @@ describe("ProjectLayoutStore", () => {
     it("should get project group by id", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -354,7 +372,10 @@ describe("ProjectLayoutStore", () => {
 
       expect(store.getActiveProjectGroup()).toBeNull()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -370,7 +391,10 @@ describe("ProjectLayoutStore", () => {
     it("should remove project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab1 = new ProjectMainTab("Project 1", createMinimalLayout())
+      const mainTab1 = new ProjectMainTabEntity(
+        "Project 1",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "project-1",
         "/path/to/test1.xml",
@@ -378,7 +402,10 @@ describe("ProjectLayoutStore", () => {
         mainTab1,
       )
 
-      const mainTab2 = new ProjectMainTab("Project 2", createMinimalLayout())
+      const mainTab2 = new ProjectMainTabEntity(
+        "Project 2",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "project-2",
         "/path/to/test2.xml",
@@ -399,7 +426,10 @@ describe("ProjectLayoutStore", () => {
     it("should handle removing active project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -417,7 +447,10 @@ describe("ProjectLayoutStore", () => {
     it("should rename project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Original Name", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Original Name",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -449,7 +482,10 @@ describe("ProjectLayoutStore", () => {
     it("should add tab to project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -457,7 +493,7 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const newTab = new ProjectTab("New Tab", null)
+      const newTab = new ProjectTabEntity("New Tab", null)
       const success = store.addTabToProjectGroup("test-project-id", newTab)
 
       expect(success).toBe(true)
@@ -473,7 +509,10 @@ describe("ProjectLayoutStore", () => {
     it("should remove tab from project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -481,7 +520,7 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const newTab = new ProjectTab("New Tab", null)
+      const newTab = new ProjectTabEntity("New Tab", null)
       store.addTabToProjectGroup("test-project-id", newTab)
 
       // Set the new tab as active before removing it
@@ -503,7 +542,10 @@ describe("ProjectLayoutStore", () => {
     it("should update active tab when removing active project tab", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -511,8 +553,8 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const newTab1 = new ProjectTab("New Tab 1", null)
-      const newTab2 = new ProjectTab("New Tab 2", null)
+      const newTab1 = new ProjectTabEntity("New Tab 1", null)
+      const newTab2 = new ProjectTabEntity("New Tab 2", null)
 
       store.addTabToProjectGroup("test-project-id", newTab1)
       store.addTabToProjectGroup("test-project-id", newTab2)
@@ -540,7 +582,10 @@ describe("ProjectLayoutStore", () => {
     it("should set active tab in project group", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -548,7 +593,7 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const newTab = new ProjectTab("New Tab", null)
+      const newTab = new ProjectTabEntity("New Tab", null)
       store.addTabToProjectGroup("test-project-id", newTab)
 
       const state = useProjectLayoutStore.getState()
@@ -571,7 +616,10 @@ describe("ProjectLayoutStore", () => {
     it("should set active project tab (main tab)", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -594,7 +642,10 @@ describe("ProjectLayoutStore", () => {
     it("should set active project tab (project tab)", () => {
       const store = useProjectLayoutStore.getState()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -602,7 +653,7 @@ describe("ProjectLayoutStore", () => {
         mainTab,
       )
 
-      const newTab = new ProjectTab("New Tab", null)
+      const newTab = new ProjectTabEntity("New Tab", null)
       store.addTabToProjectGroup("test-project-id", newTab)
 
       const success = store.setActiveProjectTab("test-project-id", newTab.id)
@@ -633,7 +684,10 @@ describe("ProjectLayoutStore", () => {
 
       expect(store.getActiveProjectTab()).toBeNull()
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -651,10 +705,13 @@ describe("ProjectLayoutStore", () => {
     it("should return app tabs and expanded project group tabs", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab = new AppTab("Test Tab", null)
+      const testTab = new AppTabEntity("Test Tab", null)
       store.createAppGroup("test-app-group", "Application", [testTab])
 
-      const mainTab = new ProjectMainTab("Test Project", createMinimalLayout())
+      const mainTab = new ProjectMainTabEntity(
+        "Test Project",
+        createMinimalLayout(),
+      )
       store.createProjectGroup(
         "test-project-id",
         "/path/to/test.xml",
@@ -672,7 +729,7 @@ describe("ProjectLayoutStore", () => {
     it("should return only app tabs when no project groups exist", () => {
       const store = useProjectLayoutStore.getState()
 
-      const testTab = new AppTab("Test Tab", null)
+      const testTab = new AppTabEntity("Test Tab", null)
       store.createAppGroup("test-app-group", "Application", [testTab])
 
       const visibleTabs = store.getVisibleTabs()

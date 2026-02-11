@@ -1,1 +1,1 @@
-export * from "./EditorShell"
+export * from "./editor-shell"

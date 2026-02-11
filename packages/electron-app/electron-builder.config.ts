@@ -10,7 +10,7 @@ const config: Configuration = {
       await removeBinaries()
     }
   },
-  appId: "com.qualcomm.audioreach-creator-ui",
+  appId: "com.audioreach.creator",
   // eslint-disable-next-line no-template-curly-in-string -- electron-builder template variables
   artifactName: "${productName}-${version}-${platform}-${arch}.${ext}",
 
@@ -38,16 +38,11 @@ const config: Configuration = {
   linux: {
     category: "Utility",
     executableName: "audioreach-creator-ui",
-    icon: "public/libs/icons/qact_256.png",
   },
 
   productName: "audioreach-creator-ui",
 
   publish: null,
-
-  win: {
-    icon: "public/libs/QACT_Icon.ico",
-  },
 }
 
 export default config

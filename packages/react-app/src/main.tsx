@@ -1,6 +1,6 @@
 import {createRoot} from "react-dom/client"
 
-import {ThemeProvider} from "~shared/providers/ThemeProvider"
+import {ThemeProvider} from "~shared/providers/theme-provider"
 import {EditorShell} from "~widgets/editor-shell"
 
 import "./index.css"

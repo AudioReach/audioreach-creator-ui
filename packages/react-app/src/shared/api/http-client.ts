@@ -1,7 +1,7 @@
 import {logger} from "~shared/lib/logger"
-import {useBackendConnectionStore} from "~shared/store/connection-store"
+import {useBackendConnectionStore} from "~shared/store/use-backend-connection-store"
 
-import type {ApiResult} from "./types"
+import type {ApiResult} from "./api-response.types"
 import {processApiResponse} from "./utils"
 
 /**

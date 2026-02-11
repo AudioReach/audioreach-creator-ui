@@ -1,3 +1,3 @@
-export {useSideNav} from "./useSideNav"
-export {useRegisterSideNav} from "./useRegisterSideNav"
-export {useKeyboardShortcuts} from "./useKeyboardShortcuts"
+export {useSideNav} from "./use-side-nav"
+export {useRegisterSideNav} from "./use-register-side-nav"
+export {useKeyboardShortcuts} from "./use-keyboard-shortcuts"

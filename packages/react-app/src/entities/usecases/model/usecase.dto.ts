@@ -1,4 +1,4 @@
-import type {KeyInfo, ValueInfo} from "./usecase.component.dto"
+import type {KeyInfo, ValueInfo} from "./usecase-component.dto"
 
 export interface UsecaseResponseDto {
   usecases: UsecaseIdentifier[]

@@ -1,1 +1,1 @@
-export {useDeviceManager} from "./hooks/useDeviceManager"
+export {useDeviceManager} from "./hooks/use-device-manager"

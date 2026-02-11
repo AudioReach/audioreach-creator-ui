@@ -1,1 +1,1 @@
-export * from "./ArcDeviceList"
+export * from "./device-list"

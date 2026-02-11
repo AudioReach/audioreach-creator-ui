@@ -1,1 +1,1 @@
-export * from "./SubsystemBrowser"
+export * from "./subsystem-browser"

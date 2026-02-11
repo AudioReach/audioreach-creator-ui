@@ -1,1 +1,1 @@
-export * from "./ModuleList"
+export * from "./module-list"

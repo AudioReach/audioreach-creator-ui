@@ -1,11 +1,11 @@
 export type ProjectType = "OFFLINE" | "DEVICE"
 
 export enum SessionMode {
-  DIFF_MERGE = "DIFF_MERGE",
-  DESIGNER = "DESIGNER",
-  SIMULATION = "SIMULATION",
-  CONNECTED = "CONNECTED",
-  DISCONNECTED = "DISCONNECTED",
+  DiffMerge = "diff-merge",
+  Desginer = "designer",
+  Simulation = "simulation",
+  Connected = "connected",
+  Disconnected = "disconnected",
 }
 
 /**

@@ -3,7 +3,7 @@ import type {
   OpenProjectFileResponseData,
   SaveValidationResultsRequest,
   SaveValidationResultsResponseData,
-} from "@audioreach-creator-ui/api-utils/src/project-file-api-types"
+} from "@audioreach-creator-ui/api-utils/"
 import {dialog, shell} from "electron"
 import {readFileSync, statSync, writeFileSync} from "fs"
 import {readdir} from "fs/promises"

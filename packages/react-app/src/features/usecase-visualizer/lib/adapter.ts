@@ -3,7 +3,7 @@ import type {
   ControlLinkDto,
   DataLinkDto,
   UsecaseComponentsDto,
-} from "~entities/usecases/model/usecase.component.dto"
+} from "~entities/usecases/model/usecase-component.dto"
 import {
   EDGE_KIND,
   type GraphSpec,
@@ -12,7 +12,7 @@ import {
   NODE_KIND,
   type RFEdge,
   type RFNode,
-} from "~features/usecase-visualizer/model/types"
+} from "~features/usecase-visualizer/model/usecase-visualizer.types"
 import {logger} from "~shared/lib/logger"
 
 // Node ID helpers

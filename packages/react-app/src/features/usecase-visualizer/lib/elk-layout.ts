@@ -11,7 +11,7 @@ import {
   type RFNode,
   type RFSubgraphNodeData,
   type RFSubsystemNodeData,
-} from "~features/usecase-visualizer/model/types"
+} from "~features/usecase-visualizer/model/usecase-visualizer.types"
 import {logger} from "~shared/lib/logger"
 
 const elk = new ELK()

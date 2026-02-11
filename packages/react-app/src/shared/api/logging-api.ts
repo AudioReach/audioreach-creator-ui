@@ -1,5 +1,5 @@
 import {httpClient} from "./http-client"
-import type {UserLogRequestDto} from "./types"
+import type {UserLogRequestDto} from "./logging.types"
 
 /**
  * Service for sending logs to the backend

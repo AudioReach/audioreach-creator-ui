@@ -1,2 +1,2 @@
 export * from "./api"
-export type * from "./project-file-api-types"
+export type * from "./project-file-api.types"

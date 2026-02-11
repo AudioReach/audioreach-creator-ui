@@ -1,1 +1,1 @@
-export * from "./OpenFile"
+export * from "./open-file"

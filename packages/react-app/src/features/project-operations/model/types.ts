@@ -1,8 +1,8 @@
-import type ArcProjectInfo from "~shared/types/arc-project-info"
+import type ProjectInfo from "~shared/types/project-info.types"
 
 export interface ProjectOpenResult {
   error?: string
-  project?: ArcProjectInfo
+  project?: ProjectInfo
   success: boolean
 }
 
@@ -15,7 +15,7 @@ export interface ProjectOpenerHook {
   /** Current loading state */
   loadingState: ProjectLoadingState
   /** Opens a recent project by project info */
-  openRecentProject: (project: ArcProjectInfo) => Promise<void>
+  openRecentProject: (project: ProjectInfo) => Promise<void>
   /** Opens a workspace project using file picker */
   openWorkspaceProject: () => Promise<void>
 }

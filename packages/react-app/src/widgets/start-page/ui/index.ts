@@ -1,1 +1,1 @@
-export * from "./ArcStartPage"
+export * from "./arc-start-page"

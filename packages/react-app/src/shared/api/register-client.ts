@@ -1,6 +1,6 @@
-import type {ApiResult} from "~shared/api/types"
+import type {ApiResult} from "~shared/api/api-response.types"
 import {logger} from "~shared/lib/logger"
-import {useBackendConnectionStore} from "~shared/store/connection-store"
+import {useBackendConnectionStore} from "~shared/store/use-backend-connection-store"
 
 import {httpClient} from "./http-client"
 
