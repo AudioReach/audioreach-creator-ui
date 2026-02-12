@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import type {SessionMode} from "~entities/project/model/project.dto"
 
 /** Contains project details used for display in the UI */

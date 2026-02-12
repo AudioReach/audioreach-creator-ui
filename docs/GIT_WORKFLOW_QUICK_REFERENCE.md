@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause
+-->
+
 # Git Workflow Quick Reference
 
 A quick reference guide for the AudioReach Creator git workflow with feature branch protection and common commands.

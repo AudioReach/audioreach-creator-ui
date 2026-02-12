@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {type FC, useEffect, useMemo, useState} from "react"
 
 import {ChevronsDown, ChevronsUp} from "lucide-react"

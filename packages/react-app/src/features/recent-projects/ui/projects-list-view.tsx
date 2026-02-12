@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {Database, FolderOpen, Trash2} from "lucide-react"
 
 import {IconButton} from "@qualcomm-ui/react/button"

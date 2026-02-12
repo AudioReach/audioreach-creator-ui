@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 // Zustand slice type contracts for UsecaseVisualizer
 // Actual implementation will be in shared/store when wiring
 import type {GraphSpec, GraphView} from "./usecase-visualizer.types"

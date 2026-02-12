@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 // UsecaseVisualizer - ReactFlow wrapper (view-only)
 import {type FC, useCallback, useEffect, useMemo} from "react"
 

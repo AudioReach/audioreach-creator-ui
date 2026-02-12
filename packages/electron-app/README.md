@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause
+-->
+
 # Production Installation
 
 - due to ffmpeg licensing issues, we must exclude the ffmpeg dll before bundling.

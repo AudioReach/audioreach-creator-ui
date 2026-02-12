@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {Search} from "lucide-react"
 
 import {TextInput} from "@qualcomm-ui/react/text-input"

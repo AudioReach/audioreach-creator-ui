@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {useCallback, useEffect, useState} from "react"
 
 import type {MruProjectInfo} from "@audioreach-creator-ui/api-utils"

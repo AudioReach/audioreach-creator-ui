@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 // converts a string input that may be decimal or hex ("0xFF" or "ff") into a number
 export function ConvertStringToNumber(searchTerm: string): number | null {
   const strToLower = searchTerm.trim().toLowerCase()

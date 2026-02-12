@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {Info, TriangleAlert, X} from "lucide-react"
 
 import {Icon} from "@qualcomm-ui/react/icon"

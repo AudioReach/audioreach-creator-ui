@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {fireEvent, render, screen} from "@testing-library/react"
 
 import SearchBox from "~features/subsystem-browser/ui/search-box"

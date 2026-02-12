@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import type {ProjectFileApiRequestTypes} from "./project-file-api.types"
 
 export enum ApiRequest {

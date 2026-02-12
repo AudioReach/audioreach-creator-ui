@@ -1,4 +1,9 @@
-import type {ReactNode} from "react"
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+import type {ReactNode} from 'react';
 
 import type {IJsonModel} from "flexlayout-react"
 

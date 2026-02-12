@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import type {PlaywrightTestConfig} from "@playwright/test"
 
 const isCI = !!process.env.IS_CI

@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause
+-->
+
 # AudioReach Creator using React Frontend and Electron
 
 A cross-platform application to design, view and edit audio and voice use cases using AudioReach Engine.

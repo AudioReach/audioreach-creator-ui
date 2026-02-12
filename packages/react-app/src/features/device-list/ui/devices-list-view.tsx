@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {Smartphone} from "lucide-react"
 
 import type DeviceInfo from "~shared/types/device-info.types"

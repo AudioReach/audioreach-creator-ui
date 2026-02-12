@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import type {ApiResult} from "~shared/api/api-response.types"
 import {logger} from "~shared/lib/logger"
 import {useBackendConnectionStore} from "~shared/store/use-backend-connection-store"

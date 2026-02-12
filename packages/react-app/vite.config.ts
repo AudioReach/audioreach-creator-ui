@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import react from "@vitejs/plugin-react"
 import {resolve} from "path"
 import {defineConfig} from "vite"

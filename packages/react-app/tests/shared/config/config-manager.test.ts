@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 import {ConfigFileManager} from "~shared/config/config-manager"
 import {DEFAULT_USER_PREFERENCES} from "~shared/config/user-preferences-types"
 import {GetFlexLayoutConfig, graphDesignerLayout} from "~shared/config/utils"

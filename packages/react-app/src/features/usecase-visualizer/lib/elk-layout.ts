@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 // Simplified ELK-based layout that mimics the manual approach
 import type {Node} from "@xyflow/react"
 import ELK from "elkjs/lib/elk.bundled.js"

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 // Normalized ReactFlow types for UsecaseVisualizer
 import type {Edge, Node} from "@xyflow/react"
 

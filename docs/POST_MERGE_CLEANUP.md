@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause
+-->
+
 # Post-Merge Cleanup Guide
 
 This guide explains how to handle your local branches after a PR has been squash merged, ensuring you maintain linear git history and avoid duplicate commits.
