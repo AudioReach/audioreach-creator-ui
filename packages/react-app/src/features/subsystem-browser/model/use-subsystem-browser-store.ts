@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {create} from "zustand"
+import {create} from 'zustand';
 
-import type {SubsystemBrowserTreeNode} from "~features/subsystem-browser/model/subsystem-browser.types"
+import type {SubsystemBrowserTreeNode} from '~features/subsystem-browser/model/subsystem-browser.types';
 
 type SubsystemBrowserStore = {
   addSubsystem: (
     newSubsystem: SubsystemBrowserTreeNode,
     parentId?: number,
-  ) => void
-  data: SubsystemBrowserTreeNode[]
-  removeSubsystem: (id: number) => void
-  renameSubsystem: (id: number, newName: string) => void
-  setSubsystemData: (newSubSystemData: SubsystemBrowserTreeNode[]) => void
-}
+  ) => void;
+  data: SubsystemBrowserTreeNode[];
+  removeSubsystem: (id: number) => void;
+  renameSubsystem: (id: number, newName: string) => void;
+  setSubsystemData: (newSubSystemData: SubsystemBrowserTreeNode[]) => void;
+};
 
 function doesSubsystemExist(
   existingTreeData: SubsystemBrowserTreeNode[],
@@ -24,16 +24,16 @@ function doesSubsystemExist(
 ): boolean {
   for (const subsystemNode of existingTreeData) {
     if (subsystemNode.id === id) {
-      return true
+      return true;
     }
     if (
       subsystemNode.children &&
       doesSubsystemExist(subsystemNode.children, id)
     ) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 function addSubsystem(
@@ -43,7 +43,7 @@ function addSubsystem(
 ): SubsystemBrowserTreeNode[] {
   if (!parentId) {
     // No parentId: add as root node
-    return [...treeData, newSubsystem]
+    return [...treeData, newSubsystem];
   }
   // Recursive add
   return treeData.map((item) => {
@@ -51,14 +51,14 @@ function addSubsystem(
       // Add to children (initialize if missing)
       const children = item.children
         ? [...item.children, newSubsystem]
-        : [newSubsystem]
-      return {...item, children}
+        : [newSubsystem];
+      return {...item, children};
     }
     // Recurse into children
     return item.children
       ? {...item, children: addSubsystem(item.children, newSubsystem, parentId)}
-      : item
-  })
+      : item;
+  });
 }
 
 // Recursive remove (works for root and nested nodes)
@@ -72,7 +72,7 @@ function removeSubsystem(
       item.children
         ? {...item, children: removeSubsystem(item.children, id)}
         : item,
-    )
+    );
 }
 
 // Recursive rename (works for root and nested nodes)
@@ -83,59 +83,59 @@ function renameSubsystem(
 ): SubsystemBrowserTreeNode[] {
   return treeData.map((item) => {
     if (item.id === id) {
-      return {...item, name: newName}
+      return {...item, name: newName};
     }
     return item.children
       ? {...item, children: renameSubsystem(item.children, id, newName)}
-      : item
-  })
+      : item;
+  });
 }
 
 export const useSubsystemBrowserStore = create<SubsystemBrowserStore>(
   (set, get) => ({
     addSubsystem: (newSubsystem, parentId) => {
-      const currentData = get().data
+      const currentData = get().data;
 
       // check for subsystem exists to avoid unnecessary updates to store
       if (doesSubsystemExist(currentData, newSubsystem.id)) {
         // TODO: Log this error info
-        return
+        return;
       }
 
       if (parentId && !doesSubsystemExist(currentData, parentId)) {
         // TODO: Log this error info
-        return
+        return;
       }
 
       set({
         data: addSubsystem(currentData, newSubsystem, parentId),
-      })
+      });
     },
     data: [],
     removeSubsystem: (id) => {
-      const currentData = get().data
+      const currentData = get().data;
 
       if (!doesSubsystemExist(currentData, id)) {
         // TODO: Log this warning info
-        return
+        return;
       }
 
       set({
         data: removeSubsystem(currentData, id),
-      })
+      });
     },
     renameSubsystem: (id, newName) => {
-      const currentData = get().data
+      const currentData = get().data;
 
       if (!doesSubsystemExist(currentData, id)) {
         // TODO: Log this error info
-        return
+        return;
       }
 
       set({
         data: renameSubsystem(currentData, id, newName),
-      })
+      });
     },
     setSubsystemData: (newSubsystemData) => set({data: newSubsystemData}),
   }),
-)
+);

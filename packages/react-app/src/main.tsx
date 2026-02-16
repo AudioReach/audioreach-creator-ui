@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {createRoot} from "react-dom/client"
+import {createRoot} from 'react-dom/client';
 
-import {ThemeProvider} from "~shared/providers/theme-provider"
-import {EditorShell} from "~widgets/editor-shell"
+import {ThemeProvider} from '~shared/providers/theme-provider';
+import {EditorShell} from '~widgets/editor-shell';
 
-import "./index.css"
+import './index.css';
 
 const App = () => {
   // useEffect(() => {
@@ -21,7 +21,7 @@ const App = () => {
     <ThemeProvider>
       <EditorShell />
     </ThemeProvider>
-  )
-}
+  );
+};
 
-createRoot(document.getElementById("root")!).render(<App />)
+createRoot(document.getElementById('root')!).render(<App />);

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
-import ValidationResultTable from "./validation-result-table"
-import ValidationResultToolbar from "./validation-result-toolbar"
+import ValidationResultTable from './validation-result-table';
+import ValidationResultToolbar from './validation-result-toolbar';
 
 /**
  * Combines ValidationResultToolbar and ValidationResultTable with proper styling for FlexLayout integration
@@ -15,10 +15,10 @@ const ValidationResultPanel: FC = () => {
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
       }}
     >
       {/* Toolbar */}
@@ -29,13 +29,13 @@ const ValidationResultPanel: FC = () => {
       {/* Table - flexible height with internal scrolling */}
       <div
         style={{
-          minHeight: "0",
+          minHeight: '0',
         }}
       >
         <ValidationResultTable />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ValidationResultPanel
+export default ValidationResultPanel;

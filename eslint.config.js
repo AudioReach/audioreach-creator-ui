@@ -1,30 +1,31 @@
-import {defineConfig} from "eslint/config"
-import * as tseslint from "typescript-eslint"
+import {defineConfig} from 'eslint/config';
+import * as tseslint from 'typescript-eslint';
 
-import quiEslintMdx from "@qualcomm-ui/eslint-config-mdx"
-import quiEslintReact from "@qualcomm-ui/eslint-config-react"
-import quiEslintTs from "@qualcomm-ui/eslint-config-typescript"
-import quiEslintPluginReact from "@qualcomm-ui/eslint-plugin-react"
+import quiEslintMdx from '@qualcomm-ui/eslint-config-mdx';
+import quiEslintReact from '@qualcomm-ui/eslint-config-react';
+import quiEslintTs from '@qualcomm-ui/eslint-config-typescript';
+import quiEslintPluginReact from '@qualcomm-ui/eslint-plugin-react';
 
 const tsLanguageOptions = {
   parser: tseslint.parser,
   parserOptions: {
     projectService: true,
   },
-}
+};
 
 const eslintConfig = defineConfig([
   {
     ignores: [
-      "**/dist/",
-      "**/node_modules/",
-      "**/build/",
-      "**/coverage/",
-      "**/.turbo/",
-      "**/out/",
-      "**/out-tsc/",
-      "**/temp/",
-      "**/.react-router/",
+      '**/dist/',
+      '**/node_modules/',
+      '**/build/',
+      '**/coverage/',
+      '**/.turbo/',
+      '**/out/',
+      '**/out-tsc/',
+      '**/temp/',
+      '**/.react-router/',
+      '/eslint-rules/**',
     ],
   },
   // JS
@@ -35,7 +36,7 @@ const eslintConfig = defineConfig([
       quiEslintTs.configs.styleGuide,
     ],
     // recommendation: scope these to your source files in your package(s).
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+    files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
   },
   // TS
   {
@@ -45,7 +46,7 @@ const eslintConfig = defineConfig([
       quiEslintTs.configs.strictExports,
     ],
     // recommendation: scope these to your source files in your package(s).
-    files: ["**/*.ts"],
+    files: ['**/*.ts'],
     languageOptions: tsLanguageOptions,
   },
   // React
@@ -59,19 +60,19 @@ const eslintConfig = defineConfig([
       quiEslintPluginReact.config,
     ],
     // recommendation: scope these to your source files in your package(s).
-    files: ["**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: tsLanguageOptions,
     rules: {
-      "react/prop-types": "off", // TypeScript provides type checking
+      'react/prop-types': 'off', // TypeScript provides type checking
     },
   },
   // Markdown
   {
     extends: [quiEslintMdx.configs.recommended],
-    files: ["**/*.{md,mdx}", "*.md"],
+    files: ['**/*.{md,mdx}', '*.md'],
   },
   // FSD (Feature-Sliced Design) Architecture Rules
   // ...makeFsdConfig("packages/react-app/src"),
-])
+]);
 
-export default eslintConfig
+export default eslintConfig;

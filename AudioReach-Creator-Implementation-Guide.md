@@ -71,18 +71,18 @@ File: packages/react-app/src/main.tsx
 The React application is initialized without a router. The root renders an application shell (EditorShell) within the QUI design system root.
 
 ```tsx
-import {createRoot} from "react-dom/client"
-import {QuiRoot} from "@qui/react"
-import {EditorShell} from "~widgets/editor-shell"
-import "./index.css"
+import {createRoot} from 'react-dom/client';
+import {QuiRoot} from '@qui/react';
+import {EditorShell} from '~widgets/editor-shell';
+import './index.css';
 
 const App = () => (
   <QuiRoot>
     <EditorShell />
   </QuiRoot>
-)
+);
 
-createRoot(document.getElementById("root")!).render(<App />)
+createRoot(document.getElementById('root')!).render(<App />);
 ```
 
 Key points:

@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {Smartphone} from "lucide-react"
+import {Smartphone} from 'lucide-react';
 
-import type DeviceInfo from "~shared/types/device-info.types"
+import type DeviceInfo from '~shared/types/device-info.types';
 
 interface DevicesListViewProps {
-  devices: DeviceInfo[]
-  onOpenDevice: (device: DeviceInfo) => void
+  devices: DeviceInfo[];
+  onOpenDevice: (device: DeviceInfo) => void;
 }
 
 export default function DevicesListView({
@@ -20,12 +20,12 @@ export default function DevicesListView({
     return (
       <div
         className="flex flex-col items-center justify-center py-12"
-        style={{color: "var(--color-text-neutral-secondary)"}}
+        style={{color: 'var(--color-text-neutral-secondary)'}}
       >
         <Smartphone className="mb-4" size={48} />
         <p className="text-lg">No devices found</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -36,33 +36,33 @@ export default function DevicesListView({
           className="flex cursor-pointer items-center gap-4 rounded p-3 transition-colors hover:bg-opacity-10"
           onClick={() => onOpenDevice(device)}
           style={{
-            backgroundColor: "var(--color-surface-raised)",
-            border: "1px solid var(--color-border-neutral-02)",
+            backgroundColor: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border-neutral-02)',
           }}
         >
           {/* Icon */}
           <Smartphone
             size={24}
-            style={{color: "var(--color-text-neutral-primary)"}}
+            style={{color: 'var(--color-text-neutral-primary)'}}
           />
 
           {/* Device Info */}
           <div className="min-w-0 flex-1">
             <h3
               className="truncate font-semibold"
-              style={{color: "var(--color-text-neutral-primary)"}}
+              style={{color: 'var(--color-text-neutral-primary)'}}
             >
               {device.name}
             </h3>
             <p
               className="truncate text-sm"
-              style={{color: "var(--color-text-neutral-secondary)"}}
+              style={{color: 'var(--color-text-neutral-secondary)'}}
             >
-              {device.description || "No description"}
+              {device.description || 'No description'}
             </p>
           </div>
         </div>
       ))}
     </div>
-  )
+  );
 }

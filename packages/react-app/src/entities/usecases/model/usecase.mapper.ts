@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {UsecaseCategory} from "~features/usecase-selection"
+import type {UsecaseCategory} from '~features/usecase-selection';
 
-import type {UsecaseIdentifier, UsecaseResponseDto} from "./usecase.dto"
+import type {UsecaseIdentifier, UsecaseResponseDto} from './usecase.dto';
 
 /**
  * Maps backend UsecaseResponseDto to UI UsecaseCategory format
@@ -14,39 +14,39 @@ import type {UsecaseIdentifier, UsecaseResponseDto} from "./usecase.dto"
 export function mapUsecaseDtoToCategories(
   dtoArray: UsecaseResponseDto[],
 ): UsecaseCategory[] {
-  const categories: UsecaseCategory[] = []
+  const categories: UsecaseCategory[] = [];
 
   // Group usecases by category
-  const categoryMap = new Map<string, UsecaseIdentifier[]>()
+  const categoryMap = new Map<string, UsecaseIdentifier[]>();
 
   dtoArray.forEach((dto) => {
     dto.usecases.forEach((usecaseIdentifier) => {
       // Determine category based on usecase type or alias
       const categoryName = usecaseIdentifier.usecaseAliasName
-        ? "Recently Selected"
-        : "Default"
+        ? 'Recently Selected'
+        : 'Default';
 
       if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, [])
+        categoryMap.set(categoryName, []);
       }
-      categoryMap.get(categoryName)!.push(usecaseIdentifier)
-    })
-  })
+      categoryMap.get(categoryName)!.push(usecaseIdentifier);
+    });
+  });
 
   // Convert map to array of categories
   categoryMap.forEach((usecases, categoryName) => {
     categories.push({
-      expanded: categoryName === "Recently Selected", // Auto-expand recently selected
+      expanded: categoryName === 'Recently Selected', // Auto-expand recently selected
       name: categoryName,
       usecases,
-    })
-  })
-  return categories
+    });
+  });
+  return categories;
 }
 
 /**
  * Creates empty usecase categories for initial state
  */
 export function createEmptyUsecaseCategories(): UsecaseCategory[] {
-  return []
+  return [];
 }

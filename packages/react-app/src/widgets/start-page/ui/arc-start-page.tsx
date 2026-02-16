@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo, useState} from "react"
+import {useMemo, useState} from 'react';
 
 import {
   BookOpen,
@@ -19,59 +19,59 @@ import {
   Logs,
   Search,
   Smartphone,
-} from "lucide-react"
-import {createPortal} from "react-dom"
+} from 'lucide-react';
+import {createPortal} from 'react-dom';
 
-import {Button, IconButton} from "@qualcomm-ui/react/button"
-import {Combobox} from "@qualcomm-ui/react/combobox"
-import {ProgressRing} from "@qualcomm-ui/react/progress-ring"
-import {useListCollection} from "@qualcomm-ui/react-core/collection"
-import {useFilter} from "@qualcomm-ui/react-core/locale"
+import {Button, IconButton} from '@qualcomm-ui/react/button';
+import {Combobox} from '@qualcomm-ui/react/combobox';
+import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
+import {useListCollection} from '@qualcomm-ui/react-core/collection';
+import {useFilter} from '@qualcomm-ui/react-core/locale';
 
-import {ProjectService} from "~entities/project/services"
-import {useDeviceManager} from "~features/device-operations"
+import {ProjectService} from '~entities/project/services';
+import {useDeviceManager} from '~features/device-operations';
 import {
   useProjectLifecycle,
   useProjectOpener,
-} from "~features/project-operations"
-import useArcRecentProjects from "~features/recent-projects/hooks/use-recent-projects"
-import UnifiedGridView from "~features/recent-projects/ui/unified-grid-view"
-import UnifiedListView from "~features/recent-projects/ui/unified-list-view"
-import ArcSearchBar from "~shared/controls/arc-search-bar"
-import {showToast} from "~shared/controls/global-toaster"
-import {logger} from "~shared/lib/logger"
-import {useRegisterSideNav, useSideNav} from "~shared/lib/side-nav"
-import type DeviceInfo from "~shared/types/device-info.types"
-import type ProjectInfo from "~shared/types/project-info.types"
+} from '~features/project-operations';
+import useArcRecentProjects from '~features/recent-projects/hooks/use-recent-projects';
+import UnifiedGridView from '~features/recent-projects/ui/unified-grid-view';
+import UnifiedListView from '~features/recent-projects/ui/unified-list-view';
+import ArcSearchBar from '~shared/controls/arc-search-bar';
+import {showToast} from '~shared/controls/global-toaster';
+import {logger} from '~shared/lib/logger';
+import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
+import type DeviceInfo from '~shared/types/device-info.types';
+import type ProjectInfo from '~shared/types/project-info.types';
 
-const projectTypes = ["Active", "Inactive", "Diff/Merge"]
+const projectTypes = ['Active', 'Inactive', 'Diff/Merge'];
 
 export type ArcStartPageProps = {
   /** An event triggered by double-clicking a device card */
-  onOpenDeviceProject?: (device: DeviceInfo) => void
+  onOpenDeviceProject?: (device: DeviceInfo) => void;
   /** An event triggered by double-clicking a project card */
-  onOpenWorkspaceProject?: (project: ProjectInfo) => void
+  onOpenWorkspaceProject?: (project: ProjectInfo) => void;
   /** Tab ID for side nav registration */
-  tabId?: string
-}
+  tabId?: string;
+};
 
 export default function ArcStartPage({
   onOpenDeviceProject,
   onOpenWorkspaceProject,
   tabId,
 }: ArcStartPageProps) {
-  const [showProjects, setShowProjects] = useState(true)
-  const [showDevices, setShowDevices] = useState(true)
+  const [showProjects, setShowProjects] = useState(true);
+  const [showDevices, setShowDevices] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "release-notes" | "user-guide" | null
-  >(null)
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
-  const [searchTerm, setSearchTerm] = useState<string>("")
+    'release-notes' | 'user-guide' | null
+  >(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const {projects: recentProjects, removeFromRecent} = useArcRecentProjects()
+  const {projects: recentProjects, removeFromRecent} = useArcRecentProjects();
 
   // Project lifecycle management (screenshot capture on close)
-  const {handleProjectClose, screenshotRegistry} = useProjectLifecycle()
+  const {handleProjectClose, screenshotRegistry} = useProjectLifecycle();
 
   // Project opening operations
   const {loadingState, openRecentProject, openWorkspaceProject} =
@@ -79,64 +79,64 @@ export default function ArcStartPage({
       onProjectClose: handleProjectClose,
       onProjectOpened: onOpenWorkspaceProject,
       screenshotRegistry,
-    })
+    });
 
   // Device management
   const {filteredDevices, openDevice} = useDeviceManager({
     onDeviceOpened: onOpenDeviceProject,
     searchTerm,
-  })
+  });
 
   // Hooks for Combobox collection
-  const {contains} = useFilter({sensitivity: "base"})
+  const {contains} = useFilter({sensitivity: 'base'});
   const {collection} = useListCollection({
     filter: contains,
     initialItems: projectTypes,
-  })
+  });
 
   const filteredProjects = useMemo(() => {
     if (recentProjects === undefined) {
-      return []
+      return [];
     }
 
     return recentProjects.filter((project: ProjectInfo) => {
       // Check if searchTerm is valid
-      if (!searchTerm || searchTerm.trim() === "") {
-        return true
+      if (!searchTerm || searchTerm.trim() === '') {
+        return true;
       }
 
       // Check if project.name exists before filtering
       if (!project.name) {
-        return false
+        return false;
       }
 
-      return project.name.toLowerCase().includes(searchTerm.toLowerCase())
-    })
-  }, [recentProjects, searchTerm])
+      return project.name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [recentProjects, searchTerm]);
 
   async function handleShowInExplorer(projectId: string) {
-    const project = recentProjects.find((p) => p.id === projectId)
+    const project = recentProjects.find((p) => p.id === projectId);
     if (!project) {
-      return
+      return;
     }
 
     try {
-      await ProjectService.showInExplorer(project.filepath)
+      await ProjectService.showInExplorer(project.filepath);
     } catch (error) {
-      logger.error("Error showing project in explorer", {
-        action: "show_in_explorer",
-        component: "ArcStartPage",
+      logger.error('Error showing project in explorer', {
+        action: 'show_in_explorer',
+        component: 'ArcStartPage',
         error: error instanceof Error ? error.message : String(error),
-      })
-      showToast("Failed to open file in explorer", "danger")
+      });
+      showToast('Failed to open file in explorer', 'danger');
     }
   }
 
   function handleOnFilterOptionChanged(value: string | undefined) {
     logger.verbose(`Filter option changed: ${value}`, {
-      action: "filter_option_changed",
-      component: "ArcStartPage",
-    })
+      action: 'filter_option_changed',
+      component: 'ArcStartPage',
+    });
     // TODO: Implement filter logic when needed
   }
 
@@ -145,104 +145,104 @@ export default function ArcStartPage({
     () => [
       {
         icon: Search,
-        id: "search",
-        label: "Search",
-        shortcut: "Ctrl+F",
+        id: 'search',
+        label: 'Search',
+        shortcut: 'Ctrl+F',
       },
       {
         icon: Logs,
-        id: "log-folder",
-        label: "View Log Folder",
+        id: 'log-folder',
+        label: 'View Log Folder',
       },
       {
-        group: "Help",
+        group: 'Help',
         icon: HelpCircle,
-        id: "help",
-        label: "Help",
-        shortcut: "F1",
+        id: 'help',
+        label: 'Help',
+        shortcut: 'F1',
       },
       {
-        group: "Help",
+        group: 'Help',
         icon: Info,
-        id: "about",
-        label: "About",
+        id: 'about',
+        label: 'About',
       },
     ],
     [],
-  )
+  );
 
   const sideNavHandlers = useMemo(
     () => ({
       about: () => {
-        logger.info("About action triggered", {
-          action: "about",
-          component: "ArcStartPage",
-        })
-        showToast("About AudioReach Creator", "info")
+        logger.info('About action triggered', {
+          action: 'about',
+          component: 'ArcStartPage',
+        });
+        showToast('About AudioReach Creator', 'info');
       },
       help: () => {
-        logger.info("Help action triggered", {
-          action: "help",
-          component: "ArcStartPage",
-        })
-        showToast("Help opened", "info")
+        logger.info('Help action triggered', {
+          action: 'help',
+          component: 'ArcStartPage',
+        });
+        showToast('Help opened', 'info');
       },
-      "log-folder": () => {
-        logger.info("Log folder triggered", {
-          action: "log-folder",
-          component: "ArcStartPage",
-        })
-        showToast("Log folder opened", "info")
+      'log-folder': () => {
+        logger.info('Log folder triggered', {
+          action: 'log-folder',
+          component: 'ArcStartPage',
+        });
+        showToast('Log folder opened', 'info');
       },
-      "release-notes": () => {
-        logger.info("Release notes action triggered", {
-          action: "release_notes",
-          component: "ArcStartPage",
-        })
-        showToast("Opening release notes", "info")
+      'release-notes': () => {
+        logger.info('Release notes action triggered', {
+          action: 'release_notes',
+          component: 'ArcStartPage',
+        });
+        showToast('Opening release notes', 'info');
       },
       search: () => {
-        logger.info("Search action triggered", {
-          action: "search",
-          component: "ArcStartPage",
-        })
-        showToast("Search functionality", "info")
+        logger.info('Search action triggered', {
+          action: 'search',
+          component: 'ArcStartPage',
+        });
+        showToast('Search functionality', 'info');
       },
-      "user-guide": () => {
-        logger.info("User guide action triggered", {
-          action: "user_guide",
-          component: "ArcStartPage",
-        })
-        showToast("Opening user guide", "info")
+      'user-guide': () => {
+        logger.info('User guide action triggered', {
+          action: 'user_guide',
+          component: 'ArcStartPage',
+        });
+        showToast('Opening user guide', 'info');
       },
     }),
     [],
-  )
+  );
 
   const sideNavShortcuts = useMemo(
     () => ({
-      "Ctrl+f": () => {
-        logger.info("Search shortcut triggered", {
-          action: "search",
-          component: "ArcStartPage",
-        })
-        showToast("Search functionality", "info")
+      'Ctrl+f': () => {
+        logger.info('Search shortcut triggered', {
+          action: 'search',
+          component: 'ArcStartPage',
+        });
+        showToast('Search functionality', 'info');
       },
-      "F1": () => {
-        logger.info("Help shortcut triggered", {
-          action: "help",
-          component: "ArcStartPage",
-        })
-        showToast("Help opened", "info")
+      F1: () => {
+        logger.info('Help shortcut triggered', {
+          action: 'help',
+          component: 'ArcStartPage',
+        });
+        showToast('Help opened', 'info');
       },
     }),
     [],
-  )
+  );
 
-  const sideNav = useSideNav(sideNavItems, sideNavHandlers, sideNavShortcuts)
+  const sideNav = useSideNav(sideNavItems, sideNavHandlers, sideNavShortcuts);
 
   // Register side nav with provider
-  useRegisterSideNav(tabId, sideNav)
+  useRegisterSideNav(tabId, sideNav);
 
   return (
     <>
@@ -252,13 +252,13 @@ export default function ArcStartPage({
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center"
             style={{
-              backdropFilter: "blur(2px)",
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              backdropFilter: 'blur(2px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
             }}
           >
             <div
               className="rounded-lg p-8 shadow-xl"
-              style={{backgroundColor: "var(--color-surface-raised)"}}
+              style={{backgroundColor: 'var(--color-surface-raised)'}}
             >
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
@@ -266,13 +266,13 @@ export default function ArcStartPage({
                 </div>
                 <div
                   className="mb-2 text-lg font-semibold"
-                  style={{color: "var(--color-text-neutral-primary)"}}
+                  style={{color: 'var(--color-text-neutral-primary)'}}
                 >
-                  {loadingState.message || "Processing..."}
+                  {loadingState.message || 'Processing...'}
                 </div>
                 <div
                   className="text-sm"
-                  style={{color: "var(--color-text-neutral-secondary)"}}
+                  style={{color: 'var(--color-text-neutral-secondary)'}}
                 >
                   Please wait for the files to be processed ...
                 </div>
@@ -286,55 +286,55 @@ export default function ArcStartPage({
         {/* Top Navigation Bar */}
         <div
           className="flex gap-2 p-2.5"
-          style={{borderBottom: "1px solid var(--color-border-neutral-02)"}}
+          style={{borderBottom: '1px solid var(--color-border-neutral-02)'}}
         >
           <Button
-            emphasis={showProjects ? "primary" : "neutral"}
+            emphasis={showProjects ? 'primary' : 'neutral'}
             onClick={() => {
-              setShowProjects(!showProjects)
-              setActiveTab(null)
+              setShowProjects(!showProjects);
+              setActiveTab(null);
             }}
             size="md"
             startIcon={Database}
-            variant={showProjects ? "fill" : "outline"}
+            variant={showProjects ? 'fill' : 'outline'}
           >
             Projects
           </Button>
           <Button
-            emphasis={showDevices ? "primary" : "neutral"}
+            emphasis={showDevices ? 'primary' : 'neutral'}
             onClick={() => {
-              setShowDevices(!showDevices)
-              setActiveTab(null)
+              setShowDevices(!showDevices);
+              setActiveTab(null);
             }}
             size="md"
             startIcon={Smartphone}
-            variant={showDevices ? "fill" : "outline"}
+            variant={showDevices ? 'fill' : 'outline'}
           >
             Devices
           </Button>
           <Button
-            emphasis={activeTab === "release-notes" ? "primary" : "neutral"}
+            emphasis={activeTab === 'release-notes' ? 'primary' : 'neutral'}
             onClick={() => {
-              setActiveTab("release-notes")
-              setShowProjects(false)
-              setShowDevices(false)
+              setActiveTab('release-notes');
+              setShowProjects(false);
+              setShowDevices(false);
             }}
             size="md"
             startIcon={FileText}
-            variant={activeTab === "release-notes" ? "fill" : "outline"}
+            variant={activeTab === 'release-notes' ? 'fill' : 'outline'}
           >
             Release Notes
           </Button>
           <Button
-            emphasis={activeTab === "user-guide" ? "primary" : "neutral"}
+            emphasis={activeTab === 'user-guide' ? 'primary' : 'neutral'}
             onClick={() => {
-              setActiveTab("user-guide")
-              setShowProjects(false)
-              setShowDevices(false)
+              setActiveTab('user-guide');
+              setShowProjects(false);
+              setShowDevices(false);
             }}
             size="md"
             startIcon={BookOpen}
-            variant={activeTab === "user-guide" ? "fill" : "outline"}
+            variant={activeTab === 'user-guide' ? 'fill' : 'outline'}
           >
             User Guide
           </Button>
@@ -377,23 +377,23 @@ export default function ArcStartPage({
           {/* List View Toggle */}
           <IconButton
             aria-label="List View"
-            emphasis={viewMode === "list" ? "primary" : "neutral"}
+            emphasis={viewMode === 'list' ? 'primary' : 'neutral'}
             icon={List}
-            onClick={() => setViewMode("list")}
+            onClick={() => setViewMode('list')}
             size="md"
             title="List View"
-            variant={viewMode === "list" ? "fill" : "outline"}
+            variant={viewMode === 'list' ? 'fill' : 'outline'}
           />
 
           {/* Grid View Toggle */}
           <IconButton
             aria-label="Grid View"
-            emphasis={viewMode === "grid" ? "primary" : "neutral"}
+            emphasis={viewMode === 'grid' ? 'primary' : 'neutral'}
             icon={Grid3x3}
-            onClick={() => setViewMode("grid")}
+            onClick={() => setViewMode('grid')}
             size="md"
             title="Grid View"
-            variant={viewMode === "grid" ? "fill" : "outline"}
+            variant={viewMode === 'grid' ? 'fill' : 'outline'}
           />
 
           {/* Filter */}
@@ -415,7 +415,7 @@ export default function ArcStartPage({
           {/* Unified Projects & Devices View */}
           {!activeTab && (
             <>
-              {viewMode === "grid" ? (
+              {viewMode === 'grid' ? (
                 <UnifiedGridView
                   devices={filteredDevices}
                   onOpenDevice={openDevice}
@@ -442,40 +442,40 @@ export default function ArcStartPage({
           )}
 
           {/* Release Notes Tab */}
-          {activeTab === "release-notes" && (
+          {activeTab === 'release-notes' && (
             <div className="flex flex-col items-center justify-center py-12">
               <FileText
                 className="mb-4"
                 size={48}
-                style={{color: "var(--color-text-neutral-secondary)"}}
+                style={{color: 'var(--color-text-neutral-secondary)'}}
               />
               <h2
                 className="mb-2 text-xl font-semibold"
-                style={{color: "var(--color-text-neutral-primary)"}}
+                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 Release Notes
               </h2>
-              <p style={{color: "var(--color-text-neutral-secondary)"}}>
+              <p style={{color: 'var(--color-text-neutral-secondary)'}}>
                 Release notes content will be displayed here.
               </p>
             </div>
           )}
 
           {/* User Guide Tab */}
-          {activeTab === "user-guide" && (
+          {activeTab === 'user-guide' && (
             <div className="flex flex-col items-center justify-center py-12">
               <BookOpen
                 className="mb-4"
                 size={48}
-                style={{color: "var(--color-text-neutral-secondary)"}}
+                style={{color: 'var(--color-text-neutral-secondary)'}}
               />
               <h2
                 className="mb-2 text-xl font-semibold"
-                style={{color: "var(--color-text-neutral-primary)"}}
+                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 User Guide
               </h2>
-              <p style={{color: "var(--color-text-neutral-secondary)"}}>
+              <p style={{color: 'var(--color-text-neutral-secondary)'}}>
                 User guide content will be displayed here.
               </p>
             </div>
@@ -483,5 +483,5 @@ export default function ArcStartPage({
         </div>
       </div>
     </>
-  )
+  );
 }

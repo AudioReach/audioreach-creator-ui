@@ -20,7 +20,8 @@
     "package": "electron-builder --dir --config electron-builder.config.ts",
     "lint": "eslint",
     "test": "cross-env DEBUG=pw:browser* playwright test",
-    "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test"
+    "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test",
+    "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
   },
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",

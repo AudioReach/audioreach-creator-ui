@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ApiResult, httpClient} from "~shared/api"
+import {type ApiResult, httpClient} from '~shared/api';
 
-import type {UsecaseComponentsDto} from "../model/usecase-component.dto"
-import type {UsecaseResponseDto} from "../model/usecase.dto"
+import type {UsecaseComponentsDto} from '../model/usecase-component.dto';
+import type {UsecaseResponseDto} from '../model/usecase.dto';
 
 /**
  * Fetch all usecases for a specific project.
@@ -16,7 +16,9 @@ import type {UsecaseResponseDto} from "../model/usecase.dto"
 export async function getAllUsecases(
   projectId: string,
 ): Promise<ApiResult<UsecaseResponseDto[]>> {
-  return httpClient.get<UsecaseResponseDto[]>(`/projects/${projectId}/usecases`)
+  return httpClient.get<UsecaseResponseDto[]>(
+    `/projects/${projectId}/usecases`,
+  );
 }
 
 export async function getUsecaseComponents(
@@ -26,5 +28,5 @@ export async function getUsecaseComponents(
   return httpClient.post<UsecaseComponentsDto[]>(
     `/projects/${projectId}/usecases/getComponents`,
     {systemIds},
-  )
+  );
 }

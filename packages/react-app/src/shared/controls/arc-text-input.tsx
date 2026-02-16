@@ -3,36 +3,36 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ChangeEvent, Component, type KeyboardEvent} from "react"
+import {type ChangeEvent, Component, type KeyboardEvent} from 'react';
 
-import {TextInput, type TextInputProps} from "@qualcomm-ui/react/text-input"
+import {TextInput, type TextInputProps} from '@qualcomm-ui/react/text-input';
 
 /**
  * Props interface for ArcTextInput component
  * Extends QTextInputProps but overrides onChange for enhanced functionality
  */
-export interface ArcTextInputProps extends Omit<TextInputProps, "onChange"> {
+export interface ArcTextInputProps extends Omit<TextInputProps, 'onChange'> {
   // Enhanced numeric features
   /** Allow hexadecimal input (e.g., "0xFF" or "FF") for numeric types */
-  acceptHex?: boolean
+  acceptHex?: boolean;
   /** Number of decimal places allowed for numeric inputs (0 = integers only) */
-  decimalPrecision?: number
+  decimalPrecision?: number;
 
   // HTML input attributes that QTextInput might not have
   /** Maximum numeric value (for number inputs) */
-  max?: number
+  max?: number;
   /** Minimum numeric value (for number inputs) */
-  min?: number
+  min?: number;
 
   // Custom event signatures (override QTextInput's onChange)
   /** Enhanced onChange handler that provides both value and event */
-  onChange?: (value: string, event: ChangeEvent<HTMLInputElement>) => void
+  onChange?: (value: string, event: ChangeEvent<HTMLInputElement>) => void;
   /** Key press event handler */
-  onKeyPress?: (event: KeyboardEvent<HTMLInputElement>) => void
+  onKeyPress?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** Whether the field is required for validation */
-  required?: boolean
+  required?: boolean;
   /** Input type - determines validation and formatting behavior */
-  type?: "text" | "number"
+  type?: 'text' | 'number';
 }
 
 /**
@@ -40,7 +40,7 @@ export interface ArcTextInputProps extends Omit<TextInputProps, "onChange"> {
  */
 interface ArcTextInputState {
   /** Current validation error message, if any */
-  validationError?: string
+  validationError?: string;
 }
 
 /**
@@ -51,20 +51,20 @@ export class ArcTextInput extends Component<
   ArcTextInputProps,
   ArcTextInputState
 > {
-  static displayName = "ArcTextInput"
+  static displayName = 'ArcTextInput';
 
   constructor(props: ArcTextInputProps) {
-    super(props)
+    super(props);
     this.state = {
       validationError: undefined,
-    }
+    };
   }
 
   /**
    * Component lifecycle: Validate initial value when component mounts
    */
   componentDidMount() {
-    this.validateCurrentValue()
+    this.validateCurrentValue();
   }
 
   /**
@@ -72,7 +72,7 @@ export class ArcTextInput extends Component<
    */
   componentDidUpdate(prevProps: ArcTextInputProps) {
     if (prevProps.value !== this.props.value) {
-      this.validateCurrentValue()
+      this.validateCurrentValue();
     }
   }
 
@@ -82,12 +82,12 @@ export class ArcTextInput extends Component<
    * we use "text" type to have full control over input validation
    */
   private getInputType = (): string => {
-    const {acceptHex, decimalPrecision, type = "text"} = this.props
-    const isNumeric = type === "number"
-    return isNumeric && (acceptHex || typeof decimalPrecision === "number")
-      ? "text"
-      : type
-  }
+    const {acceptHex, decimalPrecision, type = 'text'} = this.props;
+    const isNumeric = type === 'number';
+    return isNumeric && (acceptHex || typeof decimalPrecision === 'number')
+      ? 'text'
+      : type;
+  };
 
   /**
    * Calculates the step value for HTML number inputs
@@ -96,20 +96,20 @@ export class ArcTextInput extends Component<
    * For precision 3: step="0.001" (thousandths), etc.
    */
   private getStepValue = (): string | undefined => {
-    const {decimalPrecision} = this.props
-    const inputType = this.getInputType()
+    const {decimalPrecision} = this.props;
+    const inputType = this.getInputType();
 
     if (
-      inputType === "number" &&
-      typeof decimalPrecision === "number" &&
+      inputType === 'number' &&
+      typeof decimalPrecision === 'number' &&
       decimalPrecision >= 0
     ) {
       return decimalPrecision === 0
-        ? "1"
-        : `0.${"0".repeat(decimalPrecision - 1)}1`
+        ? '1'
+        : `0.${'0'.repeat(decimalPrecision - 1)}1`;
     }
-    return undefined
-  }
+    return undefined;
+  };
 
   /**
    * Enhanced change handler that validates input and provides error feedback
@@ -119,34 +119,34 @@ export class ArcTextInput extends Component<
     event?: ChangeEvent<HTMLInputElement>,
   ) => {
     // Validate the new value and update error state
-    const validationError = this.validateValue(newValue)
-    this.setState({validationError})
+    const validationError = this.validateValue(newValue);
+    this.setState({validationError});
 
     // Call the user's onChange callback if provided
     if (this.props.onChange && event) {
-      this.props.onChange(newValue, event)
+      this.props.onChange(newValue, event);
     }
-  }
+  };
 
   /**
    * Handles keydown events for onKeyPress prop support
    */
   private handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    const {onKeyPress} = this.props
+    const {onKeyPress} = this.props;
 
     if (onKeyPress) {
-      onKeyPress(event)
+      onKeyPress(event);
     }
-  }
+  };
 
   /**
    * Helper function to convert hexadecimal string to decimal number
    * Handles both "0x" prefixed and plain hex strings
    */
   private hexToDecimal = (hexVal: string): number => {
-    const cleanVal = hexVal.toLowerCase().replace(/^0x/, "")
-    return parseInt(cleanVal, 16)
-  }
+    const cleanVal = hexVal.toLowerCase().replace(/^0x/, '');
+    return parseInt(cleanVal, 16);
+  };
 
   /**
    * Helper function to validate if a string is a valid hexadecimal number
@@ -154,11 +154,11 @@ export class ArcTextInput extends Component<
    */
   private isValidHex = (val: string): boolean => {
     if (!val) {
-      return false
+      return false;
     }
-    const cleanVal = val.toLowerCase().replace(/^0x/, "")
-    return /^[0-9a-f]+$/.test(cleanVal)
-  }
+    const cleanVal = val.toLowerCase().replace(/^0x/, '');
+    return /^[0-9a-f]+$/.test(cleanVal);
+  };
 
   /**
    * Renders the ArcTextInput component
@@ -187,24 +187,24 @@ export class ArcTextInput extends Component<
       size,
       style,
       value,
-    } = this.props
+    } = this.props;
 
-    const {validationError} = this.state
+    const {validationError} = this.state;
 
     // Determine final error message (manual error prop takes precedence)
-    const finalError = errorText || validationError
+    const finalError = errorText || validationError;
 
-    const inputType = this.getInputType()
-    const stepValue = this.getStepValue()
+    const inputType = this.getInputType();
+    const stepValue = this.getStepValue();
 
     // Input props for QTextInput - configure the underlying HTML input element
     const inputProps = {
-      max: inputType === "number" ? max : undefined,
-      min: inputType === "number" ? min : undefined,
+      max: inputType === 'number' ? max : undefined,
+      min: inputType === 'number' ? min : undefined,
       onKeyDown: this.handleKeyDown,
       step: stepValue,
       type: inputType,
-    }
+    };
 
     return (
       <TextInput
@@ -229,7 +229,7 @@ export class ArcTextInput extends Component<
         style={style}
         value={value ? String(value) : undefined}
       />
-    )
+    );
   }
 
   /**
@@ -239,38 +239,38 @@ export class ArcTextInput extends Component<
    */
   private shouldTreatAsHex = (val: string): boolean => {
     if (!val) {
-      return false
+      return false;
     }
 
-    const lowerVal = val.toLowerCase()
+    const lowerVal = val.toLowerCase();
 
     // If it starts with 0x, definitely treat as hex
-    if (lowerVal.startsWith("0x")) {
-      return true
+    if (lowerVal.startsWith('0x')) {
+      return true;
     }
 
     // If it contains hex letters (a-f), treat as hex
     if (/[a-f]/i.test(val)) {
-      return true
+      return true;
     }
 
     // If it's purely numeric (like "123"), treat as decimal
     if (/^\d+$/.test(val)) {
-      return false
+      return false;
     }
 
     // For other cases with mixed characters, treat as hex if it could be valid hex
-    return /^[0-9a-f]+$/i.test(val)
-  }
+    return /^[0-9a-f]+$/i.test(val);
+  };
 
   /**
    * Validates the current value and updates the component state
    * Called internally when the component mounts or value changes
    */
   private validateCurrentValue = () => {
-    const validationError = this.validateValue(String(this.props.value || ""))
-    this.setState({validationError})
-  }
+    const validationError = this.validateValue(String(this.props.value || ''));
+    this.setState({validationError});
+  };
 
   /**
    * Enhanced validation logic for all input types with improved error messages
@@ -284,97 +284,97 @@ export class ArcTextInput extends Component<
       max,
       min,
       required,
-      type = "text",
-    } = this.props
+      type = 'text',
+    } = this.props;
 
     // Check required field validation
     if (!val && required) {
-      return "This field is required"
+      return 'This field is required';
     }
 
-    const isNumeric = type === "number"
+    const isNumeric = type === 'number';
     if (val && isNumeric) {
-      let numValue: number
-      let isHex = false
+      let numValue: number;
+      let isHex = false;
 
       // Check if acceptHex is enabled
       if (acceptHex) {
         // First, try to determine if this looks like it should be hex
-        const looksLikeHex = this.shouldTreatAsHex(val)
+        const looksLikeHex = this.shouldTreatAsHex(val);
 
         if (looksLikeHex) {
           // User is trying to enter hex, validate it
           if (this.isValidHex(val)) {
-            numValue = this.hexToDecimal(val)
-            isHex = true
+            numValue = this.hexToDecimal(val);
+            isHex = true;
           } else {
-            return "Please enter a valid hexadecimal number"
+            return 'Please enter a valid hexadecimal number';
           }
         } else {
           // Try parsing as decimal first
-          numValue = parseFloat(val)
+          numValue = parseFloat(val);
           if (isNaN(numValue)) {
             // If it's not a valid decimal and acceptHex is true,
             // check if it might be an invalid hex attempt
             if (/[a-z]/i.test(val)) {
-              return "Please enter a valid number or hexadecimal value"
+              return 'Please enter a valid number or hexadecimal value';
             }
-            return "Please enter a valid number or hexadecimal value"
+            return 'Please enter a valid number or hexadecimal value';
           }
 
           // Check if the entire string is a valid decimal number
           // parseFloat is too lenient and parses partial numbers like "45gghgg" ->
           // 45
           if (!/^\d*\.?\d+$/.test(val)) {
-            return "Please enter a valid number or hexadecimal value"
+            return 'Please enter a valid number or hexadecimal value';
           }
         }
       } else {
         // Parse as regular decimal number only
-        numValue = parseFloat(val)
+        numValue = parseFloat(val);
         if (isNaN(numValue)) {
-          return "Please enter a valid number"
+          return 'Please enter a valid number';
         }
 
         // Check if the entire string is a valid decimal number
         // parseFloat is too lenient and parses partial numbers like "45gghgg" -> 45
         if (!/^\d*\.?\d+$/.test(val)) {
-          return "Please enter a valid number"
+          return 'Please enter a valid number';
         }
       }
 
       // Check decimal precision constraints for non-hex values
-      if (!isHex && typeof decimalPrecision === "number") {
+      if (!isHex && typeof decimalPrecision === 'number') {
         if (decimalPrecision === 0) {
           // For precision 0, check if there are any decimal points
-          if (val.includes(".")) {
-            return "Decimal points are not allowed for this field"
+          if (val.includes('.')) {
+            return 'Decimal points are not allowed for this field';
           }
           // Check if it's a whole number
           if (numValue !== Math.floor(numValue)) {
-            return "Please enter a whole number"
+            return 'Please enter a whole number';
           }
         } else {
           // For other precisions, check decimal places
-          const decimalPart = val.split(".")[1]
+          const decimalPart = val.split('.')[1];
           if (decimalPart && decimalPart.length > decimalPrecision) {
-            return `Maximum ${decimalPrecision} decimal place${decimalPrecision === 1 ? "" : "s"} allowed`
+            return `Maximum ${decimalPrecision} decimal place${decimalPrecision === 1 ? '' : 's'} allowed`;
           }
         }
       }
 
       // Validate numeric range constraints
-      if (typeof min === "number" && numValue < min) {
-        return `Value must be at least ${min}${isHex ? ` (0x${min.toString(16).toUpperCase()})` : ""}`
+      if (typeof min === 'number' && numValue < min) {
+        return `Value must be at least ${min}${isHex ? ` (0x${min.toString(16).toUpperCase()})` : ''}`;
       }
 
-      if (typeof max === "number" && numValue > max) {
-        return `Value must be at most ${max}${isHex ? ` (0x${max.toString(16).toUpperCase()})` : ""}`
+      if (typeof max === 'number' && numValue > max) {
+        return `Value must be at most ${max}${isHex ? ` (0x${max.toString(16).toUpperCase()})` : ''}`;
       }
     }
 
-    return undefined
-  }
+    return undefined;
+  };
 }
 
-export default ArcTextInput
+export default ArcTextInput;

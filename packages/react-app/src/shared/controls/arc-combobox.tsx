@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from "react"
+import {useMemo} from 'react';
 
-import {Combobox} from "@qualcomm-ui/react/combobox"
-import {useListCollection} from "@qualcomm-ui/react-core/collection"
+import {Combobox} from '@qualcomm-ui/react/combobox';
+import {useListCollection} from '@qualcomm-ui/react-core/collection';
 
 /**
  * ArcCombobox - A wrapper around the new Combobox from qualcomm-ui
@@ -14,39 +14,39 @@ import {useListCollection} from "@qualcomm-ui/react-core/collection"
  */
 export interface ArcComboboxProps<T = string> {
   /** Custom CSS class name */
-  className?: string
+  className?: string;
   /** Whether the combobox is disabled */
-  disabled?: boolean
+  disabled?: boolean;
   /** Error state - boolean or error message string */
-  error?: boolean | string
+  error?: boolean | string;
   /** Enable filtering/search functionality */
-  filterable?: boolean
+  filterable?: boolean;
   /** Make the combobox take full width of container */
-  fullWidth?: boolean
+  fullWidth?: boolean;
   /** Helper text displayed below the input */
-  hint?: string
+  hint?: string;
   /** Unique identifier */
-  id?: string
+  id?: string;
   /** Label text for the combobox */
-  label?: string
+  label?: string;
   /** Minimum width of the combobox */
-  minWidth?: string | number
+  minWidth?: string | number;
   /** Enable multiple selection */
-  multiple?: boolean
+  multiple?: boolean;
   /** Change handler - called when selection changes */
-  onChange?: (value: T | T[]) => void
+  onChange?: (value: T | T[]) => void;
   /** Array of options to display */
-  options?: T[]
+  options?: T[];
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string;
   /** Whether the field is required */
-  required?: boolean
+  required?: boolean;
   /** Custom inline styles */
-  style?: React.CSSProperties
+  style?: React.CSSProperties;
   /** Current selected value(s) */
-  value?: T | T[]
+  value?: T | T[];
   /** Width of the combobox */
-  width?: string | number
+  width?: string | number;
 }
 
 export const ArcCombobox = <T extends string = string>(
@@ -70,7 +70,7 @@ export const ArcCombobox = <T extends string = string>(
     style,
     value,
     width,
-  } = props
+  } = props;
 
   // Create collection from options array using the hook
   const {collection} = useListCollection({
@@ -78,43 +78,43 @@ export const ArcCombobox = <T extends string = string>(
       label: String(option),
       value: String(option),
     })),
-  })
+  });
 
   // Handle value change
   const handleValueChange = (details: {value: string[]}) => {
     if (onChange) {
       if (multiple) {
         // For multiple selection, return array
-        onChange(details.value as T | T[])
+        onChange(details.value as T | T[]);
       } else {
         // For single selection, return single value or empty string
-        onChange((details.value[0] || "") as T | T[])
+        onChange((details.value[0] || '') as T | T[]);
       }
     }
-  }
+  };
 
   // Normalize value to array format for the Combobox
   const normalizedValue = useMemo(() => {
     if (!value) {
-      return []
+      return [];
     }
-    return Array.isArray(value) ? value.map(String) : [String(value)]
-  }, [value])
+    return Array.isArray(value) ? value.map(String) : [String(value)];
+  }, [value]);
 
   // Determine error state
-  const isInvalid = typeof error === "boolean" ? error : !!error
-  const errorMessage = typeof error === "string" ? error : undefined
+  const isInvalid = typeof error === 'boolean' ? error : !!error;
+  const errorMessage = typeof error === 'string' ? error : undefined;
 
   // Container styles
   const containerStyle: React.CSSProperties = {
-    minWidth: minWidth || width || (fullWidth ? undefined : "200px"),
-    width: width || (fullWidth ? "100%" : undefined),
+    minWidth: minWidth || width || (fullWidth ? undefined : '200px'),
+    width: width || (fullWidth ? '100%' : undefined),
     ...style,
-  }
+  };
 
   return (
     <div
-      className={`combobox-container ${className || ""}`}
+      className={`combobox-container ${className || ''}`}
       data-testid="arc-combobox"
       style={containerStyle}
     >
@@ -122,7 +122,7 @@ export const ArcCombobox = <T extends string = string>(
         collection={collection}
         disabled={disabled}
         id={id}
-        inputBehavior={filterable ? "autocomplete" : "none"}
+        inputBehavior={filterable ? 'autocomplete' : 'none'}
         invalid={isInvalid}
         multiple={multiple}
         onValueChange={handleValueChange}
@@ -133,7 +133,7 @@ export const ArcCombobox = <T extends string = string>(
 
         <Combobox.Control>
           <Combobox.Input
-            aria-label={!label ? placeholder || "Select option" : undefined}
+            aria-label={!label ? placeholder || 'Select option' : undefined}
             placeholder={placeholder}
           />
           <Combobox.Trigger />
@@ -162,9 +162,9 @@ export const ArcCombobox = <T extends string = string>(
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-ArcCombobox.displayName = "ArcCombobox"
+ArcCombobox.displayName = 'ArcCombobox';
 
-export default ArcCombobox
+export default ArcCombobox;

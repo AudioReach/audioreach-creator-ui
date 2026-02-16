@@ -1,1 +1,1 @@
-export * from "./device-list"
+export * from './device-list';

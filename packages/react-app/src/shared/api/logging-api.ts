@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {httpClient} from "./http-client"
-import type {UserLogRequestDto} from "./logging.types"
+import {httpClient} from './http-client';
+import type {UserLogRequestDto} from './logging.types';
 
 /**
  * Service for sending logs to the backend
@@ -18,13 +18,13 @@ export class LoggingApiService {
    */
   async sendLog(log: UserLogRequestDto): Promise<boolean> {
     try {
-      const result = await httpClient.post<void>("/log", log)
-      return result.success
+      const result = await httpClient.post<void>('/log', log);
+      return result.success;
     } catch (error) {
-      console.warn("[LoggingAPI] Failed to send log:", error)
-      return false
+      console.warn('[LoggingAPI] Failed to send log:', error);
+      return false;
     }
   }
 }
 
-export const loggingApi = new LoggingApiService()
+export const loggingApi = new LoggingApiService();

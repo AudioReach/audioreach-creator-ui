@@ -1,8 +1,8 @@
-@import "@qualcomm-ui/qds-core/styles/components.css";
-@import "@qualcomm-ui/qds-core/themes/qualcomm-dark.css";
-@import "@qualcomm-ui/qds-core/themes/qualcomm-light.css";
-@import "@qualcomm-ui/qds-core/themes/snapdragon-light.css";
-@import "@qualcomm-ui/qds-core/themes/snapdragon-dark.css";
+@import '@qualcomm-ui/qds-core/styles/components.css';
+@import '@qualcomm-ui/qds-core/themes/qualcomm-dark.css';
+@import '@qualcomm-ui/qds-core/themes/qualcomm-light.css';
+@import '@qualcomm-ui/qds-core/themes/snapdragon-light.css';
+@import '@qualcomm-ui/qds-core/themes/snapdragon-dark.css';
 
 @tailwind base;
 @tailwind components;
@@ -16,7 +16,7 @@
 }
 
 :root {
-  font-family: "Roboto Flex", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Roboto Flex', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
 
   color-scheme: light dark;

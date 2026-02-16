@@ -1,1 +1,1 @@
-export * from "./use-recent-projects-store"
+export * from './use-recent-projects-store';

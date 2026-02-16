@@ -7,6 +7,6 @@
     "./scripts",
     "electron-builder.config.ts",
     "playwright.config.ts",
-    "vitest.config.ts",
+    "vitest.config.ts"
   ]
 }

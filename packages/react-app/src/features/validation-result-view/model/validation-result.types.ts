@@ -4,59 +4,59 @@
  */
 
 export interface ValidationResult {
-  autoFixCallback?: (result: ValidationResult) => void
-  canAutoFix?: boolean
-  canShowControls?: boolean
-  description: string
-  errorCode: string
-  errorDetails: string
-  id: string
-  severity: SeverityType.Critical | SeverityType.Error | SeverityType.Warning
-  showControlsCallback?: (result: ValidationResult) => void
+  autoFixCallback?: (result: ValidationResult) => void;
+  canAutoFix?: boolean;
+  canShowControls?: boolean;
+  description: string;
+  errorCode: string;
+  errorDetails: string;
+  id: string;
+  severity: SeverityType.Critical | SeverityType.Error | SeverityType.Warning;
+  showControlsCallback?: (result: ValidationResult) => void;
 }
 
 export enum SeverityType {
-  Critical = "critical",
-  Error = "error",
-  Warning = "warning",
+  Critical = 'critical',
+  Error = 'error',
+  Warning = 'warning',
 }
 
 // Constant for "All Types" filter option
-export const ALL_SEVERITIES = "all"
+export const ALL_SEVERITIES = 'all';
 
 export interface ValidationResultStore {
   addValidationResult: (resultData: {
-    autoFixCallback?: (result: ValidationResult) => void
-    canAutoFix?: boolean
-    canShowControls?: boolean
-    description: string
-    errorCode: string
-    errorDetails: string
-    severity: SeverityType.Critical | SeverityType.Error | SeverityType.Warning
-    showControlsCallback?: (result: ValidationResult) => void
-  }) => boolean
+    autoFixCallback?: (result: ValidationResult) => void;
+    canAutoFix?: boolean;
+    canShowControls?: boolean;
+    description: string;
+    errorCode: string;
+    errorDetails: string;
+    severity: SeverityType.Critical | SeverityType.Error | SeverityType.Warning;
+    showControlsCallback?: (result: ValidationResult) => void;
+  }) => boolean;
 
-  clearRowSelection: () => boolean
+  clearRowSelection: () => boolean;
 
-  clearValidationResults: () => boolean
+  clearValidationResults: () => boolean;
 
   // Issue counts
-  criticalCount: number
+  criticalCount: number;
 
-  errorCount: number
+  errorCount: number;
   // Search & Filter state
-  searchQuery: string
+  searchQuery: string;
 
-  selectedRowId: string | null
+  selectedRowId: string | null;
 
-  selectedSeverities: string[] // ["all"] or combination of ["critical", "error", "warning"]
+  selectedSeverities: string[]; // ["all"] or combination of ["critical", "error", "warning"]
   // Row selection actions
-  selectRow: (id: string) => boolean
+  selectRow: (id: string) => boolean;
 
-  setSearchQuery: (query: string) => boolean
-  setSelectedSeverities: (severities: string[]) => boolean
-  updateCounts: () => boolean
+  setSearchQuery: (query: string) => boolean;
+  setSelectedSeverities: (severities: string[]) => boolean;
+  updateCounts: () => boolean;
 
-  validationResults: ValidationResult[]
-  warningCount: number
+  validationResults: ValidationResult[];
+  warningCount: number;
 }

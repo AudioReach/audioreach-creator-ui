@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from "react"
+import {useMemo} from 'react';
 
-import {logger} from "~shared/lib/logger"
-import type {SideNavItem, TabWithSideNav} from "~shared/types/side-nav-types"
+import {logger} from '~shared/lib/logger';
+import type {SideNavItem, TabWithSideNav} from '~shared/types/side-nav-types';
 
 /**
  * Hook to easily implement TabWithSideNav interface in widgets
@@ -42,14 +42,14 @@ export function useSideNav(
       getKeyboardShortcuts: () => shortcuts || {},
       getSideNavItems: () => items,
       handleSideNavAction: (itemId: string) => {
-        const handler = handlers[itemId]
+        const handler = handlers[itemId];
         if (handler) {
-          handler()
+          handler();
         } else {
-          logger.warn(`No handler found for side nav action: ${itemId}`)
+          logger.warn(`No handler found for side nav action: ${itemId}`);
         }
       },
     }),
     [items, handlers, shortcuts],
-  )
+  );
 }

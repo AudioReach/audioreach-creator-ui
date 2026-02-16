@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useCallback, useEffect, useState} from "react"
+import {useCallback, useEffect, useState} from 'react';
 
-import {ConfigFileManager} from "../config-manager"
-import type {UserPreferences} from "../user-preferences-types"
+import {ConfigFileManager} from '../config-manager';
+import type {UserPreferences} from '../user-preferences-types';
 
 /**
  * React hook for accessing and updating user preferences
@@ -18,14 +18,14 @@ import type {UserPreferences} from "../user-preferences-types"
 export function useUserPreferences(projectId: string) {
   const [preferences, setPreferences] = useState<UserPreferences>(() =>
     ConfigFileManager.instance.getUserPreferences(projectId),
-  )
+  );
 
   // Refresh preferences when projectId changes
   useEffect(() => {
     const newPreferences =
-      ConfigFileManager.instance.getUserPreferences(projectId)
-    setPreferences(newPreferences)
-  }, [projectId])
+      ConfigFileManager.instance.getUserPreferences(projectId);
+    setPreferences(newPreferences);
+  }, [projectId]);
 
   /**
    * Updates a single preference value
@@ -38,19 +38,19 @@ export function useUserPreferences(projectId: string) {
         projectId,
         path,
         value,
-      )
+      );
 
       if (success) {
         // Update local state to trigger re-render
         const updatedPreferences =
-          ConfigFileManager.instance.getUserPreferences(projectId)
-        setPreferences(updatedPreferences)
+          ConfigFileManager.instance.getUserPreferences(projectId);
+        setPreferences(updatedPreferences);
       }
 
-      return success
+      return success;
     },
     [projectId],
-  )
+  );
 
   /**
    * Gets the current value of a specific preference
@@ -59,25 +59,25 @@ export function useUserPreferences(projectId: string) {
    */
   const getPreference = useCallback(
     (path: string): any => {
-      const pathParts = path.split(".")
-      let value: any = preferences
+      const pathParts = path.split('.');
+      let value: any = preferences;
 
       for (const part of pathParts) {
-        if (value && typeof value === "object" && part in value) {
-          value = value[part]
+        if (value && typeof value === 'object' && part in value) {
+          value = value[part];
         } else {
-          return undefined
+          return undefined;
         }
       }
 
-      return value
+      return value;
     },
     [preferences],
-  )
+  );
 
   return {
     getPreference,
     preferences,
     updatePreference,
-  }
+  };
 }

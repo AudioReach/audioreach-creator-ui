@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
-import LogViewTable from "./ui/log-view/log-view-table"
-import LogViewToolbar from "./ui/log-view/log-view-toolbar"
+import LogViewTable from './ui/log-view/log-view-table';
+import LogViewToolbar from './ui/log-view/log-view-toolbar';
 
 /**
  * Combines LogViewToolbar and LogViewTable with proper styling for FlexLayout integration
@@ -15,10 +15,10 @@ const LogViewPanel: FC = () => {
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
       }}
     >
       {/* Toolbar */}
@@ -29,13 +29,13 @@ const LogViewPanel: FC = () => {
       {/* Table - flexible height with internal scrolling */}
       <div
         style={{
-          overflowY: "auto",
+          overflowY: 'auto',
         }}
       >
         <LogViewTable />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LogViewPanel
+export default LogViewPanel;

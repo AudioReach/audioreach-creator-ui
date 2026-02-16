@@ -1,4 +1,4 @@
 export {
   default as ProjectLayoutManager,
   PanelIntegration,
-} from "./project-layout-manager"
+} from './project-layout-manager';

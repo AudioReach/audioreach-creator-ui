@@ -24,7 +24,9 @@
     "api-utils": "pnpm -C packages/api-utils",
     "electron-app": "pnpm -C packages/electron-app",
     "react-app": "pnpm -C packages/react-app",
-    "clean": "pnpm run -C packages/electron-app clean && pnpm run -C packages/react-app clean && pnpm run -C packages/api-utils clean"
+    "clean": "pnpm run -C packages/electron-app clean && pnpm run -C packages/react-app clean && pnpm run -C packages/api-utils clean",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@qualcomm-ui/eslint-config-fsd": "^1.0.1",
@@ -46,6 +48,5 @@
     "typescript-eslint": "^8.36.0"
   },
   "packageManager": "pnpm@10.26.0",
-  "dependencies": {
-  }
+  "dependencies": {}
 }

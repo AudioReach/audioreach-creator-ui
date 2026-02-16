@@ -163,8 +163,8 @@ Example usage:
 // In renderer process
 const response = await window.api.send({
   requestType: ApiRequest.CamelCase,
-  data: {input: "hello-world"},
-})
+  data: {input: 'hello-world'},
+});
 ```
 
 ## Testing

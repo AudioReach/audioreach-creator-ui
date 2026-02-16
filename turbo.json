@@ -4,16 +4,9 @@
   "cacheDir": ".turbo-cache",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "build/**",
-        "dist/**"
-      ],
-      "inputs": [
-        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
-      ],
+      "dependsOn": ["^build"],
+      "outputs": ["build/**", "dist/**"],
+      "inputs": ["**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"],
       "outputLogs": "new-only"
     },
     "lint": {
@@ -24,10 +17,7 @@
       "outputLogs": "new-only"
     },
     "test": {
-      "dependsOn": [
-        "^build",
-        "build"
-      ],
+      "dependsOn": ["^build", "build"],
       "inputs": [
         "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
         "src/**/*",
@@ -36,10 +26,7 @@
       "outputLogs": "new-only"
     },
     "test:ci": {
-      "dependsOn": [
-        "^build",
-        "build"
-      ],
+      "dependsOn": ["^build", "build"],
       "inputs": [
         "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
         "src/**/*",
@@ -52,31 +39,18 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": [
-        "^typecheck"
-      ],
-      "inputs": [
-        "**/*.{ts,tsx}",
-        "tsconfig*.json"
-      ],
+      "dependsOn": ["^typecheck"],
+      "inputs": ["**/*.{ts,tsx}", "tsconfig*.json"],
       "outputLogs": "new-only"
     },
     "package": {
-      "inputs": [
-        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
-      ],
-      "outputs": [
-        "out/**"
-      ],
+      "inputs": ["**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"],
+      "outputs": ["out/**"],
       "outputLogs": "new-only"
     },
     "make": {
-      "inputs": [
-        "**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"
-      ],
-      "outputs": [
-        "out/**"
-      ],
+      "inputs": ["**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"],
+      "outputs": ["out/**"],
       "outputLogs": "new-only"
     }
   }

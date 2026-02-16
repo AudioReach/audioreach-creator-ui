@@ -4,121 +4,121 @@
  */
 
 // Normalized ReactFlow types for UsecaseVisualizer
-import type {Edge, Node} from "@xyflow/react"
+import type {Edge, Node} from '@xyflow/react';
 
 import type {
   ControlPortIntentDto,
   PortIOType,
   PortType,
-} from "~entities/usecases/model/usecase-component.dto"
+} from '~entities/usecases/model/usecase-component.dto';
 
 export const NODE_KIND = {
-  CONTAINER: "CONTAINER",
-  MODULE: "MODULE",
-  SUBGRAPH: "SUBGRAPH",
-  SUBSYSTEM: "SUBSYSTEM",
-} as const
+  CONTAINER: 'CONTAINER',
+  MODULE: 'MODULE',
+  SUBGRAPH: 'SUBGRAPH',
+  SUBSYSTEM: 'SUBSYSTEM',
+} as const;
 
-export type NodeKind = (typeof NODE_KIND)[keyof typeof NODE_KIND]
+export type NodeKind = (typeof NODE_KIND)[keyof typeof NODE_KIND];
 
 export const EDGE_KIND = {
-  CONTROL: "CONTROL",
-  DATA: "DATA",
-} as const
+  CONTROL: 'CONTROL',
+  DATA: 'DATA',
+} as const;
 
-export type EdgeKind = (typeof EDGE_KIND)[keyof typeof EDGE_KIND]
+export type EdgeKind = (typeof EDGE_KIND)[keyof typeof EDGE_KIND];
 
 // Base node data
 export interface RFNodeBaseData {
-  [key: string]: unknown
-  kind: NodeKind
-  label?: string
+  [key: string]: unknown;
+  kind: NodeKind;
+  label?: string;
 }
 
 // Subsystem node (outer boundary)
 export interface RFSubsystemNodeData extends RFNodeBaseData {
-  kind: typeof NODE_KIND.SUBSYSTEM
-  name?: string
+  kind: typeof NODE_KIND.SUBSYSTEM;
+  name?: string;
 }
 
 // Subgraph node (inner boundary per subgraph)
 export interface RFSubgraphNodeData extends RFNodeBaseData {
-  kind: typeof NODE_KIND.SUBGRAPH
-  name?: string
+  kind: typeof NODE_KIND.SUBGRAPH;
+  name?: string;
 }
 
 // Container segment (per containerId:subgraphId)
 export interface RFContainerNodeData extends RFNodeBaseData {
-  containerId: number
-  kind: typeof NODE_KIND.CONTAINER
-  name?: string
-  subgraphId: number
+  containerId: number;
+  kind: typeof NODE_KIND.CONTAINER;
+  name?: string;
+  subgraphId: number;
 }
 
 // Port data for modules
 export interface DataPort {
-  id: number
-  name?: string
-  portIoType: PortIOType // 'Input' | 'Output'
-  portType: PortType
+  id: number;
+  name?: string;
+  portIoType: PortIOType; // 'Input' | 'Output'
+  portType: PortType;
 }
 
 export interface ControlPort {
-  id: number
-  intents?: ControlPortIntentDto[]
-  name?: string
-  portType: PortType
+  id: number;
+  intents?: ControlPortIntentDto[];
+  name?: string;
+  portType: PortType;
 }
 
 // Module node with ports
 export interface RFModuleNodeData extends RFNodeBaseData {
-  alias?: string
-  containerId: number
-  controlPorts: ControlPort[]
-  dataPorts: DataPort[]
-  kind: typeof NODE_KIND.MODULE
-  name?: string
-  parentId?: number // subsystem id
-  showPortLabels?: boolean // default false
-  subgraphId: number
+  alias?: string;
+  containerId: number;
+  controlPorts: ControlPort[];
+  dataPorts: DataPort[];
+  kind: typeof NODE_KIND.MODULE;
+  name?: string;
+  parentId?: number; // subsystem id
+  showPortLabels?: boolean; // default false
+  subgraphId: number;
 }
 
 export type RFNodeData =
   | RFSubsystemNodeData
   | RFSubgraphNodeData
   | RFContainerNodeData
-  | RFModuleNodeData
+  | RFModuleNodeData;
 
-export type RFNode = Node<RFNodeData>
+export type RFNode = Node<RFNodeData>;
 
 // Edge data
 export interface RFEdgeData {
-  [key: string]: unknown
-  kind: EdgeKind
-  label?: string
+  [key: string]: unknown;
+  kind: EdgeKind;
+  label?: string;
 }
 
-export type RFEdge = Edge<RFEdgeData>
+export type RFEdge = Edge<RFEdgeData>;
 
 // Graph view model
 export interface GraphView {
-  edges: RFEdge[]
-  nodes: RFNode[]
+  edges: RFEdge[];
+  nodes: RFNode[];
 }
 
 // Handle ID convention: 'Data:<portId>' or 'Control:<portId>'
 export const makeHandleId = (
-  kind: "Data" | "Control",
+  kind: 'Data' | 'Control',
   portId: number,
-): string => `${kind}:${portId}`
+): string => `${kind}:${portId}`;
 
 // Graph specification (for fetching components)
 export interface GraphSpec {
-  componentSpec?: {id: number; type: "Subsystem" | "Unknown"}
-  includeUsecases: Array<{id: number; type: string}>
-  simplifySubsystems?: boolean
+  componentSpec?: {id: number; type: 'Subsystem' | 'Unknown'};
+  includeUsecases: Array<{id: number; type: string}>;
+  simplifySubsystems?: boolean;
   subgraphDisplayMode?: {
-    excludedSubgraphIds: number[]
-    isSubgraphExpanded: boolean
-  }
+    excludedSubgraphIds: number[];
+    isSubgraphExpanded: boolean;
+  };
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
 export const LogView: FC = () => {
   return (
@@ -21,5 +21,5 @@ export const LogView: FC = () => {
         <div>[12:00:06] Completed.</div>
       </div>
     </div>
-  )
-}
+  );
+};

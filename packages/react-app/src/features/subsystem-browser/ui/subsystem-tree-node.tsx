@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
-import {ChevronDown, ChevronRight, Dot} from "lucide-react"
+import {ChevronDown, ChevronRight, Dot} from 'lucide-react';
 
-import {ConvertStringToNumber} from "~shared/utils/converter-utils"
+import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
-import type {SubsystemBrowserTreeNode} from "../model/subsystem-browser.types"
+import type {SubsystemBrowserTreeNode} from '../model/subsystem-browser.types';
 
 interface SubsystemTreeNodeProps {
-  isExpanded: (id: number) => boolean
-  onClick: (id: number) => void
-  rootNode?: boolean
-  searchTerm: string
-  toggleNode: (id: number) => void
-  treeNode: SubsystemBrowserTreeNode
+  isExpanded: (id: number) => boolean;
+  onClick: (id: number) => void;
+  rootNode?: boolean;
+  searchTerm: string;
+  toggleNode: (id: number) => void;
+  treeNode: SubsystemBrowserTreeNode;
 }
 
 const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
@@ -28,27 +28,27 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
   toggleNode,
   treeNode,
 }) => {
-  const hasChildren = !!(treeNode.children && treeNode.children.length > 0)
-  const expanded = isExpanded(treeNode.id)
+  const hasChildren = !!(treeNode.children && treeNode.children.length > 0);
+  const expanded = isExpanded(treeNode.id);
 
   const searchMatches = (
     node: SubsystemBrowserTreeNode,
     searchTerm: string,
   ) => {
-    const termToLower = searchTerm.trim().toLowerCase()
+    const termToLower = searchTerm.trim().toLowerCase();
     if (!termToLower) {
       // empty string, treat all nodes as matches
-      return true
+      return true;
     }
 
     if (node.name.toLowerCase().includes(termToLower)) {
-      return true
+      return true;
     }
 
     // convert a search term that may be decimal or hex ("0xFF" or "ff") into a number
-    const idNumber = ConvertStringToNumber(termToLower)
-    return idNumber !== null && idNumber === node.id
-  }
+    const idNumber = ConvertStringToNumber(termToLower);
+    return idNumber !== null && idNumber === node.id;
+  };
 
   // A treeNode is visible if it matches the search Input or has any matching descendants.
   const hasMatchInSubtree = (
@@ -56,23 +56,23 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
     searchInput: string,
   ): boolean => {
     if (searchMatches(treeNode, searchInput)) {
-      return true
+      return true;
     }
     return !!treeNode.children?.some((childNode) =>
       hasMatchInSubtree(childNode, searchInput),
-    )
-  }
+    );
+  };
 
   // It decides the subsystem node visibility
-  const isVisible = hasMatchInSubtree(treeNode, searchTerm)
+  const isVisible = hasMatchInSubtree(treeNode, searchTerm);
 
   return (
-    <div style={{cursor: "pointer", marginLeft: rootNode ? 0 : "1rem"}}>
+    <div style={{cursor: 'pointer', marginLeft: rootNode ? 0 : '1rem'}}>
       {isVisible && (
         <div
           style={{
-            alignItems: "center", // center the button vertically with the text
-            display: "flex",
+            alignItems: 'center', // center the button vertically with the text
+            display: 'flex',
             gap: 2,
             marginBottom: 5,
           }}
@@ -95,7 +95,7 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             aria-label={`Navigate to ${treeNode.name}`}
             onClick={() => onClick(treeNode.id)}
             role="button"
-            style={{fontWeight: "bold"}}
+            style={{fontWeight: 'bold'}}
             title={`ID: ${treeNode.id}`}
           >
             {treeNode.name}
@@ -115,7 +115,7 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
           />
         ))}
     </div>
-  )
-}
+  );
+};
 
-export default SubsystemTreeNode
+export default SubsystemTreeNode;

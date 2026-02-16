@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ApiResult} from "./api-response.types"
+import type {ApiResult} from './api-response.types';
 
 /**
  * Process an API response and convert it to an ApiResult
@@ -19,18 +19,18 @@ export async function processApiResponse<T>(
       errors: [`HTTP error: ${response.status}`],
       message: `HTTP error: ${response.status} ${response.statusText}`,
       success: false,
-    }
+    };
   }
 
   try {
     // Parse the response as JSON
-    return await response.json()
+    return await response.json();
   } catch (_error) {
     // Handle JSON parsing errors
     return {
-      errors: ["Invalid JSON response"],
-      message: "Failed to parse response as JSON",
+      errors: ['Invalid JSON response'],
+      message: 'Failed to parse response as JSON',
       success: false,
-    }
+    };
   }
 }

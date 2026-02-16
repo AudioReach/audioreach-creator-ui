@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {ConfigFileManager} from "~shared/config/config-manager"
-import {DEFAULT_USER_PREFERENCES} from "~shared/config/user-preferences-types"
-import {GetFlexLayoutConfig, graphDesignerLayout} from "~shared/config/utils"
+import {ConfigFileManager} from '~shared/config/config-manager';
+import {DEFAULT_USER_PREFERENCES} from '~shared/config/user-preferences-types';
+import {GetFlexLayoutConfig, graphDesignerLayout} from '~shared/config/utils';
 
 // Helper function to create expected default config for tests
 function getExpectedDefaultConfig() {
@@ -17,56 +17,56 @@ function getExpectedDefaultConfig() {
       },
       userPreferences: DEFAULT_USER_PREFERENCES,
     },
-  }
+  };
 }
 
 // Mock the window.configApi
-const mockLoadConfigData = jest.fn()
-const mockSaveConfigData = jest.fn()
+const mockLoadConfigData = jest.fn();
+const mockSaveConfigData = jest.fn();
 
 beforeAll(() => {
-  Object.defineProperty(window, "configApi", {
+  Object.defineProperty(window, 'configApi', {
     configurable: true,
     value: {
       loadConfigData: mockLoadConfigData,
       saveConfigData: mockSaveConfigData,
     },
     writable: true,
-  })
-})
+  });
+});
 
-describe("ConfigFileManager", () => {
-  let configManager: ConfigFileManager
+describe('ConfigFileManager', () => {
+  let configManager: ConfigFileManager;
 
   beforeEach(() => {
     // Reset the singleton instance before each test
     // @ts-ignore
-    ConfigFileManager._instance = undefined
-    configManager = ConfigFileManager.instance
+    ConfigFileManager._instance = undefined;
+    configManager = ConfigFileManager.instance;
 
     // Reset mocks
-    mockLoadConfigData.mockReset()
-    mockSaveConfigData.mockReset()
-  })
+    mockLoadConfigData.mockReset();
+    mockSaveConfigData.mockReset();
+  });
 
-  it("should be a singleton instance", () => {
-    const instance1 = ConfigFileManager.instance
-    const instance2 = ConfigFileManager.instance
-    expect(instance1).toBe(instance2)
-  })
+  it('should be a singleton instance', () => {
+    const instance1 = ConfigFileManager.instance;
+    const instance2 = ConfigFileManager.instance;
+    expect(instance1).toBe(instance2);
+  });
 
-  describe("initializeConfig", () => {
-    it("should load config data successfully without existing layout and add usecase layout", async () => {
+  describe('initializeConfig', () => {
+    it('should load config data successfully without existing layout and add usecase layout', async () => {
       const mockConfig = {
         arcconfig: {},
-        otherData: "test",
-      }
+        otherData: 'test',
+      };
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(mockConfig),
         status: true,
-      })
+      });
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore
       expect(configManager.configDataMap).toEqual({
@@ -75,322 +75,322 @@ describe("ConfigFileManager", () => {
             graphDesignerView: graphDesignerLayout,
           },
         },
-        otherData: "test",
-      })
-    })
+        otherData: 'test',
+      });
+    });
 
-    it("should load config data successfully with arcconfig and add usecase layout", async () => {
+    it('should load config data successfully with arcconfig and add usecase layout', async () => {
       const mockConfig = {
         arcconfig: {
           layout: {
-            someOtherKey: "value",
+            someOtherKey: 'value',
           },
         },
-        otherData: "test",
-      }
+        otherData: 'test',
+      };
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(mockConfig),
         status: true,
-      })
+      });
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore - Accessing private member for testing
       expect(configManager.configDataMap).toEqual({
         arcconfig: {
           layout: {
             graphDesignerView: graphDesignerLayout, // Should be added
-            someOtherKey: "value",
+            someOtherKey: 'value',
           },
         },
-        otherData: "test",
-      })
-      expect(mockLoadConfigData).toHaveBeenCalledTimes(1)
-    })
+        otherData: 'test',
+      });
+      expect(mockLoadConfigData).toHaveBeenCalledTimes(1);
+    });
 
-    it("should load default config data if loadConfigData fails", async () => {
+    it('should load default config data if loadConfigData fails', async () => {
       mockLoadConfigData.mockResolvedValue({
-        message: "Error loading config",
+        message: 'Error loading config',
         status: false,
-      })
-      const defaultConfig = getExpectedDefaultConfig()
+      });
+      const defaultConfig = getExpectedDefaultConfig();
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore
-      expect(configManager.configDataMap).toEqual(defaultConfig)
-    })
+      expect(configManager.configDataMap).toEqual(defaultConfig);
+    });
 
-    it("should load default config data if JSON parsing fails", async () => {
+    it('should load default config data if JSON parsing fails', async () => {
       mockLoadConfigData.mockResolvedValue({
-        data: "invalid json",
+        data: 'invalid json',
         status: true,
-      })
-      const defaultConfig = getExpectedDefaultConfig()
+      });
+      const defaultConfig = getExpectedDefaultConfig();
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore
-      expect(configManager.configDataMap).toEqual(defaultConfig)
-    })
+      expect(configManager.configDataMap).toEqual(defaultConfig);
+    });
 
-    it("should load default config data if data is empty", async () => {
+    it('should load default config data if data is empty', async () => {
       mockLoadConfigData.mockResolvedValue({
-        data: "",
+        data: '',
         status: true,
-      })
-      const defaultConfig = getExpectedDefaultConfig()
+      });
+      const defaultConfig = getExpectedDefaultConfig();
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore
-      expect(configManager.configDataMap).toEqual(defaultConfig)
-    })
+      expect(configManager.configDataMap).toEqual(defaultConfig);
+    });
 
-    it("should load default config data if arcconfig key is missing", async () => {
+    it('should load default config data if arcconfig key is missing', async () => {
       const mockConfig = {
         otherRootKey: {},
-      }
+      };
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(mockConfig),
         status: true,
-      })
-      const defaultConfig = getExpectedDefaultConfig()
+      });
+      const defaultConfig = getExpectedDefaultConfig();
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // @ts-ignore
-      expect(configManager.configDataMap).toEqual(defaultConfig)
-    })
+      expect(configManager.configDataMap).toEqual(defaultConfig);
+    });
 
-    it("should catch and log JSON parsing errors", async () => {
+    it('should catch and log JSON parsing errors', async () => {
       // Provide malformed JSON to trigger JSON.parse error
       mockLoadConfigData.mockResolvedValue({
-        data: "{ malformed json }",
+        data: '{ malformed json }',
         status: true,
-      })
+      });
 
-      await configManager.initializeConfig()
+      await configManager.initializeConfig();
 
       // After catching, configDataMap should fall back to default config
-      const defaultConfig = getExpectedDefaultConfig()
+      const defaultConfig = getExpectedDefaultConfig();
       // @ts-ignore
-      expect(configManager.configDataMap).toEqual(defaultConfig)
-    })
-  })
+      expect(configManager.configDataMap).toEqual(defaultConfig);
+    });
+  });
 
-  describe("getProjectConfigData and setProjectConfigData", () => {
-    const projectId = "testProject1"
-    const path = "project.name"
-    const initialConfigData = {arcconfig: {project: {name: "oldName"}}}
-    const newConfigData = "newName"
+  describe('getProjectConfigData and setProjectConfigData', () => {
+    const projectId = 'testProject1';
+    const path = 'project.name';
+    const initialConfigData = {arcconfig: {project: {name: 'oldName'}}};
+    const newConfigData = 'newName';
 
     beforeEach(async () => {
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(initialConfigData),
         status: true,
-      })
-      await configManager.initializeConfig()
-    })
+      });
+      await configManager.initializeConfig();
+    });
 
-    it("should create a new ProjectConfigManager if one does not exist", () => {
+    it('should create a new ProjectConfigManager if one does not exist', () => {
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(projectId)).toBeFalsy()
-      configManager.getProjectConfigData(projectId, path)
+      expect(configManager.projectConfigMap.has(projectId)).toBeFalsy();
+      configManager.getProjectConfigData(projectId, path);
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(projectId)).toBeTruthy()
-    })
+      expect(configManager.projectConfigMap.has(projectId)).toBeTruthy();
+    });
 
-    it("should return project config data", () => {
-      const data = configManager.getProjectConfigData(projectId, path)
-      expect(data).toBe("oldName")
-    })
+    it('should return project config data', () => {
+      const data = configManager.getProjectConfigData(projectId, path);
+      expect(data).toBe('oldName');
+    });
 
-    it("should set project config data correctly", () => {
-      configManager.getProjectConfigData(projectId, path)
-      configManager.setProjectConfigData(projectId, path, newConfigData)
-      const data = configManager.getProjectConfigData(projectId, path)
-      expect(data).toBe(newConfigData)
-    })
+    it('should set project config data correctly', () => {
+      configManager.getProjectConfigData(projectId, path);
+      configManager.setProjectConfigData(projectId, path, newConfigData);
+      const data = configManager.getProjectConfigData(projectId, path);
+      expect(data).toBe(newConfigData);
+    });
 
-    it("should not set config data for a non-existent project", () => {
-      const newProjectId = "newProject"
+    it('should not set config data for a non-existent project', () => {
+      const newProjectId = 'newProject';
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy()
-      configManager.setProjectConfigData(newProjectId, path, newConfigData)
+      expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy();
+      configManager.setProjectConfigData(newProjectId, path, newConfigData);
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy()
-    })
-  })
+      expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy();
+    });
+  });
 
-  describe("archieveProjectConfig", () => {
-    const projectId = "testProjectToClose"
-    const initialConfigData = {arcconfig: {project: {name: "projectConfig"}}}
+  describe('archieveProjectConfig', () => {
+    const projectId = 'testProjectToClose';
+    const initialConfigData = {arcconfig: {project: {name: 'projectConfig'}}};
 
     beforeEach(async () => {
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(initialConfigData),
         status: true,
-      })
-      await configManager.initializeConfig()
+      });
+      await configManager.initializeConfig();
       // Ensure a ProjectConfigManager exists for the projectId
-      configManager.getProjectConfigData(projectId, "some.path")
-      mockSaveConfigData.mockResolvedValue({status: true})
-    })
+      configManager.getProjectConfigData(projectId, 'some.path');
+      mockSaveConfigData.mockResolvedValue({status: true});
+    });
 
-    it("should save the project config and delete it from the map", async () => {
+    it('should save the project config and delete it from the map', async () => {
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(projectId)).toBeTruthy()
-      const saveSpy = jest.spyOn(configManager, "archiveProjectConfig")
+      expect(configManager.projectConfigMap.has(projectId)).toBeTruthy();
+      const saveSpy = jest.spyOn(configManager, 'archiveProjectConfig');
 
-      const result = await configManager.archiveProjectConfig(projectId)
+      const result = await configManager.archiveProjectConfig(projectId);
 
-      expect(result).toBeTruthy()
-      expect(saveSpy).toHaveBeenCalledWith(projectId)
+      expect(result).toBeTruthy();
+      expect(saveSpy).toHaveBeenCalledWith(projectId);
       // @ts-ignore
-      expect(configManager.projectConfigMap.has(projectId)).toBeFalsy()
-      saveSpy.mockRestore()
-    })
+      expect(configManager.projectConfigMap.has(projectId)).toBeFalsy();
+      saveSpy.mockRestore();
+    });
 
-    it("should return false and log error if project session details not found", async () => {
-      const nonExistentProjectId = "nonExistent"
+    it('should return false and log error if project session details not found', async () => {
+      const nonExistentProjectId = 'nonExistent';
       const result =
-        await configManager.archiveProjectConfig(nonExistentProjectId)
-      expect(result).toBeFalsy()
-    })
-  })
+        await configManager.archiveProjectConfig(nonExistentProjectId);
+      expect(result).toBeFalsy();
+    });
+  });
 
-  describe("save", () => {
-    const projectId1 = "proj1"
-    const projectId2 = "proj2"
-    const initialGlobalConfig = {arcconfig: {global: "data"}}
+  describe('save', () => {
+    const projectId1 = 'proj1';
+    const projectId2 = 'proj2';
+    const initialGlobalConfig = {arcconfig: {global: 'data'}};
 
     beforeEach(async () => {
       // Reset configDataMap after initializeConfig
       // @ts-ignore
-      ConfigFileManager._instance = undefined
-      configManager = ConfigFileManager.instance
+      ConfigFileManager._instance = undefined;
+      configManager = ConfigFileManager.instance;
 
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(initialGlobalConfig),
         status: true,
-      })
-      await configManager.initializeConfig()
+      });
+      await configManager.initializeConfig();
 
-      configManager.getProjectConfigData(projectId1, "project1")
-      configManager.getProjectConfigData(projectId2, "project2")
+      configManager.getProjectConfigData(projectId1, 'project1');
+      configManager.getProjectConfigData(projectId2, 'project2');
 
-      mockSaveConfigData.mockResolvedValue({status: true})
+      mockSaveConfigData.mockResolvedValue({status: true});
 
       // Simulate project configs being set
-      configManager.setProjectConfigData(projectId1, "project1", "data")
-      configManager.setProjectConfigData(projectId2, "project2", "data")
-    })
+      configManager.setProjectConfigData(projectId1, 'project1', 'data');
+      configManager.setProjectConfigData(projectId2, 'project2', 'data');
+    });
 
-    it("should save config data and delete usecase layout if projectId is not provided", async () => {
+    it('should save config data and delete usecase layout if projectId is not provided', async () => {
       // Set a usecase layout to ensure it"s deleted
       // @ts-ignore
       configManager.configDataMap.arcconfig.layout = {
         graphDesignerView: graphDesignerLayout,
-      }
+      };
 
-      await configManager.save()
+      await configManager.save();
 
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0]);
       expect(savedData).toEqual(
         expect.not.objectContaining({graphDesignerView: graphDesignerLayout}),
-      )
-      expect(savedData.arcconfig?.layout?.graphDesignerView).toBeUndefined()
-    })
+      );
+      expect(savedData.arcconfig?.layout?.graphDesignerView).toBeUndefined();
+    });
 
-    it("should save specific project config data if projectId is provided", async () => {
+    it('should save specific project config data if projectId is provided', async () => {
       // Manually set a different config for proj1 in its ProjectConfigManager
       // @ts-ignore
-      configManager.setProjectConfigData(projectId1, "project1.modified", true)
+      configManager.setProjectConfigData(projectId1, 'project1.modified', true);
 
-      await configManager.save(projectId1)
+      await configManager.save(projectId1);
 
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
-      expect(savedData.arcconfig?.project1).toBeDefined()
-      expect(savedData.arcconfig?.project1?.modified).toBe(true)
-    })
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0]);
+      expect(savedData.arcconfig?.project1).toBeDefined();
+      expect(savedData.arcconfig?.project1?.modified).toBe(true);
+    });
 
-    it("should handle save error gracefully", async () => {
+    it('should handle save error gracefully', async () => {
       mockSaveConfigData.mockResolvedValue({
-        message: "Save failed",
+        message: 'Save failed',
         success: false,
-      })
+      });
 
-      await configManager.save()
-
-      // Just verify the save was attempted
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-    })
-
-    it("should catch and log unexpected errors during save (write access denied)", async () => {
-      const errorMessage = "Write access denied"
-      mockSaveConfigData.mockRejectedValue(new Error(errorMessage))
-
-      await configManager.save()
+      await configManager.save();
 
       // Just verify the save was attempted
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-    })
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+    });
 
-    it("should save the last project config data if multiple project sessions exist and no projectId is provided", async () => {
+    it('should catch and log unexpected errors during save (write access denied)', async () => {
+      const errorMessage = 'Write access denied';
+      mockSaveConfigData.mockRejectedValue(new Error(errorMessage));
+
+      await configManager.save();
+
+      // Just verify the save was attempted
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+    });
+
+    it('should save the last project config data if multiple project sessions exist and no projectId is provided', async () => {
       // @ts-ignore
-      expect(configManager.projectConfigMap.size).toBe(2)
+      expect(configManager.projectConfigMap.size).toBe(2);
 
-      await configManager.save() // Should save projectId2"s data
+      await configManager.save(); // Should save projectId2"s data
 
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
-      expect(savedData.arcconfig?.project2).toBeDefined()
-      expect(savedData.arcconfig?.project1).toBeUndefined() // projectId1 was not the last
-    })
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0]);
+      expect(savedData.arcconfig?.project2).toBeDefined();
+      expect(savedData.arcconfig?.project1).toBeUndefined(); // projectId1 was not the last
+    });
 
-    it("should save config if no projects are open and no projectId is provided", async () => {
+    it('should save config if no projects are open and no projectId is provided', async () => {
       // Reset to remove any existing project managers
       // @ts-ignore
-      ConfigFileManager._instance = undefined
-      configManager = ConfigFileManager.instance
-      const defaultData = getExpectedDefaultConfig()
-      delete defaultData?.arcconfig?.layout?.graphDesignerView
+      ConfigFileManager._instance = undefined;
+      configManager = ConfigFileManager.instance;
+      const defaultData = getExpectedDefaultConfig();
+      delete defaultData?.arcconfig?.layout?.graphDesignerView;
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(defaultData),
         success: true,
-      })
-      await configManager.initializeConfig()
+      });
+      await configManager.initializeConfig();
       // @ts-ignore
-      expect(configManager.projectConfigMap.size).toBe(0)
+      expect(configManager.projectConfigMap.size).toBe(0);
 
-      await configManager.save()
+      await configManager.save();
 
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
-      expect(savedData).toEqual(expect.objectContaining(defaultData))
-    })
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0]);
+      expect(savedData).toEqual(expect.objectContaining(defaultData));
+    });
 
-    it("should delete usecase from arcconfig.layout even if it does not exist", async () => {
+    it('should delete usecase from arcconfig.layout even if it does not exist', async () => {
       // Ensure usecaseLayout is NOT present initially
-      const mockConfigWithoutUsecase = {arcconfig: {layout: {foo: "bar"}}}
+      const mockConfigWithoutUsecase = {arcconfig: {layout: {foo: 'bar'}}};
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(mockConfigWithoutUsecase),
         success: true,
-      })
+      });
       // @ts-ignore
-      ConfigFileManager._instance = undefined
-      configManager = ConfigFileManager.instance
-      await configManager.initializeConfig() // This will add usecaseLayout
+      ConfigFileManager._instance = undefined;
+      configManager = ConfigFileManager.instance;
+      await configManager.initializeConfig(); // This will add usecaseLayout
 
       // Now ensure it"s removed during save
-      await configManager.save()
+      await configManager.save();
 
-      expect(mockSaveConfigData).toHaveBeenCalledTimes(1)
-      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0])
-      expect(savedData.arcconfig?.layout?.usecase).toBeUndefined()
-    })
-  })
-})
+      expect(mockSaveConfigData).toHaveBeenCalledTimes(1);
+      const savedData = JSON.parse(mockSaveConfigData.mock.calls[0][0]);
+      expect(savedData.arcconfig?.layout?.usecase).toBeUndefined();
+    });
+  });
+});

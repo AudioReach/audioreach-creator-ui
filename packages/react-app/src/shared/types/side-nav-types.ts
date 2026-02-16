@@ -3,28 +3,28 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {LucideIconOrElement} from "@qualcomm-ui/react-core/lucide"
+import type {LucideIconOrElement} from '@qualcomm-ui/react-core/lucide';
 
 /**
  * Represents a single item in the side navigation menu
  */
 export interface SideNavItem {
   /** Child items for hierarchical menus */
-  children?: SideNavItem[]
+  children?: SideNavItem[];
   /** Whether the item is disabled */
-  disabled?: boolean
+  disabled?: boolean;
   /** Optional group name for organizing items with dividers and labels */
-  group?: string
+  group?: string;
   /** Optional icon from Qualcomm UI (accepts Lucide icons or React elements) */
-  icon?: LucideIconOrElement
+  icon?: LucideIconOrElement;
   /** Unique identifier for the item */
-  id: string
+  id: string;
   /** Display label for the item */
-  label: string
+  label: string;
   /** Keyboard shortcut display (e.g., "Ctrl+S") */
-  shortcut?: string
+  shortcut?: string;
   /** Optional custom tooltip text (defaults to label if not provided) */
-  tooltip?: string
+  tooltip?: string;
 }
 
 /**
@@ -32,11 +32,11 @@ export interface SideNavItem {
  */
 export interface TabWithSideNav {
   /** Returns keyboard shortcuts for this tab (optional) */
-  getKeyboardShortcuts?(): Record<string, () => void>
+  getKeyboardShortcuts?(): Record<string, () => void>;
   /** Returns the list of side nav items for this tab */
-  getSideNavItems(): SideNavItem[]
+  getSideNavItems(): SideNavItem[];
   /** Handles when a side nav item is selected */
-  handleSideNavAction(itemId: string): void
+  handleSideNavAction(itemId: string): void;
 }
 
 /**
@@ -45,7 +45,7 @@ export interface TabWithSideNav {
 export function isTabWithSideNav(tab: any): tab is TabWithSideNav {
   return (
     tab &&
-    typeof tab.getSideNavItems === "function" &&
-    typeof tab.handleSideNavAction === "function"
-  )
+    typeof tab.getSideNavItems === 'function' &&
+    typeof tab.handleSideNavAction === 'function'
+  );
 }

@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {SessionMode} from "~entities/project/model/project.dto"
-import ArcProjectCard from "~shared/controls/arc-project-card"
-import type ProjectInfo from "~shared/types/project-info.types"
+import {SessionMode} from '~entities/project/model/project.dto';
+import ArcProjectCard from '~shared/controls/arc-project-card';
+import type ProjectInfo from '~shared/types/project-info.types';
 
 interface ArcProjectSectionProps {
-  onOpenProject?: (project: ProjectInfo) => void
-  onRemoveFromRecent?: (projectId: string) => void
-  onShowInExplorer?: (projectId: string) => Promise<void>
-  projects?: ProjectInfo[]
-  ref?: React.Ref<HTMLElement>
+  onOpenProject?: (project: ProjectInfo) => void;
+  onRemoveFromRecent?: (projectId: string) => void;
+  onShowInExplorer?: (projectId: string) => Promise<void>;
+  projects?: ProjectInfo[];
+  ref?: React.Ref<HTMLElement>;
 }
 
 export default function ArcRecentProjects({
@@ -23,11 +23,11 @@ export default function ArcRecentProjects({
   ref,
 }: ArcProjectSectionProps) {
   function handleDoubleClick(project: ProjectInfo) {
-    onOpenProject?.(project)
+    onOpenProject?.(project);
   }
 
   function handleRemoveFromRecent(projectId: string) {
-    onRemoveFromRecent?.(projectId)
+    onRemoveFromRecent?.(projectId);
   }
 
   return (
@@ -42,9 +42,9 @@ export default function ArcRecentProjects({
             const labelProp = {
               label:
                 project.sessionMode === SessionMode.DiffMerge
-                  ? "Diff/Merge"
+                  ? 'Diff/Merge'
                   : undefined,
-            }
+            };
             return (
               <ArcProjectCard
                 key={project.id}
@@ -60,10 +60,10 @@ export default function ArcRecentProjects({
                 title={project.name}
                 {...labelProp}
               />
-            )
+            );
           })
         )}
       </div>
     </section>
-  )
+  );
 }

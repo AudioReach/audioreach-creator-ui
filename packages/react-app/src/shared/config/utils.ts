@@ -9,21 +9,21 @@ import type {
   IJsonModel,
   IJsonTabNode,
   IJsonTabSetNode,
-} from "flexlayout-react"
+} from 'flexlayout-react';
 
 export type JSONDataMap = {
-  [key: string]: any
-}
+  [key: string]: any;
+};
 
-export const GRAPH_DESIGNER_COMPONENT_NAME = "usecase"
+export const GRAPH_DESIGNER_COMPONENT_NAME = 'usecase';
 
 export const graphDesignerLayout = {
   component: GRAPH_DESIGNER_COMPONENT_NAME,
   position: {
-    area: "center",
+    area: 'center',
     weight: 100,
   },
-}
+};
 
 /**
  * Creates the complete FlexLayout JSON configuration for a project
@@ -33,40 +33,40 @@ export const graphDesignerLayout = {
 export function GetFlexLayoutConfig(): IJsonModel {
   const tabNode: IJsonTabNode = {
     component: GRAPH_DESIGNER_COMPONENT_NAME,
-    id: "usecase-main",
-    name: "Graph Designer",
-    type: "tab",
-  }
+    id: 'usecase-main',
+    name: 'Graph Designer',
+    type: 'tab',
+  };
 
   const tabSet: IJsonTabSetNode = {
     children: [tabNode],
     enableTabStrip: false,
-    type: "tabset",
-  }
+    type: 'tabset',
+  };
 
   const borderBottom: IJsonBorderNode = {
     children: [] as IJsonTabNode[],
-    location: "bottom" as IBorderLocation,
-    type: "border",
-  }
+    location: 'bottom' as IBorderLocation,
+    type: 'border',
+  };
 
   const borderRight: IJsonBorderNode = {
     children: [] as IJsonTabNode[],
-    location: "right" as IBorderLocation,
-    type: "border",
-  }
+    location: 'right' as IBorderLocation,
+    type: 'border',
+  };
 
   const flexLayoutConfig: IJsonModel = {
     borders: [borderBottom, borderRight],
     global: {},
     layout: {
       children: [tabSet],
-      id: "root",
-      type: "row",
+      id: 'root',
+      type: 'row',
     },
-  }
+  };
 
-  return flexLayoutConfig
+  return flexLayoutConfig;
 }
 
 /* returns either a primitive value (like true, 42, "bottom") or
@@ -79,13 +79,13 @@ export function getConfigData(
   path: string,
   rootKey?: string,
 ): any {
-  const data = rootKey ? jsonData[rootKey] : jsonData
+  const data = rootKey ? jsonData[rootKey] : jsonData;
   return path
-    .split(".")
+    .split('.')
     .reduce(
       (accumulator, currentValue) => accumulator && accumulator[currentValue],
       data,
-    )
+    );
 }
 
 /*
@@ -101,22 +101,22 @@ export function setConfigData(
   newValue: any,
   rootKey?: string,
 ): void {
-  let presentData = rootKey ? jsonData[rootKey] : jsonData
-  const pathArray = path.split(".")
+  let presentData = rootKey ? jsonData[rootKey] : jsonData;
+  const pathArray = path.split('.');
   pathArray.forEach((currentElement, index) => {
     if (index === pathArray.length - 1) {
       // Set the value at the final path element
-      presentData[currentElement] = newValue
+      presentData[currentElement] = newValue;
     } else {
       // If the next element doesn't exist or is not an object, overwrite with an
       // empty object
       if (
-        typeof presentData[currentElement] !== "object" ||
+        typeof presentData[currentElement] !== 'object' ||
         presentData[currentElement] === null
       ) {
-        presentData[currentElement] = {}
+        presentData[currentElement] = {};
       }
-      presentData = presentData[currentElement]
+      presentData = presentData[currentElement];
     }
-  })
+  });
 }

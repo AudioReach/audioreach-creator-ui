@@ -3,36 +3,36 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {create} from "zustand"
+import {create} from 'zustand';
 
 export interface BackendConnectionState {
-  failCount: number
+  failCount: number;
   // actions
-  incrementFail: (errorMessage?: string) => void
+  incrementFail: (errorMessage?: string) => void;
   // core state
-  isBackendAvailable: boolean
-  isRegistered: boolean
-  lastCheckAt: number | null
+  isBackendAvailable: boolean;
+  isRegistered: boolean;
+  lastCheckAt: number | null;
 
-  lastError: string | null
-  markAvailable: () => void
-  markUnavailable: (errorMessage?: string) => void
-  resetFailures: () => void
-  setLastCheckAt: (ts: number) => void
-  setRegistered: (registered: boolean) => void
+  lastError: string | null;
+  markAvailable: () => void;
+  markUnavailable: (errorMessage?: string) => void;
+  resetFailures: () => void;
+  setLastCheckAt: (ts: number) => void;
+  setRegistered: (registered: boolean) => void;
 }
 
 export const useBackendConnectionStore = create<BackendConnectionState>(
   (set, get) => ({
     failCount: 0,
     incrementFail: (errorMessage?: string) => {
-      const current = get().failCount
-      const next = current + 1
+      const current = get().failCount;
+      const next = current + 1;
       set({
         failCount: next,
         isBackendAvailable: false,
         lastError: errorMessage ?? get().lastError,
-      })
+      });
     },
     // Assume available at startup; will be updated on first call
     isBackendAvailable: true,
@@ -45,7 +45,7 @@ export const useBackendConnectionStore = create<BackendConnectionState>(
       set({
         isBackendAvailable: true,
         lastError: null,
-      })
+      });
     },
 
     markUnavailable: (errorMessage?: string) => {
@@ -53,22 +53,22 @@ export const useBackendConnectionStore = create<BackendConnectionState>(
         isBackendAvailable: false,
         isRegistered: false, // Reset registration when backend becomes unavailable
         lastError: errorMessage ?? null,
-      })
+      });
     },
 
     resetFailures: () => {
       set({
         failCount: 0,
         lastError: null,
-      })
+      });
     },
 
     setLastCheckAt: (ts: number) => {
-      set({lastCheckAt: ts})
+      set({lastCheckAt: ts});
     },
 
     setRegistered: (registered: boolean) => {
-      set({isRegistered: registered})
+      set({isRegistered: registered});
     },
   }),
-)
+);

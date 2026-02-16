@@ -3,35 +3,35 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {KeyInfo, ValueInfo} from "./usecase-component.dto"
+import type {KeyInfo, ValueInfo} from './usecase-component.dto';
 
 export interface UsecaseResponseDto {
-  usecases: UsecaseIdentifier[]
+  usecases: UsecaseIdentifier[];
 }
 
 export interface UsecaseIdentifier {
-  filteredKV?: FilteredKV
-  keyValueCollection: KeyValueInfo[]
-  relatedEndPointLinks?: RelatedEndPointLink[]
-  systemId: string
-  usecaseAliasId?: number
-  usecaseAliasName?: string
-  usecaseCategory?: string
-  usecaseType: "Ec" | "Regular" | "Manual"
+  filteredKV?: FilteredKV;
+  keyValueCollection: KeyValueInfo[];
+  relatedEndPointLinks?: RelatedEndPointLink[];
+  systemId: string;
+  usecaseAliasId?: number;
+  usecaseAliasName?: string;
+  usecaseCategory?: string;
+  usecaseType: 'Ec' | 'Regular' | 'Manual';
 }
 
 export interface KeyValueInfo {
-  keyInfo: KeyInfo
-  valueInfo: ValueInfo
+  keyInfo: KeyInfo;
+  valueInfo: ValueInfo;
 }
 
 export interface FilteredKV {
-  keyValueCollection: KeyValueInfo[]
-  systemId: string
+  keyValueCollection: KeyValueInfo[];
+  systemId: string;
 }
 
 export interface RelatedEndPointLink {
-  description: string
-  hypertextRef: string
-  method: string
+  description: string;
+  hypertextRef: string;
+  method: string;
 }

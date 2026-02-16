@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type FC, useEffect, useMemo, useState} from "react"
+import {type FC, useEffect, useMemo, useState} from 'react';
 
-import {ChevronsDown, ChevronsUp} from "lucide-react"
+import {ChevronsDown, ChevronsUp} from 'lucide-react';
 
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
+import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
-import type {SubsystemBrowserTreeNode} from "~features/subsystem-browser/model/subsystem-browser.types"
-import {ConvertStringToNumber} from "~shared/utils/converter-utils"
+import type {SubsystemBrowserTreeNode} from '~features/subsystem-browser/model/subsystem-browser.types';
+import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
-import SearchBox from "./search-box"
-import SubsystemTreeNode from "./subsystem-tree-node"
+import SearchBox from './search-box';
+import SubsystemTreeNode from './subsystem-tree-node';
 
 interface SubsystemTreeViewProps {
-  data: SubsystemBrowserTreeNode[]
-  onClick: (id: number) => void
+  data: SubsystemBrowserTreeNode[];
+  onClick: (id: number) => void;
 }
 
 // collect all ids in the tree (depth-first)
@@ -25,7 +25,7 @@ function extractAllSubsystemIds(nodes: SubsystemBrowserTreeNode[]): number[] {
   return nodes.flatMap((node) => [
     node.id,
     ...(node.children ? extractAllSubsystemIds(node.children) : []),
-  ])
+  ]);
 }
 
 // For nodes expansion, collect ancestor ids for nodes that match the search term
@@ -34,15 +34,15 @@ function collectAncestorIdsForMatches(
   searchTerm: string,
   path: number[] = [],
 ): number[] {
-  const ids: number[] = []
-  const term = searchTerm.trim().toLowerCase()
+  const ids: number[] = [];
+  const term = searchTerm.trim().toLowerCase();
   for (const node of nodes) {
-    const nameMatches = node.name.toLowerCase().includes(term)
-    let idMatches: boolean = false
+    const nameMatches = node.name.toLowerCase().includes(term);
+    let idMatches: boolean = false;
     if (!nameMatches) {
       // convert a search term that may be decimal or hex ("0xFF" or "ff") into a number
-      const idNumber = ConvertStringToNumber(term)
-      idMatches = idNumber !== null && idNumber === node.id
+      const idNumber = ConvertStringToNumber(term);
+      idMatches = idNumber !== null && idNumber === node.id;
     }
 
     const childMatches = node.children
@@ -50,77 +50,77 @@ function collectAncestorIdsForMatches(
           ...path,
           node.id,
         ])
-      : []
+      : [];
     if (nameMatches || idMatches) {
       // Expand the entire ancestor path so this node becomes visible
-      ids.push(...path)
+      ids.push(...path);
     }
     if (childMatches.length) {
       // If any descendant matches, this node should also be expanded
-      ids.push(node.id, ...childMatches)
+      ids.push(node.id, ...childMatches);
     }
   }
-  return Array.from(new Set(ids))
+  return Array.from(new Set(ids));
 }
 
 const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({})
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
   // to reduce traversal frequency of searchTerm
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const isExpanded = (id: number) => !!expandedIds[id] // !! guarantees the result is strictly a boolean, not undefined, null, or other truthy/falsy values
+  const isExpanded = (id: number) => !!expandedIds[id]; // !! guarantees the result is strictly a boolean, not undefined, null, or other truthy/falsy values
   const toggleNode = (id: number) => {
-    setExpandedIds((prevState) => ({...prevState, [id]: !prevState[id]}))
-  }
+    setExpandedIds((prevState) => ({...prevState, [id]: !prevState[id]}));
+  };
 
   // Debounce the search term
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300) // 300ms debounce
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300); // 300ms debounce
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Auto-expand ancestors to reveal matches when searching
   useEffect(() => {
-    const term = debouncedSearchTerm?.trim()
+    const term = debouncedSearchTerm?.trim();
     if (!term) {
       // Optional: collapse when search is cleared
       // setExpandedIds({})
-      return
+      return;
     }
 
     // controls expansion
-    const idsToExpand = collectAncestorIdsForMatches(data, term)
+    const idsToExpand = collectAncestorIdsForMatches(data, term);
     setExpandedIds((prev) => {
-      const next = {...prev}
+      const next = {...prev};
       idsToExpand.forEach((id) => {
-        next[id] = true
-      })
-      return next
-    })
-  }, [debouncedSearchTerm, data])
+        next[id] = true;
+      });
+      return next;
+    });
+  }, [debouncedSearchTerm, data]);
 
   // Compute all ids and whether they are all expanded
-  const allIds = useMemo(() => extractAllSubsystemIds(data), [data])
+  const allIds = useMemo(() => extractAllSubsystemIds(data), [data]);
   const isFullyExpanded =
-    allIds.length > 0 && allIds.every((id) => expandedIds[id])
+    allIds.length > 0 && allIds.every((id) => expandedIds[id]);
 
   // Single toggle: expand all if not fully expanded, otherwise collapse all
   const toggleAll = () => {
     if (isFullyExpanded) {
-      setExpandedIds({})
+      setExpandedIds({});
     } else {
       setExpandedIds(
         allIds.reduce(
           (acc, id) => {
-            acc[id] = true
-            return acc
+            acc[id] = true;
+            return acc;
           },
           {} as Record<number, boolean>,
         ),
-      )
+      );
     }
-  }
+  };
 
   return (
     <div>
@@ -128,13 +128,13 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
       <div className="mb-2 flex flex-nowrap items-center gap-2">
         <SearchBox
           onChange={setSearchTerm}
-          onClear={() => setSearchTerm("")}
+          onClear={() => setSearchTerm('')}
           searchTerm={searchTerm}
         />
 
         {/* Single toggle button for Collapse all and Expand all */}
         <InlineIconButton
-          aria-label={isFullyExpanded ? "Collapse all" : "Expand all"}
+          aria-label={isFullyExpanded ? 'Collapse all' : 'Expand all'}
           icon={
             isFullyExpanded ? (
               <ChevronsUp size={20} />
@@ -145,9 +145,9 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
           onClick={toggleAll}
           size="sm"
           style={{
-            background: "#fff",
+            background: '#fff',
           }}
-          title={isFullyExpanded ? "Collapse all" : "Expand all"}
+          title={isFullyExpanded ? 'Collapse all' : 'Expand all'}
           variant="scale"
         />
       </div>
@@ -163,7 +163,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
         />
       ))}
     </div>
-  )
-}
+  );
+};
 
-export default SubsystemTreeView
+export default SubsystemTreeView;

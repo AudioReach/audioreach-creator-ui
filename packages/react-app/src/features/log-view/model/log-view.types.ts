@@ -4,48 +4,48 @@
  */
 
 export interface LogEntry {
-  detailedMessage?: string
-  id: string
-  logMessageExpanded?: boolean
-  logType: LogType.Info | LogType.Warning | LogType.Error
-  message: string
-  timestamp?: Date
+  detailedMessage?: string;
+  id: string;
+  logMessageExpanded?: boolean;
+  logType: LogType.Info | LogType.Warning | LogType.Error;
+  message: string;
+  timestamp?: Date;
 }
 
 export enum LogType {
-  Info = "info",
-  Warning = "warning",
-  Error = "error",
+  Info = 'info',
+  Warning = 'warning',
+  Error = 'error',
 }
 
 // Constant for "All Types"
-export const ALL_TYPES = "all"
+export const ALL_TYPES = 'all';
 
 export interface LogViewStore {
   // Add new log entry to the logs array
   addLog: (logData: {
-    detailedMessage?: string
-    logType: LogType.Info | LogType.Warning | LogType.Error
-    message: string
-    timestamp?: Date
-  }) => boolean
+    detailedMessage?: string;
+    logType: LogType.Info | LogType.Warning | LogType.Error;
+    message: string;
+    timestamp?: Date;
+  }) => boolean;
   // Row selection action
-  clearLogRowSelection: () => boolean
-  clearLogs: () => boolean
+  clearLogRowSelection: () => boolean;
+  clearLogs: () => boolean;
 
-  logs: LogEntry[]
+  logs: LogEntry[];
 
-  searchLogQuery: string
+  searchLogQuery: string;
 
-  selectedLogTypes: string[]
+  selectedLogTypes: string[];
 
-  selectedRowLogId: string | null
-  selectRowLog: (logId: string) => boolean
+  selectedRowLogId: string | null;
+  selectRowLog: (logId: string) => boolean;
 
   // Search and filter actions
-  setSearchLogQuery: (query: string) => boolean
-  setSelectedLogTypes: (types: string[]) => boolean
+  setSearchLogQuery: (query: string) => boolean;
+  setSelectedLogTypes: (types: string[]) => boolean;
 
   // expansion toggle
-  toggleLogExpansion: (logId: string) => boolean
+  toggleLogExpansion: (logId: string) => boolean;
 }

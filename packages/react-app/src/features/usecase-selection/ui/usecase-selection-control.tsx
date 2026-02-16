@@ -3,63 +3,63 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useRef, useState} from "react"
+import {useEffect, useRef, useState} from 'react';
 
-import {Search} from "lucide-react"
+import {Search} from 'lucide-react';
 
-import {TextInput} from "@qualcomm-ui/react/text-input"
+import {TextInput} from '@qualcomm-ui/react/text-input';
 
-import type {KeyValueInfo} from "~entities/usecases/model/usecase.dto"
-import {useUsecaseStore} from "~shared/store/use-usecase-store"
+import type {KeyValueInfo} from '~entities/usecases/model/usecase.dto';
+import {useUsecaseStore} from '~shared/store/use-usecase-store';
 
-const EMPTY_SELECTED_USECASES: string[] = []
+const EMPTY_SELECTED_USECASES: string[] = [];
 
-import type {KeyValue, Usecase, UsecaseCategory} from "../model/types"
+import type {KeyValue, Usecase, UsecaseCategory} from '../model/types';
 
-import UsecaseListPanel from "./usecase-list-panel"
+import UsecaseListPanel from './usecase-list-panel';
 
 // Utility to format a Usecase's keyValueCollection into a display string
 const formatUsecaseDisplay = (usecase: Usecase): string => {
   return usecase.keyValueCollection
     .map((kv: KeyValueInfo) => kv.valueInfo.valueLabel)
-    .join(" • ")
-}
+    .join(' • ');
+};
 
 interface UsecaseNavigationControlProps {
-  projectGroupId: string
-  usecaseData: UsecaseCategory[]
+  projectGroupId: string;
+  usecaseData: UsecaseCategory[];
 }
 
 const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
   projectGroupId,
   usecaseData,
 }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>(
     usecaseData.filter((cat) => cat.expanded).map((cat) => cat.name),
-  )
+  );
 
   // Get selected usecases from store - ensure stable reference when empty
   const selectedUsecases = useUsecaseStore(
     (state) =>
       state.selectedUsecases[projectGroupId] ?? EMPTY_SELECTED_USECASES,
-  )
+  );
 
   // Get store method - this is stable and won't cause re-renders
   const setSelectedUsecases = useUsecaseStore(
     (state) => state.setSelectedUsecases,
-  )
+  );
 
   const toggleCategoryExpansion = (categoryName: string) => {
     setExpandedCategories((prev) =>
       prev.includes(categoryName)
         ? prev.filter((name) => name !== categoryName)
         : [...prev, categoryName],
-    )
-  }
+    );
+  };
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -67,30 +67,30 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setIsDropdownOpen(false)
+        setIsDropdownOpen(false);
       }
-    }
+    };
 
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isDropdownOpen) {
-        setIsDropdownOpen(false)
+      if (event.key === 'Escape' && isDropdownOpen) {
+        setIsDropdownOpen(false);
       }
-    }
+    };
 
     if (isDropdownOpen) {
       // Use capture phase to catch events before they're stopped by child components
-      document.addEventListener("mousedown", handleClickOutside, true)
-      document.addEventListener("keydown", handleEscapeKey)
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('keydown', handleEscapeKey);
     } else {
-      document.removeEventListener("mousedown", handleClickOutside, true)
-      document.removeEventListener("keydown", handleEscapeKey)
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('keydown', handleEscapeKey);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside, true)
-      document.removeEventListener("keydown", handleEscapeKey)
-    }
-  }, [isDropdownOpen])
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isDropdownOpen]);
 
   const handleSelectUsecase = (
     formattedUsecase: string,
@@ -100,31 +100,31 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
       setSelectedUsecases(projectGroupId, [
         ...selectedUsecases,
         formattedUsecase,
-      ])
+      ]);
     } else {
       setSelectedUsecases(
         projectGroupId,
         selectedUsecases.filter((uc) => uc !== formattedUsecase),
-      )
+      );
     }
-  }
+  };
 
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
       const allUsecaseStrings = usecaseData.flatMap((category) =>
         category.usecases.map((uc: Usecase) => formatUsecaseDisplay(uc)),
-      )
-      setSelectedUsecases(projectGroupId, allUsecaseStrings)
+      );
+      setSelectedUsecases(projectGroupId, allUsecaseStrings);
     } else {
-      setSelectedUsecases(projectGroupId, [])
+      setSelectedUsecases(projectGroupId, []);
     }
-  }
+  };
 
   // Utility to determine if a usecase is checked based on its current display
   // format. This needs to be consistent with how selectedUsecases are stored.
   const isUsecaseChecked = (usecase: Usecase) => {
-    return selectedUsecases.includes(formatUsecaseDisplay(usecase))
-  }
+    return selectedUsecases.includes(formatUsecaseDisplay(usecase));
+  };
 
   // Filter usecases based on search term
   const filteredUsecaseData = usecaseData
@@ -132,10 +132,10 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
       ...category,
       usecases: category.usecases.filter((usecase: Usecase) => {
         if (!searchTerm) {
-          return true
+          return true;
         }
-        const formattedUsecase = formatUsecaseDisplay(usecase).toLowerCase()
-        const searchLower = searchTerm.toLowerCase()
+        const formattedUsecase = formatUsecaseDisplay(usecase).toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
         return (
           formattedUsecase.includes(searchLower) ||
           usecase.keyValueCollection.some(
@@ -143,10 +143,10 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
               kv.keyInfo.keyLabel.toLowerCase().includes(searchLower) ||
               kv.valueInfo.valueLabel.toLowerCase().includes(searchLower),
           )
-        )
+        );
       }),
     }))
-    .filter((category) => category.usecases.length > 0)
+    .filter((category) => category.usecases.length > 0);
 
   return (
     <div ref={containerRef} className="relative">
@@ -171,8 +171,8 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
         <div
           className="absolute left-0 right-0 top-full z-10 mt-1 flex max-h-96 rounded-md shadow-lg"
           style={{
-            backgroundColor: "var(--color-surface-raised)",
-            border: "1px solid var(--color-border-neutral-02)",
+            backgroundColor: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border-neutral-02)',
           }}
         >
           <UsecaseListPanel
@@ -189,7 +189,7 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default UsecaseNavigationControl
+export default UsecaseNavigationControl;

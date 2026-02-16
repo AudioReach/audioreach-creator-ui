@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import ArcProjectCard from "~shared/controls/arc-project-card"
-import type DeviceInfo from "~shared/types/device-info.types"
+import ArcProjectCard from '~shared/controls/arc-project-card';
+import type DeviceInfo from '~shared/types/device-info.types';
 
 interface DeviceSectionProps {
   /** List of devices to display in the device list */
-  devices?: DeviceInfo[]
+  devices?: DeviceInfo[];
   /** A callback triggered when double clicking a device card */
-  onOpenDevice?: (device: DeviceInfo) => void
+  onOpenDevice?: (device: DeviceInfo) => void;
 }
 
 export default function DeviceList({
@@ -19,7 +19,7 @@ export default function DeviceList({
 }: DeviceSectionProps) {
   // handle showing as list view or as grid view
   function handleDeviceSelected(device: DeviceInfo) {
-    onOpenDevice?.(device)
+    onOpenDevice?.(device);
   }
 
   return (
@@ -35,9 +35,9 @@ export default function DeviceList({
               onDoubleClick={() => handleDeviceSelected(item)}
               title={item.name}
             />
-          )
+          );
         })}
       </div>
     </section>
-  )
+  );
 }

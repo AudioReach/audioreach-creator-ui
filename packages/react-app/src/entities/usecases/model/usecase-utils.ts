@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {UsecaseCategory} from "~features/usecase-selection"
+import type {UsecaseCategory} from '~features/usecase-selection';
 
-import type {UsecaseIdentifier} from "./usecase.dto"
+import type {UsecaseIdentifier} from './usecase.dto';
 
 /**
  * Formats a usecase identifier into a display string
@@ -14,7 +14,7 @@ import type {UsecaseIdentifier} from "./usecase.dto"
 export function formatUsecaseDisplay(usecase: UsecaseIdentifier): string {
   return usecase.keyValueCollection
     .map((kv) => kv.valueInfo.valueLabel)
-    .join(" • ")
+    .join(' • ');
 }
 
 /**
@@ -30,32 +30,32 @@ export function getSystemIdsFromFormattedUsecases(
   usecaseData: UsecaseCategory[],
 ): string[] {
   if (!formattedUsecases || formattedUsecases.length === 0) {
-    return []
+    return [];
   }
 
   if (!usecaseData || usecaseData.length === 0) {
-    return []
+    return [];
   }
 
-  const systemIds: string[] = []
+  const systemIds: string[] = [];
 
   // Flatten all usecases from all categories
   const allUsecases: UsecaseIdentifier[] = usecaseData.flatMap(
     (category) => category.usecases,
-  )
+  );
 
   // For each formatted string, find the matching usecase and extract systemId
   for (const formattedUsecase of formattedUsecases) {
     const matchingUsecase = allUsecases.find(
       (usecase) => formatUsecaseDisplay(usecase) === formattedUsecase,
-    )
+    );
 
     if (matchingUsecase && matchingUsecase.systemId) {
-      systemIds.push(matchingUsecase.systemId)
+      systemIds.push(matchingUsecase.systemId);
     }
   }
 
-  return systemIds
+  return systemIds;
 }
 
 /**
@@ -70,30 +70,30 @@ export function getUsecaseIdentifiersFromFormattedUsecases(
   usecaseData: UsecaseCategory[],
 ): UsecaseIdentifier[] {
   if (!formattedUsecases || formattedUsecases.length === 0) {
-    return []
+    return [];
   }
 
   if (!usecaseData || usecaseData.length === 0) {
-    return []
+    return [];
   }
 
-  const usecaseIdentifiers: UsecaseIdentifier[] = []
+  const usecaseIdentifiers: UsecaseIdentifier[] = [];
 
   // Flatten all usecases from all categories
   const allUsecases: UsecaseIdentifier[] = usecaseData.flatMap(
     (category) => category.usecases,
-  )
+  );
 
   // For each formatted string, find the matching usecase
   for (const formattedUsecase of formattedUsecases) {
     const matchingUsecase = allUsecases.find(
       (usecase) => formatUsecaseDisplay(usecase) === formattedUsecase,
-    )
+    );
 
     if (matchingUsecase) {
-      usecaseIdentifiers.push(matchingUsecase)
+      usecaseIdentifiers.push(matchingUsecase);
     }
   }
 
-  return usecaseIdentifiers
+  return usecaseIdentifiers;
 }

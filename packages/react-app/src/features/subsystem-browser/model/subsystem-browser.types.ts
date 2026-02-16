@@ -4,7 +4,7 @@
  */
 
 export type SubsystemBrowserTreeNode = {
-  children?: SubsystemBrowserTreeNode[]
-  id: number
-  name: string
-}
+  children?: SubsystemBrowserTreeNode[];
+  id: number;
+  name: string;
+};

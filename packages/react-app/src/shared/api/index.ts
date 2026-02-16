@@ -1,7 +1,7 @@
-export * from "./electron-api"
-export * from "./utils"
-export * from "./http-client"
-export * from "./register-client"
-export * from "./logging-api"
-export type * from "./api-response.types"
-export * from "./logging.types"
+export * from './electron-api';
+export * from './utils';
+export * from './http-client';
+export * from './register-client';
+export * from './logging-api';
+export type * from './api-response.types';
+export * from './logging.types';

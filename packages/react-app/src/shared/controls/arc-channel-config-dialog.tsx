@@ -3,29 +3,29 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useMemo, useRef, useState} from "react"
+import {useEffect, useMemo, useRef, useState} from 'react';
 
-import {X} from "lucide-react"
+import {X} from 'lucide-react';
 
-import {Button} from "@qualcomm-ui/react/button"
+import {Button} from '@qualcomm-ui/react/button';
 
-import ArcCombobox from "./arc-combobox"
-import ArcTextInput from "./arc-text-input"
-import "./arc-channel-config-dialog.css"
+import ArcCombobox from './arc-combobox';
+import ArcTextInput from './arc-text-input';
+import './arc-channel-config-dialog.css';
 
 export interface ArcChannelConfigDialogProps {
-  maxChannelCount?: number
-  onClose: () => void
-  onSave?: (channelConfig: {[key: number]: string}) => void
-  options?: string[]
-  selectedChannelValues?: {[key: number]: string}
-  validateDuplicates?: boolean
+  maxChannelCount?: number;
+  onClose: () => void;
+  onSave?: (channelConfig: {[key: number]: string}) => void;
+  options?: string[];
+  selectedChannelValues?: {[key: number]: string};
+  validateDuplicates?: boolean;
 }
 
 interface ValidationResult {
-  duplicates: {[key: string]: number[]}
-  isValid: boolean
-  message?: string
+  duplicates: {[key: string]: number[]};
+  isValid: boolean;
+  message?: string;
 }
 
 const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
@@ -36,7 +36,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   selectedChannelValues = {},
   validateDuplicates = true,
 }) => {
-  const popupRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null);
 
   // Auto-populate logic: if no selected values provided but maxChannelCount exists,
   // set default count to maxChannelCount
@@ -45,108 +45,108 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
       ? maxChannelCount
       : Object.keys(selectedChannelValues).length > 0
         ? Math.max(...Object.keys(selectedChannelValues).map(Number))
-        : 0
+        : 0;
 
   // Auto-populate channel values based on index if no selected values provided
   const initialChannelValues = useMemo(() => {
     if (Object.keys(selectedChannelValues).length > 0) {
-      return selectedChannelValues
+      return selectedChannelValues;
     }
 
     if (maxChannelCount && Object.keys(selectedChannelValues).length === 0) {
-      const autoValues: {[key: number]: string} = {}
+      const autoValues: {[key: number]: string} = {};
       for (let i = 0; i < maxChannelCount; i++) {
         // Use options array values on index basis, or fallback to dynamic channel
         // naming
-        autoValues[i] = options[i] || `channel_${i}`
+        autoValues[i] = options[i] || `channel_${i}`;
       }
-      return autoValues
+      return autoValues;
     }
 
-    return selectedChannelValues
-  }, [selectedChannelValues, maxChannelCount, options])
+    return selectedChannelValues;
+  }, [selectedChannelValues, maxChannelCount, options]);
 
   // State for number of channels - initialize with calculated value
-  const [channelCount, setChannelCount] = useState<number>(initialChannelCount)
+  const [channelCount, setChannelCount] = useState<number>(initialChannelCount);
 
   // State for channel values - initialize with calculated values
   const [channelValues, setChannelValues] = useState<{[key: number]: string}>(
     initialChannelValues,
-  )
+  );
 
   // Handle escape key press
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose()
+      if (event.key === 'Escape') {
+        onClose();
       }
-    }
+    };
 
-    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [onClose])
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   // Prevent body scrolling when popup is open
   useEffect(() => {
-    document.body.style.overflow = "hidden"
+    document.body.style.overflow = 'hidden';
 
     return () => {
-      document.body.style.overflow = ""
-    }
-  }, [])
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   // Track previous channel count to detect changes
-  const prevChannelCountRef = useRef<number>(channelCount)
+  const prevChannelCountRef = useRef<number>(channelCount);
 
   // Update channel values when count changes
   useEffect(() => {
     // Only proceed if channel count actually changed
     if (prevChannelCountRef.current === channelCount) {
-      return
+      return;
     }
 
     setChannelValues((prevChannelValues) => {
       // Create a new object with the current channel count
-      const newChannelValues = {...prevChannelValues}
+      const newChannelValues = {...prevChannelValues};
 
       // Add new channels if needed
       for (let i = 0; i < channelCount; i++) {
         if (!newChannelValues[i]) {
           // Use options array values on index basis, or fallback to dynamic channel
           // naming
-          newChannelValues[i] = options[i] || `channel_${i}`
+          newChannelValues[i] = options[i] || `channel_${i}`;
         }
       }
 
       // Remove extra channels if count decreased
       Object.keys(newChannelValues).forEach((key) => {
-        const channelNumber = parseInt(key, 10)
+        const channelNumber = parseInt(key, 10);
         if (channelNumber >= channelCount) {
-          delete newChannelValues[channelNumber]
+          delete newChannelValues[channelNumber];
         }
-      })
+      });
 
-      return newChannelValues
-    })
+      return newChannelValues;
+    });
 
     // Update the previous channel count ref
-    prevChannelCountRef.current = channelCount
-  }, [channelCount, options])
+    prevChannelCountRef.current = channelCount;
+  }, [channelCount, options]);
 
   // Handle channel count change
   const handleChannelCountChange = (value: string) => {
-    const count = parseInt(value, 10)
+    const count = parseInt(value, 10);
     if (
       !isNaN(count) &&
       count >= 0 &&
       (maxChannelCount === undefined || count <= maxChannelCount)
     ) {
-      setChannelCount(count)
+      setChannelCount(count);
     }
-  }
+  };
 
   // Handle channel value change
   const handleChannelValueChange = (
@@ -155,13 +155,13 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   ) => {
     // Handle null value and convert array to string if needed (take first value)
     const stringValue =
-      value === null ? "" : Array.isArray(value) ? value[0] || "" : value || ""
+      value === null ? '' : Array.isArray(value) ? value[0] || '' : value || '';
 
     setChannelValues((prev) => ({
       ...prev,
       [channelNumber]: stringValue,
-    }))
-  }
+    }));
+  };
 
   // Validate channel values for duplicates
   const validation: ValidationResult = useMemo(() => {
@@ -169,89 +169,91 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
       return {
         duplicates: {},
         isValid: true,
-      }
+      };
     }
 
-    const duplicates: {[key: string]: number[]} = {}
-    const valueToChannels: {[key: string]: number[]} = {}
+    const duplicates: {[key: string]: number[]} = {};
+    const valueToChannels: {[key: string]: number[]} = {};
 
     // Group channels by their values (excluding empty values)
     Object.entries(channelValues).forEach(([channelKey, value]) => {
-      if (value && value.trim() !== "") {
-        const trimmedValue = value.trim()
+      if (value && value.trim() !== '') {
+        const trimmedValue = value.trim();
         if (!valueToChannels[trimmedValue]) {
-          valueToChannels[trimmedValue] = []
+          valueToChannels[trimmedValue] = [];
         }
-        valueToChannels[trimmedValue].push(parseInt(channelKey, 10))
+        valueToChannels[trimmedValue].push(parseInt(channelKey, 10));
       }
-    })
+    });
 
     // Find duplicates
     Object.entries(valueToChannels).forEach(([value, channels]) => {
       if (channels.length > 1) {
-        duplicates[value] = channels
+        duplicates[value] = channels;
       }
-    })
+    });
 
-    const isValid = Object.keys(duplicates).length === 0
+    const isValid = Object.keys(duplicates).length === 0;
     const message = isValid
       ? undefined
-      : `Duplicate values found: ${Object.keys(duplicates).join(", ")}`
+      : `Duplicate values found: ${Object.keys(duplicates).join(', ')}`;
 
     return {
       duplicates,
       isValid,
       message,
-    }
-  }, [channelValues, validateDuplicates])
+    };
+  }, [channelValues, validateDuplicates]);
 
   // Check if a channel has a duplicate value
   const isChannelDuplicate = (channelNumber: number): boolean => {
-    const channelValue = channelValues[channelNumber]
-    if (!channelValue || channelValue.trim() === "") {
-      return false
+    const channelValue = channelValues[channelNumber];
+    if (!channelValue || channelValue.trim() === '') {
+      return false;
     }
 
-    const trimmedValue = channelValue.trim()
-    return validation.duplicates[trimmedValue]?.includes(channelNumber) || false
-  }
+    const trimmedValue = channelValue.trim();
+    return (
+      validation.duplicates[trimmedValue]?.includes(channelNumber) || false
+    );
+  };
 
   // Handle save button click
   const handleSave = () => {
     if (onSave) {
-      onSave(channelValues)
+      onSave(channelValues);
     }
-    onClose()
-  }
+    onClose();
+  };
 
   // Generate extended options for dropdowns
   const extendedOptions = useMemo(() => {
-    const allOptions = [...options]
+    const allOptions = [...options];
 
     // Add missing channels up to the current channel count, not maxChannelCount
     if (options.length < channelCount) {
       for (let i = options.length; i < channelCount; i++) {
-        allOptions.push(`channel_${i}`)
+        allOptions.push(`channel_${i}`);
       }
     }
 
-    return allOptions
-  }, [options, channelCount])
+    return allOptions;
+  }, [options, channelCount]);
 
   // Generate channel inputs
   const renderChannelInputs = () => {
-    const inputs = []
+    const inputs = [];
 
     for (let i = 0; i < channelCount; i++) {
-      const displayLabel = `Channel ${i}`
-      const isDuplicate = isChannelDuplicate(i)
-      const currentValue = channelValues[i] || ""
+      const displayLabel = `Channel ${i}`;
+      const isDuplicate = isChannelDuplicate(i);
+      const currentValue = channelValues[i] || '';
 
       // Create options array with current value included for filtering support
       const optionsWithCurrentValue =
         currentValue && !extendedOptions.includes(currentValue)
           ? [...extendedOptions, currentValue]
-          : extendedOptions
+          : extendedOptions;
 
       inputs.push(
         <div key={i} className="channel-config-item">
@@ -262,7 +264,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
                 error={isDuplicate}
                 filterable
                 fullWidth
-                hint={isDuplicate ? "Duplicate value" : undefined}
+                hint={isDuplicate ? 'Duplicate value' : undefined}
                 onChange={(value) => handleChannelValueChange(i, value)}
                 options={optionsWithCurrentValue}
                 placeholder={displayLabel}
@@ -271,11 +273,11 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
             </div>
           </div>
         </div>,
-      )
+      );
     }
 
-    return inputs
-  }
+    return inputs;
+  };
 
   return (
     <div className="popup-overlay">
@@ -353,7 +355,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ArcChannelConfigDialog
+export default ArcChannelConfigDialog;

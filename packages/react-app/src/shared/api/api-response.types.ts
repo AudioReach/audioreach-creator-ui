@@ -10,25 +10,25 @@ export interface ApiResult<T = unknown> {
   /**
    * The actual data returned by the API
    */
-  data?: T
+  data?: T;
 
   /**
    * Array of error messages if any occurred
    */
-  errors?: string[]
+  errors?: string[];
 
   /**
    * A human-readable message describing the result
    */
-  message: string
+  message: string;
 
   /**
    * Whether the API call was successful
    */
-  success: boolean
+  success: boolean;
 
   /**
    * Array of warning messages that don't prevent operation but should be noted
    */
-  warnings?: string[]
+  warnings?: string[];
 }

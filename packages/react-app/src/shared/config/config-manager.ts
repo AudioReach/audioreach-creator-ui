@@ -3,40 +3,40 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {logger} from "../lib/logger"
-import {deepEqual} from "../utils/deep-equality"
+import {logger} from '../lib/logger';
+import {deepEqual} from '../utils/deep-equality';
 
 import {
   DEFAULT_USER_PREFERENCES,
   type UserPreferences,
-} from "./user-preferences-types"
+} from './user-preferences-types';
 import {
   getConfigData,
   GetFlexLayoutConfig,
   graphDesignerLayout,
   type JSONDataMap,
   setConfigData,
-} from "./utils"
+} from './utils';
 
 export class ConfigFileManager {
-  private static _instance: ConfigFileManager
-  private configDataMap: JSONDataMap
+  private static _instance: ConfigFileManager;
+  private configDataMap: JSONDataMap;
 
-  private projectConfigMap: Map<string, JSONDataMap>
-  private readonly rootKey: string = "arcconfig"
-  private userPreferencesCache: Map<string, UserPreferences>
+  private projectConfigMap: Map<string, JSONDataMap>;
+  private readonly rootKey: string = 'arcconfig';
+  private userPreferencesCache: Map<string, UserPreferences>;
 
   private constructor() {
-    this.configDataMap = {}
-    this.projectConfigMap = new Map<string, JSONDataMap>()
-    this.userPreferencesCache = new Map<string, UserPreferences>()
+    this.configDataMap = {};
+    this.projectConfigMap = new Map<string, JSONDataMap>();
+    this.userPreferencesCache = new Map<string, UserPreferences>();
   }
 
   static get instance(): ConfigFileManager {
     if (!this._instance) {
-      this._instance = new ConfigFileManager()
+      this._instance = new ConfigFileManager();
     }
-    return this._instance
+    return this._instance;
   }
 
   /**
@@ -47,33 +47,33 @@ export class ConfigFileManager {
    * @returns Promise resolving to true if archived, false otherwise.
    */
   async archiveProjectConfig(projectId: string): Promise<boolean> {
-    const projectConfig = this.projectConfigMap.get(projectId)
+    const projectConfig = this.projectConfigMap.get(projectId);
     if (projectConfig === undefined) {
-      logger.error("No configuration data exists for project", {
-        action: "archive_project_config",
-        component: "ConfigFileManager",
-        error: "Project config not found",
+      logger.error('No configuration data exists for project', {
+        action: 'archive_project_config',
+        component: 'ConfigFileManager',
+        error: 'Project config not found',
         projectId,
-      })
-      return false
+      });
+      return false;
     }
 
-    const result = await this.save(projectId)
+    const result = await this.save(projectId);
     if (result) {
-      this.projectConfigMap.delete(projectId)
+      this.projectConfigMap.delete(projectId);
       // Invalidate preferences cache for this project
-      this.userPreferencesCache.delete(projectId)
+      this.userPreferencesCache.delete(projectId);
     }
-    return result
+    return result;
   }
 
   private ensureGraphDesignerViewLayout() {
     if (!this.configDataMap.arcconfig?.layout?.graphDesignerView) {
-      this.configDataMap.arcconfig = this.configDataMap.arcconfig || {}
+      this.configDataMap.arcconfig = this.configDataMap.arcconfig || {};
       this.configDataMap.arcconfig.layout =
-        this.configDataMap.arcconfig.layout || {}
+        this.configDataMap.arcconfig.layout || {};
       this.configDataMap.arcconfig.layout.graphDesignerView =
-        graphDesignerLayout
+        graphDesignerLayout;
     }
   }
 
@@ -81,21 +81,21 @@ export class ConfigFileManager {
    * Gets the global theme preference (not project-specific)
    * @returns The theme value ('light' | 'dark') or default 'light'
    */
-  getGlobalTheme(): "light" | "dark" {
+  getGlobalTheme(): 'light' | 'dark' {
     const theme = getConfigData(
       this.configDataMap,
-      "globalPreferences.theme",
+      'globalPreferences.theme',
       this.rootKey,
-    )
+    );
     // Validate and log if invalid value found
-    if (theme !== "dark" && theme !== "light" && theme !== undefined) {
-      logger.warn("Invalid theme value in config, defaulting to light", {
-        action: "get_global_theme",
-        component: "ConfigFileManager",
-      })
+    if (theme !== 'dark' && theme !== 'light' && theme !== undefined) {
+      logger.warn('Invalid theme value in config, defaulting to light', {
+        action: 'get_global_theme',
+        component: 'ConfigFileManager',
+      });
     }
     // Ensure only valid values are returned
-    return theme === "dark" ? "dark" : "light"
+    return theme === 'dark' ? 'dark' : 'light';
   }
 
   /**
@@ -107,21 +107,21 @@ export class ConfigFileManager {
    * @returns The project configuration data.
    */
   getProjectConfigData(projectId: string, path: string): any {
-    let projectConfig = this.projectConfigMap.get(projectId)
+    let projectConfig = this.projectConfigMap.get(projectId);
     if (projectConfig === undefined) {
       // Deep copy to avoid mutation, changes to below obj doesn't affect the original data
       projectConfig = JSON.parse(
         JSON.stringify(this.configDataMap),
-      ) as JSONDataMap
-      this.projectConfigMap.set(projectId, projectConfig)
-      logger.verbose("Project config created", {
-        action: "create_project_config",
-        component: "ConfigFileManager",
+      ) as JSONDataMap;
+      this.projectConfigMap.set(projectId, projectConfig);
+      logger.verbose('Project config created', {
+        action: 'create_project_config',
+        component: 'ConfigFileManager',
         projectId,
-      })
+      });
     }
 
-    return getConfigData(projectConfig, path, this.rootKey)
+    return getConfigData(projectConfig, path, this.rootKey);
   }
 
   /**
@@ -133,28 +133,28 @@ export class ConfigFileManager {
    * @returns The user preferences for the project.
    */
   getUserPreferences(projectId: string): UserPreferences {
-    const projectConfig = this.projectConfigMap.get(projectId)
+    const projectConfig = this.projectConfigMap.get(projectId);
     if (!projectConfig) {
       logger.verbose(
-        "No configuration data exists for project, returning defaults",
+        'No configuration data exists for project, returning defaults',
         {
-          action: "get_user_preferences",
-          component: "ConfigFileManager",
+          action: 'get_user_preferences',
+          component: 'ConfigFileManager',
           projectId,
         },
-      )
-      return DEFAULT_USER_PREFERENCES
+      );
+      return DEFAULT_USER_PREFERENCES;
     }
 
     const preferences = getConfigData(
       projectConfig,
-      "userPreferences",
+      'userPreferences',
       this.rootKey,
-    )
+    );
 
     // If preferences don't exist or are incomplete, merge with defaults
     if (!preferences) {
-      return DEFAULT_USER_PREFERENCES
+      return DEFAULT_USER_PREFERENCES;
     }
 
     const newPreferences: UserPreferences = {
@@ -170,10 +170,10 @@ export class ConfigFileManager {
         ...DEFAULT_USER_PREFERENCES.visualization,
         ...preferences.visualization,
       },
-    }
+    };
 
     // Check cache for existing preferences
-    const cachedUserPreferences = this.userPreferencesCache.get(projectId)
+    const cachedUserPreferences = this.userPreferencesCache.get(projectId);
 
     // If cached preferences exist and are equal to new preferences,
     // return the cached object to maintain reference equality
@@ -181,12 +181,12 @@ export class ConfigFileManager {
       cachedUserPreferences &&
       deepEqual(cachedUserPreferences, newPreferences)
     ) {
-      return cachedUserPreferences
+      return cachedUserPreferences;
     }
 
     // Update cache with new preferences
-    this.userPreferencesCache.set(projectId, newPreferences)
-    return newPreferences
+    this.userPreferencesCache.set(projectId, newPreferences);
+    return newPreferences;
   }
 
   /**
@@ -194,32 +194,32 @@ export class ConfigFileManager {
    * If parsing fails due to an error, default configuration data is initialized instead.
    */
   async initializeConfig(): Promise<void> {
-    let isConfigSet = false
+    let isConfigSet = false;
     try {
-      const result = await window.configApi.loadConfigData()
+      const result = await window.configApi.loadConfigData();
       if (!result.status) {
-        logger.error("Config data loading failed", {
-          action: "initialize_config",
-          component: "ConfigFileManager",
+        logger.error('Config data loading failed', {
+          action: 'initialize_config',
+          component: 'ConfigFileManager',
           error: result.message,
-        })
-        return
+        });
+        return;
       }
 
-      const jsonData = result.data?.trim() ? JSON.parse(result.data) : null
+      const jsonData = result.data?.trim() ? JSON.parse(result.data) : null;
       // arcconfig is the root key
       if (jsonData?.arcconfig) {
-        this.configDataMap = jsonData
+        this.configDataMap = jsonData;
         // Add graphdesigner layout
-        this.ensureGraphDesignerViewLayout()
-        isConfigSet = true
+        this.ensureGraphDesignerViewLayout();
+        isConfigSet = true;
       }
     } catch (error) {
-      logger.error("Config data parsing failed", {
-        action: "initialize_config",
-        component: "ConfigFileManager",
+      logger.error('Config data parsing failed', {
+        action: 'initialize_config',
+        component: 'ConfigFileManager',
         error: error instanceof Error ? error.message : String(error),
-      })
+      });
     } finally {
       if (!isConfigSet) {
         // Initialize with default configuration using FlexLayout
@@ -231,7 +231,7 @@ export class ConfigFileManager {
             },
             userPreferences: DEFAULT_USER_PREFERENCES,
           },
-        }
+        };
       }
     }
   }
@@ -245,55 +245,55 @@ export class ConfigFileManager {
   async save(projectId?: string): Promise<boolean> {
     try {
       if (projectId) {
-        const projectConfig = this.projectConfigMap.get(projectId)
+        const projectConfig = this.projectConfigMap.get(projectId);
         if (projectConfig) {
-          this.configDataMap = projectConfig
+          this.configDataMap = projectConfig;
         }
       } else {
         if (this.projectConfigMap.size > 0) {
-          const lastProjectId = Array.from(this.projectConfigMap.keys()).pop()
+          const lastProjectId = Array.from(this.projectConfigMap.keys()).pop();
           const lastProjectConfig =
             lastProjectId !== undefined
               ? this.projectConfigMap.get(lastProjectId)
-              : undefined
+              : undefined;
           if (lastProjectConfig !== undefined) {
-            this.configDataMap = lastProjectConfig
+            this.configDataMap = lastProjectConfig;
           }
         }
       }
 
       // delete usecase from arcconfig.layout
-      delete this.configDataMap?.arcconfig?.layout?.graphDesignerView
+      delete this.configDataMap?.arcconfig?.layout?.graphDesignerView;
 
       // output JSON string should be formatted with an indentation of 2 spaces
-      const space: number = 2
+      const space: number = 2;
       const res = await window.configApi.saveConfigData(
         JSON.stringify(this.configDataMap, null, space),
-      )
+      );
       if (res.status) {
-        logger.verbose("Configuration data persistently stored", {
-          action: "save_config",
-          component: "ConfigFileManager",
+        logger.verbose('Configuration data persistently stored', {
+          action: 'save_config',
+          component: 'ConfigFileManager',
           projectId,
-        })
-        return true
+        });
+        return true;
       } else {
-        logger.error("Failed to persist configuration", {
-          action: "save_config",
-          component: "ConfigFileManager",
+        logger.error('Failed to persist configuration', {
+          action: 'save_config',
+          component: 'ConfigFileManager',
           error: res.message,
           projectId,
-        })
-        return false
+        });
+        return false;
       }
     } catch (error) {
-      logger.error("Error occurred while saving configuration", {
-        action: "save_config",
-        component: "ConfigFileManager",
+      logger.error('Error occurred while saving configuration', {
+        action: 'save_config',
+        component: 'ConfigFileManager',
         error: error instanceof Error ? error.message : String(error),
         projectId,
-      })
-      return false
+      });
+      return false;
     }
   }
 
@@ -301,13 +301,13 @@ export class ConfigFileManager {
    * Sets the global theme preference (not project-specific)
    * @param theme - The theme to set ('light' | 'dark')
    */
-  setGlobalTheme(theme: "light" | "dark"): void {
+  setGlobalTheme(theme: 'light' | 'dark'): void {
     setConfigData(
       this.configDataMap,
-      "globalPreferences.theme",
+      'globalPreferences.theme',
       theme,
       this.rootKey,
-    )
+    );
   }
 
   /**
@@ -323,17 +323,17 @@ export class ConfigFileManager {
     path: string,
     newConfigData: any,
   ): boolean {
-    const projectConfig = this.projectConfigMap.get(projectId)
+    const projectConfig = this.projectConfigMap.get(projectId);
     if (projectConfig) {
-      setConfigData(projectConfig, path, newConfigData, this.rootKey)
-      return true
+      setConfigData(projectConfig, path, newConfigData, this.rootKey);
+      return true;
     } else {
-      logger.verbose("No configuration data exists for project", {
-        action: "set_project_config",
-        component: "ConfigFileManager",
+      logger.verbose('No configuration data exists for project', {
+        action: 'set_project_config',
+        component: 'ConfigFileManager',
         projectId,
-      })
-      return false
+      });
+      return false;
     }
   }
 
@@ -346,35 +346,40 @@ export class ConfigFileManager {
    * @returns `true` if the preference was successfully set, `false` otherwise.
    */
   setUserPreference(projectId: string, path: string, value: any): boolean {
-    const projectConfig = this.projectConfigMap.get(projectId)
+    const projectConfig = this.projectConfigMap.get(projectId);
     if (!projectConfig) {
-      logger.verbose("No configuration data exists for project", {
-        action: "set_user_preference",
-        component: "ConfigFileManager",
+      logger.verbose('No configuration data exists for project', {
+        action: 'set_user_preference',
+        component: 'ConfigFileManager',
         projectId,
-      })
-      return false
+      });
+      return false;
     }
 
     // Ensure userPreferences exists
     if (!projectConfig[this.rootKey]?.userPreferences) {
       if (!projectConfig[this.rootKey]) {
-        projectConfig[this.rootKey] = {}
+        projectConfig[this.rootKey] = {};
       }
-      projectConfig[this.rootKey].userPreferences = DEFAULT_USER_PREFERENCES
+      projectConfig[this.rootKey].userPreferences = DEFAULT_USER_PREFERENCES;
     }
 
-    setConfigData(projectConfig, `userPreferences.${path}`, value, this.rootKey)
+    setConfigData(
+      projectConfig,
+      `userPreferences.${path}`,
+      value,
+      this.rootKey,
+    );
 
     // Invalidate cache since preferences have changed
-    this.userPreferencesCache.delete(projectId)
+    this.userPreferencesCache.delete(projectId);
 
-    logger.verbose("User preference updated", {
-      action: "set_user_preference",
-      component: "ConfigFileManager",
+    logger.verbose('User preference updated', {
+      action: 'set_user_preference',
+      component: 'ConfigFileManager',
       projectId,
-    })
+    });
 
-    return true
+    return true;
   }
 }

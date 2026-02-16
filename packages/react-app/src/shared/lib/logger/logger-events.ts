@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {LogContext, LogLevel} from "../../api/logging.types"
+import type {LogContext, LogLevel} from '../../api/logging.types';
 
 /**
  * Log event data structure for the event-driven logging system
  */
 export interface LogEvent {
-  context?: LogContext
-  level: LogLevel
-  message: string
-  projectId?: string
-  timestamp: Date
+  context?: LogContext;
+  level: LogLevel;
+  message: string;
+  projectId?: string;
+  timestamp: Date;
 }
 
 /**
  * Log event listener function type
  */
-export type LogEventListener = (event: LogEvent) => void
+export type LogEventListener = (event: LogEvent) => void;
 
 /**
  * Project-aware log event emitter
@@ -27,7 +27,7 @@ export type LogEventListener = (event: LogEvent) => void
  * while maintaining project context for proper log isolation
  */
 export class LogEventEmitter {
-  private listeners: LogEventListener[] = []
+  private listeners: LogEventListener[] = [];
 
   /**
    * Subscribe to log events
@@ -35,15 +35,15 @@ export class LogEventEmitter {
    * @returns Unsubscribe function
    */
   subscribe(listener: LogEventListener): () => void {
-    this.listeners.push(listener)
+    this.listeners.push(listener);
 
     // Return unsubscribe function
     return () => {
-      const index = this.listeners.indexOf(listener)
+      const index = this.listeners.indexOf(listener);
       if (index > -1) {
-        this.listeners.splice(index, 1)
+        this.listeners.splice(index, 1);
       }
-    }
+    };
   }
 
   /**
@@ -53,21 +53,21 @@ export class LogEventEmitter {
   emit(event: LogEvent): void {
     this.listeners.forEach((listener) => {
       try {
-        listener(event)
+        listener(event);
       } catch (error) {
         // Prevent listener errors from breaking the logging system
-        console.error("Log event listener error:", error)
+        console.error('Log event listener error:', error);
       }
-    })
+    });
   }
 
   /**
    * Get the number of active listeners (useful for testing)
    */
   getListenerCount(): number {
-    return this.listeners.length
+    return this.listeners.length;
   }
 }
 
 // Global log event emitter instance
-export const logEventEmitter = new LogEventEmitter()
+export const logEventEmitter = new LogEventEmitter();

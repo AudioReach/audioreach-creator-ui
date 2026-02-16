@@ -11,12 +11,7 @@
     "jsx": "react-jsx",
     "isolatedDeclarations": false,
     "isolatedModules": true,
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext",
-      "ES2023"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "ES2023"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noImplicitAny": true,

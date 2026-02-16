@@ -4,20 +4,20 @@
  */
 
 // ControlLinkEdge component (dashed line with hover highlighting)
-import {type FC, useState} from "react"
+import {type FC, useState} from 'react';
 
-import {type EdgeProps, getSmoothStepPath} from "@xyflow/react"
+import {type EdgeProps, getSmoothStepPath} from '@xyflow/react';
 
 export const ControlLinkEdge: FC<EdgeProps> = (props) => {
-  const [isHovered, setIsHovered] = useState(false)
-  const {selected} = props
+  const [isHovered, setIsHovered] = useState(false);
+  const {selected} = props;
 
   // Generate the curved path with vertical offset
   const [pathData] = getSmoothStepPath({
     ...props,
     borderRadius: 20,
     offset: 60, // Vertical offset to create arc above/below modules
-  })
+  });
 
   return (
     <g>
@@ -29,19 +29,19 @@ export const ControlLinkEdge: FC<EdgeProps> = (props) => {
         onMouseLeave={() => setIsHovered(false)}
         stroke="transparent"
         strokeWidth="15"
-        style={{cursor: "pointer"}}
+        style={{cursor: 'pointer'}}
       />
 
       {/* Main visible control edge path */}
       <path
         d={pathData}
         fill="none"
-        stroke={selected ? "#3b82f6" : isHovered ? "#777777" : "#cccccc"} // Blue when selected, darker on hover
+        stroke={selected ? '#3b82f6' : isHovered ? '#777777' : '#cccccc'} // Blue when selected, darker on hover
         strokeDasharray="5 5"
         strokeWidth={selected || isHovered ? 3 : 2}
         style={{
-          pointerEvents: "none",
-          transition: "stroke 0.2s ease, stroke-width 0.2s ease",
+          pointerEvents: 'none',
+          transition: 'stroke 0.2s ease, stroke-width 0.2s ease',
         }}
       />
 
@@ -88,5 +88,5 @@ export const ControlLinkEdge: FC<EdgeProps> = (props) => {
         </>
       )}
     </g>
-  )
-}
+  );
+};

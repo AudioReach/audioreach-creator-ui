@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {create} from "zustand"
+import {create} from 'zustand';
 
-import {logger} from "~shared/lib/logger"
+import {logger} from '~shared/lib/logger';
 
 import {
   SeverityType,
   type ValidationResultStore,
-} from "./validation-result.types"
+} from './validation-result.types';
 // Zustand store for validation result state management
 export const useValidationResultStore = create<ValidationResultStore>(
   (set, get) => ({
     addValidationResult: (resultData) => {
       try {
-        const newResultId = crypto.randomUUID() // Generate cryptographically secure unique ID
+        const newResultId = crypto.randomUUID(); // Generate cryptographically secure unique ID
         set((state) => ({
           selectedRowId: newResultId, // Auto-select the new validation result
           validationResults: [
@@ -33,22 +33,22 @@ export const useValidationResultStore = create<ValidationResultStore>(
               showControlsCallback: resultData.showControlsCallback,
             },
           ],
-        }))
+        }));
         // Update counts after adding result
-        get().updateCounts()
-        return true
+        get().updateCounts();
+        return true;
       } catch (error) {
-        logger.error(`Failed to add validation result: ${error}`)
-        return false
+        logger.error(`Failed to add validation result: ${error}`);
+        return false;
       }
     },
     clearRowSelection: () => {
       try {
-        set({selectedRowId: null}) // Remove row highlighting
-        return true
+        set({selectedRowId: null}); // Remove row highlighting
+        return true;
       } catch (error) {
-        logger.error(`Failed to clear row selection: ${error}`)
-        return false
+        logger.error(`Failed to clear row selection: ${error}`);
+        return false;
       }
     },
     clearValidationResults: () => {
@@ -56,7 +56,7 @@ export const useValidationResultStore = create<ValidationResultStore>(
         set({
           criticalCount: 0, // Reset counts
           errorCount: 0,
-          searchQuery: "", // Clear search
+          searchQuery: '', // Clear search
           selectedRowId: null, // Clear selection
           selectedSeverities: [
             SeverityType.Critical,
@@ -65,11 +65,11 @@ export const useValidationResultStore = create<ValidationResultStore>(
           ], // Reset multi-select filter - all types selected by default
           validationResults: [], // Clear all validation results
           warningCount: 0,
-        })
-        return true
+        });
+        return true;
       } catch (error) {
-        logger.error(`Failed to clear validation results: ${error}`)
-        return false
+        logger.error(`Failed to clear validation results: ${error}`);
+        return false;
       }
     },
 
@@ -78,7 +78,7 @@ export const useValidationResultStore = create<ValidationResultStore>(
 
     errorCount: 0,
 
-    searchQuery: "", // Current search text
+    searchQuery: '', // Current search text
 
     selectedRowId: null, // Currently highlighted row
 
@@ -90,36 +90,36 @@ export const useValidationResultStore = create<ValidationResultStore>(
 
     selectRow: (id) => {
       try {
-        set({selectedRowId: id}) // Set selected row for highlighting and copy
-        return true
+        set({selectedRowId: id}); // Set selected row for highlighting and copy
+        return true;
       } catch (error) {
-        logger.error(`Failed to select row: ${error}`)
-        return false
+        logger.error(`Failed to select row: ${error}`);
+        return false;
       }
     },
 
     setSearchQuery: (query) => {
       try {
-        set({searchQuery: query}) // Update search filter text
-        return true
+        set({searchQuery: query}); // Update search filter text
+        return true;
       } catch (error) {
-        logger.error(`Failed to set search query: ${error}`)
-        return false
+        logger.error(`Failed to set search query: ${error}`);
+        return false;
       }
     },
     setSelectedSeverities: (severities) => {
       try {
-        set({selectedSeverities: severities}) // Update multi-select severity filters
-        return true
+        set({selectedSeverities: severities}); // Update multi-select severity filters
+        return true;
       } catch (error) {
-        logger.error(`Failed to set selected severities: ${error}`)
-        return false
+        logger.error(`Failed to set selected severities: ${error}`);
+        return false;
       }
     },
     // Helper function to update counts
     updateCounts: () => {
       try {
-        const results = get().validationResults
+        const results = get().validationResults;
         set({
           criticalCount: results.filter(
             (result) => result.severity === SeverityType.Critical,
@@ -130,11 +130,11 @@ export const useValidationResultStore = create<ValidationResultStore>(
           warningCount: results.filter(
             (result) => result.severity === SeverityType.Warning,
           ).length,
-        })
-        return true
+        });
+        return true;
       } catch (error) {
-        logger.error(`Failed to update counts: ${error}`)
-        return false
+        logger.error(`Failed to update counts: ${error}`);
+        return false;
       }
     },
 
@@ -142,4 +142,4 @@ export const useValidationResultStore = create<ValidationResultStore>(
 
     warningCount: 0,
   }),
-)
+);

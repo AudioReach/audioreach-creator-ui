@@ -10,9 +10,9 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react"
+} from 'react';
 
-import {Info, MessageSquareText, TriangleAlert, X} from "lucide-react"
+import {Info, MessageSquareText, TriangleAlert, X} from 'lucide-react';
 
 import {
   type Cell,
@@ -22,16 +22,16 @@ import {
   type Header,
   type HeaderGroup,
   type Row,
-} from "@qualcomm-ui/core/table"
-import {Icon} from "@qualcomm-ui/react/icon"
-import {flexRender, Table, useReactTable} from "@qualcomm-ui/react/table"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
+} from '@qualcomm-ui/core/table';
+import {Icon} from '@qualcomm-ui/react/icon';
+import {flexRender, Table, useReactTable} from '@qualcomm-ui/react/table';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {type LogEntry, LogType} from "../../model/log-view.types"
-import {useLogViewStore} from "../../model/use-log-view-store"
+import {type LogEntry, LogType} from '../../model/log-view.types';
+import {useLogViewStore} from '../../model/use-log-view-store';
 
 // React Table column helper for type-safe column definitions
-const columnHelper = createColumnHelper<LogEntry>()
+const columnHelper = createColumnHelper<LogEntry>();
 
 // Returns appropriate colored icon based on log severity level
 const getLogIcon = (logType: LogType) => {
@@ -41,66 +41,67 @@ const getLogIcon = (logType: LogType) => {
         <Icon
           icon={Info}
           size="xs"
-          style={{color: "var(--color-icon-support-info)"}}
+          style={{color: 'var(--color-icon-support-info)'}}
         />
-      )
+      );
     case LogType.Warning:
       return (
         <Icon
           icon={TriangleAlert}
           size="xs"
-          style={{color: "var(--color-icon-support-warning)"}}
+          style={{color: 'var(--color-icon-support-warning)'}}
         />
-      )
+      );
     case LogType.Error:
       return (
         <Icon
           icon={X}
           size="xs"
-          style={{color: "var(--color-icon-support-danger)"}}
+          style={{color: 'var(--color-icon-support-danger)'}}
         />
-      )
+      );
     default:
       return (
         <Icon
           icon={Info}
           size="xs"
-          style={{color: "var(--color-icon-neutral-secondary)"}}
+          style={{color: 'var(--color-icon-neutral-secondary)'}}
         />
-      )
+      );
   }
-}
+};
 
 // Renders message cell with expansion icon and overflow tooltip
 function MessageCell({logEntry}: {logEntry: LogEntry}) {
-  const {selectedRowLogId, selectRowLog, toggleLogExpansion} = useLogViewStore()
-  const isSelected = selectedRowLogId === logEntry.id
-  const isExpanded = logEntry.logMessageExpanded || false
-  const spanRef = useRef<HTMLSpanElement>(null)
-  const [isOverflowing, setIsOverflowing] = useState(false)
+  const {selectedRowLogId, selectRowLog, toggleLogExpansion} =
+    useLogViewStore();
+  const isSelected = selectedRowLogId === logEntry.id;
+  const isExpanded = logEntry.logMessageExpanded || false;
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
   const checkOverflow = useCallback(() => {
-    const element = spanRef.current
+    const element = spanRef.current;
     if (element) {
-      setIsOverflowing(element.scrollWidth > element.clientWidth)
+      setIsOverflowing(element.scrollWidth > element.clientWidth);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    const element = spanRef.current
+    const element = spanRef.current;
     if (!element) {
-      return
+      return;
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      checkOverflow()
-    })
+      checkOverflow();
+    });
 
-    resizeObserver.observe(element)
+    resizeObserver.observe(element);
     return () => {
-      resizeObserver.disconnect()
-    }
-  }, [checkOverflow])
+      resizeObserver.disconnect();
+    };
+  }, [checkOverflow]);
 
   return (
     <div className="flex w-full max-w-full items-center gap-1">
@@ -109,15 +110,15 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
           <Icon
             icon={MessageSquareText}
             onMouseDown={(e: React.MouseEvent) => {
-              e.preventDefault()
-              selectRowLog(logEntry.id)
-              toggleLogExpansion(logEntry.id)
+              e.preventDefault();
+              selectRowLog(logEntry.id);
+              toggleLogExpansion(logEntry.id);
             }}
             size={12}
             style={{
               color: isExpanded
-                ? "var(--color-icon-brand-primary)"
-                : "var(--color-icon-neutral-secondary)",
+                ? 'var(--color-icon-brand-primary)'
+                : 'var(--color-icon-neutral-secondary)',
             }}
           />
         )}
@@ -125,12 +126,12 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
       <Tooltip
         disabled={!isOverflowing}
         positioning={{
-          placement: "bottom",
+          placement: 'bottom',
         }}
         trigger={
           <span
             ref={spanRef}
-            className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? "font-bold" : ""}`}
+            className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? 'font-bold' : ''}`}
           >
             {logEntry.message}
           </span>
@@ -138,15 +139,15 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
       >
         <div
           style={{
-            maxWidth: "400px",
-            wordWrap: "break-word",
+            maxWidth: '400px',
+            wordWrap: 'break-word',
           }}
         >
           {logEntry.message}
         </div>
       </Tooltip>
     </div>
-  )
+  );
 }
 
 // Main table component that displays filtered log entries with selection and expansion
@@ -158,87 +159,87 @@ function LogViewTable() {
     selectedLogTypes,
     selectedRowLogId,
     selectRowLog,
-  } = useLogViewStore()
+  } = useLogViewStore();
 
   const filteredLogs = useMemo(() => {
-    let filtered = logs
+    let filtered = logs;
 
     // Filter by log types - if no types selected, show no logs
     if (selectedLogTypes.length > 0) {
       filtered = filtered.filter((log) =>
         selectedLogTypes.includes(log.logType),
-      )
+      );
     } else {
       // If no types selected, show no logs
-      filtered = []
+      filtered = [];
     }
 
     if (searchLogQuery.trim()) {
-      const query = searchLogQuery.toLowerCase()
+      const query = searchLogQuery.toLowerCase();
       filtered = filtered.filter(
         (log) =>
           log.message.toLowerCase().includes(query) ||
           (log.detailedMessage &&
             log.detailedMessage.toLowerCase().includes(query)),
-      )
+      );
     }
-    return filtered
-  }, [logs, selectedLogTypes, searchLogQuery])
+    return filtered;
+  }, [logs, selectedLogTypes, searchLogQuery]);
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor("logType", {
+      columnHelper.accessor('logType', {
         cell: (info: CellContext<LogEntry, string>) => (
           <div className="flex items-center justify-center">
             {getLogIcon(info.getValue() as LogType)}
           </div>
         ),
-        header: "Type",
+        header: 'Type',
         minSize: 30,
         size: 30,
       }),
       // Timestamp column - shows formatted time with 24-hour format
-      columnHelper.accessor("timestamp", {
+      columnHelper.accessor('timestamp', {
         cell: (info: CellContext<LogEntry, Date | undefined>) => {
-          const logEntry = info.row.original
-          const timestamp = info.getValue()
-          const isSelected = selectedRowLogId === logEntry.id
+          const logEntry = info.row.original;
+          const timestamp = info.getValue();
+          const isSelected = selectedRowLogId === logEntry.id;
           // Format timestamp to HH:MM:SS.mmm format - timestamp is always present now
-          const date = new Date(timestamp!)
-          const timeString = `${date.toLocaleTimeString("en-US", {
-            hour: "2-digit",
+          const date = new Date(timestamp!);
+          const timeString = `${date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
             hour12: false, // 24-hour format
-            minute: "2-digit",
-            second: "2-digit",
-          })}.${date.getMilliseconds().toString().padStart(3, "0")}`
+            minute: '2-digit',
+            second: '2-digit',
+          })}.${date.getMilliseconds().toString().padStart(3, '0')}`;
           // Apply bold styling when row is selected
           return (
-            <span className={isSelected ? "font-bold" : ""}>{timeString}</span>
-          )
+            <span className={isSelected ? 'font-bold' : ''}>{timeString}</span>
+          );
         },
-        header: "Timestamp",
+        header: 'Timestamp',
         minSize: 60,
         size: 60,
       }),
       // Message column - displays log message with expand/collapse functionality
-      columnHelper.accessor("message", {
+      columnHelper.accessor('message', {
         cell: (info: CellContext<LogEntry, string>) => (
           <MessageCell logEntry={info.row.original} />
         ),
-        header: "Message",
+        header: 'Message',
         minSize: 150,
         size: 870,
       }),
     ],
     [selectedRowLogId],
-  )
+  );
 
   const table = useReactTable({
-    columnResizeMode: "onChange", // Enable real-time column resizing
+    columnResizeMode: 'onChange', // Enable real-time column resizing
     columns,
     data: filteredLogs,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
   return (
     <Table.Root size="sm">
@@ -253,7 +254,7 @@ function LogViewTable() {
                     (header: Header<LogEntry, string>, index: number) => (
                       <Table.HeaderCell
                         key={header.id}
-                        className={`relative select-none ${index !== 0 ? "border-neutral-09 border-l-2" : ""}`}
+                        className={`relative select-none ${index !== 0 ? 'border-neutral-09 border-l-2' : ''}`}
                         style={{width: header.getSize()}}
                       >
                         <div className="inline-flex w-full items-center justify-between gap-2">
@@ -273,31 +274,31 @@ function LogViewTable() {
           </Table.Header>
           <Table.Body>
             {table.getRowModel().rows.map((row: Row<LogEntry>) => {
-              const logEntry = row.original
-              const isSelected = selectedRowLogId === logEntry.id
+              const logEntry = row.original;
+              const isSelected = selectedRowLogId === logEntry.id;
               const shouldShowDetails =
-                logEntry.logMessageExpanded && logEntry.detailedMessage
+                logEntry.logMessageExpanded && logEntry.detailedMessage;
               return (
                 <Fragment key={row.id}>
                   <Table.Row
                     className="cursor-pointer"
                     isSelected={isSelected}
                     onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
+                      e.preventDefault();
+                      e.stopPropagation();
                       if (selectedRowLogId === logEntry.id) {
-                        clearLogRowSelection()
+                        clearLogRowSelection();
                       } else {
-                        selectRowLog(logEntry.id)
+                        selectRowLog(logEntry.id);
                       }
                     }}
                     onMouseDown={(e) => {
-                      e.preventDefault()
+                      e.preventDefault();
                     }}
                     style={{
-                      borderBottom: "none",
-                      borderTop: "none",
-                      height: "40px",
+                      borderBottom: 'none',
+                      borderTop: 'none',
+                      height: '40px',
                     }}
                   >
                     {row
@@ -307,8 +308,8 @@ function LogViewTable() {
                           key={cell.id}
                           className="overflow-hidden"
                           style={{
-                            borderBottom: "none",
-                            borderTop: "none",
+                            borderBottom: 'none',
+                            borderTop: 'none',
                             maxWidth: cell.column.getSize(),
                             width: cell.column.getSize(),
                           }}
@@ -330,13 +331,13 @@ function LogViewTable() {
                     </Table.Row>
                   )}
                 </Fragment>
-              )
+              );
             })}
           </Table.Body>
         </Table.Table>
       </Table.ScrollContainer>
     </Table.Root>
-  )
+  );
 }
 
-export default LogViewTable
+export default LogViewTable;

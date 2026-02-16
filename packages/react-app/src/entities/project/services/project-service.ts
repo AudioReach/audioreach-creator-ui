@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {ApiRequest} from "@audioreach-creator-ui/api-utils"
+import {ApiRequest} from '@audioreach-creator-ui/api-utils';
 
 import {
   openProject,
   openWorkspaceProject,
-} from "~entities/project/api/projects-api"
-import {getAllUsecases} from "~entities/usecases/api/usecases-api"
-import {mapUsecaseDtoToCategories} from "~entities/usecases/model/usecase.mapper"
-import {electronApi} from "~shared/api"
-import {logger} from "~shared/lib/logger"
-import type ProjectInfo from "~shared/types/project-info.types"
+} from '~entities/project/api/projects-api';
+import {getAllUsecases} from '~entities/usecases/api/usecases-api';
+import {mapUsecaseDtoToCategories} from '~entities/usecases/model/usecase.mapper';
+import {electronApi} from '~shared/api';
+import {logger} from '~shared/lib/logger';
+import type ProjectInfo from '~shared/types/project-info.types';
 
 export interface ProjectOpenResponse {
-  message?: string
-  project?: ProjectInfo
-  success: boolean
-  usecaseData?: any[]
+  message?: string;
+  project?: ProjectInfo;
+  success: boolean;
+  usecaseData?: any[];
 }
 
 /**
@@ -34,31 +34,31 @@ export class ProjectService {
    */
   private static async fetchUsecaseData(projectId: string): Promise<any[]> {
     try {
-      const result = await getAllUsecases(projectId)
+      const result = await getAllUsecases(projectId);
       if (result.success && result.data) {
-        logger.info("Successfully fetched usecases for project", {
-          action: "fetch_usecases",
-          component: "ProjectService",
+        logger.info('Successfully fetched usecases for project', {
+          action: 'fetch_usecases',
+          component: 'ProjectService',
           projectId,
-        })
-        return mapUsecaseDtoToCategories(result.data)
+        });
+        return mapUsecaseDtoToCategories(result.data);
       } else {
-        logger.error("Failed to fetch usecases", {
-          action: "fetch_usecases",
-          component: "ProjectService",
+        logger.error('Failed to fetch usecases', {
+          action: 'fetch_usecases',
+          component: 'ProjectService',
           error: result.message,
           projectId,
-        })
-        return []
+        });
+        return [];
       }
     } catch (error) {
-      logger.error("Error fetching usecases", {
-        action: "fetch_usecases",
-        component: "ProjectService",
+      logger.error('Error fetching usecases', {
+        action: 'fetch_usecases',
+        component: 'ProjectService',
         error: error instanceof Error ? error.message : String(error),
         projectId,
-      })
-      return []
+      });
+      return [];
     }
   }
   /**
@@ -71,38 +71,38 @@ export class ProjectService {
   ): Promise<ProjectOpenResponse> {
     try {
       logger.verbose(`Opening recent project: ${project.name}`, {
-        action: "open_recent_project",
-        component: "ProjectService",
-      })
+        action: 'open_recent_project',
+        component: 'ProjectService',
+      });
 
       // Call backend API to open/connect to the project
-      const result = await openProject(project.id)
+      const result = await openProject(project.id);
 
       if (!result.success) {
         return {
-          message: result.message || "Failed to open project",
+          message: result.message || 'Failed to open project',
           success: false,
-        }
+        };
       }
 
       // Fetch usecase data for the project
-      const usecaseData = await this.fetchUsecaseData(project.id)
+      const usecaseData = await this.fetchUsecaseData(project.id);
 
       return {
         project,
         success: true,
         usecaseData,
-      }
+      };
     } catch (error) {
-      logger.error("Error opening recent project", {
-        action: "open_recent_project",
-        component: "ProjectService",
+      logger.error('Error opening recent project', {
+        action: 'open_recent_project',
+        component: 'ProjectService',
         error: error instanceof Error ? error.message : String(error),
-      })
+      });
       return {
-        message: "Failed to open project",
+        message: 'Failed to open project',
         success: false,
-      }
+      };
     }
   }
 
@@ -112,14 +112,14 @@ export class ProjectService {
    */
   static async openWorkspaceProjectFromFile(): Promise<ProjectOpenResponse> {
     if (!electronApi) {
-      logger.error("Electron API not available", {
-        action: "open_workspace_project",
-        component: "ProjectService",
-      })
+      logger.error('Electron API not available', {
+        action: 'open_workspace_project',
+        component: 'ProjectService',
+      });
       return {
-        message: "Electron API not available",
+        message: 'Electron API not available',
         success: false,
-      }
+      };
     }
 
     try {
@@ -127,53 +127,53 @@ export class ProjectService {
       const response = await electronApi.send({
         data: null,
         requestType: ApiRequest.OpenProjectFile,
-      })
+      });
 
       // Check if user cancelled the file selection
       if (response.data.cancelled || !response.data.project) {
-        logger.verbose("File selection cancelled", {
-          action: "open_workspace_project",
-          component: "ProjectService",
-        })
+        logger.verbose('File selection cancelled', {
+          action: 'open_workspace_project',
+          component: 'ProjectService',
+        });
         return {
-          message: "File selection cancelled",
+          message: 'File selection cancelled',
           success: false,
-        }
+        };
       }
 
-      const projectInfo = response.data.project
-      const workspaceFileData = response.data.workspaceFileData
-      const acdbFileData = response.data.acdbFileData
+      const projectInfo = response.data.project;
+      const workspaceFileData = response.data.workspaceFileData;
+      const acdbFileData = response.data.acdbFileData;
 
       // Validate that we have the required binary data
       if (!workspaceFileData) {
         return {
-          message: "Failed to read workspace file data",
+          message: 'Failed to read workspace file data',
           success: false,
-        }
+        };
       }
 
       if (!acdbFileData) {
         return {
-          message: "No .acdb file found in the project directory",
+          message: 'No .acdb file found in the project directory',
           success: false,
-        }
+        };
       }
 
       // Convert Buffer data to File objects
       const workspaceFileName =
-        projectInfo.filepath.split(/[\\/]/).pop() || "workspace.awsp"
+        projectInfo.filepath.split(/[\\/]/).pop() || 'workspace.awsp';
       const workspaceFile = new File(
         [new Uint8Array(workspaceFileData)],
         workspaceFileName,
-        {type: "application/octet-stream"},
-      )
+        {type: 'application/octet-stream'},
+      );
 
       const acdbFile = new File(
         [new Uint8Array(acdbFileData)],
-        "project.acdb",
-        {type: "application/octet-stream"},
-      )
+        'project.acdb',
+        {type: 'application/octet-stream'},
+      );
 
       // Call the backend API to upload and open the project
       const result = await openWorkspaceProject(
@@ -181,20 +181,20 @@ export class ProjectService {
         workspaceFile,
         projectInfo.name,
         projectInfo.description,
-      )
+      );
 
       if (!result.success || !result.data) {
         return {
-          message: result.message || "Failed to open project",
+          message: result.message || 'Failed to open project',
           success: false,
-        }
+        };
       }
 
       const desc = result.data.description
         ? result.data.description
-        : projectInfo.description
+        : projectInfo.description;
       const name =
-        result.data.name !== undefined ? result.data.name : projectInfo.name
+        result.data.name !== undefined ? result.data.name : projectInfo.name;
 
       // Create project info for recent projects list
       const project: ProjectInfo = {
@@ -203,26 +203,26 @@ export class ProjectService {
         id: result.data.projectId,
         lastModifiedDate: new Date(),
         name,
-      }
+      };
 
       // Fetch usecase data for the project
-      const usecaseData = await this.fetchUsecaseData(project.id)
+      const usecaseData = await this.fetchUsecaseData(project.id);
 
       return {
         project,
         success: true,
         usecaseData,
-      }
+      };
     } catch (error) {
-      logger.error("Error opening workspace project", {
-        action: "open_workspace_project",
-        component: "ProjectService",
+      logger.error('Error opening workspace project', {
+        action: 'open_workspace_project',
+        component: 'ProjectService',
         error: error instanceof Error ? error.message : String(error),
-      })
+      });
       return {
-        message: "Failed to open workspace project",
+        message: 'Failed to open workspace project',
         success: false,
-      }
+      };
     }
   }
 
@@ -233,25 +233,25 @@ export class ProjectService {
    */
   static async showInExplorer(filepath: string): Promise<void> {
     if (!electronApi) {
-      logger.error("Electron API not available", {
-        action: "show_in_explorer",
-        component: "ProjectService",
-      })
-      throw new Error("Electron API not available")
+      logger.error('Electron API not available', {
+        action: 'show_in_explorer',
+        component: 'ProjectService',
+      });
+      throw new Error('Electron API not available');
     }
 
     try {
       await electronApi.send({
         data: filepath,
         requestType: ApiRequest.ShowProjectFileInExplorer,
-      })
+      });
     } catch (error) {
-      logger.error("Error occurred while trying to open the file explorer", {
-        action: "show_in_explorer",
-        component: "ProjectService",
+      logger.error('Error occurred while trying to open the file explorer', {
+        action: 'show_in_explorer',
+        component: 'ProjectService',
         error: error instanceof Error ? error.message : String(error),
-      })
-      throw error
+      });
+      throw error;
     }
   }
 }

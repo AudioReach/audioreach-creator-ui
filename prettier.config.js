@@ -5,13 +5,13 @@
 
 export default {
   bracketSpacing: false,
-  endOfLine: "auto",
-  htmlWhitespaceSensitivity: "ignore",
+  endOfLine: 'auto',
+  htmlWhitespaceSensitivity: 'ignore',
   jsxSingleQuote: false,
-  plugins: ["prettier-plugin-tailwindcss"],
+  plugins: ['prettier-plugin-tailwindcss'],
   printWidth: 80,
-  quoteProps: "preserve",
-  semi: false,
-  singleQuote: false,
-  trailingComma: "all",
-}
+  semi: true,
+  singleQuote: true,
+  tabWidth: 2,
+  trailingComma: 'all',
+};

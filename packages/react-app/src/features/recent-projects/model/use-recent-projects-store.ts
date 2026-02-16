@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {create} from "zustand"
+import {create} from 'zustand';
 
 export interface RecentProject {
-  lastOpened: Date
-  name: string
-  path: string
+  lastOpened: Date;
+  name: string;
+  path: string;
 }
 
 interface RecentProjectsStore {
-  addRecentProject: (file: Omit<RecentProject, "id" | "lastOpened">) => void
-  clearRecentProjects: () => void
-  getRecentProjects: () => RecentProject[]
-  recentProjects: RecentProject[]
-  removeRecentProject: (id: string) => void
+  addRecentProject: (file: Omit<RecentProject, 'id' | 'lastOpened'>) => void;
+  clearRecentProjects: () => void;
+  getRecentProjects: () => RecentProject[];
+  recentProjects: RecentProject[];
+  removeRecentProject: (id: string) => void;
 }
 
 /**
@@ -37,7 +37,7 @@ export const useRecentProjectsStore = create<RecentProjectsStore>(
 
     getRecentProjects: () => {
       // Always return current (empty) state in placeholder
-      return get().recentProjects
+      return get().recentProjects;
     },
 
     recentProjects: [],
@@ -46,4 +46,4 @@ export const useRecentProjectsStore = create<RecentProjectsStore>(
       // Placeholder — no-op
     },
   }),
-)
+);

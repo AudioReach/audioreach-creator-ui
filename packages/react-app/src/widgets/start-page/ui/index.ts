@@ -1,1 +1,1 @@
-export * from "./arc-start-page"
+export * from './arc-start-page';

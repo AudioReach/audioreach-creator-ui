@@ -1,2 +1,2 @@
-export * from "./ui"
-export {useLogView} from "./use-log-view"
+export * from './ui';
+export {useLogView} from './use-log-view';

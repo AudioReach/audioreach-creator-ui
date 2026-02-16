@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ProjectInfoResponseDto} from "~entities/project/model/project.dto"
-import type {ApiResult} from "~shared/api/api-response.types"
-import {httpClient} from "~shared/api/http-client"
+import type {ProjectInfoResponseDto} from '~entities/project/model/project.dto';
+import type {ApiResult} from '~shared/api/api-response.types';
+import {httpClient} from '~shared/api/http-client';
 
 /**
  * Fetch all projects.
@@ -14,7 +14,7 @@ import {httpClient} from "~shared/api/http-client"
 export async function getProjects(): Promise<
   ApiResult<ProjectInfoResponseDto[]>
 > {
-  return httpClient.get<ProjectInfoResponseDto[]>("/projects")
+  return httpClient.get<ProjectInfoResponseDto[]>('/projects');
 }
 
 /**
@@ -24,7 +24,7 @@ export async function getProjects(): Promise<
 export async function getProjectById(
   projectId: string,
 ): Promise<ApiResult<ProjectInfoResponseDto>> {
-  return httpClient.get<ProjectInfoResponseDto>(`/projects/${projectId}`)
+  return httpClient.get<ProjectInfoResponseDto>(`/projects/${projectId}`);
 }
 
 /**
@@ -32,7 +32,7 @@ export async function getProjectById(
  * Returns ApiResult<void> indicating success/failure.
  */
 export async function openProject(projectId: string): Promise<ApiResult<void>> {
-  return httpClient.patch<void>(`/projects/${projectId}/connect-to-project`)
+  return httpClient.patch<void>(`/projects/${projectId}/connect-to-project`);
 }
 
 /**
@@ -44,7 +44,7 @@ export async function closeProject(
 ): Promise<ApiResult<void>> {
   return httpClient.patch<void>(
     `/projects/${projectId}/disconnect-from-project`,
-  )
+  );
 }
 
 /**
@@ -62,20 +62,20 @@ export async function openWorkspaceProject(
   projectDescription?: string,
 ): Promise<ApiResult<ProjectInfoResponseDto>> {
   // Create FormData for multipart/form-data request
-  const formData = new FormData()
-  formData.append("acdbFile", acdbFile)
-  formData.append("workspaceFile", workspaceFile)
+  const formData = new FormData();
+  formData.append('acdbFile', acdbFile);
+  formData.append('workspaceFile', workspaceFile);
 
   if (projectName) {
-    formData.append("projectName", projectName)
+    formData.append('projectName', projectName);
   }
 
   if (projectDescription) {
-    formData.append("projectDescription", projectDescription)
+    formData.append('projectDescription', projectDescription);
   }
 
   return httpClient.post<ProjectInfoResponseDto>(
-    "projects/offline/upload-files",
+    'projects/offline/upload-files',
     formData,
-  )
+  );
 }

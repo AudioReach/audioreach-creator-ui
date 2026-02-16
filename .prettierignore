@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+./packages/*/node_modules/
+.yarn/
+
+# Build outputs
+./packages/*/dist/
+build/
+coverage/
+*.tsbuildinfo
+.turbo-cache/**
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.acdb
+
+# Generated files
+*.d.ts.map
+swagger-api.json
+pnpm-lock.yaml
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Temporary files
+temp-coverage/
+.nyc_output/
+
+# Lock files
+yarn.lock
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Playwright test results and reports
+**/test-results/**
+**/playwright-report/**

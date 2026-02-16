@@ -4,7 +4,7 @@
  */
 
 // UsecaseVisualizer - ReactFlow wrapper (view-only)
-import {type FC, useCallback, useEffect, useMemo} from "react"
+import {type FC, useCallback, useEffect, useMemo} from 'react';
 
 import {
   type ColorMode,
@@ -15,79 +15,79 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
-} from "@xyflow/react"
-import {toPng} from "html-to-image"
+} from '@xyflow/react';
+import {toPng} from 'html-to-image';
 
-import "@xyflow/react/dist/style.css"
+import '@xyflow/react/dist/style.css';
 
-import {useVisualizerSelectionStore} from "~features/usecase-visualizer/model/use-visualizer-selection-store"
+import {useVisualizerSelectionStore} from '~features/usecase-visualizer/model/use-visualizer-selection-store';
 import type {
   RFEdge,
   RFNode,
-} from "~features/usecase-visualizer/model/usecase-visualizer.types"
-import type {UserPreferences} from "~shared/config/user-preferences-types"
-import {logger} from "~shared/lib/logger"
-import {Theme, useTheme} from "~shared/providers/theme-provider"
+} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import type {UserPreferences} from '~shared/config/user-preferences-types';
+import {logger} from '~shared/lib/logger';
+import {Theme, useTheme} from '~shared/providers/theme-provider';
 
-import {ControlLinkEdge} from "./edge-types/control-link-edge"
-import {DataLinkEdge} from "./edge-types/data-link-edge"
-import {ContainerNode} from "./node-types/container-node"
-import {ModuleNode} from "./node-types/module-node"
-import {SubgraphNode} from "./node-types/subgraph-node"
-import {SubsystemNode} from "./node-types/subsystem-node"
+import {ControlLinkEdge} from './edge-types/control-link-edge';
+import {DataLinkEdge} from './edge-types/data-link-edge';
+import {ContainerNode} from './node-types/container-node';
+import {ModuleNode} from './node-types/module-node';
+import {SubgraphNode} from './node-types/subgraph-node';
+import {SubsystemNode} from './node-types/subsystem-node';
 
 const nodeTypes = {
   container: ContainerNode,
   module: ModuleNode,
   subgraph: SubgraphNode,
   subsystem: SubsystemNode,
-}
+};
 
 const edgeTypes = {
-  "control-link": ControlLinkEdge,
-  "data-link": DataLinkEdge,
-}
+  'control-link': ControlLinkEdge,
+  'data-link': DataLinkEdge,
+};
 
 export interface UsecaseVisualizerProps {
-  edges: RFEdge[]
-  nodes: RFNode[]
-  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void
-  projectId: string
-  userPreferences: UserPreferences
+  edges: RFEdge[];
+  nodes: RFNode[];
+  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void;
+  projectId: string;
+  userPreferences: UserPreferences;
 }
 
 // Inner component that has access to useReactFlow hook - must be child of ReactFlow
 const ScreenshotHandler: FC<{
-  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void
+  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void;
 }> = ({onScreenshotReady}) => {
-  const {getNodes, getNodesBounds} = useReactFlow()
-  const [theme] = useTheme()
+  const {getNodes, getNodesBounds} = useReactFlow();
+  const [theme] = useTheme();
 
   const captureScreenshot = useCallback(async (): Promise<string | null> => {
     try {
-      const nodes = getNodes()
+      const nodes = getNodes();
       if (nodes.length === 0) {
-        logger.warn("No nodes to capture")
-        return null
+        logger.warn('No nodes to capture');
+        return null;
       }
 
       // Wait a bit for rendering to complete
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Use the standard ReactFlow viewport selector (as per ReactFlow docs)
       const viewport = document.querySelector(
-        ".react-flow__viewport",
-      ) as HTMLElement
+        '.react-flow__viewport',
+      ) as HTMLElement;
 
       if (!viewport) {
-        logger.error("ReactFlow viewport not found")
-        return null
+        logger.error('ReactFlow viewport not found');
+        return null;
       }
 
       // Get the bounds of all nodes
-      const nodesBounds = getNodesBounds(nodes)
-      const imageWidth = nodesBounds.width + 100 // Add padding
-      const imageHeight = nodesBounds.height + 100 // Add padding
+      const nodesBounds = getNodesBounds(nodes);
+      const imageWidth = nodesBounds.width + 100; // Add padding
+      const imageHeight = nodesBounds.height + 100; // Add padding
 
       // Calculate viewport transformation to fit all nodes
       const viewportTransform = getViewportForBounds(
@@ -97,20 +97,20 @@ const ScreenshotHandler: FC<{
         0.5,
         2,
         0.1,
-      )
+      );
 
       // Use theme-aware background color for screenshot
-      const backgroundColor = theme === Theme.Dark ? "#000000" : "#ffffff"
+      const backgroundColor = theme === Theme.Dark ? '#000000' : '#ffffff';
 
       // Capture the viewport with proper transformation (ReactFlow standard approach)
       const dataUrl = await toPng(viewport, {
         backgroundColor,
         cacheBust: true,
         filter: (node) => {
-          if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
-            return false
+          if (node instanceof HTMLLinkElement && node.rel === 'stylesheet') {
+            return false;
           }
-          return true
+          return true;
         },
         height: imageHeight,
         pixelRatio: 2,
@@ -121,24 +121,24 @@ const ScreenshotHandler: FC<{
           width: `${imageWidth}px`,
         },
         width: imageWidth,
-      })
+      });
 
-      return dataUrl
+      return dataUrl;
     } catch (error) {
-      logger.error(`Failed to capture ReactFlow screenshot:${error}`)
-      return null
+      logger.error(`Failed to capture ReactFlow screenshot:${error}`);
+      return null;
     }
-  }, [getNodes, getNodesBounds, theme])
+  }, [getNodes, getNodesBounds, theme]);
 
   // Notify parent when screenshot function is ready
   useEffect(() => {
     if (onScreenshotReady) {
-      onScreenshotReady(captureScreenshot)
+      onScreenshotReady(captureScreenshot);
     }
-  }, [onScreenshotReady, captureScreenshot])
+  }, [onScreenshotReady, captureScreenshot]);
 
-  return null
-}
+  return null;
+};
 
 const FlowContent: FC<UsecaseVisualizerProps> = ({
   edges,
@@ -147,18 +147,18 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
   projectId,
   userPreferences,
 }) => {
-  const [theme] = useTheme()
-  const colorMode: ColorMode = theme === Theme.Dark ? "dark" : "light"
+  const [theme] = useTheme();
+  const colorMode: ColorMode = theme === Theme.Dark ? 'dark' : 'light';
 
   // Get selection store actions and current selection
-  const {clearSelection, setSelection} = useVisualizerSelectionStore()
+  const {clearSelection, setSelection} = useVisualizerSelectionStore();
   const selectionFromStore = useVisualizerSelectionStore(
     (state) => state.selections[projectId],
-  )
+  );
   const currentSelection = useMemo(
     () => selectionFromStore || {selectedEdges: [], selectedNodes: []},
     [selectionFromStore],
-  )
+  );
 
   // Handle node click for selection
   const handleNodeClick = useCallback(
@@ -167,32 +167,32 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
         // Multi-selection: toggle node in selection
         const isSelected = currentSelection.selectedNodes.some(
           (n) => n.id === node.id,
-        )
+        );
         if (isSelected) {
           // Remove from selection
           const newNodes = currentSelection.selectedNodes.filter(
             (n) => n.id !== node.id,
-          )
-          setSelection(projectId, newNodes, currentSelection.selectedEdges)
+          );
+          setSelection(projectId, newNodes, currentSelection.selectedEdges);
         } else {
           // Add to selection
-          const newNodes = [...currentSelection.selectedNodes, node as RFNode]
-          setSelection(projectId, newNodes, currentSelection.selectedEdges)
+          const newNodes = [...currentSelection.selectedNodes, node as RFNode];
+          setSelection(projectId, newNodes, currentSelection.selectedEdges);
         }
       } else {
         // Single selection: only update if not already the only selected node
         const isSameSelection =
           currentSelection.selectedNodes.length === 1 &&
           currentSelection.selectedNodes[0].id === node.id &&
-          currentSelection.selectedEdges.length === 0
+          currentSelection.selectedEdges.length === 0;
 
         if (!isSameSelection) {
-          setSelection(projectId, [node as RFNode], [])
+          setSelection(projectId, [node as RFNode], []);
         }
       }
     },
     [currentSelection, projectId, setSelection],
-  )
+  );
 
   // Handle edge click for selection
   const handleEdgeClick = useCallback(
@@ -201,32 +201,32 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
         // Multi-selection: toggle edge in selection
         const isSelected = currentSelection.selectedEdges.some(
           (e) => e.id === edge.id,
-        )
+        );
         if (isSelected) {
           // Remove from selection
           const newEdges = currentSelection.selectedEdges.filter(
             (e) => e.id !== edge.id,
-          )
-          setSelection(projectId, currentSelection.selectedNodes, newEdges)
+          );
+          setSelection(projectId, currentSelection.selectedNodes, newEdges);
         } else {
           // Add to selection
-          const newEdges = [...currentSelection.selectedEdges, edge as RFEdge]
-          setSelection(projectId, currentSelection.selectedNodes, newEdges)
+          const newEdges = [...currentSelection.selectedEdges, edge as RFEdge];
+          setSelection(projectId, currentSelection.selectedNodes, newEdges);
         }
       } else {
         // Single selection: only update if not already the only selected edge
         const isSameSelection =
           currentSelection.selectedEdges.length === 1 &&
           currentSelection.selectedEdges[0].id === edge.id &&
-          currentSelection.selectedNodes.length === 0
+          currentSelection.selectedNodes.length === 0;
 
         if (!isSameSelection) {
-          setSelection(projectId, [], [edge as RFEdge])
+          setSelection(projectId, [], [edge as RFEdge]);
         }
       }
     },
     [currentSelection, projectId, setSelection],
-  )
+  );
 
   // Handle pane click to clear selection
   const handlePaneClick = useCallback((): void => {
@@ -235,70 +235,70 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       currentSelection.selectedNodes.length > 0 ||
       currentSelection.selectedEdges.length > 0
     ) {
-      clearSelection(projectId)
+      clearSelection(projectId);
     }
-  }, [clearSelection, currentSelection, projectId])
+  }, [clearSelection, currentSelection, projectId]);
 
   // Handle ESC key to clear selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         // Only clear if there's actually something selected
         const selection =
-          useVisualizerSelectionStore.getState().selections[projectId]
+          useVisualizerSelectionStore.getState().selections[projectId];
         if (
           selection &&
           (selection.selectedNodes.length > 0 ||
             selection.selectedEdges.length > 0)
         ) {
-          clearSelection(projectId)
+          clearSelection(projectId);
         }
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [clearSelection, projectId])
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [clearSelection, projectId]);
 
   // Clear selection when nodes/edges change (e.g., usecase change)
   // Note: Only clear when the node/edge arrays actually change (new usecase loaded)
   useEffect(() => {
     logger.verbose(
       `Nodes/edges changed, clearing selection (nodes: ${nodes.length}, edges: ${edges.length}, project: ${projectId})`,
-    )
-    clearSelection(projectId)
+    );
+    clearSelection(projectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes.length, edges.length, projectId])
+  }, [nodes.length, edges.length, projectId]);
 
   // Filter edges based on user preferences and mark selected ones
   const filteredEdges = edges
     .filter((edge) => {
       // Filter control links if preference is disabled
       if (
-        edge.type === "control-link" &&
+        edge.type === 'control-link' &&
         !userPreferences.visualization.showControlLinks
       ) {
-        return false
+        return false;
       }
       // Add more edge filtering logic as needed
-      return true
+      return true;
     })
     .map((edge) => ({
       ...edge,
       selected: currentSelection.selectedEdges.some((e) => e.id === edge.id),
-    }))
+    }));
 
   // Mark selected nodes
   const nodesWithSelection = nodes.map((node) => ({
     ...node,
     selected: currentSelection.selectedNodes.some((n) => n.id === node.id),
-  }))
+  }));
 
   logger.verbose(
     `Rendering visualizer (selected nodes: ${nodesWithSelection.filter((n) => n.selected).length}/${nodesWithSelection.length}, selected edges: ${filteredEdges.filter((e) => e.selected).length}/${filteredEdges.length})`,
-  )
+  );
 
   return (
     <div className="h-full w-full">
@@ -326,8 +326,8 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
         <ScreenshotHandler onScreenshotReady={onScreenshotReady} />
       </ReactFlow>
     </div>
-  )
-}
+  );
+};
 
 export const UsecaseVisualizer: FC<UsecaseVisualizerProps> = ({
   edges,
@@ -346,5 +346,5 @@ export const UsecaseVisualizer: FC<UsecaseVisualizerProps> = ({
         userPreferences={userPreferences}
       />
     </ReactFlowProvider>
-  )
-}
+  );
+};

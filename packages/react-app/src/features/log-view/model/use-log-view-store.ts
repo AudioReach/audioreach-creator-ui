@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {create} from "zustand"
-import {subscribeWithSelector} from "zustand/middleware"
+import {create} from 'zustand';
+import {subscribeWithSelector} from 'zustand/middleware';
 
-import {LogLevel} from "~shared/api/logging.types"
-import {type LogEvent, logEventEmitter} from "~shared/lib/logger/logger-events"
-import {useProjectLayoutStore} from "~shared/store"
+import {LogLevel} from '~shared/api/logging.types';
+import {type LogEvent, logEventEmitter} from '~shared/lib/logger/logger-events';
+import {useProjectLayoutStore} from '~shared/store';
 
-import {type LogEntry, LogType, type LogViewStore} from "./log-view.types"
+import {type LogEntry, LogType, type LogViewStore} from './log-view.types';
 
 /**
  * Create a new LogView store instance for a specific project
@@ -20,13 +20,13 @@ function createLogViewStore() {
     subscribeWithSelector((set) => ({
       // Add new log entry to the logs array
       addLog: (logData: {
-        detailedMessage?: string
-        logType: LogType
-        message: string
-        timestamp?: Date
+        detailedMessage?: string;
+        logType: LogType;
+        message: string;
+        timestamp?: Date;
       }) => {
         try {
-          const newLogId = crypto.randomUUID() // Generate unique ID for new log
+          const newLogId = crypto.randomUUID(); // Generate unique ID for new log
           set((state: LogViewStore) => ({
             logs: [
               ...state.logs,
@@ -40,41 +40,41 @@ function createLogViewStore() {
               },
             ],
             selectedRowLogId: newLogId, // Auto-select the new log
-          }))
-          return true
+          }));
+          return true;
         } catch (error) {
-          console.error(`Failed to add log: ${error}`)
-          return false
+          console.error(`Failed to add log: ${error}`);
+          return false;
         }
       },
       // Row selection actions
       clearLogRowSelection: () => {
         try {
-          set({selectedRowLogId: null}) // Remove row highlighting
-          return true
+          set({selectedRowLogId: null}); // Remove row highlighting
+          return true;
         } catch (error) {
-          console.error(`Failed to clear log row selection: ${error}`)
-          return false
+          console.error(`Failed to clear log row selection: ${error}`);
+          return false;
         }
       },
       clearLogs: () => {
         try {
           set({
             logs: [], // Clear all logs
-            searchLogQuery: "", // Clear search
+            searchLogQuery: '', // Clear search
             selectedLogTypes: [LogType.Info, LogType.Warning, LogType.Error], // Reset multi-select filter - all types selected by default
             selectedRowLogId: null, // Clear selection
-          })
-          return true
+          });
+          return true;
         } catch (error) {
-          console.error(`Failed to clear logs: ${error}`)
-          return false
+          console.error(`Failed to clear logs: ${error}`);
+          return false;
         }
       },
 
       logs: [], // All log entries
 
-      searchLogQuery: "", // Current search text
+      searchLogQuery: '', // Current search text
 
       selectedLogTypes: [LogType.Info, LogType.Warning, LogType.Error], // Multi-select type filters - all types selected by default
 
@@ -82,11 +82,11 @@ function createLogViewStore() {
 
       selectRowLog: (logId: string) => {
         try {
-          set({selectedRowLogId: logId}) // Set selected row for highlighting and copy
-          return true
+          set({selectedRowLogId: logId}); // Set selected row for highlighting and copy
+          return true;
         } catch (error) {
-          console.error(`Failed to select row log: ${error}`)
-          return false
+          console.error(`Failed to select row log: ${error}`);
+          return false;
         }
       },
 
@@ -103,21 +103,21 @@ function createLogViewStore() {
                   : false,
             })),
             searchLogQuery: query,
-          }))
-          return true
+          }));
+          return true;
         } catch (error) {
-          console.error(`Failed to set search log query: ${error}`)
-          return false
+          console.error(`Failed to set search log query: ${error}`);
+          return false;
         }
       },
 
       setSelectedLogTypes: (types: string[]) => {
         try {
-          set({selectedLogTypes: types}) // Update multi-select type filters
-          return true
+          set({selectedLogTypes: types}); // Update multi-select type filters
+          return true;
         } catch (error) {
-          console.error(`Failed to set selected log types: ${error}`)
-          return false
+          console.error(`Failed to set selected log types: ${error}`);
+          return false;
         }
       },
 
@@ -130,15 +130,15 @@ function createLogViewStore() {
                 ? {...log, logMessageExpanded: !log.logMessageExpanded}
                 : log,
             ),
-          }))
-          return true
+          }));
+          return true;
         } catch (error) {
-          console.error(`Failed to toggle log expansion: ${error}`)
-          return false
+          console.error(`Failed to toggle log expansion: ${error}`);
+          return false;
         }
       },
     })),
-  )
+  );
 }
 
 /**
@@ -146,11 +146,11 @@ function createLogViewStore() {
  * Creates and manages separate log stores for each project
  */
 class LogViewStoreManager {
-  private stores = new Map<string, ReturnType<typeof createLogViewStore>>()
-  private eventUnsubscribe: (() => void) | null = null
+  private stores = new Map<string, ReturnType<typeof createLogViewStore>>();
+  private eventUnsubscribe: (() => void) | null = null;
 
   constructor() {
-    this.setupEventListener()
+    this.setupEventListener();
   }
 
   /**
@@ -158,9 +158,9 @@ class LogViewStoreManager {
    */
   getStore(projectId: string): ReturnType<typeof createLogViewStore> {
     if (!this.stores.has(projectId)) {
-      this.stores.set(projectId, createLogViewStore())
+      this.stores.set(projectId, createLogViewStore());
     }
-    return this.stores.get(projectId)!
+    return this.stores.get(projectId)!;
   }
 
   /**
@@ -168,18 +168,18 @@ class LogViewStoreManager {
    */
   getCurrentProjectStore(): ReturnType<typeof createLogViewStore> | null {
     try {
-      const state = useProjectLayoutStore.getState()
-      const activeProjectGroup = state.getActiveProjectGroup()
-      const projectId = activeProjectGroup?.id
+      const state = useProjectLayoutStore.getState();
+      const activeProjectGroup = state.getActiveProjectGroup();
+      const projectId = activeProjectGroup?.id;
 
       if (!projectId) {
-        return null
+        return null;
       }
 
-      return this.getStore(projectId)
+      return this.getStore(projectId);
     } catch (error) {
-      console.error("Failed to get current project store:", error)
-      return null
+      console.error('Failed to get current project store:', error);
+      return null;
     }
   }
 
@@ -187,9 +187,9 @@ class LogViewStoreManager {
    * Clear logs for a specific project
    */
   clearProjectLogs(projectId: string): void {
-    const store = this.stores.get(projectId)
+    const store = this.stores.get(projectId);
     if (store) {
-      store.getState().clearLogs()
+      store.getState().clearLogs();
     }
   }
 
@@ -197,7 +197,7 @@ class LogViewStoreManager {
    * Remove store for a project (cleanup when project is closed)
    */
   removeProjectStore(projectId: string): void {
-    this.stores.delete(projectId)
+    this.stores.delete(projectId);
   }
 
   /**
@@ -205,20 +205,20 @@ class LogViewStoreManager {
    */
   private setupEventListener(): void {
     this.eventUnsubscribe = logEventEmitter.subscribe((event: LogEvent) => {
-      const projectId = event.projectId
+      const projectId = event.projectId;
       if (!projectId) {
         // If no project ID, add to current project store
-        const currentStore = this.getCurrentProjectStore()
+        const currentStore = this.getCurrentProjectStore();
         if (currentStore) {
-          this.addLogToStore(currentStore, event)
+          this.addLogToStore(currentStore, event);
         }
-        return
+        return;
       }
 
       // Add to specific project store
-      const store = this.getStore(projectId)
-      this.addLogToStore(store, event)
-    })
+      const store = this.getStore(projectId);
+      this.addLogToStore(store, event);
+    });
   }
 
   /**
@@ -229,32 +229,32 @@ class LogViewStoreManager {
     event: LogEvent,
   ): void {
     // Map LogLevel to LogType
-    let logType: LogType
+    let logType: LogType;
     switch (event.level) {
       case LogLevel.Info:
-        logType = LogType.Info
-        break
+        logType = LogType.Info;
+        break;
       case LogLevel.Warn:
-        logType = LogType.Warning
-        break
+        logType = LogType.Warning;
+        break;
       case LogLevel.Error:
       case LogLevel.Critical:
-        logType = LogType.Error
-        break
+        logType = LogType.Error;
+        break;
       default:
-        return // Skip other levels
+        return; // Skip other levels
     }
 
     const detailed = event.context
       ? JSON.stringify(event.context, null, 2)
-      : undefined
+      : undefined;
 
     store.getState().addLog({
       detailedMessage: detailed,
       logType,
       message: event.message,
       timestamp: event.timestamp,
-    })
+    });
   }
 
   /**
@@ -262,29 +262,29 @@ class LogViewStoreManager {
    */
   destroy(): void {
     if (this.eventUnsubscribe) {
-      this.eventUnsubscribe()
-      this.eventUnsubscribe = null
+      this.eventUnsubscribe();
+      this.eventUnsubscribe = null;
     }
-    this.stores.clear()
+    this.stores.clear();
   }
 }
 
 // Global instance
-const logViewStoreManager = new LogViewStoreManager()
+const logViewStoreManager = new LogViewStoreManager();
 
 /**
  * Hook to get the LogView store for the current project
  */
 export function useLogViewStore() {
-  const currentStore = logViewStoreManager.getCurrentProjectStore()
+  const currentStore = logViewStoreManager.getCurrentProjectStore();
 
   if (!currentStore) {
     // Fallback: create a temporary store if no project is active
     // This prevents crashes during app initialization
-    return createLogViewStore()()
+    return createLogViewStore()();
   }
 
-  return currentStore()
+  return currentStore();
 }
 
-export {logViewStoreManager}
+export {logViewStoreManager};

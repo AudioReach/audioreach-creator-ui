@@ -9,42 +9,42 @@ import {
   useCallback,
   useEffect,
   useState,
-} from "react"
+} from 'react';
 
-import {Breadcrumbs} from "@qualcomm-ui/react/breadcrumbs"
-import {Popover} from "@qualcomm-ui/react/popover"
+import {Breadcrumbs} from '@qualcomm-ui/react/breadcrumbs';
+import {Popover} from '@qualcomm-ui/react/popover';
 
 export interface ArcBreadcrumbDropdownItem {
-  disabled?: boolean
-  icon?: ReactNode
-  label: string
-  onClick?: (event: React.MouseEvent<HTMLElement>) => void
+  disabled?: boolean;
+  icon?: ReactNode;
+  label: string;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
 export interface ArcBreadcrumbItem {
   /**
    * Optional dropdown items to show when this breadcrumb is clicked
    */
-  dropdownItems?: ArcBreadcrumbDropdownItem[]
+  dropdownItems?: ArcBreadcrumbDropdownItem[];
   /**
    * The label text for the breadcrumb
    */
-  label: string
+  label: string;
   /**
    * Custom click handler for the breadcrumb item
    */
-  onClick?: (event: React.MouseEvent<HTMLElement>) => void
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
 export interface ArcBreadcrumbsProps {
   /**
    * Additional CSS class names
    */
-  className?: string
+  className?: string;
   /**
    * Array of breadcrumb items
    */
-  items: ArcBreadcrumbItem[]
+  items: ArcBreadcrumbItem[];
   /**
    * Callback when a breadcrumb item is clicked
    */
@@ -52,7 +52,7 @@ export interface ArcBreadcrumbsProps {
     event: React.MouseEvent<HTMLElement>,
     item: ArcBreadcrumbItem,
     index: number,
-  ) => void
+  ) => void;
 }
 
 /**
@@ -63,7 +63,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
   ({className, items = [], onItemClick}, ref) => {
     const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
       null,
-    )
+    );
 
     // Handle dropdown item click
     const handleDropdownItemClick = useCallback(
@@ -71,12 +71,12 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
         event: React.MouseEvent<HTMLElement>,
         dropdownItem: ArcBreadcrumbDropdownItem,
       ) => {
-        event.stopPropagation()
-        dropdownItem.onClick?.(event)
-        setOpenDropdownIndex(null)
+        event.stopPropagation();
+        dropdownItem.onClick?.(event);
+        setOpenDropdownIndex(null);
       },
       [],
-    )
+    );
 
     // Handle breadcrumb item click with dropdown support
     const handleBreadcrumbClick = useCallback(
@@ -85,71 +85,71 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
         item: ArcBreadcrumbItem,
         index: number,
       ) => {
-        const hasDropdown = item.dropdownItems && item.dropdownItems.length > 0
+        const hasDropdown = item.dropdownItems && item.dropdownItems.length > 0;
 
         if (hasDropdown) {
-          event.preventDefault()
-          event.stopPropagation()
-          setOpenDropdownIndex(openDropdownIndex === index ? null : index)
+          event.preventDefault();
+          event.stopPropagation();
+          setOpenDropdownIndex(openDropdownIndex === index ? null : index);
         } else {
-          item.onClick?.(event)
-          onItemClick?.(event, item, index)
-          setOpenDropdownIndex(null)
+          item.onClick?.(event);
+          onItemClick?.(event, item, index);
+          setOpenDropdownIndex(null);
         }
       },
       [openDropdownIndex, onItemClick],
-    )
+    );
 
     // Close dropdown when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (openDropdownIndex !== null) {
-          const target = event.target as Node
+          const target = event.target as Node;
           requestAnimationFrame(() => {
             const dropdownContent = document.querySelector(
               `[data-dropdown-index="${openDropdownIndex}"]`,
-            )
+            );
             if (dropdownContent && !dropdownContent.contains(target)) {
-              setOpenDropdownIndex(null)
+              setOpenDropdownIndex(null);
             }
-          })
+          });
         }
-      }
+      };
 
       if (openDropdownIndex !== null) {
-        document.addEventListener("mousedown", handleClickOutside)
+        document.addEventListener('mousedown', handleClickOutside);
       }
 
       return () => {
-        document.removeEventListener("mousedown", handleClickOutside)
-      }
-    }, [openDropdownIndex])
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [openDropdownIndex]);
 
     const handleKeyDown = (
       event: React.KeyboardEvent<HTMLElement>,
       item: ArcBreadcrumbItem,
       index: number,
     ) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault()
-        handleBreadcrumbClick(event as any, item, index)
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleBreadcrumbClick(event as any, item, index);
       }
-    }
+    };
 
     const handleDropdownKeyDown = useCallback(
       (
         event: React.KeyboardEvent<HTMLDivElement>,
         dropdownItem: ArcBreadcrumbDropdownItem,
       ) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault()
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
           if (!dropdownItem.disabled) {
-            handleDropdownItemClick(event as any, dropdownItem)
+            handleDropdownItemClick(event as any, dropdownItem);
           }
         }
       },
       [handleDropdownItemClick],
-    )
+    );
 
     return (
       <div className="relative min-h-8 w-full overflow-visible">
@@ -157,7 +157,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
           <Breadcrumbs.List>
             {items.map((item, index) => {
               const hasDropdown =
-                item.dropdownItems && item.dropdownItems.length > 0
+                item.dropdownItems && item.dropdownItems.length > 0;
 
               return (
                 <Breadcrumbs.Item key={index}>
@@ -166,14 +166,14 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                     <Popover.Root
                       onOpenChange={(open: boolean) => {
                         if (!open) {
-                          setOpenDropdownIndex(null)
+                          setOpenDropdownIndex(null);
                         }
                       }}
                       open={openDropdownIndex === index}
                       positioning={{
                         gutter: 4,
-                        placement: "bottom-start",
-                        strategy: "absolute",
+                        placement: 'bottom-start',
+                        strategy: 'absolute',
                       }}
                     >
                       <Popover.Trigger>
@@ -182,8 +182,8 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                             {...triggerProps}
                             className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
                             onClick={(event: React.MouseEvent<HTMLElement>) => {
-                              handleBreadcrumbClick(event, item, index)
-                              triggerProps.onClick?.(event as any)
+                              handleBreadcrumbClick(event, item, index);
+                              triggerProps.onClick?.(event as any);
                             }}
                             role="button"
                             tabIndex={0}
@@ -203,20 +203,23 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                                 key={`dropdown-${dropdownIndex}`}
                                 className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
                                   dropdownItem.disabled
-                                    ? "text-text-3 cursor-not-allowed opacity-50"
-                                    : "text-text-1 hover:bg-background-3 cursor-pointer"
+                                    ? 'text-text-3 cursor-not-allowed opacity-50'
+                                    : 'text-text-1 hover:bg-background-3 cursor-pointer'
                                 }`}
                                 onClick={(
                                   event: React.MouseEvent<HTMLDivElement>,
                                 ) => {
                                   if (!dropdownItem.disabled) {
-                                    handleDropdownItemClick(event, dropdownItem)
+                                    handleDropdownItemClick(
+                                      event,
+                                      dropdownItem,
+                                    );
                                   }
                                 }}
                                 onKeyDown={(
                                   event: React.KeyboardEvent<HTMLDivElement>,
                                 ) => {
-                                  handleDropdownKeyDown(event, dropdownItem)
+                                  handleDropdownKeyDown(event, dropdownItem);
                                 }}
                                 role="menuitem"
                                 tabIndex={dropdownItem.disabled ? -1 : 0}
@@ -257,15 +260,15 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                     </span>
                   )}
                 </Breadcrumbs.Item>
-              )
+              );
             })}
           </Breadcrumbs.List>
         </Breadcrumbs.Root>
       </div>
-    )
+    );
   },
-)
+);
 
-ArcBreadcrumbs.displayName = "ArcBreadcrumbs"
+ArcBreadcrumbs.displayName = 'ArcBreadcrumbs';
 
-export default ArcBreadcrumbs
+export default ArcBreadcrumbs;

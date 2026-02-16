@@ -3,77 +3,77 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo, useState} from "react"
+import {useMemo, useState} from 'react';
 
-import {createTreeCollection} from "@qualcomm-ui/core/tree"
-import {SideNav} from "@qualcomm-ui/react/side-nav"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
+import {createTreeCollection} from '@qualcomm-ui/core/tree';
+import {SideNav} from '@qualcomm-ui/react/side-nav';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import type {SideNavItem} from "~shared/types/side-nav-types"
+import type {SideNavItem} from '~shared/types/side-nav-types';
 
-import {useSideNavContext} from "./side-nav-provider"
+import {useSideNavContext} from './side-nav-provider';
 
 export function ArcSideNav() {
-  const [open, setOpen] = useState(false)
-  const [wasAutoExpanded, setWasAutoExpanded] = useState(false)
-  const [expandedBranches, setExpandedBranches] = useState<string[]>([])
-  const {items, onItemSelect} = useSideNavContext()
+  const [open, setOpen] = useState(false);
+  const [wasAutoExpanded, setWasAutoExpanded] = useState(false);
+  const [expandedBranches, setExpandedBranches] = useState<string[]>([]);
+  const {items, onItemSelect} = useSideNavContext();
 
   // Dynamically discover groups in order of appearance
   // Ungrouped items appear last (at the bottom)
   const groupOrder = useMemo(() => {
-    const groups: string[] = []
-    const seen = new Set<string>()
+    const groups: string[] = [];
+    const seen = new Set<string>();
 
     items.forEach((item) => {
       if (item.group && !seen.has(item.group)) {
-        groups.push(item.group)
-        seen.add(item.group)
+        groups.push(item.group);
+        seen.add(item.group);
       }
-    })
+    });
 
     // Add ungrouped at the end so default items appear at bottom
-    groups.push("ungrouped")
+    groups.push('ungrouped');
 
-    return groups
-  }, [items])
+    return groups;
+  }, [items]);
 
   // Create tree collection from items
   const collection = createTreeCollection<SideNavItem>({
-    nodeChildren: "children",
+    nodeChildren: 'children',
     nodeText: (node) => node.label,
     nodeValue: (node) => node.id,
     rootNode: {
       children: items,
-      id: "root",
-      label: "",
+      id: 'root',
+      label: '',
     },
-  })
+  });
 
   const handleNodeClick = (node: SideNavItem) => {
-    const hasChildren = node.children && node.children.length > 0
+    const hasChildren = node.children && node.children.length > 0;
 
     if (hasChildren) {
       // Parent with children clicked
       if (!open) {
         // Auto-expand side nav AND expand the branch to show children
-        setWasAutoExpanded(true)
-        setExpandedBranches([node.id])
-        setOpen(true)
+        setWasAutoExpanded(true);
+        setExpandedBranches([node.id]);
+        setOpen(true);
       }
       // Branch expansion is handled by Qualcomm UI automatically
     } else {
       // Leaf item clicked - execute action
       // Note: QUI handles disabled state, so no need to check here
-      onItemSelect(node.id)
+      onItemSelect(node.id);
 
       // Auto-collapse only if it was auto-expanded
       if (wasAutoExpanded) {
-        setOpen(false)
-        setWasAutoExpanded(false)
+        setOpen(false);
+        setWasAutoExpanded(false);
       }
     }
-  }
+  };
 
   // Handle manual expansion via collapse trigger
   const handleOpenChange = (newOpen: boolean) => {
@@ -81,16 +81,16 @@ export function ArcSideNav() {
     // We detect manual toggle by checking if wasAutoExpanded is false
     if (newOpen && !wasAutoExpanded) {
       // User manually expanded - this is a manual action
-      setOpen(newOpen)
+      setOpen(newOpen);
     } else if (!newOpen) {
       // User manually collapsed
-      setOpen(newOpen)
-      setWasAutoExpanded(false)
+      setOpen(newOpen);
+      setWasAutoExpanded(false);
     } else {
       // This is from our auto-expand, just update open state
-      setOpen(newOpen)
+      setOpen(newOpen);
     }
-  }
+  };
 
   return (
     <SideNav.Root
@@ -104,8 +104,8 @@ export function ArcSideNav() {
       open={open}
       selectedValue={[]}
       style={{
-        backgroundColor: "var(--color-surface-secondary)",
-        color: "var(--color-text-neutral-primary)",
+        backgroundColor: 'var(--color-surface-secondary)',
+        color: 'var(--color-text-neutral-primary)',
       }}
     >
       <SideNav.Header>
@@ -115,12 +115,12 @@ export function ArcSideNav() {
 
       {items.length > 0 &&
         collection
-          .groupChildren([], (node) => node.group ?? "ungrouped", groupOrder)
+          .groupChildren([], (node) => node.group ?? 'ungrouped', groupOrder)
           .map((group) => (
             <SideNav.Group key={group.key}>
               <SideNav.Divider />
 
-              {group.key === "ungrouped" ? null : (
+              {group.key === 'ungrouped' ? null : (
                 <SideNav.GroupLabel>{group.key}</SideNav.GroupLabel>
               )}
 
@@ -148,7 +148,7 @@ export function ArcSideNav() {
                       </SideNav.BranchNode>
                     ) : (
                       <Tooltip
-                        positioning={{placement: "right"}}
+                        positioning={{placement: 'right'}}
                         trigger={
                           <span>
                             <SideNav.BranchNode
@@ -195,7 +195,7 @@ export function ArcSideNav() {
                       </SideNav.LeafNode>
                     ) : (
                       <Tooltip
-                        positioning={{placement: "right"}}
+                        positioning={{placement: 'right'}}
                         trigger={
                           <span>
                             <SideNav.LeafNode
@@ -223,5 +223,5 @@ export function ArcSideNav() {
             </SideNav.Group>
           ))}
     </SideNav.Root>
-  )
+  );
 }

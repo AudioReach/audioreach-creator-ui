@@ -9,12 +9,7 @@
     "experimentalDecorators": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext",
-      "ES2023"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -33,5 +28,5 @@
     "paths": {
       "@qui/docs-base": ["../docs-base/src"]
     }
-  },
+  }
 }

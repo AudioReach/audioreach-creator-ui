@@ -11,5 +11,5 @@ export const SessionWorkspace: React.FC = () => {
         <p className="text-sm text-gray-500">Placeholder</p>
       </div>
     </div>
-  )
-}
+  );
+};

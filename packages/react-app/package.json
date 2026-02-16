@@ -16,7 +16,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "clean": "shx rm -rf dist"
+    "clean": "shx rm -rf dist",
+    "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
   },
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",

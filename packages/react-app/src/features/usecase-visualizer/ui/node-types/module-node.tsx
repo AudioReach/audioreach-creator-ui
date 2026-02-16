@@ -4,45 +4,45 @@
  */
 
 // ModuleNode component with port handles
-import type {FC} from "react"
+import type {FC} from 'react';
 
-import {Handle, type NodeProps, Position} from "@xyflow/react"
+import {Handle, type NodeProps, Position} from '@xyflow/react';
 
-import type {RFModuleNodeData} from "~features/usecase-visualizer/model/usecase-visualizer.types"
+import type {RFModuleNodeData} from '~features/usecase-visualizer/model/usecase-visualizer.types';
 
-const ioToPosition = (io: "Input" | "Output") =>
-  io === "Input" ? Position.Left : Position.Right
+const ioToPosition = (io: 'Input' | 'Output') =>
+  io === 'Input' ? Position.Left : Position.Right;
 
 export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
-  const moduleData = data as RFModuleNodeData
-  const dataPorts = moduleData.dataPorts ?? []
-  const controlPorts = moduleData.controlPorts ?? []
+  const moduleData = data as RFModuleNodeData;
+  const dataPorts = moduleData.dataPorts ?? [];
+  const controlPorts = moduleData.controlPorts ?? [];
 
   // Helper to distribute control handles horizontally along top
   const getTopHandleStyle = (index: number, total: number) => {
     if (total === 0) {
-      return {}
+      return {};
     }
-    const step = total > 1 ? (100 / (total + 1)) * (index + 1) : 50
-    return {left: `${step}%`, transform: "translateX(-50%)"}
-  }
+    const step = total > 1 ? (100 / (total + 1)) * (index + 1) : 50;
+    return {left: `${step}%`, transform: 'translateX(-50%)'};
+  };
 
   return (
     <div
       className="mb-3 mt-3 rounded border px-0.5 py-0.5"
       style={{
         borderColor: selected
-          ? "var(--color-border-support-info)"
-          : "var(--color-background-neutral-10)",
-        borderWidth: selected ? "2px" : "1px",
+          ? 'var(--color-border-support-info)'
+          : 'var(--color-background-neutral-10)',
+        borderWidth: selected ? '2px' : '1px',
       }}
     >
       <div
         className="relative flex min-h-[60px] w-[100px] items-center justify-center rounded border shadow-sm"
         style={{
           backgroundColor: selected
-            ? "var(--color-background-support-info-subtle)"
-            : "var(--color-background-neutral-05)",
+            ? 'var(--color-background-support-info-subtle)'
+            : 'var(--color-background-neutral-05)',
         }}
       >
         {/* <div className="text-primary text-xs font-semibold">Module</div> */}
@@ -59,8 +59,8 @@ export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
               position={Position.Top}
               style={{
                 ...getTopHandleStyle(i, controlPorts.length),
-                backgroundColor: "var(--color-background-neutral-06)",
-                border: "1px solid var(--color-border-neutral-10)",
+                backgroundColor: 'var(--color-background-neutral-06)',
+                border: '1px solid var(--color-border-neutral-10)',
               }}
               type="source"
             />
@@ -70,8 +70,8 @@ export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
               position={Position.Top}
               style={{
                 ...getTopHandleStyle(i, controlPorts.length),
-                backgroundColor: "var(--color-background-neutral-06)",
-                border: "1px solid var(--color-border-neutral-10)",
+                backgroundColor: 'var(--color-background-neutral-06)',
+                border: '1px solid var(--color-border-neutral-10)',
               }}
               type="target"
             />
@@ -86,13 +86,13 @@ export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
             id={`Data:${p.id}`}
             position={ioToPosition(p.portIoType)}
             style={{
-              backgroundColor: "var(--color-background-neutral-06)",
-              border: "1px solid var(--color-border-neutral-10)",
+              backgroundColor: 'var(--color-background-neutral-06)',
+              border: '1px solid var(--color-border-neutral-10)',
             }}
-            type={p.portIoType === "Input" ? "target" : "source"}
+            type={p.portIoType === 'Input' ? 'target' : 'source'}
           />
         ))}
       </div>
     </div>
-  )
-}
+  );
+};

@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
-import {useSubsystemBrowserStore} from "../model/use-subsystem-browser-store"
+import {useSubsystemBrowserStore} from '../model/use-subsystem-browser-store';
 
-import SubSystemTreeView from "./subsystem-tree-view"
+import SubSystemTreeView from './subsystem-tree-view';
 
 export const SubsystemBrowser: FC = () => {
   // _id is intentionally unused for now to satisfy lint rule
   const handleOnClick = (_id: number) => {
     // TODO: Implement actual navigation logic
-  }
+  };
 
-  const subsystemData = useSubsystemBrowserStore((state) => state.data)
+  const subsystemData = useSubsystemBrowserStore((state) => state.data);
 
   return (
     <div
@@ -30,5 +30,5 @@ export const SubsystemBrowser: FC = () => {
         <SubSystemTreeView data={subsystemData} onClick={handleOnClick} />
       </div>
     </div>
-  )
-}
+  );
+};

@@ -26,11 +26,11 @@ pipeline {
                 bat 'npm --version'
                 bat 'pnpm --version'
                 bat 'git --version'
-                
+
                 echo "Branch: ${env.BRANCH_NAME}"
                 echo "Build: ${env.BUILD_NUMBER}"
                 echo "Workspace: ${env.WORKSPACE}"
-                
+
                 script {
                     if (env.CHANGE_ID) {
                         echo "🔀 Pull Request Build: PR-${env.CHANGE_ID}"
@@ -47,7 +47,7 @@ pipeline {
             steps {
                 echo '📦 Installing dependencies...'
                 bat 'pnpm install --frozen-lockfile --prefer-offline'
-                
+
                 // Verify installation
                 bat 'pnpm list --depth=0'
             }
@@ -61,6 +61,18 @@ pipeline {
             post {
                 failure {
                     echo '❌ Linting failed! Please fix code style issues.'
+                }
+            }
+        }
+
+        stage('Format Check') {
+          steps {
+            echo '🎨 Checking code formatting...'
+            bat 'pnpm format:check'
+          }
+          post {
+                failure {
+                    echo '❌ Code formatting check failed! Please run "pnpm format" to fix formatting issues.'
                 }
             }
         }
@@ -81,7 +93,7 @@ pipeline {
             steps {
                 echo '🏗️ Building all packages...'
                 bat 'pnpm build'
-                
+
                 // Verify build outputs
                 echo '📋 Checking build outputs...'
                 bat 'dir packages\\api-utils\\dist'
@@ -155,7 +167,7 @@ pipeline {
             steps {
                 echo '📦 Creating distribution packages...'
                 bat 'pnpm package'
-                
+
                 // Archive artifacts
                 archiveArtifacts artifacts: 'packages/electron-app/out/**/*', allowEmptyArchive: true
             }

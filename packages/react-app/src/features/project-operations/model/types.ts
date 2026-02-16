@@ -3,26 +3,26 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type ProjectInfo from "~shared/types/project-info.types"
+import type ProjectInfo from '~shared/types/project-info.types';
 
 export interface ProjectOpenResult {
-  error?: string
-  project?: ProjectInfo
-  success: boolean
+  error?: string;
+  project?: ProjectInfo;
+  success: boolean;
 }
 
 export interface ProjectLoadingState {
-  isLoading: boolean
-  message: string
+  isLoading: boolean;
+  message: string;
 }
 
 export interface ProjectOpenerHook {
   /** Current loading state */
-  loadingState: ProjectLoadingState
+  loadingState: ProjectLoadingState;
   /** Opens a recent project by project info */
-  openRecentProject: (project: ProjectInfo) => Promise<void>
+  openRecentProject: (project: ProjectInfo) => Promise<void>;
   /** Opens a workspace project using file picker */
-  openWorkspaceProject: () => Promise<void>
+  openWorkspaceProject: () => Promise<void>;
 }
 
 export interface ProjectLifecycleHook {
@@ -30,7 +30,7 @@ export interface ProjectLifecycleHook {
   handleProjectClose: (
     projectId: string,
     projectName: string,
-  ) => Promise<boolean>
+  ) => Promise<boolean>;
   /** Screenshot registry for storing screenshot functions */
-  screenshotRegistry: Map<string, () => Promise<string | null>>
+  screenshotRegistry: Map<string, () => Promise<string | null>>;
 }

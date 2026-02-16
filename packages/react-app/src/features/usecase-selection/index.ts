@@ -1,5 +1,5 @@
-export {default as UsecaseSelectionControl} from "./ui/usecase-selection-control"
-export {default as UsecaseListPanel} from "./ui/usecase-list-panel"
+export {default as UsecaseSelectionControl} from './ui/usecase-selection-control';
+export {default as UsecaseListPanel} from './ui/usecase-list-panel';
 export type {
   UsecaseCategory,
   Usecase,
@@ -9,4 +9,4 @@ export type {
   RelatedEndPointLink,
   SearchSetting,
   SearchKeyword,
-} from "./model/types"
+} from './model/types';

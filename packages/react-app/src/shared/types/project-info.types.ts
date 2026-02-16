@@ -3,22 +3,22 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {SessionMode} from "~entities/project/model/project.dto"
+import type {SessionMode} from '~entities/project/model/project.dto';
 
 /** Contains project details used for display in the UI */
 export default interface ProjectInfo {
   /** A short description of the project */
-  description: string
+  description: string;
   /** The absolute file path to the project *.qwsp on the filesystem */
-  filepath: string
+  filepath: string;
   /** Unique id for rendering project info in a list */
-  id: string
+  id: string;
   /** A base64 encoded image used for display on the start page */
-  image?: string
+  image?: string;
   /** The date the project was last modified */
-  lastModifiedDate: Date | undefined
+  lastModifiedDate: Date | undefined;
   /** The name of the project */
-  name: string
+  name: string;
   /** The session mode */
-  sessionMode?: SessionMode
+  sessionMode?: SessionMode;
 }

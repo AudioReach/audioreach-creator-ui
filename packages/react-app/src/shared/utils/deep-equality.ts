@@ -28,81 +28,81 @@
 export function deepEqual<T>(a: T, b: T, seen = new WeakMap()): boolean {
   // Handle primitive types and reference equality
   if (a === b) {
-    return true
+    return true;
   }
 
   // Handle null and undefined
   if (a == null || b == null) {
-    return a === b
+    return a === b;
   }
 
   // Handle different types
   if (typeof a !== typeof b) {
-    return false
+    return false;
   }
 
   // Handle Date objects
   if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime()
+    return a.getTime() === b.getTime();
   }
 
   // Handle RegExp objects
   if (a instanceof RegExp && b instanceof RegExp) {
-    return a.source === b.source && a.flags === b.flags
+    return a.source === b.source && a.flags === b.flags;
   }
 
   // Handle circular references for objects
-  if (typeof a === "object" && a !== null) {
+  if (typeof a === 'object' && a !== null) {
     if (seen.has(a)) {
-      return seen.get(a) === b
+      return seen.get(a) === b;
     }
-    seen.set(a, b)
+    seen.set(a, b);
   }
 
   // Handle arrays
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) {
-      return false
+      return false;
     }
 
     for (let i = 0; i < a.length; i++) {
       if (!deepEqual(a[i], b[i])) {
-        return false
+        return false;
       }
     }
 
-    return true
+    return true;
   }
 
   // If one is an array and the other is not, they're not equal
   if (Array.isArray(a) || Array.isArray(b)) {
-    return false
+    return false;
   }
 
   // Handle objects
-  if (typeof a === "object" && typeof b === "object") {
-    const keysA = Object.keys(a as object)
-    const keysB = Object.keys(b as object)
+  if (typeof a === 'object' && typeof b === 'object') {
+    const keysA = Object.keys(a as object);
+    const keysB = Object.keys(b as object);
 
     // Check if objects have the same number of keys
     if (keysA.length !== keysB.length) {
-      return false
+      return false;
     }
 
     // Check if all keys and values are equal
     for (const key of keysA) {
       if (!Object.prototype.hasOwnProperty.call(b, key)) {
-        return false
+        return false;
       }
 
       if (!deepEqual((a as any)[key], (b as any)[key])) {
-        return false
+        return false;
       }
     }
 
-    return true
+    return true;
   }
 
   // For all other cases (functions, symbols, etc.)
-  return false
+  return false;
 }

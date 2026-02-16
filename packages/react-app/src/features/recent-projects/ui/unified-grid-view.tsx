@@ -3,28 +3,28 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from "react"
+import {useMemo} from 'react';
 
-import {Database} from "lucide-react"
+import {Database} from 'lucide-react';
 
-import {SessionMode} from "~entities/project/model/project.dto"
-import ArcProjectCard from "~shared/controls/arc-project-card"
-import type DeviceInfo from "~shared/types/device-info.types"
-import type ProjectInfo from "~shared/types/project-info.types"
+import {SessionMode} from '~entities/project/model/project.dto';
+import ArcProjectCard from '~shared/controls/arc-project-card';
+import type DeviceInfo from '~shared/types/device-info.types';
+import type ProjectInfo from '~shared/types/project-info.types';
 
 type UnifiedItem =
-  | {data: ProjectInfo; type: "project"}
-  | {data: DeviceInfo; type: "device"}
+  | {data: ProjectInfo; type: 'project'}
+  | {data: DeviceInfo; type: 'device'};
 
 interface UnifiedGridViewProps {
-  devices: DeviceInfo[]
-  onOpenDevice: (device: DeviceInfo) => void
-  onOpenProject: (project: ProjectInfo) => void
-  onRemoveFromRecent: (projectId: string) => void
-  onShowInExplorer: (projectId: string) => Promise<void>
-  projects: ProjectInfo[]
-  showDevices: boolean
-  showProjects: boolean
+  devices: DeviceInfo[];
+  onOpenDevice: (device: DeviceInfo) => void;
+  onOpenProject: (project: ProjectInfo) => void;
+  onRemoveFromRecent: (projectId: string) => void;
+  onShowInExplorer: (projectId: string) => Promise<void>;
+  projects: ProjectInfo[];
+  showDevices: boolean;
+  showProjects: boolean;
 }
 
 export default function UnifiedGridView({
@@ -38,44 +38,44 @@ export default function UnifiedGridView({
   showProjects,
 }: UnifiedGridViewProps) {
   const items: UnifiedItem[] = useMemo(() => {
-    const combined: UnifiedItem[] = []
+    const combined: UnifiedItem[] = [];
 
     // Add projects (sorted by date, most recent first)
     if (showProjects) {
       const sortedProjects = [...projects].sort((a, b) => {
-        const dateA = a.lastModifiedDate?.getTime() || 0
-        const dateB = b.lastModifiedDate?.getTime() || 0
-        return dateB - dateA
-      })
+        const dateA = a.lastModifiedDate?.getTime() || 0;
+        const dateB = b.lastModifiedDate?.getTime() || 0;
+        return dateB - dateA;
+      });
 
-      sortedProjects.forEach((p) => combined.push({data: p, type: "project"}))
+      sortedProjects.forEach((p) => combined.push({data: p, type: 'project'}));
     }
 
     // Add devices (as-is, after projects)
     if (showDevices) {
-      devices.forEach((d) => combined.push({data: d, type: "device"}))
+      devices.forEach((d) => combined.push({data: d, type: 'device'}));
     }
 
-    return combined
-  }, [devices, projects, showDevices, showProjects])
+    return combined;
+  }, [devices, projects, showDevices, showProjects]);
 
   // Empty state
   if (items.length === 0) {
     return (
       <div
         className="flex flex-col items-center justify-center py-12"
-        style={{color: "var(--color-text-neutral-secondary)"}}
+        style={{color: 'var(--color-text-neutral-secondary)'}}
       >
         <Database className="mb-4" size={48} />
         <p className="text-lg">No items</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-wrap gap-2.5">
       {items.map((item) =>
-        item.type === "project" ? (
+        item.type === 'project' ? (
           <ArcProjectCard
             key={`project-${item.data.id}`}
             description={item.data.description}
@@ -83,7 +83,7 @@ export default function UnifiedGridView({
             isActive={false}
             label={
               item.data.sessionMode === SessionMode.DiffMerge
-                ? "Diff/Merge"
+                ? 'Diff/Merge'
                 : undefined
             }
             lastModifiedDate={item.data.lastModifiedDate}
@@ -105,5 +105,5 @@ export default function UnifiedGridView({
         ),
       )}
     </div>
-  )
+  );
 }

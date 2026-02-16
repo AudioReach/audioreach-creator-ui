@@ -1,1 +1,1 @@
-export * from "./electron"
+export * from './electron';

@@ -11,143 +11,143 @@ import {
   useEffect,
   useMemo,
   useState,
-} from "react"
+} from 'react';
 
-import {Moon, Settings, Sun} from "lucide-react"
+import {Moon, Settings, Sun} from 'lucide-react';
 
-import {showToast} from "~shared/controls/global-toaster"
-import {Theme, useTheme} from "~shared/providers/theme-provider"
-import {useProjectLayoutStore} from "~shared/store"
-import type {SideNavItem, TabWithSideNav} from "~shared/types/side-nav-types"
+import {showToast} from '~shared/controls/global-toaster';
+import {Theme, useTheme} from '~shared/providers/theme-provider';
+import {useProjectLayoutStore} from '~shared/store';
+import type {SideNavItem, TabWithSideNav} from '~shared/types/side-nav-types';
 
 interface SideNavContextType {
-  items: SideNavItem[]
-  keyboardShortcuts: Record<string, () => void>
-  onItemSelect: (itemId: string) => void
-  register: (tabId: string, impl: TabWithSideNav) => void
-  unregister: (tabId: string) => void
+  items: SideNavItem[];
+  keyboardShortcuts: Record<string, () => void>;
+  onItemSelect: (itemId: string) => void;
+  register: (tabId: string, impl: TabWithSideNav) => void;
+  unregister: (tabId: string) => void;
 }
 
-const SideNavContext = createContext<SideNavContextType | null>(null)
+const SideNavContext = createContext<SideNavContextType | null>(null);
 
 export function useSideNavContext() {
-  const context = useContext(SideNavContext)
+  const context = useContext(SideNavContext);
   if (!context) {
-    throw new Error("useSideNavContext must be used within SideNavProvider")
+    throw new Error('useSideNavContext must be used within SideNavProvider');
   }
-  return context
+  return context;
 }
 
 interface SideNavProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function SideNavProvider({children}: SideNavProviderProps) {
-  const [registry, setRegistry] = useState(new Map<string, TabWithSideNav>())
-  const [activeTab, setActiveTab] = useState<any>(null)
-  const [theme, setTheme] = useTheme()
+  const [registry, setRegistry] = useState(new Map<string, TabWithSideNav>());
+  const [activeTab, setActiveTab] = useState<any>(null);
+  const [theme, setTheme] = useTheme();
 
   // Subscribe to active tab changes
   useEffect(() => {
     // Set initial active tab first
-    setActiveTab(useProjectLayoutStore.getState().activeTab)
+    setActiveTab(useProjectLayoutStore.getState().activeTab);
 
     const unsubscribe = useProjectLayoutStore.subscribe((state) => {
-      setActiveTab(state.activeTab)
-    })
+      setActiveTab(state.activeTab);
+    });
 
-    return unsubscribe
-  }, [])
+    return unsubscribe;
+  }, []);
 
   // Define default items that appear at the bottom for ALL widgets
   const defaultItems = useMemo(
     (): SideNavItem[] => [
       {
         icon: theme === Theme.Light ? Moon : Sun,
-        id: "__default_theme_toggle",
-        label: theme === Theme.Light ? "Dark Theme" : "Light Theme",
+        id: '__default_theme_toggle',
+        label: theme === Theme.Light ? 'Dark Theme' : 'Light Theme',
         // No group = ungrouped, will appear at bottom
       },
       {
         icon: Settings,
-        id: "__default_settings",
-        label: "Settings",
+        id: '__default_settings',
+        label: 'Settings',
       },
     ],
     [theme],
-  )
+  );
 
   // Get items from registry based on active tab
   const widgetItems = useMemo(() => {
     if (!activeTab?.id) {
-      return []
+      return [];
     }
 
-    const impl = registry.get(activeTab.id)
-    return impl ? impl.getSideNavItems() : []
-  }, [activeTab?.id, registry])
+    const impl = registry.get(activeTab.id);
+    return impl ? impl.getSideNavItems() : [];
+  }, [activeTab?.id, registry]);
 
   // Merge widget items with default items (default items at the end)
   const allItems = useMemo(() => {
-    return [...widgetItems, ...defaultItems]
-  }, [widgetItems, defaultItems])
+    return [...widgetItems, ...defaultItems];
+  }, [widgetItems, defaultItems]);
 
   // Get keyboard shortcuts from registry based on active tab
   const keyboardShortcuts = useMemo(() => {
     if (!activeTab?.id) {
-      return {}
+      return {};
     }
 
-    const impl = registry.get(activeTab.id)
-    return impl?.getKeyboardShortcuts?.() || {}
-  }, [activeTab?.id, registry])
+    const impl = registry.get(activeTab.id);
+    return impl?.getKeyboardShortcuts?.() || {};
+  }, [activeTab?.id, registry]);
 
   const handleItemSelect = useCallback(
     (itemId: string) => {
       // Handle default items first
-      if (itemId === "__default_theme_toggle") {
-        const newTheme = theme === Theme.Light ? Theme.Dark : Theme.Light
-        setTheme(newTheme)
+      if (itemId === '__default_theme_toggle') {
+        const newTheme = theme === Theme.Light ? Theme.Dark : Theme.Light;
+        setTheme(newTheme);
         showToast(
-          `Switched to ${newTheme === Theme.Light ? "light" : "dark"} theme`,
-          "success",
-        )
-        return
+          `Switched to ${newTheme === Theme.Light ? 'light' : 'dark'} theme`,
+          'success',
+        );
+        return;
       }
 
-      if (itemId === "__default_settings") {
-        showToast("Settings (coming soon)", "info")
-        return
+      if (itemId === '__default_settings') {
+        showToast('Settings (coming soon)', 'info');
+        return;
       }
 
       // Handle widget-specific items
       if (!activeTab?.id) {
-        return
+        return;
       }
 
-      const impl = registry.get(activeTab.id)
+      const impl = registry.get(activeTab.id);
       if (impl) {
-        impl.handleSideNavAction(itemId)
+        impl.handleSideNavAction(itemId);
       }
     },
     [activeTab?.id, registry, theme, setTheme],
-  )
+  );
 
   const register = useCallback((tabId: string, impl: TabWithSideNav) => {
     setRegistry((prev) => {
-      const newRegistry = new Map(prev)
-      newRegistry.set(tabId, impl)
-      return newRegistry
-    })
-  }, [])
+      const newRegistry = new Map(prev);
+      newRegistry.set(tabId, impl);
+      return newRegistry;
+    });
+  }, []);
 
   const unregister = useCallback((tabId: string) => {
     setRegistry((prev) => {
-      const newRegistry = new Map(prev)
-      newRegistry.delete(tabId)
-      return newRegistry
-    })
-  }, [])
+      const newRegistry = new Map(prev);
+      newRegistry.delete(tabId);
+      return newRegistry;
+    });
+  }, []);
 
   return (
     <SideNavContext.Provider
@@ -161,5 +161,5 @@ export function SideNavProvider({children}: SideNavProviderProps) {
     >
       {children}
     </SideNavContext.Provider>
-  )
+  );
 }

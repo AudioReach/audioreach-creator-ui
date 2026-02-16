@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from "react"
+import {useMemo} from 'react';
 
 import {
   Ban,
@@ -15,39 +15,41 @@ import {
   Search,
   TriangleAlert,
   X,
-} from "lucide-react"
+} from 'lucide-react';
 
-import {IconButton} from "@qualcomm-ui/react/button"
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
-import {Menu} from "@qualcomm-ui/react/menu"
-import {TextInput} from "@qualcomm-ui/react/text-input"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
+import {IconButton} from '@qualcomm-ui/react/button';
+import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
+import {Menu} from '@qualcomm-ui/react/menu';
+import {TextInput} from '@qualcomm-ui/react/text-input';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {logger} from "~shared/lib/logger"
+import {logger} from '~shared/lib/logger';
 
-import {ALL_TYPES, LogType} from "../../model/log-view.types"
-import {useLogViewStore} from "../../model/use-log-view-store"
+import {ALL_TYPES, LogType} from '../../model/log-view.types';
+import {useLogViewStore} from '../../model/use-log-view-store';
 
 // function to get the appropriate icon for each log type
 const getLogTypeIcon = (logType: LogType) => {
   switch (logType) {
     case LogType.Info:
       return (
-        <Info size={14} style={{color: "var(--color-icon-support-info)"}} />
-      )
+        <Info size={14} style={{color: 'var(--color-icon-support-info)'}} />
+      );
     case LogType.Warning:
       return (
         <TriangleAlert
           size={14}
-          style={{color: "var(--color-icon-support-warning)"}}
+          style={{color: 'var(--color-icon-support-warning)'}}
         />
-      )
+      );
     case LogType.Error:
-      return <X size={14} style={{color: "var(--color-icon-support-danger)"}} />
+      return (
+        <X size={14} style={{color: 'var(--color-icon-support-danger)'}} />
+      );
     default:
-      return null
+      return null;
   }
-}
+};
 
 const LogViewToolbar: React.FC = () => {
   // Extract necessary state and actions from the log view store
@@ -59,122 +61,122 @@ const LogViewToolbar: React.FC = () => {
     selectedRowLogId,
     setSearchLogQuery,
     setSelectedLogTypes,
-  } = useLogViewStore()
+  } = useLogViewStore();
 
   // Calculate "All Types" checkbox state (checked, unchecked, or indeterminate)
   const allTypesState = useMemo(() => {
     // Creates array of the 3 individual log types (excludes `LogType.ALL`)
-    const individualTypes = [LogType.Info, LogType.Warning, LogType.Error]
+    const individualTypes = [LogType.Info, LogType.Warning, LogType.Error];
     // selectedLogTypes = current state (e.g., `["info", "error"]`)
     // filter() keeps only types that are in `selectedLogTypes`
     const selectedCount = individualTypes.filter((type) =>
       selectedLogTypes.includes(type),
-    ).length
+    ).length;
 
     if (selectedCount === 0) {
-      return {checked: false, indeterminate: false} // None selected = show no logs = unchecked
+      return {checked: false, indeterminate: false}; // None selected = show no logs = unchecked
     }
     if (selectedCount === individualTypes.length) {
-      return {checked: true, indeterminate: false} // All selected = checked
+      return {checked: true, indeterminate: false}; // All selected = checked
     }
-    return {checked: false, indeterminate: true} // Some selected = indeterminate
-  }, [selectedLogTypes])
+    return {checked: false, indeterminate: true}; // Some selected = indeterminate
+  }, [selectedLogTypes]);
 
   // Handles multiple selection logic for log type filters
   const handleFilterToggle = (type: string) => {
     if (type === ALL_TYPES) {
       // Toggle "All Types"
-      const individualTypes = [LogType.Info, LogType.Warning, LogType.Error]
+      const individualTypes = [LogType.Info, LogType.Warning, LogType.Error];
       const allToggled = individualTypes.every((t: LogType) =>
         selectedLogTypes.includes(t),
-      )
+      );
 
       if (allToggled) {
-        setSelectedLogTypes([]) // Clear all = show no logs
+        setSelectedLogTypes([]); // Clear all = show no logs
       } else {
-        setSelectedLogTypes([...individualTypes]) // Select all individual types (create new array)
+        setSelectedLogTypes([...individualTypes]); // Select all individual types (create new array)
       }
-      return
+      return;
     }
 
     // Toggle individual type
     if (selectedLogTypes.includes(type)) {
       // Remove this type
-      const newTypes = selectedLogTypes.filter((t: string) => t !== type)
-      setSelectedLogTypes(newTypes)
+      const newTypes = selectedLogTypes.filter((t: string) => t !== type);
+      setSelectedLogTypes(newTypes);
     } else {
       // Add this type
-      const newTypes = [...selectedLogTypes, type]
-      setSelectedLogTypes(newTypes)
+      const newTypes = [...selectedLogTypes, type];
+      setSelectedLogTypes(newTypes);
     }
-  }
+  };
 
   const filteredLogs = useMemo(() => {
-    let filtered = logs
+    let filtered = logs;
 
     if (selectedLogTypes.length > 0) {
       filtered = filtered.filter((log) =>
         selectedLogTypes.includes(log.logType),
-      )
+      );
     } else {
-      filtered = []
+      filtered = [];
     }
 
     if (searchLogQuery.trim()) {
-      const query = searchLogQuery.toLowerCase()
+      const query = searchLogQuery.toLowerCase();
       filtered = filtered.filter(
         (log) =>
           log.message.toLowerCase().includes(query) ||
           (log.detailedMessage &&
             log.detailedMessage.toLowerCase().includes(query)),
-      )
+      );
     }
 
-    return filtered
-  }, [logs, selectedLogTypes, searchLogQuery])
+    return filtered;
+  }, [logs, selectedLogTypes, searchLogQuery]);
 
   // Copies the currently selected log entry to clipboard with formatting
   const copySelectedLog = async () => {
-    const selectedLog = filteredLogs.find((log) => log.id === selectedRowLogId)
+    const selectedLog = filteredLogs.find((log) => log.id === selectedRowLogId);
     if (!selectedLog) {
-      return
+      return;
     }
 
-    const logText = `[${selectedLog.logType.toUpperCase()}] ${selectedLog.timestamp?.toString() ?? new Date().toLocaleString()} - ${selectedLog.message}`
+    const logText = `[${selectedLog.logType.toUpperCase()}] ${selectedLog.timestamp?.toString() ?? new Date().toLocaleString()} - ${selectedLog.message}`;
     const fullText = selectedLog.detailedMessage
       ? `${logText}\n${selectedLog.detailedMessage}`
-      : logText
+      : logText;
 
     try {
-      await navigator.clipboard.writeText(fullText)
+      await navigator.clipboard.writeText(fullText);
     } catch (error) {
-      logger.error(`Failed to copy to clipboard: ${error}`)
+      logger.error(`Failed to copy to clipboard: ${error}`);
     }
-  }
+  };
 
   // Saves all filtered logs to clipboard with consistent formatting
   const saveAllFilteredLogs = async () => {
     if (filteredLogs.length === 0) {
-      return
+      return;
     }
 
     const logsText = filteredLogs
       .map((log) => {
         const timestamp =
-          log.timestamp?.toString() ?? new Date().toLocaleString()
-        const logLine = `[${log.logType.toUpperCase()}] ${timestamp} - ${log.message}`
+          log.timestamp?.toString() ?? new Date().toLocaleString();
+        const logLine = `[${log.logType.toUpperCase()}] ${timestamp} - ${log.message}`;
         return log.detailedMessage
           ? `${logLine}\n${log.detailedMessage}\n`
-          : `${logLine}\n`
+          : `${logLine}\n`;
       })
-      .join("\n")
+      .join('\n');
 
     try {
-      await navigator.clipboard.writeText(logsText)
+      await navigator.clipboard.writeText(logsText);
     } catch (error) {
-      logger.error(`Failed to save logs to clipboard: ${error}`)
+      logger.error(`Failed to save logs to clipboard: ${error}`);
     }
-  }
+  };
 
   return (
     <div className="flex items-center gap-1 bg-grey px-1">
@@ -224,18 +226,18 @@ const LogViewToolbar: React.FC = () => {
                           className="mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2"
                           style={{
                             backgroundColor:
-                              "var(--color-background-brand-primary)",
+                              'var(--color-background-brand-primary)',
                             borderColor:
-                              "var(--color-background-brand-primary)",
-                            color: "var(--color-text-neutral-inverse)",
+                              'var(--color-background-brand-primary)',
+                            color: 'var(--color-text-neutral-inverse)',
                           }}
                         >
                           <Minus
                             size={10}
                             strokeWidth={4}
                             style={{
-                              color: "var(--color-text-neutral-inverse)",
-                              stroke: "var(--color-text-neutral-inverse)",
+                              color: 'var(--color-text-neutral-inverse)',
+                              stroke: 'var(--color-text-neutral-inverse)',
                             }}
                           />
                         </div>
@@ -243,7 +245,7 @@ const LogViewToolbar: React.FC = () => {
                         <Menu.CheckboxItemControl />
                       )}
                       <div className="flex items-center gap-0.5">
-                        <span>{type === ALL_TYPES ? "All Types" : type}</span>
+                        <span>{type === ALL_TYPES ? 'All Types' : type}</span>
                         {type !== ALL_TYPES && getLogTypeIcon(type as LogType)}
                       </div>
                     </Menu.CheckboxItem>
@@ -312,7 +314,7 @@ const LogViewToolbar: React.FC = () => {
         Clear all logs
       </Tooltip>
     </div>
-  )
-}
+  );
+};
 
-export default LogViewToolbar
+export default LogViewToolbar;

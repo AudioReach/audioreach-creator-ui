@@ -5,9 +5,7 @@
     "baseUrl": "./",
     "moduleResolution": "bundler",
     "paths": {
-      "~utils": [
-        "./tests/utils/index.ts"
-      ]
+      "~utils": ["./tests/utils/index.ts"]
     }
   },
   "include": ["./tests", "playwright.config.ts"],

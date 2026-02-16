@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect} from "react"
+import {useEffect} from 'react';
 
-import {logger} from "~shared/lib/logger"
+import {logger} from '~shared/lib/logger';
 
 /**
  * Hook to register keyboard shortcuts for the active tab
@@ -25,7 +25,7 @@ export function useKeyboardShortcuts(
 ) {
   useEffect(() => {
     if (!enabled) {
-      return
+      return;
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -35,30 +35,30 @@ export function useKeyboardShortcuts(
       const normalizedKey =
         event.key.length === 1 && !event.shiftKey
           ? event.key.toLowerCase()
-          : event.key
+          : event.key;
 
       const key = [
-        event.ctrlKey && "Ctrl",
-        event.metaKey && "Meta",
-        event.shiftKey && "Shift",
-        event.altKey && "Alt",
+        event.ctrlKey && 'Ctrl',
+        event.metaKey && 'Meta',
+        event.shiftKey && 'Shift',
+        event.altKey && 'Alt',
         normalizedKey,
       ]
         .filter(Boolean)
-        .join("+")
+        .join('+');
 
-      const handler = shortcuts[key]
+      const handler = shortcuts[key];
       if (handler) {
-        event.preventDefault()
+        event.preventDefault();
         logger.verbose(`Keyboard shortcut triggered: ${key}`, {
-          action: "keyboard_shortcut",
-          component: "useKeyboardShortcuts",
-        })
-        handler()
+          action: 'keyboard_shortcut',
+          component: 'useKeyboardShortcuts',
+        });
+        handler();
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [shortcuts, enabled])
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [shortcuts, enabled]);
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {logger} from "~shared/lib/logger"
+import {logger} from '~shared/lib/logger';
 
 /**
  * Service for managing project screenshots
@@ -21,41 +21,41 @@ export class ProjectImageService {
     screenshotFn: () => Promise<string | null>,
   ): Promise<void> {
     if (!window.mruStoreApi) {
-      logger.warn("MRU Store API not available", {
-        action: "capture_screenshot",
-        component: "ProjectImageService",
+      logger.warn('MRU Store API not available', {
+        action: 'capture_screenshot',
+        component: 'ProjectImageService',
         projectId,
-      })
-      return
+      });
+      return;
     }
 
     try {
-      logger.verbose("Capturing project screenshot", {
-        action: "capture_screenshot",
-        component: "ProjectImageService",
+      logger.verbose('Capturing project screenshot', {
+        action: 'capture_screenshot',
+        component: 'ProjectImageService',
         projectId,
-      })
+      });
 
-      const imageData = await screenshotFn()
+      const imageData = await screenshotFn();
 
       if (imageData) {
         // Save to MRU in background (non-blocking)
-        await window.mruStoreApi.updateProjectImage(projectId, imageData)
+        await window.mruStoreApi.updateProjectImage(projectId, imageData);
 
-        logger.info("Project screenshot saved to MRU", {
-          action: "save_screenshot",
-          component: "ProjectImageService",
+        logger.info('Project screenshot saved to MRU', {
+          action: 'save_screenshot',
+          component: 'ProjectImageService',
           projectId,
-        })
+        });
       }
     } catch (error) {
-      logger.error("Failed to capture/save screenshot", {
-        action: "capture_screenshot",
-        component: "ProjectImageService",
+      logger.error('Failed to capture/save screenshot', {
+        action: 'capture_screenshot',
+        component: 'ProjectImageService',
         error: error instanceof Error ? error.message : String(error),
         projectId,
-      })
-      throw error
+      });
+      throw error;
     }
   }
 }

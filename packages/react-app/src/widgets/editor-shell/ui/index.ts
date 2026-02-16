@@ -1,1 +1,1 @@
-export * from "./editor-shell"
+export * from './editor-shell';

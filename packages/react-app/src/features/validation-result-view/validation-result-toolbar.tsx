@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from "react"
+import {useMemo} from 'react';
 
 import {
   Ban,
@@ -14,21 +14,21 @@ import {
   Search,
   TriangleAlert,
   X,
-} from "lucide-react"
+} from 'lucide-react';
 
-import {IconButton} from "@qualcomm-ui/react/button"
-import {Icon} from "@qualcomm-ui/react/icon"
-import {InlineIconButton} from "@qualcomm-ui/react/inline-icon-button"
-import {Menu} from "@qualcomm-ui/react/menu"
-import {TextInput} from "@qualcomm-ui/react/text-input"
-import {Tooltip} from "@qualcomm-ui/react/tooltip"
-import {Portal} from "@qualcomm-ui/react-core/portal"
+import {IconButton} from '@qualcomm-ui/react/button';
+import {Icon} from '@qualcomm-ui/react/icon';
+import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
+import {Menu} from '@qualcomm-ui/react/menu';
+import {TextInput} from '@qualcomm-ui/react/text-input';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
+import {Portal} from '@qualcomm-ui/react-core/portal';
 
-import {logger} from "~shared/lib/logger"
+import {logger} from '~shared/lib/logger';
 
-import {useValidationResultStore} from "./model/use-validation-result-store"
-import {ALL_SEVERITIES, SeverityType} from "./model/validation-result.types"
-import {getSeverityIcon} from "./utils/severity-icons"
+import {useValidationResultStore} from './model/use-validation-result-store';
+import {ALL_SEVERITIES, SeverityType} from './model/validation-result.types';
+import {getSeverityIcon} from './utils/severity-icons';
 
 const ValidationResultToolbar: React.FC = () => {
   // Extract necessary state and actions from the validation result store
@@ -43,7 +43,7 @@ const ValidationResultToolbar: React.FC = () => {
     setSelectedSeverities,
     validationResults,
     warningCount,
-  } = useValidationResultStore()
+  } = useValidationResultStore();
 
   // Calculate "All Types" checkbox state (checked, unchecked, or indeterminate)
   const allSeveritiesState = useMemo(() => {
@@ -51,43 +51,43 @@ const ValidationResultToolbar: React.FC = () => {
       SeverityType.Critical,
       SeverityType.Error,
       SeverityType.Warning,
-    ]
+    ];
     const selectedCount = individualSeverities.filter((severity) =>
       selectedSeverities.includes(severity),
-    ).length
+    ).length;
 
     if (selectedCount === 0) {
-      return {checked: false, indeterminate: false} // None selected = show no results = unchecked
+      return {checked: false, indeterminate: false}; // None selected = show no results = unchecked
     }
     if (selectedCount === individualSeverities.length) {
-      return {checked: true, indeterminate: false} // All selected = checked
+      return {checked: true, indeterminate: false}; // All selected = checked
     }
-    return {checked: false, indeterminate: true} // Some selected = indeterminate
-  }, [selectedSeverities])
+    return {checked: false, indeterminate: true}; // Some selected = indeterminate
+  }, [selectedSeverities]);
 
   // Handles multiple selection logic for severity filters
   const handleFilterToggle = (severity: string) => {
-    logger.debug(`Filter toggle for severity: ${severity}`)
+    logger.debug(`Filter toggle for severity: ${severity}`);
     // Get fresh state from store
-    const currentState = useValidationResultStore.getState()
-    const currentSelectedSeverities = currentState.selectedSeverities
+    const currentState = useValidationResultStore.getState();
+    const currentSelectedSeverities = currentState.selectedSeverities;
     if (severity === ALL_SEVERITIES) {
       // Toggle "All Types"
       const individualSeverities = [
         SeverityType.Critical,
         SeverityType.Error,
         SeverityType.Warning,
-      ]
+      ];
       const allToggled = individualSeverities.every((s) =>
         currentSelectedSeverities.includes(s),
-      )
-      logger.debug(`All severities toggled: ${allToggled}`)
+      );
+      logger.debug(`All severities toggled: ${allToggled}`);
       if (allToggled) {
-        setSelectedSeverities([]) // Clear all = show no results
+        setSelectedSeverities([]); // Clear all = show no results
       } else {
-        setSelectedSeverities([...individualSeverities]) // Select all individual severities
+        setSelectedSeverities([...individualSeverities]); // Select all individual severities
       }
-      return
+      return;
     }
     // handles toggling individual severity checkboxes (Critical, Error, Warning)
     // Toggle individual severity using fresh state
@@ -95,43 +95,43 @@ const ValidationResultToolbar: React.FC = () => {
       // Remove this severity
       const newSeverities = currentSelectedSeverities.filter(
         (s) => s !== severity,
-      )
-      setSelectedSeverities(newSeverities)
+      );
+      setSelectedSeverities(newSeverities);
     } else {
       // Add this severity
-      const newSeverities = [...currentSelectedSeverities, severity]
-      setSelectedSeverities(newSeverities)
+      const newSeverities = [...currentSelectedSeverities, severity];
+      setSelectedSeverities(newSeverities);
     }
-  }
+  };
 
   // Memoized filtering logic for performance optimization
   // Filters validation results based on selected severities and search query
   // Used by toolbar actions (copy, export) to operate on the same filtered dataset as the table
   const filteredResults = useMemo(() => {
-    let filtered = validationResults
+    let filtered = validationResults;
 
     // Apply severity filter (critical, error, warning, or all)
     if (selectedSeverities.length > 0) {
       filtered = filtered.filter((result) =>
         selectedSeverities.includes(result.severity),
-      )
+      );
     } else {
-      filtered = [] // Show no results if no severities selected
+      filtered = []; // Show no results if no severities selected
     }
 
     // Apply text search filter (case-insensitive, searches description, error details, and error code)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (result) =>
           result.description.toLowerCase().includes(query) ||
           result.errorDetails.toLowerCase().includes(query) ||
           result.errorCode.toLowerCase().includes(query),
-      )
+      );
     }
 
-    return filtered
-  }, [validationResults, selectedSeverities, searchQuery])
+    return filtered;
+  }, [validationResults, selectedSeverities, searchQuery]);
 
   /**
    * Copies the currently selected validation result to clipboard
@@ -142,20 +142,20 @@ const ValidationResultToolbar: React.FC = () => {
     // Searches through visible results to find the one with matching ID
     const selectedResult = filteredResults.find(
       (result) => result.id === selectedRowId,
-    )
+    );
     if (!selectedResult) {
-      return // No result selected, nothing to copy
+      return; // No result selected, nothing to copy
     }
 
     // Format validation result with severity, error code, description, and error details
-    const fullText = `[${selectedResult.severity.toUpperCase()}] ${selectedResult.errorCode}: ${selectedResult.description}\n${selectedResult.errorDetails}`
+    const fullText = `[${selectedResult.severity.toUpperCase()}] ${selectedResult.errorCode}: ${selectedResult.description}\n${selectedResult.errorDetails}`;
 
     try {
-      await navigator.clipboard.writeText(fullText)
+      await navigator.clipboard.writeText(fullText);
     } catch (error) {
-      logger.error(`Failed to copy to clipboard: ${error}`)
+      logger.error(`Failed to copy to clipboard: ${error}`);
     }
-  }
+  };
 
   /**
    * Exports all currently filtered validation results to a file
@@ -164,26 +164,26 @@ const ValidationResultToolbar: React.FC = () => {
   const exportAllResults = async () => {
     // Check if data exists
     if (filteredResults.length === 0) {
-      return // No results to export
+      return; // No results to export
     }
 
     // Format all filtered validation results with consistent structure
     const resultsText = filteredResults
       .map((result) => {
-        const resultLine = `[${result.severity.toUpperCase()}] ${result.errorCode}: ${result.description}`
+        const resultLine = `[${result.severity.toUpperCase()}] ${result.errorCode}: ${result.description}`;
         // Add error details with extra newline for separation
-        return `${resultLine}\n${result.errorDetails}\n`
+        return `${resultLine}\n${result.errorDetails}\n`;
       })
-      .join("\n") // Join all results with newlines
+      .join('\n'); // Join all results with newlines
 
     try {
       // Import the API request types and electron API
-      const {ApiRequest} = await import("@audioreach-creator-ui/api-utils")
-      const {electronApi} = await import("~shared/api")
+      const {ApiRequest} = await import('@audioreach-creator-ui/api-utils');
+      const {electronApi} = await import('~shared/api');
 
       if (!electronApi) {
-        logger.error("Electron API not available")
-        return
+        logger.error('Electron API not available');
+        return;
       }
 
       // Call the save validation results API
@@ -192,15 +192,17 @@ const ValidationResultToolbar: React.FC = () => {
           content: resultsText,
         },
         requestType: ApiRequest.SaveValidationResults,
-      })
+      });
 
       if (response.data && !response.data.cancelled) {
-        logger.info(`Validation results exported to: ${response.data.filepath}`)
+        logger.info(
+          `Validation results exported to: ${response.data.filepath}`,
+        );
       }
     } catch (error) {
-      logger.error(`Failed to export validation results: ${error}`)
+      logger.error(`Failed to export validation results: ${error}`);
     }
-  }
+  };
 
   return (
     <div className="flex w-full items-center gap-1 bg-grey px-1">
@@ -221,7 +223,7 @@ const ValidationResultToolbar: React.FC = () => {
             <Menu.Root>
               <Tooltip
                 trigger={
-                  <span style={{display: "inline-flex"}}>
+                  <span style={{display: 'inline-flex'}}>
                     <Menu.Trigger>
                       <InlineIconButton
                         aria-label="Filter validation results"
@@ -260,16 +262,16 @@ const ValidationResultToolbar: React.FC = () => {
                             className="mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2"
                             style={{
                               backgroundColor:
-                                "var(--color-background-brand-primary)",
+                                'var(--color-background-brand-primary)',
                               borderColor:
-                                "var(--color-background-brand-primary)",
+                                'var(--color-background-brand-primary)',
                             }}
                           >
                             <Minus
                               size={10}
                               strokeWidth={4}
                               style={{
-                                stroke: "var(--color-text-neutral-inverse)",
+                                stroke: 'var(--color-text-neutral-inverse)',
                               }}
                             />
                           </div>
@@ -279,7 +281,7 @@ const ValidationResultToolbar: React.FC = () => {
                         <div className="flex items-center gap-0.5">
                           <span>
                             {severity === ALL_SEVERITIES
-                              ? "All Types"
+                              ? 'All Types'
                               : severity}
                           </span>
                           {severity !== ALL_SEVERITIES &&
@@ -297,7 +299,7 @@ const ValidationResultToolbar: React.FC = () => {
 
       {/* Total Issues Count */}
       <div className="mr-4 text-xs font-medium">
-        Total Issues:{" "}
+        Total Issues:{' '}
         <span className="font-bold">
           {criticalCount + errorCount + warningCount}
         </span>
@@ -310,7 +312,7 @@ const ValidationResultToolbar: React.FC = () => {
           <Icon
             icon={TriangleAlert}
             size={12}
-            style={{color: "var(--color-icon-support-danger)"}}
+            style={{color: 'var(--color-icon-support-danger)'}}
           />
           <span className="text-red-500 font-medium">
             {criticalCount} Critical Errors
@@ -322,7 +324,7 @@ const ValidationResultToolbar: React.FC = () => {
           <Icon
             icon={X}
             size={12}
-            style={{color: "var(--color-icon-support-danger)"}}
+            style={{color: 'var(--color-icon-support-danger)'}}
           />
           <span className="text-red-500 font-medium">{errorCount} Errors</span>
         </div>
@@ -332,7 +334,7 @@ const ValidationResultToolbar: React.FC = () => {
           <Icon
             icon={TriangleAlert}
             size={12}
-            style={{color: "var(--color-icon-support-warning)"}}
+            style={{color: 'var(--color-icon-support-warning)'}}
           />
           <span className="text-orange-500 font-medium">
             {warningCount} Warnings
@@ -402,7 +404,7 @@ const ValidationResultToolbar: React.FC = () => {
         Clear all validation results
       </Tooltip>
     </div>
-  )
-}
+  );
+};
 
-export default ValidationResultToolbar
+export default ValidationResultToolbar;

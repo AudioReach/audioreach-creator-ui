@@ -3,24 +3,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {dirname, resolve} from "node:path"
-import {fileURLToPath} from "node:url"
-import {defineConfig} from "vite"
-import tsconfigPaths from "vite-tsconfig-paths"
+import {dirname, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {defineConfig} from 'vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
-import pkg from "./package.json"
+import pkg from './package.json';
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   build: {
     cssCodeSplit: false,
     emptyOutDir: false,
     lib: {
-      entry: resolve(__dirname, "src/index.ts"),
-      fileName: "index",
-      formats: ["es"],
+      entry: resolve(__dirname, 'src/index.ts'),
+      fileName: 'index',
+      formats: ['es'],
     },
     rollupOptions: {
       external: {
@@ -31,4 +31,4 @@ export default defineConfig({
     sourcemap: true,
   },
   plugins: [tsconfigPaths()],
-})
+});

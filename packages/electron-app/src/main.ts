@@ -9,9 +9,9 @@ import {
   type ApiResponse,
   type ConfigResult,
   type MruProjectInfo,
-} from "@audioreach-creator-ui/api-utils"
-import {app, BrowserWindow, ipcMain, Menu} from "electron"
-import Store from "electron-store"
+} from '@audioreach-creator-ui/api-utils';
+import {app, BrowserWindow, ipcMain, Menu} from 'electron';
+import Store from 'electron-store';
 import {
   accessSync,
   constants,
@@ -19,89 +19,89 @@ import {
   mkdirSync,
   readFileSync,
   writeFileSync,
-} from "node:fs"
-import {join, resolve} from "node:path"
-import {setTimeout} from "node:timers/promises"
+} from 'node:fs';
+import {join, resolve} from 'node:path';
+import {setTimeout} from 'node:timers/promises';
 
 import {
   getFileModificationDateSync,
   openProjectFile,
   saveValidationResults,
   showProjectInExplorer,
-} from "./project-file-api"
+} from './project-file-api';
 
-let win: BrowserWindow
-const CONFIG_FILE = "config.json"
-const MAX_RECENT_PROJECTS = 20
+let win: BrowserWindow;
+const CONFIG_FILE = 'config.json';
+const MAX_RECENT_PROJECTS = 20;
 
 // Track log view state for menu updates
-let isLogViewOpen = false
-let hasActiveProject = false
+let isLogViewOpen = false;
+let hasActiveProject = false;
 
 /**
  * Create and set the application menu
  */
 function createApplicationMenu(): void {
-  const isMac = process.platform === "darwin"
+  const isMac = process.platform === 'darwin';
 
-  const template: Electron.MenuItemConstructorOptions[] = []
+  const template: Electron.MenuItemConstructorOptions[] = [];
 
   // File menu
   template.push({
-    label: "File",
-    submenu: [isMac ? {role: "close"} : {role: "quit"}],
-  })
+    label: 'File',
+    submenu: [isMac ? {role: 'close'} : {role: 'quit'}],
+  });
 
   // View menu with log view toggle
-  const viewSubmenu: Electron.MenuItemConstructorOptions[] = []
+  const viewSubmenu: Electron.MenuItemConstructorOptions[] = [];
 
   // Only show log view menu item when a project is active
   if (hasActiveProject) {
     viewSubmenu.push({
       click: () => {
-        win.webContents.send("menu:toggle-log-view")
+        win.webContents.send('menu:toggle-log-view');
       },
-      label: isLogViewOpen ? "Hide Log View" : "Show Log View",
-    })
-    viewSubmenu.push({type: "separator"})
+      label: isLogViewOpen ? 'Hide Log View' : 'Show Log View',
+    });
+    viewSubmenu.push({type: 'separator'});
   }
 
   viewSubmenu.push(
-    {role: "toggleDevTools"},
-    {type: "separator"},
-    {role: "togglefullscreen"},
-  )
+    {role: 'toggleDevTools'},
+    {type: 'separator'},
+    {role: 'togglefullscreen'},
+  );
 
   template.push({
-    label: "View",
+    label: 'View',
     submenu: viewSubmenu,
-  })
+  });
 
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 /**
  * Update menu to reflect current log view state
  */
 function updateMenuLogViewState(isOpen: boolean): void {
-  isLogViewOpen = isOpen
-  createApplicationMenu()
+  isLogViewOpen = isOpen;
+  createApplicationMenu();
 }
 
 /**
  * Update menu to reflect project context
  */
 function updateMenuProjectContext(isActive: boolean): void {
-  hasActiveProject = isActive
-  createApplicationMenu()
+  hasActiveProject = isActive;
+  createApplicationMenu();
 }
 
 // #region MRU Store Setup
 
 /** Schema for the electron-store */
 interface StoreSchema {
-  recentProjects: MruProjectInfo[]
+  recentProjects: MruProjectInfo[];
 }
 
 /** Initialize electron-store for MRU (Most Recently Used) projects */
@@ -109,42 +109,42 @@ const mruStore = new Store<StoreSchema>({
   defaults: {
     recentProjects: [],
   },
-  name: "arc-mru",
+  name: 'arc-mru',
   // Optional: Add schema validation
   schema: {
     recentProjects: {
       items: {
         properties: {
-          description: {type: "string"},
-          filepath: {type: "string"},
-          id: {type: "string"},
-          image: {type: "string"},
-          lastModifiedDate: {type: "string"},
-          name: {type: "string"},
+          description: {type: 'string'},
+          filepath: {type: 'string'},
+          id: {type: 'string'},
+          image: {type: 'string'},
+          lastModifiedDate: {type: 'string'},
+          name: {type: 'string'},
         },
-        required: ["id", "name", "filepath"],
-        type: "object",
+        required: ['id', 'name', 'filepath'],
+        type: 'object',
       },
-      type: "array",
+      type: 'array',
     },
   },
-})
+});
 
 // #endregion MRU Store Setup
 
-const appUrl = "http://localhost:5173"
+const appUrl = 'http://localhost:5173';
 
 const createWindow = async () => {
-  const isDev = process.env.DEV
+  const isDev = process.env.DEV;
 
   win = new BrowserWindow({
     height: 800,
-    title: "AudioReach™ Creator",
+    title: 'AudioReach™ Creator',
     webPreferences: {
-      preload: resolve(__dirname, "./preload.cjs"),
+      preload: resolve(__dirname, './preload.cjs'),
     },
     width: isDev ? 1550 : 1200,
-  })
+  });
 
   if (isDev) {
     /**
@@ -153,25 +153,25 @@ const createWindow = async () => {
      * app doesn't have enough time to load before the electron process tries to
      * access it. This function checks if the app is available.
      */
-    const ora = await import("ora").then((pkg) => pkg.default)
-    const spinner = ora("Checking for app ready state").start()
+    const ora = await import('ora').then((pkg) => pkg.default);
+    const spinner = ora('Checking for app ready state').start();
 
-    let attempt = 0
-    let appReady = false
+    let attempt = 0;
+    let appReady = false;
     // default behavior = check for 60 seconds.
     while (attempt < 120 && !appReady) {
-      attempt += 1
-      spinner.text = `Checking for app ready state, attempt ${attempt}`
+      attempt += 1;
+      spinner.text = `Checking for app ready state, attempt ${attempt}`;
       const checkIfReady = await setTimeout(500, async () =>
         fetch(appUrl)
           .then((res) => {
-            return res.status === 200
+            return res.status === 200;
           })
           .catch(() => false),
-      )
+      );
       if (await checkIfReady()) {
-        appReady = true
-        spinner.succeed(`App detected in local dev mode at ${appUrl}`)
+        appReady = true;
+        spinner.succeed(`App detected in local dev mode at ${appUrl}`);
       }
     }
 
@@ -179,349 +179,352 @@ const createWindow = async () => {
       win
         .loadURL(appUrl)
         .then(() => {
-          win.webContents.openDevTools()
+          win.webContents.openDevTools();
         })
         .catch((error: unknown) => {
           const errorMessage =
-            error instanceof Error ? error.message : String(error)
-          console.debug(`Error starting application - ${errorMessage}`)
+            error instanceof Error ? error.message : String(error);
+          console.debug(`Error starting application - ${errorMessage}`);
         })
         .catch((err) => {
-          console.debug("Critical application error, exiting", err)
-          win.close()
-          process.exit(0)
-        })
+          console.debug('Critical application error, exiting', err);
+          win.close();
+          process.exit(0);
+        });
     } else {
       spinner.fail(
         `Failed to start application. Please ensure that the React application is running at ${appUrl}`,
-      )
-      process.exit(0)
+      );
+      process.exit(0);
     }
   } else {
     await win.loadFile(`${__dirname}/index.html`).catch((err) => {
-      console.log("Error starting application", err)
-    })
+      console.log('Error starting application', err);
+    });
   }
-}
+};
 
 void app.whenReady().then(() => {
   void createWindow().then(() => {
     // Create application menu after window is ready
-    createApplicationMenu()
-  })
-})
+    createApplicationMenu();
+  });
+});
 
-app.on("activate", () => {
+app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
-    void createWindow()
+    void createWindow();
   }
-})
+});
 
 // also see: packages/api-utils/api.ts
 ipcMain.handle(
-  "ipc::message",
+  'ipc::message',
   async (_, args: ApiRequestType): Promise<ApiResponse> => {
-    let response
-    let data = undefined
+    let response;
+    let data = undefined;
 
     switch (args.requestType) {
       case ApiRequest.GetProjectFileModificationDate:
-        const filepath = args.data.filepath
-        const modifiedDate = getFileModificationDateSync(filepath)
+        const filepath = args.data.filepath;
+        const modifiedDate = getFileModificationDateSync(filepath);
 
-        data = {date: modifiedDate}
-        response = ""
+        data = {date: modifiedDate};
+        response = '';
 
         if (modifiedDate === undefined) {
-          response = "Unable to get modified date"
+          response = 'Unable to get modified date';
         }
 
-        break
+        break;
       case ApiRequest.OpenProjectFile:
-        const openFileResponse = await openProjectFile(win)
+        const openFileResponse = await openProjectFile(win);
 
-        response = openFileResponse.response
-        data = openFileResponse.data
-        break
+        response = openFileResponse.response;
+        data = openFileResponse.data;
+        break;
       case ApiRequest.ShowProjectFileInExplorer:
-        console.debug(`Showing project file in explorer: ${args.data}`)
-        showProjectInExplorer(args.data)
-        response = ""
-        break
+        console.debug(`Showing project file in explorer: ${args.data}`);
+        showProjectInExplorer(args.data);
+        response = '';
+        break;
       case ApiRequest.SaveValidationResults:
-        const saveFileResponse = await saveValidationResults(win, args.data)
+        const saveFileResponse = await saveValidationResults(win, args.data);
 
-        response = saveFileResponse.response
-        data = saveFileResponse.data
-        break
+        response = saveFileResponse.response;
+        data = saveFileResponse.data;
+        break;
       default:
-        response = "Unknown request type"
+        response = 'Unknown request type';
     }
 
-    return {data, message: response, requestType: args.requestType}
+    return {data, message: response, requestType: args.requestType};
   },
-)
+);
 
 //  #region Configuration file handling
 
 function getConfigFilePath(): string {
   try {
-    const userDataPath = app.getPath("userData")
+    const userDataPath = app.getPath('userData');
 
     // Validate that the userData path is accessible
     if (!existsSync(userDataPath)) {
       console.warn(
         `userData directory does not exist, attempting to create: ${userDataPath}`,
-      )
+      );
       try {
-        mkdirSync(userDataPath, {recursive: true})
-        console.log(`Successfully created userData directory: ${userDataPath}`)
+        mkdirSync(userDataPath, {recursive: true});
+        console.log(`Successfully created userData directory: ${userDataPath}`);
       } catch (mkdirError) {
-        const errorMsg = `Failed to create userData directory: ${mkdirError instanceof Error ? mkdirError.message : String(mkdirError)}`
-        console.error(errorMsg)
-        return "" // Return empty string instead of throwing
+        const errorMsg = `Failed to create userData directory: ${mkdirError instanceof Error ? mkdirError.message : String(mkdirError)}`;
+        console.error(errorMsg);
+        return ''; // Return empty string instead of throwing
       }
     }
 
     // Verify write permissions on the userData directory
     try {
-      accessSync(userDataPath, constants.W_OK)
+      accessSync(userDataPath, constants.W_OK);
     } catch (accessError) {
-      const errorMsg = `No write permission to userData directory (${userDataPath}): ${accessError instanceof Error ? accessError.message : String(accessError)}`
-      console.error(errorMsg)
-      return "" // Return empty string instead of throwing
+      const errorMsg = `No write permission to userData directory (${userDataPath}): ${accessError instanceof Error ? accessError.message : String(accessError)}`;
+      console.error(errorMsg);
+      return ''; // Return empty string instead of throwing
     }
 
-    const configPath = join(userDataPath, CONFIG_FILE)
-    console.log(`Using config file path: ${configPath}`)
-    return configPath
+    const configPath = join(userDataPath, CONFIG_FILE);
+    console.log(`Using config file path: ${configPath}`);
+    return configPath;
   } catch (error) {
-    const errorMsg = `Critical error accessing userData path: ${error instanceof Error ? error.message : String(error)}`
-    console.error(errorMsg)
-    return "" // Return empty string instead of throwing
+    const errorMsg = `Critical error accessing userData path: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(errorMsg);
+    return ''; // Return empty string instead of throwing
   }
 }
 
 function ensureConfigFileExists(): string {
   try {
-    const filePath = getConfigFilePath()
+    const filePath = getConfigFilePath();
 
     if (!existsSync(filePath)) {
       try {
-        writeFileSync(filePath, "", "utf8")
+        writeFileSync(filePath, '', 'utf8');
         console.log(
           `Configuration file does not exist. A new empty file has been created at ${filePath}`,
-        )
+        );
       } catch (writeError) {
-        const errorMsg = `Failed to create configuration file: ${writeError instanceof Error ? writeError.message : String(writeError)}`
-        console.error(errorMsg)
-        return ""
+        const errorMsg = `Failed to create configuration file: ${writeError instanceof Error ? writeError.message : String(writeError)}`;
+        console.error(errorMsg);
+        return '';
       }
     }
 
-    console.log(`Config file path: ${filePath}`)
-    return filePath
+    console.log(`Config file path: ${filePath}`);
+    return filePath;
   } catch (error) {
     console.error(
-      "Failed to get configuration file path due to an error:",
+      'Failed to get configuration file path due to an error:',
       error,
-    )
-    return ""
+    );
+    return '';
   }
 }
 
-ipcMain.handle("load-config-data", (): ConfigResult => {
+ipcMain.handle('load-config-data', (): ConfigResult => {
   try {
-    const filePath = ensureConfigFileExists()
+    const filePath = ensureConfigFileExists();
     if (!filePath) {
       return {
         message:
-          "Error occurred while creating or fetching the configuration file",
+          'Error occurred while creating or fetching the configuration file',
         status: false,
-      }
+      };
     }
-    const configData = readFileSync(filePath, "utf-8")
+    const configData = readFileSync(filePath, 'utf-8');
     return {
       data: configData,
-      message: "success",
+      message: 'success',
       status: true,
-    }
+    };
   } catch (error: unknown) {
     return {
       message: error instanceof Error ? error.message : String(error),
       status: false,
-    }
+    };
   }
-})
+});
 
 ipcMain.handle(
-  "save-config-data",
+  'save-config-data',
   (_event, newConfigData: string): ConfigResult => {
     try {
-      const filePath = ensureConfigFileExists()
+      const filePath = ensureConfigFileExists();
       if (!filePath) {
         return {
-          message: "Error occurred while fetching the configuration file",
+          message: 'Error occurred while fetching the configuration file',
           status: false,
-        }
+        };
       }
-      writeFileSync(filePath, newConfigData, "utf-8")
+      writeFileSync(filePath, newConfigData, 'utf-8');
       return {
         message: `Successfully saved the configuration file to the path: ${filePath}`,
         status: true,
-      }
+      };
     } catch (error: unknown) {
-      console.error("Unable to save configuration file due to an error:", error)
+      console.error(
+        'Unable to save configuration file due to an error:',
+        error,
+      );
       return {
         message: error instanceof Error ? error.message : String(error),
         status: false,
-      }
+      };
     }
   },
-)
+);
 //  #endregion Configuration file handling
 
 //  #region MRU Store IPC Handlers
 
 /** Get all recent projects from MRU store */
-ipcMain.handle("mru:get-recent-projects", (): MruProjectInfo[] => {
+ipcMain.handle('mru:get-recent-projects', (): MruProjectInfo[] => {
   try {
-    return mruStore.get("recentProjects", [])
+    return mruStore.get('recentProjects', []);
   } catch (error) {
-    console.error("Error getting recent projects from MRU store:", error)
-    return []
+    console.error('Error getting recent projects from MRU store:', error);
+    return [];
   }
-})
+});
 
 /** Add a project to the MRU store */
 ipcMain.handle(
-  "mru:add-project",
+  'mru:add-project',
   (_event, project: MruProjectInfo): boolean => {
     try {
-      const recentProjects = mruStore.get("recentProjects", [])
+      const recentProjects = mruStore.get('recentProjects', []);
 
       // Check if project already exists (by filepath)
       const existingIndex = recentProjects.findIndex(
         (p) => p.filepath === project.filepath,
-      )
+      );
 
       if (existingIndex !== -1) {
         // Update existing project and move to front
-        recentProjects.splice(existingIndex, 1)
+        recentProjects.splice(existingIndex, 1);
       }
 
       // Add to the beginning of the array (most recent)
-      recentProjects.unshift(project)
+      recentProjects.unshift(project);
 
       // Optional: Limit to last 20 projects
-      const limitedProjects = recentProjects.slice(0, MAX_RECENT_PROJECTS)
+      const limitedProjects = recentProjects.slice(0, MAX_RECENT_PROJECTS);
 
-      mruStore.set("recentProjects", limitedProjects)
-      return true
+      mruStore.set('recentProjects', limitedProjects);
+      return true;
     } catch (error) {
-      console.error("Error adding project to MRU store:", error)
-      return false
+      console.error('Error adding project to MRU store:', error);
+      return false;
     }
   },
-)
+);
 
 /** Remove a project from the MRU store by ID */
-ipcMain.handle("mru:remove-project", (_event, projectId: string): boolean => {
+ipcMain.handle('mru:remove-project', (_event, projectId: string): boolean => {
   try {
-    const recentProjects = mruStore.get("recentProjects", [])
-    const filteredProjects = recentProjects.filter((p) => p.id !== projectId)
-    mruStore.set("recentProjects", filteredProjects)
-    return true
+    const recentProjects = mruStore.get('recentProjects', []);
+    const filteredProjects = recentProjects.filter((p) => p.id !== projectId);
+    mruStore.set('recentProjects', filteredProjects);
+    return true;
   } catch (error) {
-    console.error("Error removing project from MRU store:", error)
-    return false
+    console.error('Error removing project from MRU store:', error);
+    return false;
   }
-})
+});
 
 /** Update a project's image in the MRU store */
 ipcMain.handle(
-  "mru:update-project-image",
+  'mru:update-project-image',
   (_event, projectId: string, image: string): boolean => {
     try {
-      const recentProjects = mruStore.get("recentProjects", [])
-      const projectIndex = recentProjects.findIndex((p) => p.id === projectId)
+      const recentProjects = mruStore.get('recentProjects', []);
+      const projectIndex = recentProjects.findIndex((p) => p.id === projectId);
 
       console.debug(
-        "[MRU] update-project-image called",
+        '[MRU] update-project-image called',
         JSON.stringify({
           foundIndex: projectIndex,
-          imageLength: typeof image === "string" ? image.length : 0,
+          imageLength: typeof image === 'string' ? image.length : 0,
           projectId,
           recentCount: recentProjects.length,
         }),
-      )
+      );
 
       if (projectIndex !== -1) {
-        recentProjects[projectIndex].image = image
-        mruStore.set("recentProjects", recentProjects)
+        recentProjects[projectIndex].image = image;
+        mruStore.set('recentProjects', recentProjects);
         console.debug(
-          "[MRU] Image updated successfully",
+          '[MRU] Image updated successfully',
           JSON.stringify({
             projectId,
             storePath: mruStore.path,
           }),
-        )
-        return true
+        );
+        return true;
       }
 
       console.warn(
-        "[MRU] Project not found when updating image",
+        '[MRU] Project not found when updating image',
         JSON.stringify({
           projectId,
           storePath: mruStore.path,
         }),
-      )
-      return false
+      );
+      return false;
     } catch (error) {
-      console.error("Error updating project image in MRU store:", error)
-      return false
+      console.error('Error updating project image in MRU store:', error);
+      return false;
     }
   },
-)
+);
 
 /** Clear all recent projects from MRU store */
-ipcMain.handle("mru:clear-all", (): boolean => {
+ipcMain.handle('mru:clear-all', (): boolean => {
   try {
-    mruStore.set("recentProjects", [])
-    return true
+    mruStore.set('recentProjects', []);
+    return true;
   } catch (error) {
-    console.error("Error clearing MRU store:", error)
-    return false
+    console.error('Error clearing MRU store:', error);
+    return false;
   }
-})
+});
 
 /** Get the path where MRU data is stored (useful for debugging) */
-ipcMain.handle("mru:get-store-path", (): string => {
-  return mruStore.path
-})
+ipcMain.handle('mru:get-store-path', (): string => {
+  return mruStore.path;
+});
 
 //  #endregion MRU Store IPC Handlers
 
 //  #region Log View IPC Handlers
 
 /** Update log view state from renderer */
-ipcMain.handle("log-view:update-state", (_event, isOpen: boolean): void => {
-  updateMenuLogViewState(isOpen)
-})
+ipcMain.handle('log-view:update-state', (_event, isOpen: boolean): void => {
+  updateMenuLogViewState(isOpen);
+});
 
 //  #endregion Log View IPC Handlers
 
 //  #region Project Context IPC Handlers
 
 /** Update project context state */
-ipcMain.handle("project-context:set", (_event, isActive: boolean): void => {
-  updateMenuProjectContext(isActive)
+ipcMain.handle('project-context:set', (_event, isActive: boolean): void => {
+  updateMenuProjectContext(isActive);
   // Reset log view state when switching to app context
   if (!isActive) {
-    isLogViewOpen = false
+    isLogViewOpen = false;
   }
-})
+});
 
 //  #endregion Project Context IPC Handlers

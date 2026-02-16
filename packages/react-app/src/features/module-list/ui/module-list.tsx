@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from "react"
+import type {FC} from 'react';
 
 export const ModuleList: FC = () => {
   return (
@@ -18,5 +18,5 @@ export const ModuleList: FC = () => {
         Module List Placeholder
       </div>
     </div>
-  )
-}
+  );
+};
