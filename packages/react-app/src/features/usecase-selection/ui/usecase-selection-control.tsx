@@ -25,12 +25,12 @@ const formatUsecaseDisplay = (usecase: Usecase): string => {
     .join(' • ');
 };
 
-interface UsecaseNavigationControlProps {
+interface UsecaseSelectionControlProps {
   projectGroupId: string;
   usecaseData: UsecaseCategory[];
 }
 
-const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
+const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
   projectGroupId,
   usecaseData,
 }) => {
@@ -192,4 +192,4 @@ const UsecaseNavigationControl: React.FC<UsecaseNavigationControlProps> = ({
   );
 };
 
-export default UsecaseNavigationControl;
+export default UsecaseSelectionControl;
