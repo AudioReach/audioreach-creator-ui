@@ -1,5 +1,6 @@
 import type {
   ConfigApi,
+  KeyConfiguratorViewApi,
   LogViewApi,
   MruStoreApi,
   ProjectContextApi,
@@ -8,6 +9,7 @@ import type {
 declare global {
   interface Window {
     configApi: ConfigApi;
+    keyConfiguratorViewApi: KeyConfiguratorViewApi;
     logViewApi: LogViewApi;
     mruStoreApi: MruStoreApi;
     projectContextApi: ProjectContextApi;

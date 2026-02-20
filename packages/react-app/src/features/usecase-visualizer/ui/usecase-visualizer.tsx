@@ -20,6 +20,8 @@ import {toPng} from 'html-to-image';
 
 import '@xyflow/react/dist/style.css';
 
+import {useKeyConfiguratorSelectionStore} from '~features/key-configurator';
+import {mapNodesToConfigItems} from '~features/usecase-visualizer/lib/node-to-config.mapper';
 import {useVisualizerSelectionStore} from '~features/usecase-visualizer/model/use-visualizer-selection-store';
 import type {
   RFEdge,
@@ -160,9 +162,20 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
     [selectionFromStore],
   );
 
+  // Get KeyConfigurator hooks
+  const keyConfiguratorStore = useKeyConfiguratorSelectionStore();
+  const setKeyConfiguratorItems = keyConfiguratorStore(
+    (state) => state.setSelectedItems,
+  );
+  const clearKeyConfiguratorSelection = keyConfiguratorStore(
+    (state) => state.clearSelection,
+  );
+
   // Handle node click for selection
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node): void => {
+      let updatedNodes: RFNode[] = [];
+
       if (event.ctrlKey) {
         // Multi-selection: toggle node in selection
         const isSelected = currentSelection.selectedNodes.some(
@@ -170,14 +183,14 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
         );
         if (isSelected) {
           // Remove from selection
-          const newNodes = currentSelection.selectedNodes.filter(
+          updatedNodes = currentSelection.selectedNodes.filter(
             (n) => n.id !== node.id,
           );
-          setSelection(projectId, newNodes, currentSelection.selectedEdges);
+          setSelection(projectId, updatedNodes, currentSelection.selectedEdges);
         } else {
           // Add to selection
-          const newNodes = [...currentSelection.selectedNodes, node as RFNode];
-          setSelection(projectId, newNodes, currentSelection.selectedEdges);
+          updatedNodes = [...currentSelection.selectedNodes, node as RFNode];
+          setSelection(projectId, updatedNodes, currentSelection.selectedEdges);
         }
       } else {
         // Single selection: only update if not already the only selected node
@@ -187,11 +200,20 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
           currentSelection.selectedEdges.length === 0;
 
         if (!isSameSelection) {
-          setSelection(projectId, [node as RFNode], []);
+          updatedNodes = [node as RFNode];
+          setSelection(projectId, updatedNodes, []);
+        } else {
+          updatedNodes = currentSelection.selectedNodes;
         }
       }
+
+      // Sync with KeyConfigurator: Convert nodes to ConfigurationItems
+      const configItems = mapNodesToConfigItems(updatedNodes);
+
+      // Update KeyConfigurator selection
+      setKeyConfiguratorItems(configItems);
     },
-    [currentSelection, projectId, setSelection],
+    [currentSelection, projectId, setSelection, setKeyConfiguratorItems],
   );
 
   // Handle edge click for selection
@@ -236,8 +258,15 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       currentSelection.selectedEdges.length > 0
     ) {
       clearSelection(projectId);
+      // Also clear KeyConfigurator selection (Option A)
+      clearKeyConfiguratorSelection();
     }
-  }, [clearSelection, currentSelection, projectId]);
+  }, [
+    clearSelection,
+    clearKeyConfiguratorSelection,
+    currentSelection,
+    projectId,
+  ]);
 
   // Handle ESC key to clear selection
   useEffect(() => {
@@ -252,6 +281,8 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
             selection.selectedEdges.length > 0)
         ) {
           clearSelection(projectId);
+          // Also clear KeyConfigurator selection
+          clearKeyConfiguratorSelection();
         }
       }
     };
@@ -260,7 +291,7 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [clearSelection, projectId]);
+  }, [clearSelection, clearKeyConfiguratorSelection, projectId]);
 
   // Clear selection when nodes/edges change (e.g., usecase change)
   // Note: Only clear when the node/edge arrays actually change (new usecase loaded)
@@ -269,8 +300,21 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       `Nodes/edges changed, clearing selection (nodes: ${nodes.length}, edges: ${edges.length}, project: ${projectId})`,
     );
     clearSelection(projectId);
+    // Also clear KeyConfigurator selection when usecase changes
+    clearKeyConfiguratorSelection();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length, edges.length, projectId]);
+
+  // Clear selection when component unmounts (e.g., when usecase is unselected)
+  useEffect(() => {
+    return () => {
+      logger.verbose(
+        `UsecaseVisualizer unmounting, clearing selections for project: ${projectId}`,
+      );
+      clearSelection(projectId);
+      clearKeyConfiguratorSelection();
+    };
+  }, [projectId, clearSelection, clearKeyConfiguratorSelection]);
 
   // Filter edges based on user preferences and mark selected ones
   const filteredEdges = edges

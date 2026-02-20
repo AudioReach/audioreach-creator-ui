@@ -37,6 +37,7 @@ const MAX_RECENT_PROJECTS = 20;
 // Track log view state for menu updates
 let isLogViewOpen = false;
 let hasActiveProject = false;
+let isKeyConfiguratorViewOpen = false;
 
 /**
  * Create and set the application menu
@@ -64,6 +65,16 @@ function createApplicationMenu(): void {
       label: isLogViewOpen ? 'Hide Log View' : 'Show Log View',
     });
     viewSubmenu.push({type: 'separator'});
+
+    viewSubmenu.push({
+      click: () => {
+        win.webContents.send('menu:toggle-key-configurator-view');
+      },
+      label: isKeyConfiguratorViewOpen
+        ? 'Hide Key Configurator'
+        : 'Show Key Configurator',
+    });
+    viewSubmenu.push({type: 'separator'});
   }
 
   viewSubmenu.push(
@@ -86,6 +97,14 @@ function createApplicationMenu(): void {
  */
 function updateMenuLogViewState(isOpen: boolean): void {
   isLogViewOpen = isOpen;
+  createApplicationMenu();
+}
+
+/**
+ * Update menu to reflect current key configurator state
+ */
+function updateMenuKeyConfiguratorState(isOpen: boolean): void {
+  isKeyConfiguratorViewOpen = isOpen;
   createApplicationMenu();
 }
 
@@ -515,6 +534,18 @@ ipcMain.handle('log-view:update-state', (_event, isOpen: boolean): void => {
 });
 
 //  #endregion Log View IPC Handlers
+
+//  #region Key Configurator View IPC Handlers
+
+/** Update key configurator view state from renderer */
+ipcMain.handle(
+  'key-configurator-view:update-state',
+  (_event, isOpen: boolean): void => {
+    updateMenuKeyConfiguratorState(isOpen);
+  },
+);
+
+//  #endregion Key Configurator View IPC Handlers
 
 //  #region Project Context IPC Handlers
 

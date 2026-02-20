@@ -9,6 +9,7 @@ import type {
   ConfigApi,
   ConfigResult,
   ElectronApi,
+  KeyConfiguratorViewApi,
   LogViewApi,
   MruProjectInfo,
   MruStoreApi,
@@ -57,6 +58,24 @@ const mruStoreApi: MruStoreApi = {
 };
 
 contextBridge.exposeInMainWorld('mruStoreApi', mruStoreApi);
+
+// Key Configurator View API
+const keyConfiguratorViewApi: KeyConfiguratorViewApi = {
+  onToggleKeyConfiguratorView: (callback: () => void) => {
+    ipcRenderer.on('menu:toggle-key-configurator-view', callback);
+    // Return cleanup function
+    return () => {
+      ipcRenderer.removeListener('menu:toggle-key-configurator-view', callback);
+    };
+  },
+  updateKeyConfiguratorViewState: (isOpen: boolean) =>
+    ipcRenderer.invoke('key-configurator-view:update-state', isOpen),
+};
+
+contextBridge.exposeInMainWorld(
+  'keyConfiguratorViewApi',
+  keyConfiguratorViewApi,
+);
 
 // Log View API
 const logViewApi: LogViewApi = {

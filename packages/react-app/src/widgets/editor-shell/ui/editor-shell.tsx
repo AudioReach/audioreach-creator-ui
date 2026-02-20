@@ -5,6 +5,7 @@
 
 import {useEffect, useRef} from 'react';
 
+import {useKeyConfiguratorView} from '~features/key-configurator';
 import {useLogView} from '~features/log-view';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {ArcSideNav} from '~shared/controls/arc-side-nav';
@@ -72,6 +73,8 @@ export const EditorShell: React.FC = () => {
   const store = useProjectLayoutStore();
   const initializedRef = useRef(false);
   const {isLogViewOpen, toggleLogView} = useLogView();
+  const {isKeyConfiguratorViewOpen, toggleKeyConfiguratorView} =
+    useKeyConfiguratorView();
 
   // Set up IPC listener for log view toggle from menu
   useEffect(() => {
@@ -108,6 +111,43 @@ export const EditorShell: React.FC = () => {
     return cleanup;
   }, [toggleLogView, isLogViewOpen]);
 
+  // Set up IPC listener for key configurator view toggle from menu
+  useEffect(() => {
+    if (!window.keyConfiguratorViewApi) {
+      logger.warn('Key Configurator View API not available', {
+        action: 'setup_key_configurator_view_listener',
+        component: 'EditorShell',
+      });
+      return;
+    }
+
+    const handleToggleKeyConfiguratorView = () => {
+      // Determine target state before toggling to avoid race/negation issues
+      const targetOpen = !isKeyConfiguratorViewOpen();
+
+      // Toggle the key configurator view
+      toggleKeyConfiguratorView();
+
+      // Update menu state to reflect the actual target state
+      window.keyConfiguratorViewApi
+        .updateKeyConfiguratorViewState(targetOpen)
+        .catch((error: unknown) => {
+          logger.error('Failed to update key configurator view menu state', {
+            action: 'update_menu_state',
+            component: 'EditorShell',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    };
+
+    // Register listener
+    const cleanup = window.keyConfiguratorViewApi.onToggleKeyConfiguratorView(
+      handleToggleKeyConfiguratorView,
+    );
+
+    return cleanup;
+  }, [toggleKeyConfiguratorView, isKeyConfiguratorViewOpen]);
+
   // Monitor active tab group and update menu state accordingly
   useEffect(() => {
     if (!window.projectContextApi || !window.logViewApi) {
@@ -143,6 +183,21 @@ export const EditorShell: React.FC = () => {
             error: error instanceof Error ? error.message : String(error),
           });
         });
+
+      // Update key configurator view menu state based on current project
+      const keyConfiguratorViewOpen = isKeyConfiguratorViewOpen();
+      window.keyConfiguratorViewApi
+        .updateKeyConfiguratorViewState(keyConfiguratorViewOpen)
+        .catch((error: unknown) => {
+          logger.error(
+            'Failed to update key configurator view state on project change',
+            {
+              action: 'update_key_configurator_view_state',
+              component: 'EditorShell',
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
+        });
     } else {
       // We're on Start page or no active group - hide menu
       window.projectContextApi
@@ -155,7 +210,7 @@ export const EditorShell: React.FC = () => {
           });
         });
     }
-  }, [store.activeTabGroup, isLogViewOpen]);
+  }, [store.activeTabGroup, isLogViewOpen, isKeyConfiguratorViewOpen]);
 
   // Initialize with a default app group and Start tab
   useEffect(() => {

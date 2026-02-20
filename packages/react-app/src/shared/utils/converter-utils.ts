@@ -33,3 +33,19 @@ export function ConvertStringToNumber(searchTerm: string): number | null {
 
   return result;
 }
+
+export function ConvertNumberToHexString(id: number): string | null {
+  if (
+    typeof id !== 'number' || // Validate input is a number
+    isNaN(id) || // Check for NaN
+    !isFinite(id) || // Check for infinity
+    !Number.isSafeInteger(id) || // Validate the input is within safe integer range
+    id < 0
+  ) {
+    // Check for negative numbers (hex representation typically for positive numbers)
+    return null;
+  }
+
+  // Convert to hex string with proper formatting
+  return `0x${id.toString(16).toUpperCase().padStart(8, '0')}`;
+}
