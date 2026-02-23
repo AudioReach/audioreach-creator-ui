@@ -56,7 +56,7 @@ pipeline {
         stage('Lint') {
             steps {
                 echo '🔍 Running linting checks...'
-                bat 'pnpm lint'
+                bat 'pnpm lint:ci'
             }
             post {
                 failure {

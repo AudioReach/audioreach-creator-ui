@@ -11,8 +11,10 @@
     },
     "lint": {
       "inputs": [
-        "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
-        "src/**/*"
+        "src/**/*",
+        "tests/**/*",
+        "scripts/**/*",
+        "*.{ts,tsx,js,jsx,mjs,cjs,json,html,css,scss,md,mdx,yaml}"
       ],
       "outputLogs": "new-only"
     },
