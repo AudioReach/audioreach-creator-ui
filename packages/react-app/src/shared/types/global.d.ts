@@ -1,5 +1,6 @@
 import type {
   ConfigApi,
+  ElectronApi,
   KeyConfiguratorViewApi,
   LogViewApi,
   MruStoreApi,
@@ -7,6 +8,8 @@ import type {
 } from '@audioreach-creator-ui/api-utils';
 
 declare global {
+  // eslint-disable-next-line no-var
+  var api: ElectronApi;
   // eslint-disable-next-line no-var
   var configApi: ConfigApi;
   // eslint-disable-next-line no-var

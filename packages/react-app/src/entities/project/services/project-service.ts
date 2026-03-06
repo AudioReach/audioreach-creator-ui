@@ -11,7 +11,6 @@ import {
 } from '~entities/project/api/projects-api';
 import {getAllUsecases} from '~entities/usecases/api/usecases-api';
 import {mapUsecaseDtoToCategories} from '~entities/usecases/model/usecase.mapper';
-import {electronApi} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type ProjectInfo from '~shared/types/project-info.types';
 
@@ -111,7 +110,7 @@ export class ProjectService {
    * @returns Promise with project open result
    */
   static async openWorkspaceProjectFromFile(): Promise<ProjectOpenResponse> {
-    if (!electronApi) {
+    if (!globalThis.api) {
       logger.error('Electron API not available', {
         action: 'open_workspace_project',
         component: 'ProjectService',
@@ -124,7 +123,7 @@ export class ProjectService {
 
     try {
       // Open a project file using Electron API
-      const response = await electronApi.send({
+      const response = await globalThis.api.send({
         data: null,
         requestType: ApiRequest.OpenProjectFile,
       });
@@ -232,7 +231,7 @@ export class ProjectService {
    * @returns Promise that resolves when operation completes
    */
   static async showInExplorer(filepath: string): Promise<void> {
-    if (!electronApi) {
+    if (!globalThis.api) {
       logger.error('Electron API not available', {
         action: 'show_in_explorer',
         component: 'ProjectService',
@@ -241,7 +240,7 @@ export class ProjectService {
     }
 
     try {
-      await electronApi.send({
+      await globalThis.api.send({
         data: filepath,
         requestType: ApiRequest.ShowProjectFileInExplorer,
       });

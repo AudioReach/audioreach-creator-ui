@@ -1,4 +1,3 @@
-export * from './electron-api';
 export * from './utils';
 export * from './http-client';
 export * from './register-client';
