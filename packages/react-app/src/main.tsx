@@ -24,4 +24,4 @@ const App = () => {
   );
 };
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.querySelector('#root')!).render(<App />);

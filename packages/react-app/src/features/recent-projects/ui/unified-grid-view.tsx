@@ -16,7 +16,7 @@ type UnifiedItem =
   | {data: ProjectInfo; type: 'project'}
   | {data: DeviceInfo; type: 'device'};
 
-interface UnifiedGridViewProps {
+interface UnifiedGridViewProperties {
   devices: DeviceInfo[];
   onOpenDevice: (device: DeviceInfo) => void;
   onOpenProject: (project: ProjectInfo) => void;
@@ -36,7 +36,7 @@ export default function UnifiedGridView({
   projects,
   showDevices,
   showProjects,
-}: UnifiedGridViewProps) {
+}: UnifiedGridViewProperties) {
   const items: UnifiedItem[] = useMemo(() => {
     const combined: UnifiedItem[] = [];
 
@@ -48,12 +48,12 @@ export default function UnifiedGridView({
         return dateB - dateA;
       });
 
-      sortedProjects.forEach((p) => combined.push({data: p, type: 'project'}));
+      for (const p of sortedProjects) combined.push({data: p, type: 'project'});
     }
 
     // Add devices (as-is, after projects)
     if (showDevices) {
-      devices.forEach((d) => combined.push({data: d, type: 'device'}));
+      for (const d of devices) combined.push({data: d, type: 'device'});
     }
 
     return combined;

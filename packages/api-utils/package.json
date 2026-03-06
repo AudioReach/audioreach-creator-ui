@@ -15,7 +15,7 @@
     "dev": "run-p watch:components watch:types",
     "watch:components": "vite build -c vite.config.ts -w --emptyOutDir=false",
     "watch:types": "tsc -b tsconfig.lib.json -w --preserveWatchOutput --force",
-    "lint": "eslint \"src/**/*.ts\" \"*.{ts,js,mjs}\" --quiet",
+    "lint": "eslint \"src/**/*.ts\" \"*.{ts,js,mjs}\" --cache --quiet",
     "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
   },
   "dependencies": {

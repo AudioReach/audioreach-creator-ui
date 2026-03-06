@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 
 import {
   ArcKeyVectorSelector,
-  type ArcKeyVectorSelectorProps,
+  type ArcKeyVectorSelectorProperties,
 } from '~shared/controls/arc-key-vector-selector';
 
 // Mock ArcCombobox component
@@ -86,7 +86,7 @@ jest.mock('~shared/controls/arc-combobox', () => {
 
     // Combine style with minWidth
     const style = {
-      ...(originalStyle || {}),
+      ...originalStyle,
       minWidth: minWidth || (fullWidth ? undefined : '200px'),
       width: fullWidth ? '100%' : undefined,
     };
@@ -174,7 +174,7 @@ Object.defineProperty(console, 'error', {value: consoleMock.error});
 Object.defineProperty(console, 'warn', {value: consoleMock.warn});
 
 describe('ArcKeyVectorSelector', () => {
-  const defaultProps: ArcKeyVectorSelectorProps = {
+  const defaultProps: ArcKeyVectorSelectorProperties = {
     keyName: 'testKey',
     values: ['value1', 'value2', 'value3'],
   };

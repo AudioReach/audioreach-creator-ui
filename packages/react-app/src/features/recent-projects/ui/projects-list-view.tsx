@@ -9,7 +9,7 @@ import {IconButton} from '@qualcomm-ui/react/button';
 
 import type ProjectInfo from '~shared/types/project-info.types';
 
-interface ProjectsListViewProps {
+interface ProjectsListViewProperties {
   onOpenProject: (project: ProjectInfo) => void;
   onRemoveFromRecent: (projectId: string) => void;
   onShowInExplorer: (projectId: string) => void;
@@ -47,7 +47,7 @@ export default function ProjectsListView({
   onRemoveFromRecent,
   onShowInExplorer,
   projects,
-}: ProjectsListViewProps) {
+}: ProjectsListViewProperties) {
   if (projects.length === 0) {
     return (
       <div

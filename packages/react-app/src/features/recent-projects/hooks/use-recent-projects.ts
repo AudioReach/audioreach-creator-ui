@@ -37,7 +37,7 @@ interface ArcRecentProjectsApi {
    * @param htmlElem An html element representing the graph view
    * @returns
    */
-  updateImage: (projectId: string, htmlElem: HTMLElement) => void;
+  updateImage: (projectId: string, htmlElement: HTMLElement) => void;
 }
 
 /** A hook containing functionality for managing the recent files list containing files in the order of most to least recent
@@ -56,14 +56,14 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
     useCallback(async () => {
       try {
         // 1. Get MRU projects (master list - contains all projects)
-        if (!window.mruStoreApi) {
+        if (!globalThis.mruStoreApi) {
           logger.warn('MRU Store API not available', {
             component: 'useArcRecentProjects',
           });
           return [];
         }
 
-        const mruProjects = await window.mruStoreApi.getRecentProjects();
+        const mruProjects = await globalThis.mruStoreApi.getRecentProjects();
 
         // 2. Get currently active projects from backend
         const backendResult = await getProjects();
@@ -184,7 +184,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @returns n/a
    */
   async function removeFromRecent(projectId: string) {
-    if (!window.mruStoreApi) {
+    if (!globalThis.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
       });
@@ -192,7 +192,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
     }
 
     try {
-      await window.mruStoreApi.removeProject(projectId);
+      await globalThis.mruStoreApi.removeProject(projectId);
 
       // Update local state
       const updatedProjects = await getRecentConfig();
@@ -212,7 +212,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @returns n/a
    */
   async function addToRecent(project: ProjectInfo) {
-    if (!window.mruStoreApi) {
+    if (!globalThis.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
       });
@@ -230,7 +230,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         name: project.name,
       };
 
-      await window.mruStoreApi.addProject(mruProject);
+      await globalThis.mruStoreApi.addProject(mruProject);
 
       // Update local state
       const updatedProjects = await getRecentConfig();
@@ -243,8 +243,8 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
     }
   }
 
-  async function updateImage(projectId: string, htmlElem: HTMLElement) {
-    if (!window.mruStoreApi) {
+  async function updateImage(projectId: string, htmlElement: HTMLElement) {
+    if (!globalThis.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
       });
@@ -253,9 +253,9 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
 
     try {
       // Convert the html element to a base64 encoded png string
-      const imageData = await toPng(htmlElem);
+      const imageData = await toPng(htmlElement);
 
-      await window.mruStoreApi.updateProjectImage(projectId, imageData);
+      await globalThis.mruStoreApi.updateProjectImage(projectId, imageData);
 
       // Update local state
       const updatedProjects = await getRecentConfig();

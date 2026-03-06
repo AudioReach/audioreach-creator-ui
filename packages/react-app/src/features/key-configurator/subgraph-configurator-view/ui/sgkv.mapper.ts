@@ -19,13 +19,11 @@ export function transformKeyDefinitionsToGraphKeys(
 ): Record<string, GraphKey> {
   const graphKeys = keyDefinitions.filter((keyDef) => keyDef.isGraphKey);
 
-  return graphKeys.reduce(
-    (acc, keyDef) => {
-      acc[keyDef.name] = transformKeyDefinitionToGraphKey(keyDef);
-      return acc;
-    },
-    {} as Record<string, GraphKey>,
-  );
+  const result: Record<string, GraphKey> = {};
+  for (const keyDef of graphKeys) {
+    result[keyDef.name] = transformKeyDefinitionToGraphKey(keyDef);
+  }
+  return result;
 }
 
 /**
@@ -39,6 +37,6 @@ function transformKeyDefinitionToGraphKey(
   return {
     id: keyDto.keyId,
     name: keyDto.name,
-    values: keyDto.values.map(transformValueDefinition),
+    values: keyDto.values.map((value) => transformValueDefinition(value)),
   };
 }

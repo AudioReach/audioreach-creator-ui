@@ -17,7 +17,7 @@ import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
 import type {KeyValue, Usecase, UsecaseCategory} from '../model/types';
 
-interface UsecaseListPanelProps {
+interface UsecaseListPanelProperties {
   expandedCategories: string[];
   formatUsecaseDisplay: (usecase: Usecase) => string;
   handleSelectAll: (isSelected: boolean) => void;
@@ -29,7 +29,7 @@ interface UsecaseListPanelProps {
   usecaseData: UsecaseCategory[];
 }
 
-const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
+const UsecaseListPanel: React.FC<UsecaseListPanelProperties> = ({
   expandedCategories,
   formatUsecaseDisplay,
   handleSelectAll,
@@ -48,7 +48,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
         style={{borderBottom: '1px solid var(--color-border-neutral-02)'}}
       >
         <div className="flex items-center justify-between">
-          <label
+          <div
             className="flex cursor-pointer items-center text-sm"
             style={{color: 'var(--color-text-neutral-primary)'}}
           >
@@ -63,7 +63,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               size="sm"
             />
             <span className="ml-2">Select All</span>
-          </label>
+          </div>
           <div className="flex items-center space-x-1">
             <IconButton
               aria-label="Expand All"
@@ -129,7 +129,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                   size="sm"
                   variant="ghost"
                 />
-                <label
+                <div
                   className="flex cursor-pointer items-center text-sm font-semibold"
                   style={{color: 'var(--color-text-neutral-primary)'}}
                 >
@@ -148,7 +148,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                     size="sm"
                   />
                   <span className="ml-2">{category.name}</span>
-                </label>
+                </div>
               </div>
               {isCategoryExpanded && (
                 <div
@@ -162,7 +162,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                       const formattedUsecase = formatUsecaseDisplay(usecase);
                       return (
                         <div key={usecaseIndex} className="mb-2 last:mb-0">
-                          <label
+                          <div
                             className="flex cursor-pointer items-center text-sm"
                             style={{color: 'var(--color-text-neutral-primary)'}}
                           >
@@ -180,7 +180,7 @@ const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                               size="sm"
                             />
                             <span className="ml-2">{formattedUsecase}</span>
-                          </label>
+                          </div>
                           <div
                             className="ml-6 mt-0.5 space-y-0.5 text-xs"
                             style={{

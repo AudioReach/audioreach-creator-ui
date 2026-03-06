@@ -231,18 +231,22 @@ class LogViewStoreManager {
     // Map LogLevel to LogType
     let logType: LogType;
     switch (event.level) {
-      case LogLevel.Info:
+      case LogLevel.Info: {
         logType = LogType.Info;
         break;
-      case LogLevel.Warn:
+      }
+      case LogLevel.Warn: {
         logType = LogType.Warning;
         break;
+      }
       case LogLevel.Error:
-      case LogLevel.Critical:
+      case LogLevel.Critical: {
         logType = LogType.Error;
         break;
-      default:
-        return; // Skip other levels
+      }
+      default: {
+        return;
+      } // Skip other levels
     }
 
     const detailed = event.context

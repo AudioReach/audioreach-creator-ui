@@ -86,19 +86,19 @@ function TextCell({
   isSelected: boolean;
   text: string;
 }) {
-  const spanRef = useRef<HTMLSpanElement>(null);
+  const spanReference = useRef<HTMLSpanElement>(null);
   // Track whether text is truncated (cut off with ellipses)
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   const checkOverflow = useCallback(() => {
-    const element = spanRef.current;
+    const element = spanReference.current;
     if (element) {
       setIsOverflowing(element.scrollWidth > element.clientWidth);
     }
   }, []);
 
   useEffect(() => {
-    const element = spanRef.current;
+    const element = spanReference.current;
     if (!element) {
       return;
     }
@@ -126,7 +126,7 @@ function TextCell({
       }}
       trigger={
         <span
-          ref={spanRef}
+          ref={spanReference}
           className={`block overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? 'font-bold' : ''} ${className}`}
         >
           {text}
@@ -316,7 +316,7 @@ function ValidationResultTable() {
                       ) => (
                         <Table.HeaderCell
                           key={header.id}
-                          className={`relative select-none whitespace-nowrap ${index !== 0 ? 'border-neutral-09 border-l-2' : ''}`}
+                          className={`relative select-none whitespace-nowrap ${index === 0 ? '' : 'border-neutral-09 border-l-2'}`}
                           style={{width: header.getSize()}}
                         >
                           <div className="inline-flex w-full items-center justify-between gap-2">

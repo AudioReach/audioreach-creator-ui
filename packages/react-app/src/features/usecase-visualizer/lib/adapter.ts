@@ -24,8 +24,8 @@ import {logger} from '~shared/lib/logger';
 const nodeId = (kind: string, id: number) => `${kind}-${id}`;
 const containerSegmentId = (containerId: number, subgraphId: number) =>
   `container-${containerId}:${subgraphId}`;
-const edgeId = (kind: string, src: string, dst: string, idx = 0) =>
-  `e-${kind}-${src}-${dst}-${idx}`;
+const edgeId = (kind: string, source: string, dst: string, index = 0) =>
+  `e-${kind}-${source}-${dst}-${index}`;
 
 export function buildGraphViewFromUsecase(
   dtoArray: UsecaseComponentsDto[],
@@ -54,15 +54,6 @@ export function buildGraphViewFromUsecase(
 
   // Build sets for endpoint type deduction
   const subsystemIdSet = new Set(subsystems.map((s) => s.id));
-
-  // Build lookup map from systemId to ReactFlow node ID
-  const systemIdToNodeId = new Map<string, string>();
-  for (const m of modules) {
-    systemIdToNodeId.set(m.systemId, nodeId('module', m.id));
-  }
-  for (const ss of subsystems) {
-    systemIdToNodeId.set(ss.systemId, nodeId('subsystem', ss.id));
-  }
 
   // Build lookup maps for port systemIds (strings) to numeric port IDs
   const dataPortSystemIdToPortId = new Map<string, number>();
@@ -97,9 +88,7 @@ export function buildGraphViewFromUsecase(
   }
 
   // Infer subgraphs from modules
-  const subgraphIds = Array.from(
-    new Set(modules.map((m) => m.subgraphId)),
-  ).sort();
+  const subgraphIds = [...new Set(modules.map((m) => m.subgraphId))].sort();
 
   // IMPORTANT: Parents must be added before children for ReactFlow nesting to work
 
@@ -123,13 +112,13 @@ export function buildGraphViewFromUsecase(
     // Check if any module in this subgraph has parentId in subsystemIdSet
     const modulesInSg = modules.filter((m) => m.subgraphId === sgId);
     const parentSubsystemId = modulesInSg.find(
-      (m) => m.parentId != null && subsystemIdSet.has(m.parentId),
+      (m) => m.parentId != undefined && subsystemIdSet.has(m.parentId),
     )?.parentId;
 
     const parent =
-      parentSubsystemId != null
-        ? nodeId('subsystem', parentSubsystemId)
-        : undefined;
+      parentSubsystemId == undefined
+        ? undefined
+        : nodeId('subsystem', parentSubsystemId);
 
     nodes.push({
       data: {
@@ -222,18 +211,18 @@ export function buildGraphViewFromUsecase(
   const dataLinks = dtoArray.flatMap((dto) =>
     Array.isArray(dto.dataLinks) ? dto.dataLinks : [],
   );
-  dataLinks.forEach((dl: DataLinkDto, idx) => {
+  dataLinks.forEach((dl: DataLinkDto, index) => {
     // For data links, we need to find the source and destination using the link's properties
     // The sourceId and destinationId in the DTO are numeric IDs that need to be mapped
-    const srcModule = modules.find((m) => m.id === dl.sourceId);
+    const sourceModule = modules.find((m) => m.id === dl.sourceId);
     const dstModule = modules.find((m) => m.id === dl.destinationId);
-    const srcSubsystem = subsystems.find((s) => s.id === dl.sourceId);
+    const sourceSubsystem = subsystems.find((s) => s.id === dl.sourceId);
     const dstSubsystem = subsystems.find((s) => s.id === dl.destinationId);
 
-    const src = srcModule
-      ? nodeId('module', srcModule.id)
-      : srcSubsystem
-        ? nodeId('subsystem', srcSubsystem.id)
+    const source = sourceModule
+      ? nodeId('module', sourceModule.id)
+      : sourceSubsystem
+        ? nodeId('subsystem', sourceSubsystem.id)
         : null;
     const dst = dstModule
       ? nodeId('module', dstModule.id)
@@ -241,7 +230,7 @@ export function buildGraphViewFromUsecase(
         ? nodeId('subsystem', dstSubsystem.id)
         : null;
 
-    if (!src || !dst) {
+    if (!source || !dst) {
       logger.warn(
         `[Adapter] Data link endpoints not found: source=${dl.sourceId}, dest=${dl.destinationId}`,
       );
@@ -263,8 +252,8 @@ export function buildGraphViewFromUsecase(
 
     edges.push({
       data: {kind: EDGE_KIND.DATA, label: 'Data'},
-      id: edgeId('data', src, dst, idx),
-      source: src,
+      id: edgeId('data', source, dst, index),
+      source: source,
       sourceHandle: makeHandleId('Data', sourcePortId),
       target: dst,
       targetHandle: makeHandleId('Data', destinationPortId),
@@ -276,17 +265,17 @@ export function buildGraphViewFromUsecase(
   const controlLinks = dtoArray.flatMap((dto) =>
     Array.isArray(dto.controlLinks) ? dto.controlLinks : [],
   );
-  controlLinks.forEach((cl: ControlLinkDto, idx) => {
+  controlLinks.forEach((cl: ControlLinkDto, index) => {
     // For control links, use the numeric IDs to find the components
-    const srcModule = modules.find((m) => m.id === cl.sourceId);
+    const sourceModule = modules.find((m) => m.id === cl.sourceId);
     const dstModule = modules.find((m) => m.id === cl.destinationId);
-    const srcSubsystem = subsystems.find((s) => s.id === cl.sourceId);
+    const sourceSubsystem = subsystems.find((s) => s.id === cl.sourceId);
     const dstSubsystem = subsystems.find((s) => s.id === cl.destinationId);
 
-    const src = srcModule
-      ? nodeId('module', srcModule.id)
-      : srcSubsystem
-        ? nodeId('subsystem', srcSubsystem.id)
+    const source = sourceModule
+      ? nodeId('module', sourceModule.id)
+      : sourceSubsystem
+        ? nodeId('subsystem', sourceSubsystem.id)
         : null;
     const dst = dstModule
       ? nodeId('module', dstModule.id)
@@ -294,7 +283,7 @@ export function buildGraphViewFromUsecase(
         ? nodeId('subsystem', dstSubsystem.id)
         : null;
 
-    if (!src || !dst) {
+    if (!source || !dst) {
       logger.warn(
         `[Adapter] Control link endpoints not found: source=${cl.sourceId}, dest=${cl.destinationId}`,
       );
@@ -318,8 +307,8 @@ export function buildGraphViewFromUsecase(
 
     edges.push({
       data: {kind: EDGE_KIND.CONTROL, label: 'Control'},
-      id: edgeId('control', src, dst, idx),
-      source: src,
+      id: edgeId('control', source, dst, index),
+      source: source,
       sourceHandle: `${makeHandleId('Control', sourcePortId)}-source`,
       target: dst,
       targetHandle: `${makeHandleId('Control', destinationPortId)}-target`,

@@ -36,7 +36,7 @@ export interface ArcBreadcrumbItem {
   onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-export interface ArcBreadcrumbsProps {
+export interface ArcBreadcrumbsProperties {
   /**
    * Additional CSS class names
    */
@@ -59,8 +59,8 @@ export interface ArcBreadcrumbsProps {
  * ArcBreadcrumbs - A breadcrumb control using the new Breadcrumbs from qualcomm-ui
  * with enhanced functionality for click handling and dropdown support
  */
-export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
-  ({className, items = [], onItemClick}, ref) => {
+export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProperties>(
+  ({className, items = [], onItemClick}, reference) => {
     const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
       null,
     );
@@ -153,7 +153,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
 
     return (
       <div className="relative min-h-8 w-full overflow-visible">
-        <Breadcrumbs.Root ref={ref} className={className}>
+        <Breadcrumbs.Root ref={reference} className={className}>
           <Breadcrumbs.List>
             {items.map((item, index) => {
               const hasDropdown =
@@ -177,13 +177,13 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                       }}
                     >
                       <Popover.Trigger>
-                        {(triggerProps) => (
+                        {(triggerProperties) => (
                           <span
-                            {...triggerProps}
+                            {...triggerProperties}
                             className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
                             onClick={(event: React.MouseEvent<HTMLElement>) => {
                               handleBreadcrumbClick(event, item, index);
-                              triggerProps.onClick?.(event as any);
+                              triggerProperties.onClick?.(event as any);
                             }}
                             role="button"
                             tabIndex={0}

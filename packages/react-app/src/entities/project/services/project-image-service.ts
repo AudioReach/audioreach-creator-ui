@@ -9,18 +9,18 @@ import {logger} from '~shared/lib/logger';
  * Service for managing project screenshots
  * Handles screenshot capture and MRU store integration
  */
-export class ProjectImageService {
+export const ProjectImageService = {
   /**
    * Captures and saves a project screenshot to MRU store
    * @param projectId - The project ID
    * @param screenshotFn - Function that captures the screenshot
    * @returns Promise that resolves when screenshot is saved
    */
-  static async captureAndSave(
+  async captureAndSave(
     projectId: string,
-    screenshotFn: () => Promise<string | null>,
+    screenshotFunction: () => Promise<string | null>,
   ): Promise<void> {
-    if (!window.mruStoreApi) {
+    if (!globalThis.mruStoreApi) {
       logger.warn('MRU Store API not available', {
         action: 'capture_screenshot',
         component: 'ProjectImageService',
@@ -36,11 +36,11 @@ export class ProjectImageService {
         projectId,
       });
 
-      const imageData = await screenshotFn();
+      const imageData = await screenshotFunction();
 
       if (imageData) {
         // Save to MRU in background (non-blocking)
-        await window.mruStoreApi.updateProjectImage(projectId, imageData);
+        await globalThis.mruStoreApi.updateProjectImage(projectId, imageData);
 
         logger.info('Project screenshot saved to MRU', {
           action: 'save_screenshot',
@@ -57,5 +57,5 @@ export class ProjectImageService {
       });
       throw error;
     }
-  }
-}
+  },
+};

@@ -11,13 +11,16 @@ function cn(...classes: (string | undefined | false)[]) {
 }
 
 // Card Root Component
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardProperties extends HTMLAttributes<HTMLDivElement> {
   alignment?: 'left' | 'center' | 'right';
   elevation?: number;
 }
 
-const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({alignment = 'left', className, elevation = 1, ...props}, ref) => {
+const Card = forwardRef<HTMLDivElement, CardProperties>(
+  (
+    {alignment = 'left', className, elevation = 1, ...properties},
+    reference,
+  ) => {
     const alignmentClass = {
       center: 'text-center',
       left: 'text-left',
@@ -28,14 +31,14 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
 
     return (
       <div
-        ref={ref}
+        ref={reference}
         className={cn(
           'rounded-lg border bg-card text-card-foreground',
           elevationClass,
           alignmentClass,
           className,
         )}
-        {...props}
+        {...properties}
       />
     );
   },
@@ -43,17 +46,19 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
 Card.displayName = 'Card';
 
 // Card Media Component
-export interface CardMediaProps extends ImgHTMLAttributes<HTMLImageElement> {
+export interface CardMediaProperties
+  extends ImgHTMLAttributes<HTMLImageElement> {
   as?: 'img';
 }
 
-const CardMedia = forwardRef<HTMLImageElement, CardMediaProps>(
-  ({as: _as = 'img', className, ...props}, ref) => {
+const CardMedia = forwardRef<HTMLImageElement, CardMediaProperties>(
+  ({as: _as = 'img', className, ...properties}, reference) => {
     return (
       <img
-        ref={ref}
+        ref={reference}
         className={cn('w-full rounded-t-lg object-cover', className)}
-        {...props}
+        alt=""
+        {...properties}
       />
     );
   },
@@ -61,12 +66,16 @@ const CardMedia = forwardRef<HTMLImageElement, CardMediaProps>(
 CardMedia.displayName = 'CardMedia';
 
 // Card Adornment Component
-export interface CardAdornmentProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardAdornmentProperties
+  extends HTMLAttributes<HTMLDivElement> {
   placement?: 'top-right-outer' | 'top-left-outer' | 'top-right' | 'top-left';
 }
 
-const CardAdornment = forwardRef<HTMLDivElement, CardAdornmentProps>(
-  ({children, className, placement = 'top-right-outer', ...props}, ref) => {
+const CardAdornment = forwardRef<HTMLDivElement, CardAdornmentProperties>(
+  (
+    {children, className, placement = 'top-right-outer', ...properties},
+    reference,
+  ) => {
     const placementClass = {
       'top-left': 'absolute top-2 left-2',
       'top-left-outer': 'absolute -top-2 -left-2',
@@ -75,7 +84,11 @@ const CardAdornment = forwardRef<HTMLDivElement, CardAdornmentProps>(
     }[placement];
 
     return (
-      <div ref={ref} className={cn(placementClass, className)} {...props}>
+      <div
+        ref={reference}
+        className={cn(placementClass, className)}
+        {...properties}
+      >
         {children}
       </div>
     );
@@ -85,8 +98,12 @@ CardAdornment.displayName = 'CardAdornment';
 
 // Card Content Component
 const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({className, ...props}, ref) => (
-    <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
+  ({className, ...properties}, reference) => (
+    <div
+      ref={reference}
+      className={cn('p-6 pt-0', className)}
+      {...properties}
+    />
   ),
 );
 CardContent.displayName = 'CardContent';
@@ -95,15 +112,17 @@ CardContent.displayName = 'CardContent';
 const CardTitle = forwardRef<
   HTMLParagraphElement,
   HTMLAttributes<HTMLHeadingElement>
->(({className, ...props}, ref) => (
+>(({children, className, ...properties}, reference) => (
   <h3
-    ref={ref}
+    ref={reference}
     className={cn(
       'text-2xl font-semibold leading-none tracking-tight',
       className,
     )}
-    {...props}
-  />
+    {...properties}
+  >
+    {children}
+  </h3>
 ));
 CardTitle.displayName = 'CardTitle';
 
@@ -111,11 +130,11 @@ CardTitle.displayName = 'CardTitle';
 const CardSubtitle = forwardRef<
   HTMLParagraphElement,
   HTMLAttributes<HTMLParagraphElement>
->(({className, ...props}, ref) => (
+>(({className, ...properties}, reference) => (
   <p
-    ref={ref}
+    ref={reference}
     className={cn('text-sm font-medium text-muted-foreground', className)}
-    {...props}
+    {...properties}
   />
 ));
 CardSubtitle.displayName = 'CardSubtitle';
@@ -124,22 +143,22 @@ CardSubtitle.displayName = 'CardSubtitle';
 const CardDescription = forwardRef<
   HTMLParagraphElement,
   HTMLAttributes<HTMLParagraphElement>
->(({className, ...props}, ref) => (
+>(({className, ...properties}, reference) => (
   <p
-    ref={ref}
+    ref={reference}
     className={cn('text-sm text-muted-foreground', className)}
-    {...props}
+    {...properties}
   />
 ));
 CardDescription.displayName = 'CardDescription';
 
 // Card Header Component (optional, for completeness)
 const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({className, ...props}, ref) => (
+  ({className, ...properties}, reference) => (
     <div
-      ref={ref}
+      ref={reference}
       className={cn('flex flex-col space-y-1.5 p-6', className)}
-      {...props}
+      {...properties}
     />
   ),
 );
@@ -147,11 +166,11 @@ CardHeader.displayName = 'CardHeader';
 
 // Card Footer Component (optional, for completeness)
 const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({className, ...props}, ref) => (
+  ({className, ...properties}, reference) => (
     <div
-      ref={ref}
+      ref={reference}
       className={cn('flex items-center p-6 pt-0', className)}
-      {...props}
+      {...properties}
     />
   ),
 );

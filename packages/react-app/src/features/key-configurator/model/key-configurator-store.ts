@@ -258,7 +258,7 @@ export function createKeyConfiguratorStore(projectId: string) {
           ]);
 
           // Check if all saves succeeded
-          const success = results.every((result) => result);
+          const success = results.every(Boolean);
 
           if (success) {
             logger.info('All configurations saved successfully', {
@@ -313,7 +313,7 @@ export function createKeyConfiguratorStore(projectId: string) {
         const currentState = get().isEditable;
         set({isEditable: !currentState});
         logger.debug(
-          `Edit mode toggled to ${!currentState ? 'enabled' : 'disabled'}`,
+          `Edit mode toggled to ${currentState ? 'disabled' : 'enabled'}`,
           {
             action: 'toggle_is_editable',
             component: 'KeyConfiguratorStore',

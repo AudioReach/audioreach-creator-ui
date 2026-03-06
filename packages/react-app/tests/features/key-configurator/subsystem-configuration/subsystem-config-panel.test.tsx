@@ -89,7 +89,7 @@ jest.mock('~shared/utils/converter-utils', () => ({
   ConvertNumberToHexString: (num: number) =>
     `0x${num.toString(16).toUpperCase()}`,
   ConvertStringToNumber: (str: string) => {
-    const num = parseInt(str, 16);
+    const num = Number.parseInt(str, 16);
     return isNaN(num) ? null : num;
   },
 }));
@@ -309,7 +309,7 @@ describe('SubsystemConfigPanel', () => {
     fireEvent.click(streamTxCheckbox);
 
     // Mock window.confirm to return true
-    window.confirm = jest.fn(() => true);
+    globalThis.confirm = jest.fn(() => true);
 
     // Click Cancel
     const cancelButton = screen.getByText('Cancel');

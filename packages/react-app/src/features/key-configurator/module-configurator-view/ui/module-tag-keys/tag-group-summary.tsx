@@ -13,7 +13,7 @@ import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import type {ConfiguredTkv} from './module-tag-keys-config.types';
 
-interface TagGroupSummaryProps {
+interface TagGroupSummaryProperties {
   configurations: ConfiguredTkv[];
   hasActiveSearch?: boolean;
   isEditable: boolean;
@@ -31,7 +31,7 @@ export function TagGroupSummary({
   onDeleteTagGroup,
   onEditItem,
   tagGroupName,
-}: TagGroupSummaryProps) {
+}: TagGroupSummaryProperties) {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Auto-expand when there's an active search

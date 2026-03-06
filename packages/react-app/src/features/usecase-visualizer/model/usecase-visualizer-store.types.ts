@@ -28,7 +28,7 @@ export interface GraphDataSliceState {
 
 export interface GraphDataSliceActions {
   loadGraph: (spec: GraphSpec) => Promise<void>;
-  setError: (msg?: string) => void;
+  setError: (message?: string) => void;
   setLoading: (loading: boolean) => void;
   setView: (view: GraphView) => void;
 }

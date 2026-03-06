@@ -18,7 +18,7 @@
     "watch:js": "cross-env DEV=1 tsx ./scripts/build.ts --mode development --watch",
     "watch:types": "tsc -b tsconfig.lib.json --force -w --preserveWatchOutput",
     "package": "electron-builder --dir --config electron-builder.config.ts",
-    "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"scripts/**/*.{ts,js}\" \"*.{ts,js}\" --quiet",
+    "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"scripts/**/*.{ts,js}\" \"*.{ts,js}\" --cache --quiet",
     "test": "cross-env DEBUG=pw:browser* playwright test",
     "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test",
     "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"

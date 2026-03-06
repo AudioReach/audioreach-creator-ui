@@ -5,14 +5,14 @@
 
 import {forwardRef, useMemo} from 'react';
 
-import ArcCombobox, {type ArcComboboxProps} from './arc-combobox';
+import ArcCombobox, {type ArcComboboxProperties} from './arc-combobox';
 import './arc-key-vector-selector.css';
 
 // Types for the component props - inherit from ArcCombobox and add
 // key-vector specific props
-export interface ArcKeyVectorSelectorProps
+export interface ArcKeyVectorSelectorProperties
   extends Omit<
-    ArcComboboxProps<string>,
+    ArcComboboxProperties<string>,
     'onChange' | 'options' | 'value' | 'label'
   > {
   error?: boolean | string;
@@ -35,7 +35,7 @@ export interface ArcKeyVectorSelectorProps
  */
 export const ArcKeyVectorSelector = forwardRef<
   HTMLDivElement,
-  ArcKeyVectorSelectorProps
+  ArcKeyVectorSelectorProperties
 >(
   (
     {
@@ -49,9 +49,9 @@ export const ArcKeyVectorSelector = forwardRef<
       required,
       selectedValue,
       values,
-      ...restProps
+      ...restProperties
     },
-    ref,
+    reference,
   ) => {
     // Show plain values in dropdown options
     const displayOptions = useMemo((): string[] => {
@@ -94,9 +94,9 @@ export const ArcKeyVectorSelector = forwardRef<
     };
 
     return (
-      <div ref={ref}>
+      <div ref={reference}>
         <ArcCombobox<string>
-          {...restProps}
+          {...restProperties}
           error={error}
           filterable={false}
           fullWidth={fullWidth}

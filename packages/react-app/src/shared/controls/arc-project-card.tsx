@@ -25,7 +25,7 @@ import {
   CardTitle,
 } from './card';
 
-export interface ArcProjectCardProps {
+export interface ArcProjectCardProperties {
   /** A short description */
   description: string;
   /** The image to display in the project card */
@@ -59,10 +59,10 @@ export default function ArcProjectCard({
   onShowInExplorer,
   title,
   typeIndicator,
-}: ArcProjectCardProps) {
+}: ArcProjectCardProperties) {
   // State for context menu
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardReference = useRef<HTMLDivElement>(null);
 
   function getTimeStampMesage(): string {
     // If no lastModifiedDate is provided, return a default message
@@ -114,13 +114,12 @@ export default function ArcProjectCard({
   }
 
   function handleMouseDown(e: React.MouseEvent) {
-    switch (e.button) {
-      case 2: // Right Click
-        // Prevent default context menu
-        e.preventDefault();
+    if (e.button === 2) {
+      // Right Click
+      // Prevent default context menu
+      e.preventDefault();
 
-        setIsContextMenuOpen(true);
-        break;
+      setIsContextMenuOpen(true);
     }
   }
 
@@ -139,7 +138,7 @@ export default function ArcProjectCard({
   return (
     <div>
       <Card
-        ref={cardRef}
+        ref={cardReference}
         alignment="left"
         className="hover:border-focus relative h-full max-w-[350px] grow rounded-xl hover:border-2"
         elevation={0}

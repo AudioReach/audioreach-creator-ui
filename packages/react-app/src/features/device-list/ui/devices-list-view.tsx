@@ -7,7 +7,7 @@ import {Smartphone} from 'lucide-react';
 
 import type DeviceInfo from '~shared/types/device-info.types';
 
-interface DevicesListViewProps {
+interface DevicesListViewProperties {
   devices: DeviceInfo[];
   onOpenDevice: (device: DeviceInfo) => void;
 }
@@ -15,7 +15,7 @@ interface DevicesListViewProps {
 export default function DevicesListView({
   devices,
   onOpenDevice,
-}: DevicesListViewProps) {
+}: DevicesListViewProperties) {
   if (devices.length === 0) {
     return (
       <div

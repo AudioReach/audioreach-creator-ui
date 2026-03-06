@@ -7,7 +7,7 @@ import {Search} from 'lucide-react';
 
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
-interface ArcSearchBarProps {
+interface ArcSearchBarProperties {
   /** A callback function thats triggered on every keystroke */
   onSearchChange: (value: string) => void;
   placeholder?: string;
@@ -18,7 +18,7 @@ export default function ArcSearchBar({
   onSearchChange,
   placeholder,
   searchTerm,
-}: ArcSearchBarProps) {
+}: ArcSearchBarProperties) {
   return (
     <TextInput
       aria-label={placeholder || 'Search'}

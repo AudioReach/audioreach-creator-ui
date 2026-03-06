@@ -158,7 +158,7 @@ describe('SubsystemTreeView', () => {
 
     // Create a new subsystem
     const newNode: SubsystemBrowserTreeNode = {
-      id: 111111,
+      id: 111_111,
       name: 'Child-new-id-1',
     };
 
@@ -208,8 +208,8 @@ describe('SubsystemTreeView', () => {
         children: [
           {
             children: [
-              {id: 12311, name: 'Leaf 1'},
-              {id: 12312, name: 'Leaf 2'},
+              {id: 12_311, name: 'Leaf 1'},
+              {id: 12_312, name: 'Leaf 2'},
             ],
             id: 1231,
             name: 'Child',
@@ -263,10 +263,10 @@ describe('SubsystemTreeView', () => {
         children: [
           {
             children: [
-              {id: 125611, name: 'Leaf 1'},
-              {id: 125612, name: 'Leaf 2'},
+              {id: 125_611, name: 'Leaf 1'},
+              {id: 125_612, name: 'Leaf 2'},
             ],
-            id: 12561,
+            id: 12_561,
             name: 'Child',
           },
         ],
@@ -279,7 +279,7 @@ describe('SubsystemTreeView', () => {
     // Rename nested node "leaf-2"
     useSubsystemBrowserStore
       .getState()
-      .renameSubsystem(125612, 'Leaf 2 (Renamed)');
+      .renameSubsystem(125_612, 'Leaf 2 (Renamed)');
 
     // find node by id
     const findById = (
@@ -299,12 +299,12 @@ describe('SubsystemTreeView', () => {
     };
 
     const data = useSubsystemBrowserStore.getState().data;
-    const renamed = findById(data, 125612);
+    const renamed = findById(data, 125_612);
     expect(renamed?.name).toBe('Leaf 2 (Renamed)');
 
     // Ensure siblings/ancestors are unchanged
-    expect(findById(data, 125611)?.name).toBe('Leaf 1');
-    expect(findById(data, 12561)?.name).toBe('Child');
+    expect(findById(data, 125_611)?.name).toBe('Leaf 1');
+    expect(findById(data, 12_561)?.name).toBe('Child');
     expect(findById(data, 1256)?.name).toBe('Root');
   });
 

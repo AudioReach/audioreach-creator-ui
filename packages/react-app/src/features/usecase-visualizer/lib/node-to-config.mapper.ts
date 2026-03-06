@@ -45,15 +45,15 @@ function generateDeterministicInstanceId(node: RFNode): number {
  */
 function nodeIdToNumber(nodeId: string): number {
   // Try to parse as number first
-  const parsed = parseInt(nodeId, 10);
+  const parsed = Number.parseInt(nodeId, 10);
   if (!isNaN(parsed)) {
     return parsed;
   }
 
   // Generate a numeric hash from the string
   let hash = 0;
-  for (let i = 0; i < nodeId.length; i++) {
-    const char = nodeId.charCodeAt(i);
+  for (let index = 0; index < nodeId.length; index++) {
+    const char = nodeId.codePointAt(index) || 0;
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
@@ -120,17 +120,22 @@ export function mapSubsystemNodeToConfigItem(
  */
 export function mapNodeToConfigItem(node: RFNode): ConfigurationItem | null {
   switch (node.data.kind) {
-    case NODE_KIND.MODULE:
+    case NODE_KIND.MODULE: {
       return mapModuleNodeToConfigItem(node);
-    case NODE_KIND.SUBGRAPH:
+    }
+    case NODE_KIND.SUBGRAPH: {
       return mapSubgraphNodeToConfigItem(node);
-    case NODE_KIND.SUBSYSTEM:
+    }
+    case NODE_KIND.SUBSYSTEM: {
       return mapSubsystemNodeToConfigItem(node);
-    case NODE_KIND.CONTAINER:
+    }
+    case NODE_KIND.CONTAINER: {
       // Containers are not configurable
       return null;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -141,7 +146,7 @@ export function mapNodeToConfigItem(node: RFNode): ConfigurationItem | null {
  */
 export function mapNodesToConfigItems(nodes: RFNode[]): ConfigurationItem[] {
   return nodes
-    .map(mapNodeToConfigItem)
+    .map((node) => mapNodeToConfigItem(node))
     .filter((item): item is ConfigurationItem => item !== null);
 }
 
@@ -162,5 +167,5 @@ export function configItemIdToNodeId(configItemId: number): string {
  * Convert multiple ConfigurationItem IDs to node IDs
  */
 export function configItemIdsToNodeIds(configItemIds: number[]): string[] {
-  return configItemIds.map(configItemIdToNodeId);
+  return configItemIds.map((id) => configItemIdToNodeId(id));
 }

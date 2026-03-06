@@ -40,7 +40,7 @@ export class LogEventEmitter {
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
-      if (index > -1) {
+      if (index !== -1) {
         this.listeners.splice(index, 1);
       }
     };
@@ -51,14 +51,14 @@ export class LogEventEmitter {
    * @param event Log event with project context
    */
   emit(event: LogEvent): void {
-    this.listeners.forEach((listener) => {
+    for (const listener of this.listeners) {
       try {
         listener(event);
       } catch (error) {
         // Prevent listener errors from breaking the logging system
         console.error('Log event listener error:', error);
       }
-    });
+    }
   }
 
   /**

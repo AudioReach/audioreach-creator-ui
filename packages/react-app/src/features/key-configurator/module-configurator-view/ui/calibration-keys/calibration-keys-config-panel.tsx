@@ -37,7 +37,7 @@ import type {
 } from './calibration-keys-config.types';
 import {CkvParametersSection} from './ckv-parameters-section';
 
-interface CalibrationKeysConfigPanelProps {
+interface CalibrationKeysConfigPanelProperties {
   instanceId: number;
   isEditable: boolean;
   moduleId: number;
@@ -182,11 +182,11 @@ const generateCartesianProduct = (
     }
 
     const {key, values} = selectedPerKey[index];
-    values.forEach((value) => {
+    for (const value of values) {
       currentCombo.push({key, value});
       generate(index + 1, currentCombo);
       currentCombo.pop();
-    });
+    }
   };
 
   generate(0, []);
@@ -219,31 +219,33 @@ const groupSelectedValuesByKey = (
     values: Array<{id: number; name: string}>;
   }> = [];
 
-  Object.entries(selectedKeyValues).forEach(([keyIdStr, valueSelections]) => {
-    const keyId = parseInt(keyIdStr, 10);
+  for (const [keyIdString, valueSelections] of Object.entries(
+    selectedKeyValues,
+  )) {
+    const keyId = Number.parseInt(keyIdString, 10);
 
     // Find the key name from the key ID
     const keyName = Object.keys(calibrationKeyData).find(
       (name) => calibrationKeyData[name].id === keyId,
     );
     if (!keyName) {
-      return;
+      continue;
     }
 
     const key = calibrationKeyData[keyName];
     const selectedValues: Array<{id: number; name: string}> = [];
 
-    Object.entries(valueSelections).forEach(([valueIdStr, isSelected]) => {
+    for (const [valueIdString, isSelected] of Object.entries(valueSelections)) {
       if (!isSelected) {
-        return;
+        continue;
       }
 
-      const valueId = parseInt(valueIdStr, 10);
+      const valueId = Number.parseInt(valueIdString, 10);
       const value = key.values.find((v) => v.id === valueId);
       if (value) {
         selectedValues.push({id: value.id, name: value.name});
       }
-    });
+    }
 
     if (selectedValues.length > 0) {
       selectedPerKey.push({
@@ -251,7 +253,7 @@ const groupSelectedValuesByKey = (
         values: selectedValues,
       });
     }
-  });
+  }
 
   return selectedPerKey;
 };
@@ -260,7 +262,7 @@ export function CalibrationKeysConfigPanel({
   instanceId,
   isEditable,
   moduleId,
-}: CalibrationKeysConfigPanelProps) {
+}: CalibrationKeysConfigPanelProperties) {
   // Store state
   const availableKeys = useCalibrationKeysStore((state) => state.availableKeys);
   if (!availableKeys) {
@@ -319,8 +321,8 @@ export function CalibrationKeysConfigPanel({
   const [initialEditSelections, setInitialEditSelections] = useState<
     Record<number, Record<number, boolean>>
   >({});
-  const configSectionRef = useRef<HTMLDivElement>(null);
-  const searchBarRef = useRef<HTMLDivElement>(null);
+  const configSectionReference = useRef<HTMLDivElement>(null);
+  const searchBarReference = useRef<HTMLDivElement>(null);
 
   // Get configured keys for this module instance from store
   const configuredCKVs = useMemo(() => {
@@ -387,7 +389,7 @@ export function CalibrationKeysConfigPanel({
   const handleSort = useCallback(
     (column: SortColumn) => {
       if (sortColumn === column) {
-        setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        setSortOrder((previous) => (previous === 'asc' ? 'desc' : 'asc'));
       } else {
         setSortColumn(column);
         setSortOrder('asc');
@@ -411,8 +413,10 @@ export function CalibrationKeysConfigPanel({
   );
 
   const toggleKeyExpansion = useCallback((keyId: number) => {
-    setExpandedKeys((prev) =>
-      prev.includes(keyId) ? prev.filter((k) => k !== keyId) : [...prev, keyId],
+    setExpandedKeys((previous) =>
+      previous.includes(keyId)
+        ? previous.filter((k) => k !== keyId)
+        : [...previous, keyId],
     );
   }, []);
 
@@ -422,10 +426,10 @@ export function CalibrationKeysConfigPanel({
         return;
       }
 
-      setSelectedKeyValues((prev) => {
-        const keySelections = prev[keyId] || {};
+      setSelectedKeyValues((previous) => {
+        const keySelections = previous[keyId] || {};
         return {
-          ...prev,
+          ...previous,
           [keyId]: {
             ...keySelections,
             [valueId]: !keySelections[valueId],
@@ -453,13 +457,13 @@ export function CalibrationKeysConfigPanel({
       const keySelections = selectedKeyValues[keyId] || {};
       const allSelected = key.values.every((v) => keySelections[v.id]);
 
-      setSelectedKeyValues((prev) => {
+      setSelectedKeyValues((previous) => {
         const newKeySelections: Record<number, boolean> = {};
-        key.values.forEach((v) => {
+        for (const v of key.values) {
           newKeySelections[v.id] = !allSelected;
-        });
+        }
         return {
-          ...prev,
+          ...previous,
           [keyId]: newKeySelections,
         };
       });
@@ -474,14 +478,14 @@ export function CalibrationKeysConfigPanel({
       }
 
       const newSelectedKeyValues: Record<number, Record<number, boolean>> = {};
-      filteredAndSortedKeys.forEach((keyName) => {
+      for (const keyName of filteredAndSortedKeys) {
         const key = availableKeys[keyName];
         const keySelections: Record<number, boolean> = {};
-        key.values.forEach((v) => {
+        for (const v of key.values) {
           keySelections[v.id] = checked;
-        });
+        }
         newSelectedKeyValues[key.id] = keySelections;
-      });
+      }
       setSelectedKeyValues(newSelectedKeyValues);
     },
     [filteredAndSortedKeys, availableKeys],
@@ -542,7 +546,7 @@ export function CalibrationKeysConfigPanel({
     setSearchTerm('');
 
     setTimeout(() => {
-      searchBarRef.current?.scrollIntoView({
+      searchBarReference.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -604,30 +608,30 @@ export function CalibrationKeysConfigPanel({
 
     // Get existing configs (exclude the one being edited)
     const existingConfigs =
-      editingIndex !== null
-        ? configuredCKVs.filter((_, i) => i !== editingIndex)
-        : configuredCKVs;
+      editingIndex === null
+        ? configuredCKVs
+        : configuredCKVs.filter((_, index) => index !== editingIndex);
 
     // Check for duplicates using IDs
     const uniqueNewConfigs: ConfiguredCkv[] = [];
-    newConfigs.forEach((newConfig) => {
-      const newConfigStr = newConfig.keyValuePairs
+    for (const newConfig of newConfigs) {
+      const newConfigString = newConfig.keyValuePairs
         .map((p) => `${p.key.id}:${p.value.id}`)
         .sort()
         .join('|');
 
       const isDuplicate = existingConfigs.some((existingConfig) => {
-        const existingConfigStr = existingConfig.keyValuePairs
+        const existingConfigString = existingConfig.keyValuePairs
           .map((p) => `${p.key.id}:${p.value.id}`)
           .sort()
           .join('|');
-        return existingConfigStr === newConfigStr;
+        return existingConfigString === newConfigString;
       });
 
       if (!isDuplicate) {
         uniqueNewConfigs.push(newConfig);
       }
-    });
+    }
 
     if (uniqueNewConfigs.length === 0) {
       return;
@@ -649,9 +653,9 @@ export function CalibrationKeysConfigPanel({
     }
 
     // Add new configurations
-    uniqueNewConfigs.forEach((config) => {
+    for (const config of uniqueNewConfigs) {
       addConfiguredKey(moduleId, instanceId, config);
-    });
+    }
 
     // Update module parameters in store if PIDs were modified
     if (pidsModified) {
@@ -669,7 +673,7 @@ export function CalibrationKeysConfigPanel({
     setInitialPidConfig(checkedPids);
 
     setTimeout(() => {
-      configSectionRef.current?.scrollIntoView({
+      configSectionReference.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -707,7 +711,7 @@ export function CalibrationKeysConfigPanel({
       const keysToExpand: number[] = [];
 
       // Use the Key and KeyValue objects directly
-      ckv.keyValuePairs.forEach((pair) => {
+      for (const pair of ckv.keyValuePairs) {
         if (!newSelectedValues[pair.key.id]) {
           newSelectedValues[pair.key.id] = {};
         }
@@ -715,14 +719,14 @@ export function CalibrationKeysConfigPanel({
         if (!keysToExpand.includes(pair.key.id)) {
           keysToExpand.push(pair.key.id);
         }
-      });
+      }
 
       // Update parameters based on the CKV's pidConfig
       if (ckv.pidConfig) {
         const pidConfigSet = new Set(ckv.pidConfig);
-        const updatedParameters = parameters.map((param) => ({
-          ...param,
-          checked: pidConfigSet.has(param.pid),
+        const updatedParameters = parameters.map((parameter) => ({
+          ...parameter,
+          checked: pidConfigSet.has(parameter.pid),
         }));
         setParameters(updatedParameters);
       }
@@ -734,7 +738,7 @@ export function CalibrationKeysConfigPanel({
       setSearchTerm('');
 
       setTimeout(() => {
-        searchBarRef.current?.scrollIntoView({
+        searchBarReference.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -764,7 +768,7 @@ export function CalibrationKeysConfigPanel({
   );
 
   const handleCancel = useCallback(() => {
-    const hasSelections = Object.values(selectedKeyValues).some((v) => v);
+    const hasSelections = Object.values(selectedKeyValues).some(Boolean);
     const isConfirmed: boolean = true;
     if (hasSelections) {
       // TODO: Notify and confirm from user
@@ -778,7 +782,7 @@ export function CalibrationKeysConfigPanel({
       setInitialEditSelections({});
       setExpandedKeys([]);
       setTimeout(() => {
-        configSectionRef.current?.scrollIntoView({
+        configSectionReference.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -834,7 +838,7 @@ export function CalibrationKeysConfigPanel({
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Configured CKVs Summary */}
-      <div ref={configSectionRef}>
+      <div ref={configSectionReference}>
         <ConfigSummaryView
           isEditable={isEditable}
           items={configuredItems}
@@ -849,9 +853,9 @@ export function CalibrationKeysConfigPanel({
       {/* CKV Parameters Section */}
       <CkvParametersSection
         isEditable={isEditable}
-        onParametersChange={(params) => {
+        onParametersChange={(parameters_) => {
           // Update local state immediately for UI responsiveness
-          setParameters(params);
+          setParameters(parameters_);
         }}
         parameters={parameters}
       />
@@ -859,7 +863,7 @@ export function CalibrationKeysConfigPanel({
       {/* Search and List Section */}
       {showSearchAndList && (
         <>
-          <div ref={searchBarRef} className="flex items-center gap-2">
+          <div ref={searchBarReference} className="flex items-center gap-2">
             <div className="flex-1">
               <ArcSearchBar
                 onSearchChange={setSearchTerm}

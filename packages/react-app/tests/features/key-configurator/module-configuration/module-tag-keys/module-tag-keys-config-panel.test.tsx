@@ -178,7 +178,7 @@ jest.mock('~shared/utils/converter-utils', () => ({
   ConvertNumberToHexString: (num: number) =>
     `0x${num.toString(16).toUpperCase()}`,
   ConvertStringToNumber: (str: string) => {
-    const num = parseInt(str, 16);
+    const num = Number.parseInt(str, 16);
     return isNaN(num) ? null : num;
   },
 }));
@@ -400,14 +400,14 @@ describe('ModuleTagKeysConfigPanel', () => {
   });
 
   it('shows alert when no tag group is selected on Apply', () => {
-    window.alert = jest.fn();
+    globalThis.alert = jest.fn();
 
     render(<ModuleTagKeysConfigPanel instanceId={1} isEditable moduleId={1} />);
 
     fireEvent.click(screen.getByText('Add'));
     fireEvent.click(screen.getByText('Apply'));
 
-    expect(window.alert).toHaveBeenCalledWith('Please select a tag group');
+    expect(globalThis.alert).toHaveBeenCalledWith('Please select a tag group');
   });
 
   it('edits existing TKV configuration', () => {
@@ -443,14 +443,14 @@ describe('ModuleTagKeysConfigPanel', () => {
   });
 
   it('cancels without confirmation when no selections exist', () => {
-    window.confirm = jest.fn();
+    globalThis.confirm = jest.fn();
 
     render(<ModuleTagKeysConfigPanel instanceId={1} isEditable moduleId={1} />);
 
     fireEvent.click(screen.getByText('Add'));
     fireEvent.click(screen.getByText('Cancel'));
 
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
     expect(
       screen.queryByPlaceholderText('Search module tag keys or values...'),
     ).not.toBeInTheDocument();

@@ -7,11 +7,14 @@ import type {
 } from '@audioreach-creator-ui/api-utils';
 
 declare global {
-  interface Window {
-    configApi: ConfigApi;
-    keyConfiguratorViewApi: KeyConfiguratorViewApi;
-    logViewApi: LogViewApi;
-    mruStoreApi: MruStoreApi;
-    projectContextApi: ProjectContextApi;
-  }
+  // eslint-disable-next-line no-var
+  var configApi: ConfigApi;
+  // eslint-disable-next-line no-var
+  var keyConfiguratorViewApi: KeyConfiguratorViewApi;
+  // eslint-disable-next-line no-var
+  var logViewApi: LogViewApi;
+  // eslint-disable-next-line no-var
+  var mruStoreApi: MruStoreApi;
+  // eslint-disable-next-line no-var
+  var projectContextApi: ProjectContextApi;
 }

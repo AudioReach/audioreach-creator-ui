@@ -344,7 +344,6 @@ const ValidationResultToolbar: React.FC = () => {
 
       {/* Copy Selected Result Button - only visible when a result is selected AND exists in filtered results */}
       {selectedRowId &&
-        filteredResults.length > 0 &&
         filteredResults.some((result) => result.id === selectedRowId) && (
           <Tooltip
             trigger={

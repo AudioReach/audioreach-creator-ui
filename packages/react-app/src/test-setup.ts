@@ -15,6 +15,14 @@ import {
   useState,
 } from 'react';
 
+// Polyfill for structuredClone if not available (Node.js < 17)
+if (globalThis.structuredClone === undefined) {
+  globalThis.structuredClone = function structuredClone<T>(obj: T): T {
+    // eslint-disable-next-line unicorn/prefer-structured-clone
+    return JSON.parse(JSON.stringify(obj));
+  };
+}
+
 // Suppress console warnings in tests (optional)
 const originalError = console.error;
 beforeAll(() => {
@@ -493,7 +501,7 @@ jest.mock('@qualcomm-ui/react/progress-ring', () => ({
           role: 'progressbar',
           ...props,
         },
-        value !== undefined ? `${value}%` : 'Loading...',
+        value === undefined ? 'Loading...' : `${value}%`,
       );
     }),
 }));

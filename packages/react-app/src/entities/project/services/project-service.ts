@@ -194,7 +194,7 @@ export class ProjectService {
         ? result.data.description
         : projectInfo.description;
       const name =
-        result.data.name !== undefined ? result.data.name : projectInfo.name;
+        result.data.name === undefined ? projectInfo.name : result.data.name;
 
       // Create project info for recent projects list
       const project: ProjectInfo = {

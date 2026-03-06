@@ -71,14 +71,14 @@ const EditorShellContent: React.FC = () => {
 
 export const EditorShell: React.FC = () => {
   const store = useProjectLayoutStore();
-  const initializedRef = useRef(false);
+  const initializedReference = useRef(false);
   const {isLogViewOpen, toggleLogView} = useLogView();
   const {isKeyConfiguratorViewOpen, toggleKeyConfiguratorView} =
     useKeyConfiguratorView();
 
   // Set up IPC listener for log view toggle from menu
   useEffect(() => {
-    if (!window.logViewApi) {
+    if (!globalThis.logViewApi) {
       logger.warn('Log View API not available', {
         action: 'setup_log_view_listener',
         component: 'EditorShell',
@@ -94,7 +94,7 @@ export const EditorShell: React.FC = () => {
       toggleLogView();
 
       // Update menu state to reflect the actual target state
-      window.logViewApi
+      globalThis.logViewApi
         .updateLogViewState(targetOpen)
         .catch((error: unknown) => {
           logger.error('Failed to update log view menu state', {
@@ -106,14 +106,14 @@ export const EditorShell: React.FC = () => {
     };
 
     // Register listener
-    const cleanup = window.logViewApi.onToggleLogView(handleToggleLogView);
+    const cleanup = globalThis.logViewApi.onToggleLogView(handleToggleLogView);
 
     return cleanup;
   }, [toggleLogView, isLogViewOpen]);
 
   // Set up IPC listener for key configurator view toggle from menu
   useEffect(() => {
-    if (!window.keyConfiguratorViewApi) {
+    if (!globalThis.keyConfiguratorViewApi) {
       logger.warn('Key Configurator View API not available', {
         action: 'setup_key_configurator_view_listener',
         component: 'EditorShell',
@@ -129,7 +129,7 @@ export const EditorShell: React.FC = () => {
       toggleKeyConfiguratorView();
 
       // Update menu state to reflect the actual target state
-      window.keyConfiguratorViewApi
+      globalThis.keyConfiguratorViewApi
         .updateKeyConfiguratorViewState(targetOpen)
         .catch((error: unknown) => {
           logger.error('Failed to update key configurator view menu state', {
@@ -141,7 +141,7 @@ export const EditorShell: React.FC = () => {
     };
 
     // Register listener
-    const cleanup = window.keyConfiguratorViewApi.onToggleKeyConfiguratorView(
+    const cleanup = globalThis.keyConfiguratorViewApi.onToggleKeyConfiguratorView(
       handleToggleKeyConfiguratorView,
     );
 
@@ -150,7 +150,7 @@ export const EditorShell: React.FC = () => {
 
   // Monitor active tab group and update menu state accordingly
   useEffect(() => {
-    if (!window.projectContextApi || !window.logViewApi) {
+    if (!globalThis.projectContextApi || !globalThis.logViewApi) {
       return;
     }
 
@@ -162,7 +162,7 @@ export const EditorShell: React.FC = () => {
 
     // Update project context in menu
     if (isViewingProject) {
-      window.projectContextApi
+      globalThis.projectContextApi
         .setProjectContext(true)
         .catch((error: unknown) => {
           logger.error('Failed to set project context', {
@@ -174,7 +174,7 @@ export const EditorShell: React.FC = () => {
 
       // Update log view menu state based on current project
       const logViewOpen = isLogViewOpen();
-      window.logViewApi
+      globalThis.logViewApi
         .updateLogViewState(logViewOpen)
         .catch((error: unknown) => {
           logger.error('Failed to update log view state on project change', {
@@ -186,7 +186,7 @@ export const EditorShell: React.FC = () => {
 
       // Update key configurator view menu state based on current project
       const keyConfiguratorViewOpen = isKeyConfiguratorViewOpen();
-      window.keyConfiguratorViewApi
+      globalThis.keyConfiguratorViewApi
         .updateKeyConfiguratorViewState(keyConfiguratorViewOpen)
         .catch((error: unknown) => {
           logger.error(
@@ -200,7 +200,7 @@ export const EditorShell: React.FC = () => {
         });
     } else {
       // We're on Start page or no active group - hide menu
-      window.projectContextApi
+      globalThis.projectContextApi
         .setProjectContext(false)
         .catch((error: unknown) => {
           logger.error('Failed to clear project context', {
@@ -215,10 +215,10 @@ export const EditorShell: React.FC = () => {
   // Initialize with a default app group and Start tab
   useEffect(() => {
     // Ensure initialization happens only once (important for React 18 Strict Mode)
-    if (initializedRef.current) {
+    if (initializedReference.current) {
       return;
     }
-    initializedRef.current = true;
+    initializedReference.current = true;
 
     // Check if default app group already exists
     const defaultAppGroup = store.appGroups.find(

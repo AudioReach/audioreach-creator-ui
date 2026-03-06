@@ -36,7 +36,7 @@ const columnHelper = createColumnHelper<LogEntry>();
 // Returns appropriate colored icon based on log severity level
 const getLogIcon = (logType: LogType) => {
   switch (logType) {
-    case LogType.Info:
+    case LogType.Info: {
       return (
         <Icon
           icon={Info}
@@ -44,7 +44,8 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-support-info)'}}
         />
       );
-    case LogType.Warning:
+    }
+    case LogType.Warning: {
       return (
         <Icon
           icon={TriangleAlert}
@@ -52,7 +53,8 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-support-warning)'}}
         />
       );
-    case LogType.Error:
+    }
+    case LogType.Error: {
       return (
         <Icon
           icon={X}
@@ -60,7 +62,8 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-support-danger)'}}
         />
       );
-    default:
+    }
+    default: {
       return (
         <Icon
           icon={Info}
@@ -68,6 +71,7 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-neutral-secondary)'}}
         />
       );
+    }
   }
 };
 
@@ -77,18 +81,18 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
     useLogViewStore();
   const isSelected = selectedRowLogId === logEntry.id;
   const isExpanded = logEntry.logMessageExpanded || false;
-  const spanRef = useRef<HTMLSpanElement>(null);
+  const spanReference = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   const checkOverflow = useCallback(() => {
-    const element = spanRef.current;
+    const element = spanReference.current;
     if (element) {
       setIsOverflowing(element.scrollWidth > element.clientWidth);
     }
   }, []);
 
   useEffect(() => {
-    const element = spanRef.current;
+    const element = spanReference.current;
     if (!element) {
       return;
     }
@@ -130,7 +134,7 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
         }}
         trigger={
           <span
-            ref={spanRef}
+            ref={spanReference}
             className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? 'font-bold' : ''}`}
           >
             {logEntry.message}
@@ -254,7 +258,7 @@ function LogViewTable() {
                     (header: Header<LogEntry, string>, index: number) => (
                       <Table.HeaderCell
                         key={header.id}
-                        className={`relative select-none ${index !== 0 ? 'border-neutral-09 border-l-2' : ''}`}
+                        className={`relative select-none ${index === 0 ? '' : 'border-neutral-09 border-l-2'}`}
                         style={{width: header.getSize()}}
                       >
                         <div className="inline-flex w-full items-center justify-between gap-2">

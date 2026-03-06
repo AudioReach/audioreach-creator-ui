@@ -31,23 +31,27 @@ import {useLogViewStore} from '../../model/use-log-view-store';
 // function to get the appropriate icon for each log type
 const getLogTypeIcon = (logType: LogType) => {
   switch (logType) {
-    case LogType.Info:
+    case LogType.Info: {
       return (
         <Info size={14} style={{color: 'var(--color-icon-support-info)'}} />
       );
-    case LogType.Warning:
+    }
+    case LogType.Warning: {
       return (
         <TriangleAlert
           size={14}
           style={{color: 'var(--color-icon-support-warning)'}}
         />
       );
-    case LogType.Error:
+    }
+    case LogType.Error: {
       return (
         <X size={14} style={{color: 'var(--color-icon-support-danger)'}} />
       );
-    default:
+    }
+    default: {
       return null;
+    }
   }
 };
 

@@ -25,7 +25,7 @@ import {useSubsystemConfigStore} from '../../model/subsystem-config-store';
 
 import {AVAILABLE_KEYS, SAMPLE_CONFIGURED_KEYS} from './subsystem-config.types';
 
-export interface SubsystemConfigPanelProps {
+export interface SubsystemConfigPanelProperties {
   isEditable: boolean;
   subsystemId: number;
 }
@@ -33,7 +33,7 @@ export interface SubsystemConfigPanelProps {
 export function SubsystemConfigPanel({
   isEditable,
   subsystemId,
-}: SubsystemConfigPanelProps) {
+}: SubsystemConfigPanelProperties) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showKeysList, setShowKeysList] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<number[]>([]);
@@ -135,9 +135,9 @@ export function SubsystemConfigPanel({
 
   const handleKeySelection = (id: number, checked: boolean) => {
     if (checked) {
-      setSelectedKeys((prev) => [...prev, id]);
+      setSelectedKeys((previous) => [...previous, id]);
     } else {
-      setSelectedKeys((prev) => prev.filter((keyId) => keyId !== id));
+      setSelectedKeys((previous) => previous.filter((keyId) => keyId !== id));
     }
   };
 
@@ -171,9 +171,9 @@ export function SubsystemConfigPanel({
 
     if (keysToAdd.length > 0) {
       // Add each key individually
-      keysToAdd.forEach((key) => {
+      for (const key of keysToAdd) {
         addConfiguredKey(subsystemId, key);
-      });
+      }
     }
 
     setSelectedKeys([]);

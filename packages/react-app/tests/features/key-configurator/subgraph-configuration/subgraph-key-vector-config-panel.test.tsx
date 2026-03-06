@@ -113,7 +113,7 @@ jest.mock('~shared/utils/converter-utils', () => ({
   ConvertNumberToHexString: (num: number) =>
     `0x${num.toString(16).toUpperCase()}`,
   ConvertStringToNumber: (str: string) => {
-    const num = parseInt(str, 16);
+    const num = Number.parseInt(str, 16);
     return isNaN(num) ? null : num;
   },
 }));
@@ -243,13 +243,13 @@ describe('SubgraphKeyVectorConfigPanel', () => {
   });
 
   it('deletes configuration when Delete button is clicked with confirmation', () => {
-    window.confirm = jest.fn(() => true);
+    globalThis.confirm = jest.fn(() => true);
 
     render(<SubgraphKeyVectorConfigPanel isEditable subgraphId={1} />);
 
     fireEvent.click(screen.getByTitle('Delete configuration'));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(globalThis.confirm).toHaveBeenCalled();
     expect(mockStoreState.updateConfiguredKeyValues).toHaveBeenCalledWith(
       1,
       [],
@@ -257,13 +257,13 @@ describe('SubgraphKeyVectorConfigPanel', () => {
   });
 
   it('does not delete configuration when confirmation is cancelled', () => {
-    window.confirm = jest.fn(() => false);
+    globalThis.confirm = jest.fn(() => false);
 
     render(<SubgraphKeyVectorConfigPanel isEditable subgraphId={1} />);
 
     fireEvent.click(screen.getByTitle('Delete configuration'));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(globalThis.confirm).toHaveBeenCalled();
     expect(mockStoreState.updateConfiguredKeyValues).not.toHaveBeenCalled();
   });
 
@@ -696,7 +696,7 @@ describe('SubgraphKeyVectorConfigPanel', () => {
   });
 
   it('cancels with confirmation when selections exist', () => {
-    window.confirm = jest.fn(() => true);
+    globalThis.confirm = jest.fn(() => true);
 
     const emptyState = {
       ...mockStoreState,
@@ -724,7 +724,7 @@ describe('SubgraphKeyVectorConfigPanel', () => {
   });
 
   it('cancels without confirmation when no selections exist', () => {
-    window.confirm = jest.fn();
+    globalThis.confirm = jest.fn();
 
     const emptyState = {
       ...mockStoreState,
@@ -743,7 +743,7 @@ describe('SubgraphKeyVectorConfigPanel', () => {
     // Click Cancel without making selections
     fireEvent.click(screen.getByText('Cancel'));
 
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
     expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
   });
 

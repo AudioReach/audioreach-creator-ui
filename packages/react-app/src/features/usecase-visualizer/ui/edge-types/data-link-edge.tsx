@@ -8,12 +8,12 @@ import {type FC, useState} from 'react';
 
 import type {EdgeProps} from '@xyflow/react';
 
-export const DataLinkEdge: FC<EdgeProps> = (props) => {
+export const DataLinkEdge: FC<EdgeProps> = (properties) => {
   const [isHovered, setIsHovered] = useState(false);
-  const {selected} = props;
+  const {selected} = properties;
 
   // Calculate offset based on connection metadata for visual separation
-  const data = props.data as Record<string, unknown>;
+  const data = properties.data as Record<string, unknown>;
 
   // Target-side connection metadata
   const connectionIndex = (data?.connectionIndex as number) ?? 0;
@@ -35,10 +35,10 @@ export const DataLinkEdge: FC<EdgeProps> = (props) => {
       : 0;
 
   // Calculate positions
-  const sourceX = props.sourceX;
-  const sourceY = props.sourceY + sourceOffset;
-  const targetX = props.targetX;
-  const targetY = props.targetY + targetOffset;
+  const sourceX = properties.sourceX;
+  const sourceY = properties.sourceY + sourceOffset;
+  const targetX = properties.targetX;
+  const targetY = properties.targetY + targetOffset;
 
   // Create clean right-angle path
   const midX = sourceX + (targetX - sourceX) * 0.5;

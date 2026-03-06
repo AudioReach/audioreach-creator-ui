@@ -107,7 +107,7 @@ async function main(argv: string[]) {
             return;
           }
           build.onEnd(async (result) => {
-            if (result.errors.length) {
+            if (result.errors.length > 0) {
               console.log(
                 '[build.ts] build errors detected, skipping electron restart',
               );

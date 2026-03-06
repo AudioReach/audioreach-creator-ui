@@ -19,8 +19,8 @@ export function mapUsecaseDtoToCategories(
   // Group usecases by category
   const categoryMap = new Map<string, UsecaseIdentifier[]>();
 
-  dtoArray.forEach((dto) => {
-    dto.usecases.forEach((usecaseIdentifier) => {
+  for (const dto of dtoArray) {
+    for (const usecaseIdentifier of dto.usecases) {
       // Determine category based on usecase type or alias
       const categoryName = usecaseIdentifier.usecaseAliasName
         ? 'Recently Selected'
@@ -30,17 +30,17 @@ export function mapUsecaseDtoToCategories(
         categoryMap.set(categoryName, []);
       }
       categoryMap.get(categoryName)!.push(usecaseIdentifier);
-    });
-  });
+    }
+  }
 
   // Convert map to array of categories
-  categoryMap.forEach((usecases, categoryName) => {
+  for (const [categoryName, usecases] of categoryMap.entries()) {
     categories.push({
       expanded: categoryName === 'Recently Selected', // Auto-expand recently selected
       name: categoryName,
       usecases,
     });
-  });
+  }
   return categories;
 }
 

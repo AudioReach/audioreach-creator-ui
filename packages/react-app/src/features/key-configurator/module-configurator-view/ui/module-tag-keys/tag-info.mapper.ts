@@ -14,7 +14,7 @@ import type {
   TagValueDefinitionInfo,
 } from '~entities/key-definitions/model/key-definition.dto';
 import type {
-  ParamDefinitionsSummaryInfo,
+  ParameterDefinitionsSummaryInfo,
   SpfModuleDefinitionResponseDto,
 } from '~entities/module-definitions/model/module-definition.dto';
 import type {GraphKey as ModuleTagKey} from '~shared/types/key-configurator-config.types';
@@ -34,17 +34,17 @@ export function transformTagsToConfiguredTKVs(
   const configuredTKVs: ConfiguredTkv[] = [];
 
   // Iterate through each tag group
-  tags.forEach((tag) => {
+  for (const tag of tags) {
     // Transform each TKV in the tag to a ConfiguredTKV
-    tag.tkvs.forEach((tkv) => {
+    for (const tkv of tag.tkvs) {
       const configuredTKV = transformTkvToConfiguredTKV(
         tkv,
         tag.tagName,
         tag.tagId,
       );
       configuredTKVs.push(configuredTKV);
-    });
-  });
+    }
+  }
 
   return configuredTKVs;
 }
@@ -70,7 +70,7 @@ function transformTkvToConfiguredTKV(
 
   // Map supported parameters to PID array
   const pidConfig = tkv.supportedParameters.map(
-    (paramInfo) => paramInfo.paramId,
+    (parameterInfo) => parameterInfo.paramId,
   );
 
   return {
@@ -96,9 +96,9 @@ export function transformTuningConfigToConfiguredTKVs(
  * @returns Array of TKVParameter with checked set to false by default
  */
 export function transformParamDefinitionsToTKVParameters(
-  paramDefinitions: ParamDefinitionsSummaryInfo[],
+  parameterDefinitions: ParameterDefinitionsSummaryInfo[],
 ): TkvParameter[] {
-  return paramDefinitions.map((paramDef) => ({
+  return parameterDefinitions.map((paramDef) => ({
     checked: false,
     name: paramDef.name,
     pid: paramDef.paramId,
@@ -144,7 +144,7 @@ function transformTagKeyDefinitionToModuleTagKey(
   return {
     id: keyDto.keyId,
     name: keyDto.name,
-    values: keyDto.values.map(transformTagValueDefinition),
+    values: keyDto.values.map((value) => transformTagValueDefinition(value)),
   };
 }
 
@@ -156,13 +156,11 @@ function transformTagKeyDefinitionToModuleTagKey(
 function transformTagKeyDefinitionsToModuleTagKeys(
   keyDefinitions: TagKeyDefinitionInfo[],
 ): Record<string, ModuleTagKey> {
-  return keyDefinitions.reduce(
-    (acc, keyDef) => {
-      acc[keyDef.name] = transformTagKeyDefinitionToModuleTagKey(keyDef);
-      return acc;
-    },
-    {} as Record<string, ModuleTagKey>,
-  );
+  const result: Record<string, ModuleTagKey> = {};
+  for (const keyDef of keyDefinitions) {
+    result[keyDef.name] = transformTagKeyDefinitionToModuleTagKey(keyDef);
+  }
+  return result;
 }
 
 /**
@@ -188,11 +186,9 @@ function transformTagDefinitionToTagGroup(
 export function transformTagDefinitionsToTagGroups(
   tagDefinitions: TagDefinitionResponseDto[],
 ): Record<string, TagGroup> {
-  return tagDefinitions.reduce(
-    (acc, tagDef) => {
-      acc[tagDef.name] = transformTagDefinitionToTagGroup(tagDef);
-      return acc;
-    },
-    {} as Record<string, TagGroup>,
-  );
+  const result: Record<string, TagGroup> = {};
+  for (const tagDef of tagDefinitions) {
+    result[tagDef.name] = transformTagDefinitionToTagGroup(tagDef);
+  }
+  return result;
 }

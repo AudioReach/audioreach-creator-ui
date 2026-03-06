@@ -35,7 +35,7 @@ import {useSubgraphConfigStore} from '../../model/subgraph-config-store';
 
 import type {ConfiguredSubgraphKeyValue} from './subgraph-config.types';
 
-interface SubgraphKeyVectorConfigPanelProps {
+interface SubgraphKeyVectorConfigPanelProperties {
   isEditable: boolean;
   subgraphId: number;
 }
@@ -43,7 +43,7 @@ interface SubgraphKeyVectorConfigPanelProps {
 export function SubgraphKeyVectorConfigPanel({
   isEditable,
   subgraphId,
-}: SubgraphKeyVectorConfigPanelProps) {
+}: SubgraphKeyVectorConfigPanelProperties) {
   // Get store state
   const availableKeys = useSubgraphConfigStore((state) => state.availableKeys);
   const configuredKeyValuesArray = useSubgraphConfigStore(
@@ -88,8 +88,8 @@ export function SubgraphKeyVectorConfigPanel({
   const [initialEditValues, setInitialEditValues] = useState<
     Record<number, number>
   >({});
-  const configSectionRef = useRef<HTMLDivElement>(null);
-  const searchBarRef = useRef<HTMLDivElement>(null);
+  const configSectionReference = useRef<HTMLDivElement>(null);
+  const searchBarReference = useRef<HTMLDivElement>(null);
 
   // Get all key names
   const allKeyNames = Object.keys(availableGraphKeys);
@@ -132,7 +132,9 @@ export function SubgraphKeyVectorConfigPanel({
         }
         // Hex string match
         const valueIdHex = ConvertNumberToHexString(v.id);
-        return valueIdHex && valueIdHex.toLowerCase().includes(searchLower);
+        const result =
+          valueIdHex != null && valueIdHex.toLowerCase().includes(searchLower);
+        return result;
       });
 
       // Auto-expand keys with matching values
@@ -229,9 +231,9 @@ export function SubgraphKeyVectorConfigPanel({
     // Load configured keys into selection state
     const keys = new Set(configuredKeyValues.map((kv) => kv.keyInfo.id));
     const values: Record<number, number> = {};
-    configuredKeyValues.forEach((kv) => {
+    for (const kv of configuredKeyValues) {
       values[kv.keyInfo.id] = kv.valueInfo.id;
-    });
+    }
 
     setSelectedKeys(keys);
     setSelectedValues(values);
@@ -242,7 +244,7 @@ export function SubgraphKeyVectorConfigPanel({
 
     // Scroll to keys list section
     setTimeout(() => {
-      searchBarRef.current?.scrollIntoView({
+      searchBarReference.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -250,7 +252,9 @@ export function SubgraphKeyVectorConfigPanel({
   };
 
   const handleDeleteClick = () => {
-    if (window.confirm('Are you sure you want to delete this configuration?')) {
+    if (
+      globalThis.confirm('Are you sure you want to delete this configuration?')
+    ) {
       updateConfiguredKeyValues(subgraphId, []);
       // Clear selections if in edit mode
       if (showKeysList) {
@@ -348,7 +352,7 @@ export function SubgraphKeyVectorConfigPanel({
     // Build configuration from selected keys and values
     const newConfigs: ConfiguredSubgraphKeyValue[] = [];
 
-    selectedKeys.forEach((keyId) => {
+    for (const keyId of selectedKeys) {
       const valueId = selectedValues[keyId];
       if (valueId !== undefined) {
         // Find the key by ID
@@ -366,7 +370,7 @@ export function SubgraphKeyVectorConfigPanel({
           }
         }
       }
-    });
+    }
 
     if (newConfigs.length === 0) {
       alert('Please select at least one key-value pair.');
@@ -379,9 +383,9 @@ export function SubgraphKeyVectorConfigPanel({
     }
 
     // Add new configurations using the store's addConfiguredKey method
-    newConfigs.forEach((config) => {
+    for (const config of newConfigs) {
       addConfiguredKey(subgraphId, config);
-    });
+    }
 
     setShowKeysList(false);
     setIsEditing(false);
@@ -413,7 +417,7 @@ export function SubgraphKeyVectorConfigPanel({
         setInitialEditValues({});
         // Scroll to configuration section
         setTimeout(() => {
-          configSectionRef.current?.scrollIntoView({
+          configSectionReference.current?.scrollIntoView({
             behavior: 'smooth',
             block: 'start',
           });
@@ -427,7 +431,7 @@ export function SubgraphKeyVectorConfigPanel({
       setInitialEditValues({});
       // Scroll to configuration section
       setTimeout(() => {
-        configSectionRef.current?.scrollIntoView({
+        configSectionReference.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -449,19 +453,19 @@ export function SubgraphKeyVectorConfigPanel({
     <div className="flex flex-col gap-4 p-2">
       {/* Configuration Key Section */}
       <div
-        ref={configSectionRef}
+        ref={configSectionReference}
         className="rounded border p-4"
         style={{
           backgroundColor: 'var(--color-surface-secondary)',
           borderColor: 'var(--color-border-neutral-02)',
         }}
       >
-        <label
+        <h3
           className="mb-2 block text-sm font-medium"
           style={{color: 'var(--color-text-neutral-primary)'}}
         >
           Subgraph Key Vector
-        </label>
+        </h3>
         <div className="flex items-center gap-2">
           <div
             className="min-h-[40px] flex-1 whitespace-pre-line rounded border p-3 text-left text-sm"
@@ -538,7 +542,7 @@ export function SubgraphKeyVectorConfigPanel({
 
       {/* Search Container */}
       {showKeysList && (
-        <div ref={searchBarRef} className="flex items-center gap-2">
+        <div ref={searchBarReference} className="flex items-center gap-2">
           <div className="flex-1">
             <ArcSearchBar
               onSearchChange={setSearchTerm}
@@ -703,7 +707,7 @@ export function SubgraphKeyVectorConfigPanel({
                           if (target.value) {
                             handleValueSelect(
                               key.id,
-                              parseInt(target.value, 10),
+                              Number.parseInt(target.value, 10),
                             );
                           }
                         }}

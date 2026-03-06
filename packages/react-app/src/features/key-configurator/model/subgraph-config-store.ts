@@ -196,10 +196,10 @@ export const useSubgraphConfigStore = create<SubgraphConfigStore>(
         subgraphId,
       };
 
-      if (existingIndex >= 0) {
-        newConfiguredKeyValues[existingIndex] = newEntry;
-      } else {
+      if (existingIndex === -1) {
         newConfiguredKeyValues.push(newEntry);
+      } else {
+        newConfiguredKeyValues[existingIndex] = newEntry;
       }
 
       set({configuredKeyValues: newConfiguredKeyValues});

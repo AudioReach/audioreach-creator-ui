@@ -24,7 +24,7 @@ interface ConfigSummaryItem {
   label: string;
 }
 
-interface ConfigSummaryViewProps {
+interface ConfigSummaryViewProperties {
   isEditable: boolean;
   items: ConfigSummaryItem[];
   onAddClick?: () => void;
@@ -42,7 +42,7 @@ export function ConfigSummaryView({
   onEditItem,
   showEditIcon = false,
   title,
-}: ConfigSummaryViewProps) {
+}: ConfigSummaryViewProperties) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -79,9 +79,9 @@ export function ConfigSummaryView({
     const idsToDelete = filteredItems
       .map((item) => item.id)
       .sort((a, b) => b - a);
-    idsToDelete.forEach((id) => {
+    for (const id of idsToDelete) {
       onDeleteItem?.(id);
-    });
+    }
   };
 
   const handleAddClick = () => {

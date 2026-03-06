@@ -10,12 +10,14 @@
       "outputLogs": "new-only"
     },
     "lint": {
+      "cache": true,
       "inputs": [
         "src/**/*",
         "tests/**/*",
         "scripts/**/*",
         "*.{ts,tsx,js,jsx,mjs,cjs,json,html,css,scss,md,mdx,yaml}"
       ],
+      "outputs": [".eslintcache"],
       "outputLogs": "new-only"
     },
     "test": {

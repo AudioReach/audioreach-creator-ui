@@ -38,7 +38,7 @@ export function useTheme(): [Theme, (theme: Theme) => void] {
   return [context.theme, context.setTheme];
 }
 
-interface ThemeProviderProps {
+interface ThemeProviderProperties {
   children: ReactNode;
 }
 
@@ -49,7 +49,7 @@ interface ThemeProviderProps {
  * - Updates HTML data-theme attribute for Qualcomm UI components
  * - Provides theme state and setter via useTheme hook
  */
-export function ThemeProvider({children}: ThemeProviderProps) {
+export function ThemeProvider({children}: ThemeProviderProperties) {
   const [configReady, setConfigReady] = useState(false);
   const [theme, setThemeState] = useState<Theme>(Theme.Light);
 
@@ -79,11 +79,12 @@ export function ThemeProvider({children}: ThemeProviderProps) {
   useEffect(() => {
     if (configReady) {
       const html = document.documentElement;
-      html.setAttribute('data-theme', theme);
+      html.dataset.theme = theme;
     }
   }, [theme, configReady]);
 
   const setTheme = async (newTheme: Theme) => {
+    const previousTheme = theme;
     setThemeState(newTheme);
     // Save theme to config file
     try {
@@ -96,7 +97,7 @@ export function ThemeProvider({children}: ThemeProviderProps) {
         error: error instanceof Error ? error.message : String(error),
       });
       // revert to previous theme on save failure
-      setThemeState(theme);
+      setThemeState(previousTheme);
     }
   };
 

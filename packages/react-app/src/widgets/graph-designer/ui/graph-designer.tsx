@@ -42,14 +42,14 @@ import {useUsecaseStore} from '~shared/store/use-usecase-store';
 
 const EMPTY_SELECTED_USECASES: string[] = [];
 
-interface GraphDesignerProps {
+interface GraphDesignerProperties {
   projectGroupId: string;
   screenshotRegistry: Map<string, () => Promise<string | null>>;
   tabId?: string;
   usecaseData: UsecaseCategory[];
 }
 
-const GraphDesigner: React.FC<GraphDesignerProps> = ({
+const GraphDesigner: React.FC<GraphDesignerProperties> = ({
   projectGroupId,
   screenshotRegistry,
   tabId,
@@ -75,9 +75,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Handle screenshot function registration - directly register with passed registry
   const handleScreenshotReady = (
-    screenshotFn: () => Promise<string | null>,
+    screenshotFunction: () => Promise<string | null>,
   ) => {
-    screenshotRegistry.set(projectGroupId, screenshotFn);
+    screenshotRegistry.set(projectGroupId, screenshotFunction);
     logger.verbose('Screenshot function registered', {
       action: 'register_screenshot',
       component: 'GraphDesigner',
@@ -160,23 +160,23 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             component: 'GraphDesigner',
           });
         } else {
-          const errorMsg =
+          const errorMessage =
             result.message || 'Failed to fetch usecase components';
-          setError(errorMsg);
+          setError(errorMessage);
           logger.error('Failed to fetch usecase components', {
             action: 'fetch_graph_data',
             component: 'GraphDesigner',
-            error: errorMsg,
+            error: errorMessage,
           });
         }
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Unknown error occurred';
-        setError(errorMsg);
+      } catch (error_) {
+        const errorMessage =
+          error_ instanceof Error ? error_.message : 'Unknown error occurred';
+        setError(errorMessage);
         logger.error('Error fetching usecase components', {
           action: 'fetch_graph_data',
           component: 'GraphDesigner',
-          error: errorMsg,
+          error: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -233,7 +233,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         id: 'copy',
         label: 'Copy',
         shortcut: 'Ctrl+C',
-        tooltip: !hasSelection ? 'Copy is currently unavailable' : '',
+        tooltip: hasSelection ? '' : 'Copy is currently unavailable',
       },
       {
         group: 'Edit',

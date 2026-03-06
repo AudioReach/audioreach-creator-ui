@@ -222,10 +222,10 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
         subsystemId,
       };
 
-      if (existingIndex >= 0) {
-        newConfiguredKeys[existingIndex] = newEntry;
-      } else {
+      if (existingIndex === -1) {
         newConfiguredKeys.push(newEntry);
+      } else {
+        newConfiguredKeys[existingIndex] = newEntry;
       }
 
       set({configuredKeys: newConfiguredKeys});

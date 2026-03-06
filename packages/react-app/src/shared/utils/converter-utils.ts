@@ -5,22 +5,22 @@
 
 // converts a string input that may be decimal or hex ("0xFF" or "ff") into a number
 export function ConvertStringToNumber(searchTerm: string): number | null {
-  const strToLower = searchTerm.trim().toLowerCase();
+  const stringToLower = searchTerm.trim().toLowerCase();
 
   // if string is empty after trimming, it’s invalid
-  if (!strToLower) {
+  if (!stringToLower) {
     return null;
   }
 
   let result: number;
 
   // explicit hex prefix
-  if (/^0x[0-9a-f]+$/.test(strToLower)) {
-    result = parseInt(strToLower, 16);
+  if (/^0x[0-9a-f]+$/.test(stringToLower)) {
+    result = Number.parseInt(stringToLower, 16);
   }
   // digits only -> decimal
-  else if (/^\d+$/.test(strToLower)) {
-    result = parseInt(strToLower, 10);
+  else if (/^\d+$/.test(stringToLower)) {
+    result = Number.parseInt(stringToLower, 10);
   } else {
     return null;
   }

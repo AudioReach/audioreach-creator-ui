@@ -11,13 +11,13 @@ export interface ModuleInstanceTuningConfigDto {
 
 export interface CkvDto {
   keyValueCollection: KeyValueInfo[];
-  supportedParameters: ParamInfo[];
+  supportedParameters: ParameterInfo[];
   systemId: string;
 }
 
 export interface TkvDto {
   keyValueCollection: KeyValueInfo[];
-  supportedParameters: ParamInfo[];
+  supportedParameters: ParameterInfo[];
   systemId: string;
 }
 
@@ -28,7 +28,7 @@ export interface TagInfoDto {
   tkvs: TkvDto[];
 }
 
-export interface ParamInfo {
+export interface ParameterInfo {
   description: string;
   name: string;
   paramId: number;

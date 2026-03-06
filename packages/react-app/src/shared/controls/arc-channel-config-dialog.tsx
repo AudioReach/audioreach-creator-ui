@@ -13,7 +13,7 @@ import ArcCombobox from './arc-combobox';
 import ArcTextInput from './arc-text-input';
 import './arc-channel-config-dialog.css';
 
-export interface ArcChannelConfigDialogProps {
+export interface ArcChannelConfigDialogProperties {
   maxChannelCount?: number;
   onClose: () => void;
   onSave?: (channelConfig: {[key: number]: string}) => void;
@@ -28,7 +28,7 @@ interface ValidationResult {
   message?: string;
 }
 
-const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
+const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProperties> = ({
   maxChannelCount,
   onClose,
   onSave,
@@ -36,7 +36,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   selectedChannelValues = {},
   validateDuplicates = true,
 }) => {
-  const popupRef = useRef<HTMLDivElement>(null);
+  const popupReference = useRef<HTMLDivElement>(null);
 
   // Auto-populate logic: if no selected values provided but maxChannelCount exists,
   // set default count to maxChannelCount
@@ -55,10 +55,10 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
 
     if (maxChannelCount && Object.keys(selectedChannelValues).length === 0) {
       const autoValues: {[key: number]: string} = {};
-      for (let i = 0; i < maxChannelCount; i++) {
+      for (let index = 0; index < maxChannelCount; index++) {
         // Use options array values on index basis, or fallback to dynamic channel
         // naming
-        autoValues[i] = options[i] || `channel_${i}`;
+        autoValues[index] = options[index] || `channel_${index}`;
       }
       return autoValues;
     }
@@ -99,46 +99,46 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   }, []);
 
   // Track previous channel count to detect changes
-  const prevChannelCountRef = useRef<number>(channelCount);
+  const previousChannelCountReference = useRef<number>(channelCount);
 
   // Update channel values when count changes
   useEffect(() => {
     // Only proceed if channel count actually changed
-    if (prevChannelCountRef.current === channelCount) {
+    if (previousChannelCountReference.current === channelCount) {
       return;
     }
 
-    setChannelValues((prevChannelValues) => {
+    setChannelValues((previousChannelValues) => {
       // Create a new object with the current channel count
-      const newChannelValues = {...prevChannelValues};
+      const newChannelValues = {...previousChannelValues};
 
       // Add new channels if needed
-      for (let i = 0; i < channelCount; i++) {
-        if (!newChannelValues[i]) {
+      for (let index = 0; index < channelCount; index++) {
+        if (!newChannelValues[index]) {
           // Use options array values on index basis, or fallback to dynamic channel
           // naming
-          newChannelValues[i] = options[i] || `channel_${i}`;
+          newChannelValues[index] = options[index] || `channel_${index}`;
         }
       }
 
       // Remove extra channels if count decreased
-      Object.keys(newChannelValues).forEach((key) => {
-        const channelNumber = parseInt(key, 10);
+      for (const key of Object.keys(newChannelValues)) {
+        const channelNumber = Number.parseInt(key, 10);
         if (channelNumber >= channelCount) {
           delete newChannelValues[channelNumber];
         }
-      });
+      }
 
       return newChannelValues;
     });
 
     // Update the previous channel count ref
-    prevChannelCountRef.current = channelCount;
+    previousChannelCountReference.current = channelCount;
   }, [channelCount, options]);
 
   // Handle channel count change
   const handleChannelCountChange = (value: string) => {
-    const count = parseInt(value, 10);
+    const count = Number.parseInt(value, 10);
     if (
       !isNaN(count) &&
       count >= 0 &&
@@ -157,8 +157,8 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
     const stringValue =
       value === null ? '' : Array.isArray(value) ? value[0] || '' : value || '';
 
-    setChannelValues((prev) => ({
-      ...prev,
+    setChannelValues((previous) => ({
+      ...previous,
       [channelNumber]: stringValue,
     }));
   };
@@ -176,22 +176,22 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
     const valueToChannels: {[key: string]: number[]} = {};
 
     // Group channels by their values (excluding empty values)
-    Object.entries(channelValues).forEach(([channelKey, value]) => {
+    for (const [channelKey, value] of Object.entries(channelValues)) {
       if (value && value.trim() !== '') {
         const trimmedValue = value.trim();
         if (!valueToChannels[trimmedValue]) {
           valueToChannels[trimmedValue] = [];
         }
-        valueToChannels[trimmedValue].push(parseInt(channelKey, 10));
+        valueToChannels[trimmedValue].push(Number.parseInt(channelKey, 10));
       }
-    });
+    }
 
     // Find duplicates
-    Object.entries(valueToChannels).forEach(([value, channels]) => {
+    for (const [value, channels] of Object.entries(valueToChannels)) {
       if (channels.length > 1) {
         duplicates[value] = channels;
       }
-    });
+    }
 
     const isValid = Object.keys(duplicates).length === 0;
     const message = isValid
@@ -232,8 +232,8 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
 
     // Add missing channels up to the current channel count, not maxChannelCount
     if (options.length < channelCount) {
-      for (let i = options.length; i < channelCount; i++) {
-        allOptions.push(`channel_${i}`);
+      for (let index = options.length; index < channelCount; index++) {
+        allOptions.push(`channel_${index}`);
       }
     }
 
@@ -244,10 +244,10 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   const renderChannelInputs = () => {
     const inputs = [];
 
-    for (let i = 0; i < channelCount; i++) {
-      const displayLabel = `Channel ${i}`;
-      const isDuplicate = isChannelDuplicate(i);
-      const currentValue = channelValues[i] || '';
+    for (let index = 0; index < channelCount; index++) {
+      const displayLabel = `Channel ${index}`;
+      const isDuplicate = isChannelDuplicate(index);
+      const currentValue = channelValues[index] || '';
 
       // Create options array with current value included for filtering support
       const optionsWithCurrentValue =
@@ -256,7 +256,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
           : extendedOptions;
 
       inputs.push(
-        <div key={i} className="channel-config-item">
+        <div key={index} className="channel-config-item">
           <div className="channel-config-row">
             <label className="channel-config-label">{displayLabel}</label>
             <div className="channel-config-input">
@@ -265,7 +265,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
                 filterable
                 fullWidth
                 hint={isDuplicate ? 'Duplicate value' : undefined}
-                onChange={(value) => handleChannelValueChange(i, value)}
+                onChange={(value) => handleChannelValueChange(index, value)}
                 options={optionsWithCurrentValue}
                 placeholder={displayLabel}
                 value={currentValue}
@@ -282,7 +282,7 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
   return (
     <div className="popup-overlay">
       <div
-        ref={popupRef}
+        ref={popupReference}
         aria-labelledby="arc-popup-title"
         aria-modal="true"
         className="popup-content"
@@ -306,9 +306,9 @@ const ArcChannelConfigDialog: React.FC<ArcChannelConfigDialogProps> = ({
         <div className="popup-body">
           <div className="channel-config-container">
             <div className="channel-config-row">
-              <label className="channel-config-label-config">
+              <div className="channel-config-label-config">
                 Number of channels:
-              </label>
+              </div>
               <div className="channel-config-input-wrapper">
                 <ArcTextInput
                   max={maxChannelCount}

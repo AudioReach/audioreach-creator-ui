@@ -32,7 +32,7 @@ export function deepEqual<T>(a: T, b: T, seen = new WeakMap()): boolean {
   }
 
   // Handle null and undefined
-  if (a == null || b == null) {
+  if (a == undefined || b == undefined) {
     return a === b;
   }
 
@@ -65,8 +65,8 @@ export function deepEqual<T>(a: T, b: T, seen = new WeakMap()): boolean {
       return false;
     }
 
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) {
+    for (let index = 0; index < a.length; index++) {
+      if (!deepEqual(a[index], b[index])) {
         return false;
       }
     }

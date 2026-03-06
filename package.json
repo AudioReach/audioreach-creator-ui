@@ -13,10 +13,10 @@
     "dev:electron": "pnpm run -C packages/electron-app dev",
     "typecheck": "cross-env FORCE_COLOR=1 turbo run typecheck",
     "package": "cross-env FORCE_COLOR=1 turbo run package",
-    "lint": "cross-env FORCE_COLOR=1 turbo run lint",
+    "lint": "cross-env FORCE_COLOR=1 turbo run lint --continue",
     "lint:ci": "cross-env FORCE_COLOR=1 turbo run lint --continue",
     "lint:cache": "cross-env FORCE_COLOR=1 turbo run lint --cache-dir=.eslintcache",
-    "lint:fix": "cross-env FORCE_COLOR=1 turbo run lint -- --fix",
+    "lint:fix": "cross-env FORCE_COLOR=1 turbo run lint --continue -- --fix",
     "test": "cross-env FORCE_COLOR=1 turbo run test --env-mode=loose",
     "test:ci": "cross-env FORCE_COLOR=1 turbo run test:ci --env-mode=loose",
     "release": "cross-env FORCE_COLOR=1 turbo run make",
@@ -29,6 +29,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "9.31.0",
     "@qualcomm-ui/eslint-config-fsd": "^1.0.1",
     "@qualcomm-ui/eslint-config-mdx": "^1.1.0",
     "@qualcomm-ui/eslint-config-react": "^1.1.0",
@@ -38,7 +39,16 @@
     "@typescript-eslint/parser": "^8.36.0",
     "cross-env": "^7.0.3",
     "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-n": "^17.24.0",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-security": "^4.0.0",
+    "eslint-plugin-sonarjs": "^4.0.0",
+    "eslint-plugin-unicorn": "^63.0.0",
     "jest-junit": "^16.0.0",
     "npm-run-all2": "^8.0.4",
     "prettier": "^3.6.2",
@@ -47,6 +57,5 @@
     "typescript": "5.8.3",
     "typescript-eslint": "^8.36.0"
   },
-  "packageManager": "pnpm@10.26.0",
-  "dependencies": {}
+  "packageManager": "pnpm@10.26.0"
 }

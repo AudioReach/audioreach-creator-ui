@@ -15,7 +15,7 @@ import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 import SearchBox from './search-box';
 import SubsystemTreeNode from './subsystem-tree-node';
 
-interface SubsystemTreeViewProps {
+interface SubsystemTreeViewProperties {
   data: SubsystemBrowserTreeNode[];
   onClick: (id: number) => void;
 }
@@ -55,15 +55,18 @@ function collectAncestorIdsForMatches(
       // Expand the entire ancestor path so this node becomes visible
       ids.push(...path);
     }
-    if (childMatches.length) {
+    if (childMatches.length > 0) {
       // If any descendant matches, this node should also be expanded
       ids.push(node.id, ...childMatches);
     }
   }
-  return Array.from(new Set(ids));
+  return [...new Set(ids)];
 }
 
-const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
+const SubsystemTreeView: FC<SubsystemTreeViewProperties> = ({
+  data,
+  onClick,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
   // to reduce traversal frequency of searchTerm
@@ -71,7 +74,10 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
 
   const isExpanded = (id: number) => !!expandedIds[id]; // !! guarantees the result is strictly a boolean, not undefined, null, or other truthy/falsy values
   const toggleNode = (id: number) => {
-    setExpandedIds((prevState) => ({...prevState, [id]: !prevState[id]}));
+    setExpandedIds((previousState) => ({
+      ...previousState,
+      [id]: !previousState[id],
+    }));
   };
 
   // Debounce the search term
@@ -91,11 +97,11 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
 
     // controls expansion
     const idsToExpand = collectAncestorIdsForMatches(data, term);
-    setExpandedIds((prev) => {
-      const next = {...prev};
-      idsToExpand.forEach((id) => {
+    setExpandedIds((previous) => {
+      const next = {...previous};
+      for (const id of idsToExpand) {
         next[id] = true;
-      });
+      }
       return next;
     });
   }, [debouncedSearchTerm, data]);
@@ -110,15 +116,11 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
     if (isFullyExpanded) {
       setExpandedIds({});
     } else {
-      setExpandedIds(
-        allIds.reduce(
-          (acc, id) => {
-            acc[id] = true;
-            return acc;
-          },
-          {} as Record<number, boolean>,
-        ),
-      );
+      const expanded: Record<number, boolean> = {};
+      for (const id of allIds) {
+        expanded[id] = true;
+      }
+      setExpandedIds(expanded);
     }
   };
 

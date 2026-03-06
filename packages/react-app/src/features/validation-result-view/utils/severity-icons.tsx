@@ -14,7 +14,7 @@ import {SeverityType} from '../model/validation-result.types';
  */
 export const getSeverityIcon = (severity: string) => {
   switch (severity as SeverityType) {
-    case SeverityType.Critical:
+    case SeverityType.Critical: {
       return (
         <Icon
           icon={TriangleAlert}
@@ -24,7 +24,8 @@ export const getSeverityIcon = (severity: string) => {
           }}
         />
       );
-    case SeverityType.Error:
+    }
+    case SeverityType.Error: {
       return (
         <Icon
           icon={X}
@@ -34,7 +35,8 @@ export const getSeverityIcon = (severity: string) => {
           }}
         />
       );
-    case SeverityType.Warning:
+    }
+    case SeverityType.Warning: {
       return (
         <Icon
           icon={TriangleAlert}
@@ -44,7 +46,8 @@ export const getSeverityIcon = (severity: string) => {
           }}
         />
       );
-    default:
+    }
+    default: {
       return (
         <Icon
           icon={Info}
@@ -54,5 +57,6 @@ export const getSeverityIcon = (severity: string) => {
           }}
         />
       );
+    }
   }
 };

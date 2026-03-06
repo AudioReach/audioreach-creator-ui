@@ -57,7 +57,9 @@ function backoffDelay(
   jitterMs: number,
 ): number {
   const exp = Math.min(attempt + 1, 8); // cap exponent
-  const raw = baseMs * Math.pow(2, exp);
+  const raw = baseMs * 2 ** exp;
+  // Using Math.random() for retry jitter is acceptable for non-security purposes
+  // eslint-disable-next-line sonarjs/pseudo-random
   const jitter = Math.floor(Math.random() * jitterMs);
   return raw + jitter;
 }
@@ -79,7 +81,7 @@ export class HttpClient {
 
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl ?? getBackendBaseUrl();
-    this.timeoutMs = config.timeoutMs ?? 30000; // 30s default
+    this.timeoutMs = config.timeoutMs ?? 30_000; // 30s default
     this.maxRetries = config.maxRetries ?? 3;
     this.retryBaseDelayMs = config.retryBaseDelayMs ?? 500;
     this.retryJitterMs = config.retryJitterMs ?? 250;
@@ -126,7 +128,7 @@ export class HttpClient {
       body,
       headers: {
         'Content-Type': 'application/json',
-        ...(overrides?.headers ?? {}),
+        ...overrides?.headers,
       },
       method: 'PATCH',
       retries: overrides?.retries,
@@ -144,10 +146,10 @@ export class HttpClient {
     // Don't set Content-Type for FormData - browser will set it with boundary
     const isFormData = body instanceof FormData;
     const headers = isFormData
-      ? {...(overrides?.headers ?? {})}
+      ? {...overrides?.headers}
       : {
           'Content-Type': 'application/json',
-          ...(overrides?.headers ?? {}),
+          ...overrides?.headers,
         };
 
     return this.request<T>(endpoint, {
@@ -166,10 +168,13 @@ export class HttpClient {
     endpoint: string,
     options: RequestOptions,
   ): Promise<ApiResult<T>> {
+    // eslint-disable-next-line sonarjs/slow-regex
     const baseRoot = this.baseUrl.replace(/\/v\d+\/?$/, '').replace(/\/+$/, '');
     const chosenVersion = options.apiVersion ?? this.apiVersion;
     const ep = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const normalizedEndpoint = /^\/v\d+(?:\/|$)/.test(ep)
+    // eslint-disable-next-line sonarjs/slow-regex
+    const versionPattern = /^\/v\d+(?:\/|$)/;
+    const normalizedEndpoint = versionPattern.test(ep)
       ? ep
       : `/${chosenVersion}${ep}`;
     const url = `${baseRoot}${normalizedEndpoint}`;

@@ -51,14 +51,14 @@ export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
         </div>
 
         {/* Control handles on top - both source and target for flexibility */}
-        {controlPorts.map((p, i) => (
+        {controlPorts.map((p, index) => (
           <div key={`Control:${p.id}`}>
             <Handle
               className="absolute -top-1 h-2 w-2 rounded-full"
               id={`Control:${p.id}-source`}
               position={Position.Top}
               style={{
-                ...getTopHandleStyle(i, controlPorts.length),
+                ...getTopHandleStyle(index, controlPorts.length),
                 backgroundColor: 'var(--color-background-neutral-06)',
                 border: '1px solid var(--color-border-neutral-10)',
               }}
@@ -69,7 +69,7 @@ export const ModuleNode: FC<NodeProps> = ({data, selected}) => {
               id={`Control:${p.id}-target`}
               position={Position.Top}
               style={{
-                ...getTopHandleStyle(i, controlPorts.length),
+                ...getTopHandleStyle(index, controlPorts.length),
                 backgroundColor: 'var(--color-background-neutral-06)',
                 border: '1px solid var(--color-border-neutral-10)',
               }}

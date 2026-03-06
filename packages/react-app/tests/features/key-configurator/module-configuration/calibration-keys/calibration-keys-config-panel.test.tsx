@@ -151,7 +151,7 @@ jest.mock('~shared/utils/converter-utils', () => ({
   ConvertNumberToHexString: (num: number) =>
     `0x${num.toString(16).toUpperCase()}`,
   ConvertStringToNumber: (str: string) => {
-    const num = parseInt(str, 16);
+    const num = Number.parseInt(str, 16);
     return isNaN(num) ? null : num;
   },
 }));
@@ -224,7 +224,7 @@ describe('CalibrationKeysConfigPanel', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.alert = jest.fn();
+    globalThis.alert = jest.fn();
     (useCalibrationKeysStore as unknown as jest.Mock).mockImplementation(
       (selector) => selector(mockStoreState),
     );
@@ -504,7 +504,7 @@ describe('CalibrationKeysConfigPanel', () => {
   });
 
   it('cancels with confirmation when selections exist', () => {
-    window.confirm = jest.fn(() => true);
+    globalThis.confirm = jest.fn(() => true);
 
     render(
       <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
@@ -524,7 +524,7 @@ describe('CalibrationKeysConfigPanel', () => {
   });
 
   it('cancels without confirmation when no selections exist', () => {
-    window.confirm = jest.fn();
+    globalThis.confirm = jest.fn();
 
     render(
       <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
@@ -533,7 +533,7 @@ describe('CalibrationKeysConfigPanel', () => {
     fireEvent.click(screen.getByText('Add'));
     fireEvent.click(screen.getByText('Cancel'));
 
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
     expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
   });
 

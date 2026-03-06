@@ -14,7 +14,7 @@ import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import type {TkvParameter} from './module-tag-keys-config.types';
 
-interface TkvParametersSectionProps {
+interface TkvParametersSectionProperties {
   isEditable: boolean;
   onParametersChange: (parameters: TkvParameter[]) => void;
   parameters: TkvParameter[];
@@ -26,7 +26,7 @@ export function TkvParametersSection({
   onParametersChange,
   parameters,
   visible,
-}: TkvParametersSectionProps) {
+}: TkvParametersSectionProperties) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!visible) {
@@ -34,14 +34,14 @@ export function TkvParametersSection({
   }
 
   const handleSelectAll = (checked: boolean) => {
-    const updatedParams = parameters.map((param) => ({...param, checked}));
-    onParametersChange(updatedParams);
+    const updatedParameters = parameters.map((parameter) => ({...parameter, checked}));
+    onParametersChange(updatedParameters);
   };
 
   const handleParameterChange = (index: number, checked: boolean) => {
-    const updatedParams = [...parameters];
-    updatedParams[index] = {...updatedParams[index], checked};
-    onParametersChange(updatedParams);
+    const updatedParameters = [...parameters];
+    updatedParameters[index] = {...updatedParameters[index], checked};
+    onParametersChange(updatedParameters);
   };
 
   const allChecked = parameters.every((p) => p.checked);
@@ -144,16 +144,16 @@ export function TkvParametersSection({
               </tr>
             </thead>
             <tbody>
-              {parameters.map((param, index) => (
-                <tr key={param.pid}>
+              {parameters.map((parameter, index) => (
+                <tr key={parameter.pid}>
                   <td
                     className="border px-3 py-2"
                     style={{borderColor: 'var(--color-border-neutral-02)'}}
                   >
                     <div className="flex justify-center">
                       <Checkbox
-                        aria-label={`Select parameter ${param.name}`}
-                        checked={param.checked}
+                        aria-label={`Select parameter ${parameter.name}`}
+                        checked={parameter.checked}
                         disabled={!isEditable}
                         onChange={(e) =>
                           handleParameterChange(
@@ -172,7 +172,7 @@ export function TkvParametersSection({
                       color: 'var(--color-text-neutral-secondary)',
                     }}
                   >
-                    {ConvertNumberToHexString(param.pid) || param.pid}
+                    {ConvertNumberToHexString(parameter.pid) || parameter.pid}
                   </td>
                   <td
                     className="border px-3 py-2 text-sm"
@@ -181,7 +181,7 @@ export function TkvParametersSection({
                       color: 'var(--color-text-neutral-primary)',
                     }}
                   >
-                    {param.name}
+                    {parameter.name}
                   </td>
                 </tr>
               ))}

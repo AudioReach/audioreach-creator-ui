@@ -45,13 +45,12 @@ let isKeyConfiguratorViewOpen = false;
 function createApplicationMenu(): void {
   const isMac = process.platform === 'darwin';
 
-  const template: Electron.MenuItemConstructorOptions[] = [];
-
-  // File menu
-  template.push({
+  const template: Electron.MenuItemConstructorOptions[] = [ {
     label: 'File',
     submenu: [isMac ? {role: 'close'} : {role: 'quit'}],
-  });
+  }];
+
+  // File menu
 
   // View menu with log view toggle
   const viewSubmenu: Electron.MenuItemConstructorOptions[] = [];
@@ -63,18 +62,14 @@ function createApplicationMenu(): void {
         win.webContents.send('menu:toggle-log-view');
       },
       label: isLogViewOpen ? 'Hide Log View' : 'Show Log View',
-    });
-    viewSubmenu.push({type: 'separator'});
-
-    viewSubmenu.push({
+    }, {type: 'separator'}, {
       click: () => {
         win.webContents.send('menu:toggle-key-configurator-view');
       },
       label: isKeyConfiguratorViewOpen
         ? 'Hide Key Configurator'
         : 'Show Key Configurator',
-    });
-    viewSubmenu.push({type: 'separator'});
+    }, {type: 'separator'});
   }
 
   viewSubmenu.push(
@@ -205,8 +200,8 @@ const createWindow = async () => {
             error instanceof Error ? error.message : String(error);
           console.debug(`Error starting application - ${errorMessage}`);
         })
-        .catch((err) => {
-          console.debug('Critical application error, exiting', err);
+        .catch((error) => {
+          console.debug('Critical application error, exiting', error);
           win.close();
           process.exit(0);
         });
@@ -217,8 +212,8 @@ const createWindow = async () => {
       process.exit(0);
     }
   } else {
-    await win.loadFile(`${__dirname}/index.html`).catch((err) => {
-      console.log('Error starting application', err);
+    await win.loadFile(`${__dirname}/index.html`).catch((error) => {
+      console.log('Error starting application', error);
     });
   }
 };

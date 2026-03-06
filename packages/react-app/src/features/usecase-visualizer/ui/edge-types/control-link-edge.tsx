@@ -8,13 +8,13 @@ import {type FC, useState} from 'react';
 
 import {type EdgeProps, getSmoothStepPath} from '@xyflow/react';
 
-export const ControlLinkEdge: FC<EdgeProps> = (props) => {
+export const ControlLinkEdge: FC<EdgeProps> = (properties) => {
   const [isHovered, setIsHovered] = useState(false);
-  const {selected} = props;
+  const {selected} = properties;
 
   // Generate the curved path with vertical offset
   const [pathData] = getSmoothStepPath({
-    ...props,
+    ...properties,
     borderRadius: 20,
     offset: 60, // Vertical offset to create arc above/below modules
   });

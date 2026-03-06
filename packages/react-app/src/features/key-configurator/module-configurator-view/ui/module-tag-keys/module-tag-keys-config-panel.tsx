@@ -35,7 +35,7 @@ import type {ConfiguredTkv, TkvParameter} from './module-tag-keys-config.types';
 import {TagGroupSummary} from './tag-group-summary';
 import {TkvParametersSection} from './tkv-parameters-section';
 
-interface ModuleTagKeysConfigPanelProps {
+interface ModuleTagKeysConfigPanelProperties {
   instanceId: number;
   isEditable: boolean;
   moduleId: number;
@@ -45,7 +45,7 @@ export function ModuleTagKeysConfigPanel({
   instanceId,
   isEditable,
   moduleId,
-}: ModuleTagKeysConfigPanelProps) {
+}: ModuleTagKeysConfigPanelProperties) {
   // Store state
   const availableModuleTags = useModuleTagKeysStore(
     (state) => state.availableModuleTags,
@@ -76,7 +76,7 @@ export function ModuleTagKeysConfigPanel({
     {},
   );
   const [expandedTagGroups, setExpandedTagGroups] = useState<number[]>([]);
-  const [expandedModKeys, setExpandedModKeys] = useState<
+  const [expandedModuleKeys, setExpandedModuleKeys] = useState<
     Record<number, boolean>
   >({});
   const [selectedTagGroup, setSelectedTagGroup] = useState<number | null>(null);
@@ -89,8 +89,8 @@ export function ModuleTagKeysConfigPanel({
   >({});
   const [isConfigSectionCollapsed, setIsConfigSectionCollapsed] =
     useState(false);
-  const configSectionRef = useRef<HTMLDivElement>(null);
-  const searchBarRef = useRef<HTMLDivElement>(null);
+  const configSectionReference = useRef<HTMLDivElement>(null);
+  const searchBarReference = useRef<HTMLDivElement>(null);
 
   // Sync parameters with store when store updates
   useEffect(() => {
@@ -121,16 +121,16 @@ export function ModuleTagKeysConfigPanel({
     ): string[] => {
       const groupsWithSelectedValues = tagGroups.filter((tagGroupName) => {
         const tagGroup = availableModuleTagsInfo[tagGroupName];
-        return Object.keys(tagGroup.keys).some((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
-          return modKey.values.some((v: {id: number}) => selectedValues[v.id]);
+        return Object.keys(tagGroup.keys).some((moduleKeyName) => {
+          const moduleKey = tagGroup.keys[moduleKeyName];
+          return moduleKey.values.some((v: {id: number}) => selectedValues[v.id]);
         });
       });
       const groupsWithoutSelectedValues = tagGroups.filter((tagGroupName) => {
         const tagGroup = availableModuleTagsInfo[tagGroupName];
-        return !Object.keys(tagGroup.keys).some((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
-          return modKey.values.some((v: {id: number}) => selectedValues[v.id]);
+        return !Object.keys(tagGroup.keys).some((moduleKeyName) => {
+          const moduleKey = tagGroup.keys[moduleKeyName];
+          return moduleKey.values.some((v: {id: number}) => selectedValues[v.id]);
         });
       });
       return [...groupsWithSelectedValues, ...groupsWithoutSelectedValues];
@@ -155,12 +155,12 @@ export function ModuleTagKeysConfigPanel({
 
         // Check if any module keys or values match
         let hasMatchingContent = false;
-        Object.keys(tagGroup.keys).forEach((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
+        for (const moduleKeyName of Object.keys(tagGroup.keys)) {
+          const moduleKey = tagGroup.keys[moduleKeyName];
           const keyMatches =
-            modKeyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (searchNumber !== null && modKey.id === searchNumber);
-          const valueMatches = modKey.values.some(
+            moduleKeyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (searchNumber !== null && moduleKey.id === searchNumber);
+          const valueMatches = moduleKey.values.some(
             (v: {id: number; name: string}) =>
               v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (searchNumber !== null && v.id === searchNumber),
@@ -168,7 +168,7 @@ export function ModuleTagKeysConfigPanel({
           if (keyMatches || valueMatches) {
             hasMatchingContent = true;
           }
-        });
+        }
 
         return tagGroupMatches || hasMatchingContent;
       });
@@ -180,19 +180,19 @@ export function ModuleTagKeysConfigPanel({
       setExpandedTagGroups(tagGroupIds);
 
       // Also expand all module keys in the filtered tag groups
-      const allModKeys: Record<number, boolean> = {};
-      tagGroups.forEach((tagGroupName) => {
+      const allModuleKeys: Record<number, boolean> = {};
+      for (const tagGroupName of tagGroups) {
         const tagGroup = availableModuleTagsInfo[tagGroupName];
-        Object.keys(tagGroup.keys).forEach((modKeyName) => {
-          const modKeyId = tagGroup.keys[modKeyName].id;
-          allModKeys[modKeyId] = true;
-        });
-      });
-      setExpandedModKeys(allModKeys);
+        for (const moduleKeyName of Object.keys(tagGroup.keys)) {
+          const moduleKeyId = tagGroup.keys[moduleKeyName].id;
+          allModuleKeys[moduleKeyId] = true;
+        }
+      }
+      setExpandedModuleKeys(allModuleKeys);
     } else {
       // When search is cleared, collapse everything
       setExpandedTagGroups([]);
-      setExpandedModKeys({});
+      setExpandedModuleKeys({});
     }
 
     // Sort tag groups
@@ -237,7 +237,7 @@ export function ModuleTagKeysConfigPanel({
   const handleSort = useCallback(
     (column: SortColumn) => {
       if (sortColumn === column) {
-        setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        setSortOrder((previous) => (previous === 'asc' ? 'desc' : 'asc'));
       } else {
         setSortColumn(column);
         setSortOrder('asc');
@@ -261,17 +261,17 @@ export function ModuleTagKeysConfigPanel({
   );
 
   const toggleTagGroupExpansion = useCallback((tagGroupId: number) => {
-    setExpandedTagGroups((prev) =>
-      prev.includes(tagGroupId)
-        ? prev.filter((t) => t !== tagGroupId)
-        : [...prev, tagGroupId],
+    setExpandedTagGroups((previous) =>
+      previous.includes(tagGroupId)
+        ? previous.filter((t) => t !== tagGroupId)
+        : [...previous, tagGroupId],
     );
   }, []);
 
-  const toggleModKeyExpansion = useCallback((modKeyId: number) => {
-    setExpandedModKeys((prev) => ({
-      ...prev,
-      [modKeyId]: !prev[modKeyId],
+  const toggleModuleKeyExpansion = useCallback((moduleKeyId: number) => {
+    setExpandedModuleKeys((previous) => ({
+      ...previous,
+      [moduleKeyId]: !previous[moduleKeyId],
     }));
   }, []);
 
@@ -287,14 +287,12 @@ export function ModuleTagKeysConfigPanel({
         setSelectedValues({[valueId]: true});
         setSelectedTagGroup(tagGroupId);
       } else {
-        setSelectedValues((prev) => ({
-          ...prev,
-          [valueId]: !prev[valueId],
+        setSelectedValues((previous) => ({
+          ...previous,
+          [valueId]: !previous[valueId],
         }));
         // Auto-select tag group when any value is selected
-        if (!selectedValues[valueId]) {
-          setSelectedTagGroup(tagGroupId);
-        } else {
+        if (selectedValues[valueId]) {
           // Check if any values are still selected in this tag group
           const tagGroupName = Object.keys(availableModuleTagsInfo).find(
             (name) => availableModuleTagsInfo[name].id === tagGroupId,
@@ -302,9 +300,9 @@ export function ModuleTagKeysConfigPanel({
           if (tagGroupName) {
             const tagGroup = availableModuleTagsInfo[tagGroupName];
             const hasAnySelected = Object.keys(tagGroup.keys).some(
-              (modKeyName) => {
-                const modKey = tagGroup.keys[modKeyName];
-                return modKey.values.some(
+              (moduleKeyName) => {
+                const moduleKey = tagGroup.keys[moduleKeyName];
+                return moduleKey.values.some(
                   (v: {id: number}) => v.id !== valueId && selectedValues[v.id],
                 );
               },
@@ -313,14 +311,16 @@ export function ModuleTagKeysConfigPanel({
               setSelectedTagGroup(null);
             }
           }
+        } else {
+          setSelectedTagGroup(tagGroupId);
         }
       }
     },
     [selectedTagGroup, selectedValues, availableModuleTagsInfo],
   );
 
-  const toggleModKeySelection = useCallback(
-    (tagGroupId: number, modKeyId: number) => {
+  const toggleModuleKeySelection = useCallback(
+    (tagGroupId: number, moduleKeyId: number) => {
       const tagGroupName = Object.keys(availableModuleTagsInfo).find(
         (name) => availableModuleTagsInfo[name].id === tagGroupId,
       );
@@ -328,21 +328,21 @@ export function ModuleTagKeysConfigPanel({
         return;
       }
 
-      const modKeyName = Object.keys(
+      const moduleKeyName = Object.keys(
         availableModuleTagsInfo[tagGroupName].keys,
       ).find(
         (name) =>
-          availableModuleTagsInfo[tagGroupName].keys[name].id === modKeyId,
+          availableModuleTagsInfo[tagGroupName].keys[name].id === moduleKeyId,
       );
-      if (!modKeyName) {
+      if (!moduleKeyName) {
         return;
       }
 
       // If selecting from a different tag group, clear previous selections
       if (selectedTagGroup && selectedTagGroup !== tagGroupId) {
-        const modKey = availableModuleTagsInfo[tagGroupName].keys[modKeyName];
+        const moduleKey = availableModuleTagsInfo[tagGroupName].keys[moduleKeyName];
         const newSelectedValues: Record<number, boolean> = {};
-        modKey.values.forEach((v: {id: number}) => {
+        moduleKey.values.forEach((v: {id: number}) => {
           newSelectedValues[v.id] = true;
         });
         setSelectedValues(newSelectedValues);
@@ -350,25 +350,23 @@ export function ModuleTagKeysConfigPanel({
         return;
       }
 
-      const modKey = availableModuleTagsInfo[tagGroupName].keys[modKeyName];
-      const allSelected = modKey.values.every(
+      const moduleKey = availableModuleTagsInfo[tagGroupName].keys[moduleKeyName];
+      const allSelected = moduleKey.values.every(
         (v: {id: number}) => selectedValues[v.id],
       );
 
       const newSelectedValues = {...selectedValues};
-      modKey.values.forEach((v: {id: number}) => {
+      moduleKey.values.forEach((v: {id: number}) => {
         newSelectedValues[v.id] = !allSelected;
       });
       setSelectedValues(newSelectedValues);
 
       // Auto-select the tag group radio when selecting values
-      if (!allSelected) {
-        setSelectedTagGroup(tagGroupId);
-      } else {
+      if (allSelected) {
         // Check if any values are still selected in this tag group
         const tagGroup = availableModuleTagsInfo[tagGroupName];
         const hasAnySelected = Object.keys(tagGroup.keys).some((keyName) => {
-          if (keyName === modKeyName) {
+          if (keyName === moduleKeyName) {
             return false;
           }
           const key = tagGroup.keys[keyName];
@@ -377,6 +375,8 @@ export function ModuleTagKeysConfigPanel({
         if (!hasAnySelected) {
           setSelectedTagGroup(null);
         }
+      } else {
+        setSelectedTagGroup(tagGroupId);
       }
     },
     [selectedTagGroup, selectedValues, availableModuleTagsInfo],
@@ -388,20 +388,20 @@ export function ModuleTagKeysConfigPanel({
     );
     setExpandedTagGroups(tagGroupIds);
     // Expand all mod keys in expanded tag groups
-    const allModKeys: Record<number, boolean> = {};
-    filteredAndSortedTagGroups.forEach((tagGroupName) => {
+    const allModuleKeys: Record<number, boolean> = {};
+    for (const tagGroupName of filteredAndSortedTagGroups) {
       const tagGroup = availableModuleTagsInfo[tagGroupName];
-      Object.keys(tagGroup.keys).forEach((modKeyName) => {
-        const modKeyId = tagGroup.keys[modKeyName].id;
-        allModKeys[modKeyId] = true;
-      });
-    });
-    setExpandedModKeys(allModKeys);
+      for (const moduleKeyName of Object.keys(tagGroup.keys)) {
+        const moduleKeyId = tagGroup.keys[moduleKeyName].id;
+        allModuleKeys[moduleKeyId] = true;
+      }
+    }
+    setExpandedModuleKeys(allModuleKeys);
   }, [filteredAndSortedTagGroups, availableModuleTagsInfo]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedTagGroups([]);
-    setExpandedModKeys({});
+    setExpandedModuleKeys({});
   }, []);
 
   const handleAddClick = useCallback(() => {
@@ -411,15 +411,15 @@ export function ModuleTagKeysConfigPanel({
     setInitialEditSelections({});
     setShowSearchAndList(true);
     setExpandedTagGroups([]);
-    setExpandedModKeys({});
+    setExpandedModuleKeys({});
     setSearchTerm('');
 
     // Reset parameters to unchecked state
-    setParameters((prev) => prev.map((p) => ({...p, checked: false})));
+    setParameters((previous) => previous.map((p) => ({...p, checked: false})));
 
     // Scroll to search bar
     setTimeout(() => {
-      searchBarRef.current?.scrollIntoView({
+      searchBarReference.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -456,23 +456,23 @@ export function ModuleTagKeysConfigPanel({
       values: Array<{id: number; name: string}>;
     }> = [];
 
-    Object.keys(selectedValues).forEach((valueIdStr) => {
-      const valueId = parseInt(valueIdStr, 10);
+    for (const valueIdString of Object.keys(selectedValues)) {
+      const valueId = Number.parseInt(valueIdString, 10);
       if (selectedValues[valueId]) {
         // Find which key this value belongs to in the selected tag group
-        for (const modKeyName in tagGroup.keys) {
-          const modKey = tagGroup.keys[modKeyName];
-          const value = modKey.values.find(
+        for (const moduleKeyName in tagGroup.keys) {
+          const moduleKey = tagGroup.keys[moduleKeyName];
+          const value = moduleKey.values.find(
             (v: {id: number; name: string}) => v.id === valueId,
           );
           if (value) {
             // Check if we already have this key
             let keyEntry = selectedPerKey.find(
-              (entry) => entry.key.id === modKey.id,
+              (entry) => entry.key.id === moduleKey.id,
             );
             if (!keyEntry) {
               keyEntry = {
-                key: {id: modKey.id, name: modKey.name},
+                key: {id: moduleKey.id, name: moduleKey.name},
                 values: [],
               };
               selectedPerKey.push(keyEntry);
@@ -482,7 +482,7 @@ export function ModuleTagKeysConfigPanel({
           }
         }
       }
-    });
+    }
 
     // Check if no values are selected
     if (selectedPerKey.length === 0) {
@@ -518,11 +518,11 @@ export function ModuleTagKeysConfigPanel({
       }
 
       const {key, values} = selectedPerKey[index];
-      values.forEach((value) => {
+      for (const value of values) {
         currentCombo.push({key, value});
         generateCombinations(index + 1, currentCombo);
         currentCombo.pop();
-      });
+      }
     }
 
     generateCombinations(0, []);
@@ -537,33 +537,33 @@ export function ModuleTagKeysConfigPanel({
 
     // Get existing configs (exclude the one being edited)
     const existingConfigs =
-      editingIndex !== null
-        ? configuredTKVs.filter((_, i) => i !== editingIndex)
-        : configuredTKVs;
+      editingIndex === null
+        ? configuredTKVs
+        : configuredTKVs.filter((_, index) => index !== editingIndex);
 
     // Check for duplicates
     const uniqueNewConfigs: ConfiguredTkv[] = [];
 
-    newConfigs.forEach((newConfig) => {
+    for (const newConfig of newConfigs) {
       // Create a normalized string representation for comparison using IDs
-      const newConfigStr = `${newConfig.tagGroupId}|${newConfig.keyValuePairs
+      const newConfigString = `${newConfig.tagGroupId}|${newConfig.keyValuePairs
         .map((p) => `${p.key.id}:${p.value.id}`)
         .sort()
         .join('|')}`;
 
       // Check if this configuration already exists
       const isDuplicate = existingConfigs.some((existingConfig) => {
-        const existingConfigStr = `${existingConfig.tagGroupId}|${existingConfig.keyValuePairs
+        const existingConfigString = `${existingConfig.tagGroupId}|${existingConfig.keyValuePairs
           .map((p) => `${p.key.id}:${p.value.id}`)
           .sort()
           .join('|')}`;
-        return existingConfigStr === newConfigStr;
+        return existingConfigString === newConfigString;
       });
 
       if (!isDuplicate) {
         uniqueNewConfigs.push(newConfig);
       }
-    });
+    }
 
     // If no unique configs to add, don't proceed
     if (uniqueNewConfigs.length === 0) {
@@ -577,9 +577,9 @@ export function ModuleTagKeysConfigPanel({
     }
 
     // Add new configurations
-    uniqueNewConfigs.forEach((config) => {
+    for (const config of uniqueNewConfigs) {
       addConfiguredTagKeyValue(moduleId, instanceId, config);
-    });
+    }
 
     // Reset state including parameters
     setSelectedValues({});
@@ -588,15 +588,15 @@ export function ModuleTagKeysConfigPanel({
     setInitialEditSelections({});
     setShowSearchAndList(false);
     setExpandedTagGroups([]);
-    setExpandedModKeys({});
+    setExpandedModuleKeys({});
     setSearchTerm('');
 
     // Reset parameters to unchecked state (don't use storeParameters as it may have stale data)
-    setParameters((prev) => prev.map((p) => ({...p, checked: false})));
+    setParameters((previous) => previous.map((p) => ({...p, checked: false})));
 
     // Scroll to configuration section
     setTimeout(() => {
-      configSectionRef.current?.scrollIntoView({
+      configSectionReference.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -637,21 +637,21 @@ export function ModuleTagKeysConfigPanel({
       const tagGroupId = tkv.tagGroupId;
 
       // Use the Key and KeyValue objects directly
-      tkv.keyValuePairs.forEach((pair) => {
+      for (const pair of tkv.keyValuePairs) {
         newSelectedValues[pair.value.id] = true;
         // Add key to expansion list
         if (!keysToExpand.includes(pair.key.id)) {
           keysToExpand.push(pair.key.id);
         }
-      });
+      }
 
       // Update parameters based on the TKV's pidConfig
       // Use storeParameters to ensure we have the latest data
       if (tkv.pidConfig && storeParameters && storeParameters.length > 0) {
         const pidConfigSet = new Set(tkv.pidConfig);
-        const updatedParameters = storeParameters.map((param) => ({
-          ...param,
-          checked: pidConfigSet.has(param.pid),
+        const updatedParameters = storeParameters.map((parameter) => ({
+          ...parameter,
+          checked: pidConfigSet.has(parameter.pid),
         }));
         setParameters(updatedParameters);
       }
@@ -666,18 +666,18 @@ export function ModuleTagKeysConfigPanel({
       }
 
       // Expand keys with selected values
-      const expandedKeysObj: Record<number, boolean> = {};
-      keysToExpand.forEach((keyId) => {
-        expandedKeysObj[keyId] = true;
-      });
-      setExpandedModKeys(expandedKeysObj);
+      const expandedKeysObject: Record<number, boolean> = {};
+      for (const keyId of keysToExpand) {
+        expandedKeysObject[keyId] = true;
+      }
+      setExpandedModuleKeys(expandedKeysObject);
 
       setShowSearchAndList(true);
       setSearchTerm('');
 
       // Scroll to search bar
       setTimeout(() => {
-        searchBarRef.current?.scrollIntoView({
+        searchBarReference.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -710,9 +710,9 @@ export function ModuleTagKeysConfigPanel({
         setSelectedTagGroup(null);
         setInitialEditSelections({});
         setExpandedTagGroups([]);
-        setExpandedModKeys({});
+        setExpandedModuleKeys({});
         // Reset parameters to unchecked state
-        setParameters((prev) => prev.map((p) => ({...p, checked: false})));
+        setParameters((previous) => previous.map((p) => ({...p, checked: false})));
       }
     },
     [
@@ -736,8 +736,8 @@ export function ModuleTagKeysConfigPanel({
           setSelectedTagGroup(null);
           setInitialEditSelections({});
           setExpandedTagGroups([]);
-          setExpandedModKeys({});
-          setParameters((prev) => prev.map((p) => ({...p, checked: false})));
+          setExpandedModuleKeys({});
+          setParameters((previous) => previous.map((p) => ({...p, checked: false})));
           setEditingIndex(null);
           setShowSearchAndList(false);
         }
@@ -759,7 +759,7 @@ export function ModuleTagKeysConfigPanel({
   );
 
   const handleCancel = useCallback(() => {
-    const hasSelections = Object.values(selectedValues).some((v) => v);
+    const hasSelections = Object.values(selectedValues).some(Boolean);
     const isConfirmed: boolean = true;
     if (hasSelections) {
       // if (
@@ -779,10 +779,10 @@ export function ModuleTagKeysConfigPanel({
       setSelectedTagGroup(null);
       setInitialEditSelections({});
       setExpandedTagGroups([]);
-      setExpandedModKeys({});
+      setExpandedModuleKeys({});
       // Scroll to configuration section
       setTimeout(() => {
-        configSectionRef.current?.scrollIntoView({
+        configSectionReference.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -809,7 +809,7 @@ export function ModuleTagKeysConfigPanel({
     }
 
     const filtered: Record<string, ConfiguredTkv[]> = {};
-    Object.keys(groupedTKVs).forEach((tagGroupName) => {
+    for (const tagGroupName of Object.keys(groupedTKVs)) {
       const configs = groupedTKVs[tagGroupName].filter((config) => {
         const label = config.keyValuePairs
           .map((p) => `[${p.key.name}: ${p.value.name}]`)
@@ -822,7 +822,7 @@ export function ModuleTagKeysConfigPanel({
       if (configs.length > 0) {
         filtered[tagGroupName] = configs;
       }
-    });
+    }
     return filtered;
   }, [groupedTKVs, configSearchTerm]);
 
@@ -830,21 +830,21 @@ export function ModuleTagKeysConfigPanel({
   const sortedValues = useCallback(
     (
       tagGroupName: string,
-      modKey: {values: Array<{id: number; name: string}>},
+      moduleKey: {values: Array<{id: number; name: string}>},
     ) => {
       if (
         editingIndex === null ||
         Object.keys(initialEditSelections).length === 0
       ) {
-        return modKey.values;
+        return moduleKey.values;
       }
 
       // Sort values based on INITIAL selections (not current selections)
       return [
-        ...modKey.values.filter(
+        ...moduleKey.values.filter(
           (v: {id: number}) => initialEditSelections[v.id],
         ),
-        ...modKey.values.filter(
+        ...moduleKey.values.filter(
           (v: {id: number}) => !initialEditSelections[v.id],
         ),
       ];
@@ -855,8 +855,8 @@ export function ModuleTagKeysConfigPanel({
   const handleDeleteFiltered = useCallback(() => {
     // Collect all indices first to avoid issues with state updates during iteration
     const filteredTKVIndices: number[] = [];
-    Object.keys(filteredGroupedTKVs).forEach((tagGroupName) => {
-      filteredGroupedTKVs[tagGroupName].forEach((config) => {
+    for (const tagGroupName of Object.keys(filteredGroupedTKVs)) {
+      for (const config of filteredGroupedTKVs[tagGroupName]) {
         const tkvId = `${config.tagGroupId}_${config.keyValuePairs
           .map((p) => `${p.key.id}_${p.value.id}`)
           .sort()
@@ -874,17 +874,17 @@ export function ModuleTagKeysConfigPanel({
         if (index !== -1) {
           filteredTKVIndices.push(index);
         }
-      });
-    });
+      }
+    }
 
     // Sort indices in descending order to delete from highest to lowest
     // This prevents index shifting issues
     filteredTKVIndices.sort((a, b) => b - a);
 
     // Delete each filtered TKV by index
-    filteredTKVIndices.forEach((index) => {
+    for (const index of filteredTKVIndices) {
       removeConfiguredTagKeyValue(moduleId, instanceId, index);
-    });
+    }
 
     // Clear search after deletion
     // setConfigSearchTerm('');
@@ -911,7 +911,7 @@ export function ModuleTagKeysConfigPanel({
     <div className="flex flex-col p-4">
       {/* Configured TKVs Summary with Tag Groups */}
       <div
-        ref={configSectionRef}
+        ref={configSectionReference}
         className="mb-2 overflow-hidden rounded-md border shadow-sm"
         style={{
           backgroundColor: 'var(--color-surface-primary)',
@@ -1046,9 +1046,9 @@ export function ModuleTagKeysConfigPanel({
       {/* TKV Parameters Section */}
       <TkvParametersSection
         isEditable={isEditable}
-        onParametersChange={(params) => {
+        onParametersChange={(parameters_) => {
           // Update local state immediately for UI responsiveness
-          setParameters(params);
+          setParameters(parameters_);
         }}
         parameters={parameters}
         visible={showSearchAndList}
@@ -1058,7 +1058,7 @@ export function ModuleTagKeysConfigPanel({
       {showSearchAndList && (
         <>
           {/* Search Bar with Expand/Collapse buttons */}
-          <div ref={searchBarRef} className="mt-4 flex items-center gap-2">
+          <div ref={searchBarReference} className="mt-4 flex items-center gap-2">
             <div className="flex-1">
               <ArcSearchBar
                 onSearchChange={setSearchTerm}
@@ -1213,23 +1213,23 @@ export function ModuleTagKeysConfigPanel({
                             backgroundColor: 'var(--color-surface-primary)',
                           }}
                         >
-                          {Object.keys(tagGroup.keys).map((modKeyName) => {
-                            const modKey = tagGroup.keys[modKeyName];
-                            const isModKeyExpanded = expandedModKeys[modKey.id];
-                            const allValuesSelected = modKey.values.every(
+                          {Object.keys(tagGroup.keys).map((moduleKeyName) => {
+                            const moduleKey = tagGroup.keys[moduleKeyName];
+                            const isModuleKeyExpanded = expandedModuleKeys[moduleKey.id];
+                            const allValuesSelected = moduleKey.values.every(
                               (v: {id: number}) => selectedValues[v.id],
                             );
-                            const someValuesSelected = modKey.values.some(
+                            const someValuesSelected = moduleKey.values.some(
                               (v: {id: number}) => selectedValues[v.id],
                             );
 
                             return (
-                              <div key={modKeyName}>
+                              <div key={moduleKeyName}>
                                 {/* Module Key Header */}
                                 <div
                                   className="flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors"
                                   onClick={() =>
-                                    toggleModKeyExpansion(modKey.id)
+                                    toggleModuleKeyExpansion(moduleKey.id)
                                   }
                                   onMouseEnter={(e) => {
                                     if (!allValuesSelected) {
@@ -1258,7 +1258,7 @@ export function ModuleTagKeysConfigPanel({
                                         'var(--color-text-neutral-secondary)',
                                     }}
                                   >
-                                    {isModKeyExpanded ? (
+                                    {isModuleKeyExpanded ? (
                                       <ChevronDown className="h-3 w-3" />
                                     ) : (
                                       <ChevronRight className="h-3 w-3" />
@@ -1277,9 +1277,9 @@ export function ModuleTagKeysConfigPanel({
                                     disabled={!isEditable}
                                     onChange={(e) => {
                                       e.stopPropagation();
-                                      toggleModKeySelection(
+                                      toggleModuleKeySelection(
                                         tagGroup.id,
-                                        modKey.id,
+                                        moduleKey.id,
                                       );
                                     }}
                                     onClick={(e) => e.stopPropagation()}
@@ -1292,8 +1292,8 @@ export function ModuleTagKeysConfigPanel({
                                         'var(--color-text-neutral-primary)',
                                     }}
                                   >
-                                    {ConvertNumberToHexString(modKey.id) ||
-                                      modKey.id}
+                                    {ConvertNumberToHexString(moduleKey.id) ||
+                                      moduleKey.id}
                                   </span>
                                   <span
                                     className="text-sm font-medium"
@@ -1302,14 +1302,14 @@ export function ModuleTagKeysConfigPanel({
                                         'var(--color-text-neutral-primary)',
                                     }}
                                   >
-                                    {modKeyName}
+                                    {moduleKeyName}
                                   </span>
                                 </div>
 
                                 {/* Values */}
-                                {isModKeyExpanded && (
+                                {isModuleKeyExpanded && (
                                   <div>
-                                    {sortedValues(tagGroupName, modKey).map(
+                                    {sortedValues(tagGroupName, moduleKey).map(
                                       (value: {id: number; name: string}) => (
                                         <div
                                           key={value.id}

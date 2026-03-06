@@ -16,7 +16,7 @@ type UnifiedItem =
   | {data: ProjectInfo; type: 'project'}
   | {data: DeviceInfo; type: 'device'};
 
-interface UnifiedListViewProps {
+interface UnifiedListViewProperties {
   devices: DeviceInfo[];
   onOpenDevice: (device: DeviceInfo) => void;
   onOpenProject: (project: ProjectInfo) => void;
@@ -32,9 +32,9 @@ function formatDate(date: Date | undefined): string {
     return 'unknown';
   }
 
-  const dateObj = date instanceof Date ? date : new Date(date);
+  const dateObject = date instanceof Date ? date : new Date(date);
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - dateObj.getTime());
+  const diffTime = Math.abs(now.getTime() - dateObject.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
@@ -64,7 +64,7 @@ export default function UnifiedListView({
   projects,
   showDevices,
   showProjects,
-}: UnifiedListViewProps) {
+}: UnifiedListViewProperties) {
   const items: UnifiedItem[] = useMemo(() => {
     const combined: UnifiedItem[] = [];
 
@@ -76,12 +76,12 @@ export default function UnifiedListView({
         return dateB - dateA;
       });
 
-      sortedProjects.forEach((p) => combined.push({data: p, type: 'project'}));
+      for (const p of sortedProjects) combined.push({data: p, type: 'project'});
     }
 
     // Add devices (as-is, after projects)
     if (showDevices) {
-      devices.forEach((d) => combined.push({data: d, type: 'device'}));
+      for (const d of devices) combined.push({data: d, type: 'device'});
     }
 
     return combined;

@@ -25,12 +25,12 @@ const formatUsecaseDisplay = (usecase: Usecase): string => {
     .join(' • ');
 };
 
-interface UsecaseSelectionControlProps {
+interface UsecaseSelectionControlProperties {
   projectGroupId: string;
   usecaseData: UsecaseCategory[];
 }
 
-const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
+const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProperties> = ({
   projectGroupId,
   usecaseData,
 }) => {
@@ -52,20 +52,20 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
   );
 
   const toggleCategoryExpansion = (categoryName: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(categoryName)
-        ? prev.filter((name) => name !== categoryName)
-        : [...prev, categoryName],
+    setExpandedCategories((previous) =>
+      previous.includes(categoryName)
+        ? previous.filter((name) => name !== categoryName)
+        : [...previous, categoryName],
     );
   };
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerReference = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        containerReference.current &&
+        !containerReference.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
       }
@@ -149,7 +149,7 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
     .filter((category) => category.usecases.length > 0);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerReference} className="relative">
       {/* Search Bar */}
       <div className="relative">
         <TextInput

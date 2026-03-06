@@ -182,7 +182,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
     }
 
     const updatedTagKeyValueList = instance.tagKeyValueList.filter(
-      (_, i) => i !== index,
+      (_, index_) => index_ !== index,
     );
     get().updateConfiguredTagKeyValues(
       moduleId,
@@ -264,17 +264,16 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
       tagKeyValueList,
     };
 
-    if (existingIndex >= 0) {
-      moduleInstances[existingIndex] = newEntry;
-    } else {
+    if (existingIndex === -1) {
       moduleInstances.push(newEntry);
+    } else {
+      moduleInstances[existingIndex] = newEntry;
     }
 
     newConfiguredModuleTags[moduleId] = moduleInstances;
 
     // Update module parameters (per module, not per instance)
-    const newModuleParameters = {...state.moduleParameters};
-    newModuleParameters[moduleId] = parameters;
+    const newModuleParameters = {...state.moduleParameters, [moduleId]: parameters,};
 
     set({
       configuredModuleTags: newConfiguredModuleTags,
@@ -308,10 +307,10 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
       tagKeyValueList,
     };
 
-    if (existingIndex >= 0) {
-      moduleInstances[existingIndex] = newEntry;
-    } else {
+    if (existingIndex === -1) {
       moduleInstances.push(newEntry);
+    } else {
+      moduleInstances[existingIndex] = newEntry;
     }
 
     newConfiguredModuleTags[moduleId] = moduleInstances;

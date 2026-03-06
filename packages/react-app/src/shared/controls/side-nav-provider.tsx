@@ -38,11 +38,11 @@ export function useSideNavContext() {
   return context;
 }
 
-interface SideNavProviderProps {
+interface SideNavProviderProperties {
   children: ReactNode;
 }
 
-export function SideNavProvider({children}: SideNavProviderProps) {
+export function SideNavProvider({children}: SideNavProviderProperties) {
   const [registry, setRegistry] = useState(new Map<string, TabWithSideNav>());
   const [activeTab, setActiveTab] = useState<any>(null);
   const [theme, setTheme] = useTheme();
@@ -134,16 +134,16 @@ export function SideNavProvider({children}: SideNavProviderProps) {
   );
 
   const register = useCallback((tabId: string, impl: TabWithSideNav) => {
-    setRegistry((prev) => {
-      const newRegistry = new Map(prev);
+    setRegistry((previous) => {
+      const newRegistry = new Map(previous);
       newRegistry.set(tabId, impl);
       return newRegistry;
     });
   }, []);
 
   const unregister = useCallback((tabId: string) => {
-    setRegistry((prev) => {
-      const newRegistry = new Map(prev);
+    setRegistry((previous) => {
+      const newRegistry = new Map(previous);
       newRegistry.delete(tabId);
       return newRegistry;
     });

@@ -184,7 +184,7 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
       }
 
       const updatedKeyValueList = instance.keyValueList.filter(
-        (_, i) => i !== index,
+        (_, index_) => index_ !== index,
       );
       get().updateConfiguredKeyValues(
         moduleId,
@@ -250,10 +250,10 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
         keyValueList,
       };
 
-      if (existingIndex >= 0) {
-        moduleInstances[existingIndex] = newEntry;
-      } else {
+      if (existingIndex === -1) {
         moduleInstances.push(newEntry);
+      } else {
+        moduleInstances[existingIndex] = newEntry;
       }
 
       newConfiguredKeyValuesMap[moduleId] = moduleInstances;
@@ -262,15 +262,14 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
       let updatedParameters = ckvParameters;
       if (keyValueList.length > 0 && keyValueList[0].pidConfig) {
         const pidConfigSet = new Set(keyValueList[0].pidConfig);
-        updatedParameters = ckvParameters.map((param) => ({
-          ...param,
-          checked: pidConfigSet.has(param.pid),
+        updatedParameters = ckvParameters.map((parameter) => ({
+          ...parameter,
+          checked: pidConfigSet.has(parameter.pid),
         }));
       }
 
       // Update module parameters (per module, not per instance)
-      const newModuleParameters = {...state.moduleParameters};
-      newModuleParameters[moduleId] = updatedParameters;
+      const newModuleParameters = {...state.moduleParameters, [moduleId]: updatedParameters,};
 
       set({
         configuredKeyValuesMap: newConfiguredKeyValuesMap,
@@ -304,10 +303,10 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
         keyValueList,
       };
 
-      if (existingIndex >= 0) {
-        moduleInstances[existingIndex] = newEntry;
-      } else {
+      if (existingIndex === -1) {
         moduleInstances.push(newEntry);
+      } else {
+        moduleInstances[existingIndex] = newEntry;
       }
 
       newConfiguredKeyValuesMap[moduleId] = moduleInstances;
@@ -316,8 +315,7 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
 
     updateModuleParameters: (moduleId: number, parameters: CkvParameter[]) => {
       const state = get();
-      const newModuleParameters = {...state.moduleParameters};
-      newModuleParameters[moduleId] = parameters;
+      const newModuleParameters = {...state.moduleParameters, [moduleId]: parameters,};
 
       set({moduleParameters: newModuleParameters});
 

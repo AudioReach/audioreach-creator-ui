@@ -10,7 +10,7 @@ import {Tab, Tabs} from '@qualcomm-ui/react/tabs';
 import {CalibrationKeysConfigPanel} from './calibration-keys/calibration-keys-config-panel';
 import {ModuleTagKeysConfigPanel} from './module-tag-keys/module-tag-keys-config-panel';
 
-interface ModuleConfigurationPanelProps {
+interface ModuleConfigurationPanelProperties {
   instanceId: number;
   isEditable: boolean;
   moduleId: number;
@@ -20,7 +20,7 @@ export function ModuleConfigurationPanel({
   instanceId,
   isEditable,
   moduleId,
-}: ModuleConfigurationPanelProps) {
+}: ModuleConfigurationPanelProperties) {
   const [activeTab, setActiveTab] = useState<'calibration' | 'module-tag'>(
     'calibration',
   );

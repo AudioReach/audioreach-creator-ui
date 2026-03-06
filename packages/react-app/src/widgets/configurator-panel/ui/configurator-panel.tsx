@@ -50,7 +50,7 @@ export interface ConfigurationSection {
   item: ConfigurationItem;
 }
 
-export interface ConfiguratorPanelProps {
+export interface ConfiguratorPanelProperties {
   isEditable?: boolean; // Controls whether the configuration views are editable or readonly
   onEditModeChange?: (isEditable: boolean) => void; // Callback when edit mode changes
   onItemExpand?: (itemId: number, expanded: boolean) => void;
@@ -242,7 +242,7 @@ const ConfigurationSection: React.FC<{
 };
 
 // Main ConfiguratorPanel Component
-export const ConfiguratorPanel: React.FC<ConfiguratorPanelProps> = ({
+export const ConfiguratorPanel: React.FC<ConfiguratorPanelProperties> = ({
   isEditable = false,
   onItemExpand,
   onItemRemove,
@@ -263,8 +263,8 @@ export const ConfiguratorPanel: React.FC<ConfiguratorPanelProps> = ({
 
   const handleToggleExpand = useCallback(
     (sectionId: number) => {
-      setSections((prevSections) =>
-        prevSections.map((section) =>
+      setSections((previousSections) =>
+        previousSections.map((section) =>
           section.item.id === sectionId
             ? {...section, isExpanded: !section.isExpanded}
             : section,

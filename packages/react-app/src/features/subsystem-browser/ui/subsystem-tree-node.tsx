@@ -11,7 +11,7 @@ import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
 import type {SubsystemBrowserTreeNode} from '../model/subsystem-browser.types';
 
-interface SubsystemTreeNodeProps {
+interface SubsystemTreeNodeProperties {
   isExpanded: (id: number) => boolean;
   onClick: (id: number) => void;
   rootNode?: boolean;
@@ -20,7 +20,7 @@ interface SubsystemTreeNodeProps {
   treeNode: SubsystemBrowserTreeNode;
 }
 
-const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
+const SubsystemTreeNode: FC<SubsystemTreeNodeProperties> = ({
   isExpanded,
   onClick,
   rootNode = false,

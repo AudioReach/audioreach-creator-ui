@@ -35,22 +35,22 @@ export class Logger {
   /**
    * Log critical message (sent immediately)
    */
-  critical(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Critical, msg, context);
+  critical(message: string, context?: LogContext): void {
+    this.log(LogLevel.Critical, message, context);
   }
 
   /**
    * Log debug message
    */
-  debug(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Debug, msg, context);
+  debug(message: string, context?: LogContext): void {
+    this.log(LogLevel.Debug, message, context);
   }
 
   /**
    * Log error message (sent immediately)
    */
-  error(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Error, msg, context);
+  error(message: string, context?: LogContext): void {
+    this.log(LogLevel.Error, message, context);
   }
 
   /**
@@ -61,7 +61,7 @@ export class Logger {
       const state = useProjectLayoutStore.getState();
       const activeProjectGroup = state.getActiveProjectGroup();
       return activeProjectGroup?.id || undefined;
-    } catch (error) {
+    } catch {
       // Store may not be initialized yet
       return undefined;
     }
@@ -70,8 +70,8 @@ export class Logger {
   /**
    * Log info message
    */
-  info(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Info, msg, context);
+  info(message: string, context?: LogContext): void {
+    this.log(LogLevel.Info, message, context);
   }
 
   /**
@@ -86,7 +86,7 @@ export class Logger {
    */
   private emitLogEvent(
     logLevel: LogLevel,
-    msg: string,
+    message: string,
     context?: LogContext,
   ): void {
     try {
@@ -108,7 +108,7 @@ export class Logger {
       logEventEmitter.emit({
         context,
         level: logLevel,
-        message: msg,
+        message: message,
         projectId,
         timestamp: new Date(),
       });
@@ -122,7 +122,7 @@ export class Logger {
    * Fire-and-forget: sends log to backend without blocking
    * Only sends to backend if client ID is set (after registration)
    */
-  private log(logLevel: LogLevel, msg: string, context?: LogContext): void {
+  private log(logLevel: LogLevel, message: string, context?: LogContext): void {
     // Only send to backend if we have a client ID (after registration)
     if (this.backendEnabled && this.clientId) {
       // const logEntry: UserLogRequestDto = {
@@ -141,11 +141,11 @@ export class Logger {
       // Silently handle errors - already logged in loggingApi
       // })
     } else {
-      this.logToConsole(logLevel, msg, context);
+      this.logToConsole(logLevel, message, context);
     }
 
     // Always emit log event for UI consumption
-    this.emitLogEvent(logLevel, msg, context);
+    this.emitLogEvent(logLevel, message, context);
   }
 
   /**
@@ -153,29 +153,34 @@ export class Logger {
    */
   private logToConsole(
     logLevel: LogLevel,
-    msg: string,
+    message: string,
     context?: LogContext,
   ): void {
-    const contextStr = context ? JSON.stringify(context, null, 2) : '';
-    const logMessage = `[${logLevel.toUpperCase()}] ${msg}`;
+    const contextString = context ? JSON.stringify(context, null, 2) : '';
+    const logMessage = `[${logLevel.toUpperCase()}] ${message}`;
 
     switch (logLevel) {
       case LogLevel.Verbose:
-      case LogLevel.Debug:
-        console.debug(logMessage, contextStr);
+      case LogLevel.Debug: {
+        console.debug(logMessage, contextString);
         break;
-      case LogLevel.Info:
-        console.info(logMessage, contextStr);
+      }
+      case LogLevel.Info: {
+        console.info(logMessage, contextString);
         break;
-      case LogLevel.Warn:
-        console.warn(logMessage, contextStr);
+      }
+      case LogLevel.Warn: {
+        console.warn(logMessage, contextString);
         break;
+      }
       case LogLevel.Error:
-      case LogLevel.Critical:
-        console.error(logMessage, contextStr);
+      case LogLevel.Critical: {
+        console.error(logMessage, contextString);
         break;
-      default:
-        console.log(logMessage, contextStr);
+      }
+      default: {
+        console.log(logMessage, contextString);
+      }
     }
   }
 
@@ -195,14 +200,14 @@ export class Logger {
   /**
    * Log verbose message (detailed debug info)
    */
-  verbose(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Verbose, msg, context);
+  verbose(message: string, context?: LogContext): void {
+    this.log(LogLevel.Verbose, message, context);
   }
 
   /**
    * Log warning message
    */
-  warn(msg: string, context?: LogContext): void {
-    this.log(LogLevel.Warn, msg, context);
+  warn(message: string, context?: LogContext): void {
+    this.log(LogLevel.Warn, message, context);
   }
 }

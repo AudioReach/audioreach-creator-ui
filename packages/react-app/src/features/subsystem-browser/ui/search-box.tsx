@@ -9,13 +9,13 @@ import {Search} from 'lucide-react';
 
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
-interface SearchProps {
+interface SearchProperties {
   onChange: (value: string) => void;
   onClear: () => void;
   searchTerm: string;
 }
 
-const SearchBox: FC<SearchProps> = ({onChange, onClear, searchTerm}) => {
+const SearchBox: FC<SearchProperties> = ({onChange, onClear, searchTerm}) => {
   const handleValueChange = (value: string) => {
     onChange(value);
     // If value is empty, also call onClear

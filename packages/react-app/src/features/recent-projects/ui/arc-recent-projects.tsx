@@ -7,7 +7,7 @@ import {SessionMode} from '~entities/project/model/project.dto';
 import ArcProjectCard from '~shared/controls/arc-project-card';
 import type ProjectInfo from '~shared/types/project-info.types';
 
-interface ArcProjectSectionProps {
+interface ArcProjectSectionProperties {
   onOpenProject?: (project: ProjectInfo) => void;
   onRemoveFromRecent?: (projectId: string) => void;
   onShowInExplorer?: (projectId: string) => Promise<void>;
@@ -21,7 +21,7 @@ export default function ArcRecentProjects({
   onShowInExplorer,
   projects,
   ref,
-}: ArcProjectSectionProps) {
+}: ArcProjectSectionProperties) {
   function handleDoubleClick(project: ProjectInfo) {
     onOpenProject?.(project);
   }
@@ -39,7 +39,7 @@ export default function ArcRecentProjects({
         ) : (
           projects.map((project: ProjectInfo) => {
             // project.sessionMode = "DiffMerge"//testing diff/merge label
-            const labelProp = {
+            const labelProperty = {
               label:
                 project.sessionMode === SessionMode.DiffMerge
                   ? 'Diff/Merge'
@@ -58,7 +58,7 @@ export default function ArcRecentProjects({
                   await onShowInExplorer?.(project.id)
                 }
                 title={project.name}
-                {...labelProp}
+                {...labelProperty}
               />
             );
           })

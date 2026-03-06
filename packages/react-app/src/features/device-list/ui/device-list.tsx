@@ -6,7 +6,7 @@
 import ArcProjectCard from '~shared/controls/arc-project-card';
 import type DeviceInfo from '~shared/types/device-info.types';
 
-interface DeviceSectionProps {
+interface DeviceSectionProperties {
   /** List of devices to display in the device list */
   devices?: DeviceInfo[];
   /** A callback triggered when double clicking a device card */
@@ -16,7 +16,7 @@ interface DeviceSectionProps {
 export default function DeviceList({
   devices,
   onOpenDevice,
-}: DeviceSectionProps) {
+}: DeviceSectionProperties) {
   // handle showing as list view or as grid view
   function handleDeviceSelected(device: DeviceInfo) {
     onOpenDevice?.(device);

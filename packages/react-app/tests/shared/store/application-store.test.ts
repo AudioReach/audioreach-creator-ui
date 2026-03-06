@@ -254,7 +254,7 @@ describe('ProjectLayoutStore', () => {
       const mainTab = new ProjectMainTabEntity('test', createMinimalLayout());
       store.createProjectGroup(
         'test-project-id',
-        'C:\\path\\to\\test.xml',
+        String.raw`C:\path\to\test.xml`,
         'test.xml',
         mainTab,
       );

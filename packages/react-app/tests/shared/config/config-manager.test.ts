@@ -25,7 +25,7 @@ const mockLoadConfigData = jest.fn();
 const mockSaveConfigData = jest.fn();
 
 beforeAll(() => {
-  Object.defineProperty(window, 'configApi', {
+  Object.defineProperty(globalThis, 'configApi', {
     configurable: true,
     value: {
       loadConfigData: mockLoadConfigData,
@@ -40,7 +40,7 @@ describe('ConfigFileManager', () => {
 
   beforeEach(() => {
     // Reset the singleton instance before each test
-    // @ts-ignore
+    // @ts-expect-error - Accessing private member for testing
     ConfigFileManager._instance = undefined;
     configManager = ConfigFileManager.instance;
 
@@ -68,7 +68,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual({
         arcconfig: {
           layout: {
@@ -95,7 +95,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore - Accessing private member for testing
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual({
         arcconfig: {
           layout: {
@@ -117,7 +117,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual(defaultConfig);
     });
 
@@ -130,7 +130,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual(defaultConfig);
     });
 
@@ -143,7 +143,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual(defaultConfig);
     });
 
@@ -159,7 +159,7 @@ describe('ConfigFileManager', () => {
 
       await configManager.initializeConfig();
 
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual(defaultConfig);
     });
 
@@ -174,7 +174,7 @@ describe('ConfigFileManager', () => {
 
       // After catching, configDataMap should fall back to default config
       const defaultConfig = getExpectedDefaultConfig();
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.configDataMap).toEqual(defaultConfig);
     });
   });
@@ -194,10 +194,10 @@ describe('ConfigFileManager', () => {
     });
 
     it('should create a new ProjectConfigManager if one does not exist', () => {
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(projectId)).toBeFalsy();
       configManager.getProjectConfigData(projectId, path);
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(projectId)).toBeTruthy();
     });
 
@@ -215,10 +215,10 @@ describe('ConfigFileManager', () => {
 
     it('should not set config data for a non-existent project', () => {
       const newProjectId = 'newProject';
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy();
       configManager.setProjectConfigData(newProjectId, path, newConfigData);
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(newProjectId)).toBeFalsy();
     });
   });
@@ -239,7 +239,7 @@ describe('ConfigFileManager', () => {
     });
 
     it('should save the project config and delete it from the map', async () => {
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(projectId)).toBeTruthy();
       const saveSpy = jest.spyOn(configManager, 'archiveProjectConfig');
 
@@ -247,7 +247,7 @@ describe('ConfigFileManager', () => {
 
       expect(result).toBeTruthy();
       expect(saveSpy).toHaveBeenCalledWith(projectId);
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.has(projectId)).toBeFalsy();
       saveSpy.mockRestore();
     });
@@ -267,7 +267,7 @@ describe('ConfigFileManager', () => {
 
     beforeEach(async () => {
       // Reset configDataMap after initializeConfig
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       ConfigFileManager._instance = undefined;
       configManager = ConfigFileManager.instance;
 
@@ -289,7 +289,7 @@ describe('ConfigFileManager', () => {
 
     it('should save config data and delete usecase layout if projectId is not provided', async () => {
       // Set a usecase layout to ensure it"s deleted
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       configManager.configDataMap.arcconfig.layout = {
         graphDesignerView: graphDesignerLayout,
       };
@@ -306,7 +306,6 @@ describe('ConfigFileManager', () => {
 
     it('should save specific project config data if projectId is provided', async () => {
       // Manually set a different config for proj1 in its ProjectConfigManager
-      // @ts-ignore
       configManager.setProjectConfigData(projectId1, 'project1.modified', true);
 
       await configManager.save(projectId1);
@@ -340,7 +339,7 @@ describe('ConfigFileManager', () => {
     });
 
     it('should save the last project config data if multiple project sessions exist and no projectId is provided', async () => {
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.size).toBe(2);
 
       await configManager.save(); // Should save projectId2"s data
@@ -353,17 +352,18 @@ describe('ConfigFileManager', () => {
 
     it('should save config if no projects are open and no projectId is provided', async () => {
       // Reset to remove any existing project managers
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       ConfigFileManager._instance = undefined;
       configManager = ConfigFileManager.instance;
       const defaultData = getExpectedDefaultConfig();
+      // @ts-expect-error - Deleting non-optional property for testing
       delete defaultData?.arcconfig?.layout?.graphDesignerView;
       mockLoadConfigData.mockResolvedValue({
         data: JSON.stringify(defaultData),
         success: true,
       });
       await configManager.initializeConfig();
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       expect(configManager.projectConfigMap.size).toBe(0);
 
       await configManager.save();
@@ -380,7 +380,7 @@ describe('ConfigFileManager', () => {
         data: JSON.stringify(mockConfigWithoutUsecase),
         success: true,
       });
-      // @ts-ignore
+      // @ts-expect-error - Accessing private member for testing
       ConfigFileManager._instance = undefined;
       configManager = ConfigFileManager.instance;
       await configManager.initializeConfig(); // This will add usecaseLayout

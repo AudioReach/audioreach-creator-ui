@@ -17,7 +17,7 @@ import type {ProjectLifecycleHook} from '../model/types';
  */
 export function useProjectLifecycle(): ProjectLifecycleHook {
   // Local screenshot registry - stores screenshot functions for each project
-  const screenshotRegistryRef = useRef<
+  const screenshotRegistryReference = useRef<
     Map<string, () => Promise<string | null>>
   >(new Map());
 
@@ -36,11 +36,11 @@ export function useProjectLifecycle(): ProjectLifecycleHook {
     });
 
     try {
-      const screenshotFn = screenshotRegistryRef.current.get(projectId);
+      const screenshotFunction = screenshotRegistryReference.current.get(projectId);
 
-      if (screenshotFn) {
+      if (screenshotFunction) {
         // Capture screenshot BEFORE component unmounts
-        await ProjectImageService.captureAndSave(projectId, screenshotFn);
+        await ProjectImageService.captureAndSave(projectId, screenshotFunction);
       }
     } catch (error) {
       logger.error('Failed to capture screenshot during project close', {
@@ -73,7 +73,7 @@ export function useProjectLifecycle(): ProjectLifecycleHook {
       // Don't block close on config save failure
     } finally {
       // Cleanup registry
-      screenshotRegistryRef.current.delete(projectId);
+      screenshotRegistryReference.current.delete(projectId);
     }
 
     // Allow close to proceed
@@ -82,6 +82,6 @@ export function useProjectLifecycle(): ProjectLifecycleHook {
 
   return {
     handleProjectClose,
-    screenshotRegistry: screenshotRegistryRef.current,
+    screenshotRegistry: screenshotRegistryReference.current,
   };
 }

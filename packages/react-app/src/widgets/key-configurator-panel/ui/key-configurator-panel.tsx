@@ -17,7 +17,7 @@ import {
   type ConfigurationItem,
   ConfigurationItemType,
   ConfiguratorPanel,
-  ConfiguratorUtils,
+  
 } from '~widgets/configurator-panel';
 
 export const KeyConfiguratorPanel: React.FC = () => {
@@ -39,7 +39,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
     }
 
     // Initialize configuration for each selected item
-    selectedItems.forEach((item) => {
+    for (const item of selectedItems) {
       const context = mapItemToConfigurationContext(item);
       if (context) {
         initializeConfiguration(context);
@@ -48,7 +48,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
           component: 'KeyConfiguratorPanel',
         });
       }
-    });
+    }
   }, [selectedItems, projectId, initializeConfiguration]);
 
   // Helper function to map ConfigurationItem to ConfigurationContext
@@ -56,65 +56,72 @@ export const KeyConfiguratorPanel: React.FC = () => {
     item: ConfigurationItem,
   ): ConfigurationContext | null => {
     switch (item.type) {
-      case ConfigurationItemType.MODULE:
+      case ConfigurationItemType.MODULE: {
         return {
           entityId: item.id,
           entityType: item.type,
           instanceId: item.instanceId,
           systemId: item.systemId,
         };
+      }
 
-      case ConfigurationItemType.SUBGRAPH:
+      case ConfigurationItemType.SUBGRAPH: {
         return {
           entityId: item.id,
           entityType: item.type,
           systemId: item.systemId,
         };
+      }
 
-      case ConfigurationItemType.SUBSYSTEM:
+      case ConfigurationItemType.SUBSYSTEM: {
         return {
           entityId: item.id,
           entityType: item.type,
           systemId: item.systemId,
         };
+      }
 
-      default:
+      default: {
         return null;
+      }
     }
   };
 
   // KeyConfigurator-specific rendering logic
   const renderKeyConfigView = (
     item: ConfigurationItem,
-    isEditableParam: boolean,
+    isEditableParameter: boolean,
   ) => {
     switch (item.type.toLowerCase()) {
-      case 'subsystem':
+      case 'subsystem': {
         return (
           <SubsystemConfigPanel
-            isEditable={isEditableParam}
+            isEditable={isEditableParameter}
             subsystemId={item.id}
           />
         );
+      }
 
-      case 'subgraph':
+      case 'subgraph': {
         return (
           <SubgraphKeyVectorConfigPanel
-            isEditable={isEditableParam}
+            isEditable={isEditableParameter}
             subgraphId={item.id}
           />
         );
+      }
 
-      case 'module':
+      case 'module': {
         return (
           <ModuleConfigurationPanel
             instanceId={(item as any).instanceId || 1}
-            isEditable={isEditableParam}
+            isEditable={isEditableParameter}
             moduleId={item.id}
           />
         );
+      }
 
-      default:
+      default: {
         return (
           <div
             className="p-4 text-center text-sm"
@@ -133,6 +140,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
             </div>
           </div>
         );
+      }
     }
   };
 
@@ -194,4 +202,6 @@ export const KeyConfiguratorPanel: React.FC = () => {
 };
 
 // Re-export utilities for convenience
-export {ConfiguratorUtils};
+
+
+export {ConfiguratorUtils} from '~widgets/configurator-panel';

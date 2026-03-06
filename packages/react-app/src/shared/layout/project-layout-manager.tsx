@@ -38,10 +38,64 @@ import {deepEqual} from '../utils/deep-equality';
 
 import 'flexlayout-react/style/combined.css';
 
-interface ProjectLayoutManagerProps {
-  // Empty props interface - using object type instead of empty interface
-  // to satisfy @typescript-eslint/no-empty-object-type
-}
+// Utility functions for layout operations
+/**
+ * Recursively search for a tab by ID in a layout node tree
+ */
+const searchInLayout = (node: any, tabId: string): string | null => {
+  if (node.id === tabId) {
+    return node.name;
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      const result = searchInLayout(child, tabId);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return null;
+};
+
+/**
+ * Search for a tab by ID in borders array
+ */
+const searchInBorders = (borders: any[], tabId: string): string | null => {
+  for (const border of borders) {
+    if (border.children) {
+      for (const tab of border.children) {
+        if (tab.id === tabId) {
+          return tab.name;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+/**
+ * Strip 'selected' property from layout object for comparison
+ * This removes ephemeral state that shouldn't trigger layout saves
+ */
+const stripSelected = (object: any): any => {
+  if (object == undefined || typeof object !== 'object') {
+    return object;
+  }
+  if (Array.isArray(object)) {
+    return object.map((item) => stripSelected(item));
+  }
+  const out: any = {};
+  for (const key of Object.keys(object)) {
+    if (key === 'selected') {
+      continue;
+    }
+    out[key] = stripSelected(object[key]);
+  }
+  return out;
+};
+
+// Using Record<string, never> instead of empty interface to satisfy @typescript-eslint/no-empty-object-type
+type ProjectLayoutManagerProperties = Record<string, never>;
 
 interface ProjectLayoutManagerState {
   initialized: boolean;
@@ -50,13 +104,13 @@ interface ProjectLayoutManagerState {
 }
 
 class ProjectLayoutManager extends Component<
-  ProjectLayoutManagerProps,
+  ProjectLayoutManagerProperties,
   ProjectLayoutManagerState
 > {
   private unsubscribe?: () => void;
 
-  constructor(props: ProjectLayoutManagerProps) {
-    super(props);
+  constructor(properties: ProjectLayoutManagerProperties) {
+    super(properties);
 
     // Set this manager as the global manager for PanelIntegration
     PanelIntegration.setManager(this);
@@ -76,7 +130,7 @@ class ProjectLayoutManager extends Component<
    * Build FlexLayout model JSON from store data
    * This function is a translator that converts  ApplicationStore data into FlexLayout's required JSON format
    */
-  buildFlexLayoutModelFromStore = (): any => {
+  buildFlexLayoutModelFromStore = (): IJsonModel => {
     // Get fresh store reference to avoid stale data
     const freshStore = this.store;
 
@@ -88,7 +142,7 @@ class ProjectLayoutManager extends Component<
     const activeTabGroup = freshStore.activeTabGroup;
 
     // Add App Group tabs (if any)
-    freshStore.appGroups.forEach((appGroup) => {
+    for (const appGroup of freshStore.appGroups) {
       const colorNumber = appGroup.colorId; // Use stored colorId for App Groups
 
       // Always add app group label (whether collapsed or not)
@@ -107,7 +161,7 @@ class ProjectLayoutManager extends Component<
       // Only add app tabs if not collapsed
       if (!appGroup.isCollapsed) {
         // Add all app tabs from the array
-        appGroup.appTabs.forEach((appTab) => {
+        for (const appTab of appGroup.appTabs) {
           children.push({
             className: `border-t-2 border-${getColorName(colorNumber)}`,
             component: 'app-tab',
@@ -122,12 +176,12 @@ class ProjectLayoutManager extends Component<
           if (activeTab && activeTab.id === appTab.id) {
             selectedIndex = children.length - 1;
           }
-        });
+        }
       }
-    });
+    }
 
     // Add Project Groups using fresh store
-    freshStore.projectGroups.forEach((project, _index) => {
+    for (const [_index, project] of freshStore.projectGroups.entries()) {
       const colorNumber = project.colorId; // Use stored colorId
 
       // Add project group label
@@ -169,7 +223,7 @@ class ProjectLayoutManager extends Component<
         }
 
         // Add project tabs
-        project.projectTabs.forEach((projectTab, _tabIndex) => {
+        for (const [_tabIndex, projectTab] of project.projectTabs.entries()) {
           // This converts each project tab from  store into FlexLayout tab format
           const tabDef = {
             className: `border-t-2 border-${getColorName(colorNumber)}`,
@@ -195,15 +249,14 @@ class ProjectLayoutManager extends Component<
           // Use group's activeTabId if global activeTab doesn't match
           if (
             project.activeTabId === projectTab.id &&
-            activeTabGroup?.id === project.id
+            activeTabGroup?.id === project.id &&
+            !shouldSelect
           ) {
-            if (!shouldSelect) {
-              selectedIndex = children.length - 1;
-            }
+            selectedIndex = children.length - 1;
           }
-        });
+        }
       }
-    });
+    }
 
     // Return complete FlexLayout JSON structure
     // recreates the FlexLayout configuration structure that tells FlexLayout how to display tabs like horizontal
@@ -572,14 +625,14 @@ class ProjectLayoutManager extends Component<
           }
 
           // Notify all project tabs before group destruction
-          project.projectTabs.forEach((projectTab) => {
+          for (const projectTab of project.projectTabs) {
             if (
               'onProjectClose' in projectTab &&
               typeof projectTab.onProjectClose === 'function'
             ) {
               projectTab.onProjectClose(projectTab.id, projectTab.title);
             }
-          });
+          }
 
           // Proceed with group destruction
           PanelIntegration.cleanupProjectPanels(project.id);
@@ -708,7 +761,6 @@ class ProjectLayoutManager extends Component<
                   this.rebuildModel();
                 },
               );
-            } else {
             }
           },
         },
@@ -731,14 +783,14 @@ class ProjectLayoutManager extends Component<
     }
   };
 
-  onRenderTabSet = (tabSetNode: any, renderValues: any): void => {
+  onRenderTabSet = (_tabSetNode: any, renderValues: any): void => {
     renderValues.stickyButtons = [];
   };
 
   /**
    * Prevent group labels from being selected
    */
-  preventGroupLabelSelection = (newModel: any): any => {
+  preventGroupLabelSelection = (newModel: Model): Model => {
     const fixSelectedTab = (node: any): void => {
       if (node.getType() === 'tabset') {
         const children = node.getChildren();
@@ -747,10 +799,9 @@ class ProjectLayoutManager extends Component<
 
         if (selectedNode && selectedNode.getComponent() === 'group-label') {
           // Find the first actual tab (not group label) to select instead
-          for (let i = 0; i < children.length; i++) {
-            const child = children[i];
+          for (const [index, child] of children.entries()) {
             if (child.getComponent() !== 'group-label') {
-              node.setSelected(i);
+              node.setSelected(index);
               break;
             }
           }
@@ -893,26 +944,27 @@ export class PanelIntegration {
       useEffect(() => {
         let mounted = true;
         const unsubscribe = useProjectLayoutStore.subscribe(
-          (state, prevState) => {
+          (state, previousState) => {
             if (!mounted) {
               return;
             }
 
             const currentLayout = state.projectTabLayouts.get(mainTab.id);
-            const prevLayout = prevState?.projectTabLayouts.get(mainTab.id);
+            const previousLayout = previousState?.projectTabLayouts.get(
+              mainTab.id,
+            );
             const currentRegistry = state.componentRegistry;
-            const prevRegistry = prevState?.componentRegistry;
+            const previousRegistry = previousState?.componentRegistry;
 
             if (
-              currentLayout !== prevLayout ||
-              currentRegistry !== prevRegistry
+              (currentLayout !== previousLayout ||
+                currentRegistry !== previousRegistry) &&
+              this.globalManager
             ) {
-              if (this.globalManager) {
-                const newModel = this.globalManager.createFlexLayoutModel(
-                  mainTab.id,
-                );
-                setModel(newModel);
-              }
+              const newModel = this.globalManager.createFlexLayoutModel(
+                mainTab.id,
+              );
+              setModel(newModel);
             }
           },
         );
@@ -988,55 +1040,26 @@ export class PanelIntegration {
                   try {
                     const layoutData = JSON.parse(layoutJson);
 
-                    // Search in center layout
-                    const searchInLayout = (node: any): string | null => {
-                      if (node.id === tabId) {
-                        return node.name;
-                      }
-                      if (node.children) {
-                        for (const child of node.children) {
-                          const result = searchInLayout(child);
-                          if (result) {
-                            return result;
-                          }
-                        }
-                      }
-                      return null;
-                    };
-
-                    // Search in borders
-                    const searchInBorders = (borders: any[]): string | null => {
-                      for (const border of borders) {
-                        if (border.children) {
-                          for (const tab of border.children) {
-                            if (tab.id === tabId) {
-                              return tab.name;
-                            }
-                          }
-                        }
-                      }
-                      return null;
-                    };
-
                     let foundName = null;
 
                     // Search in layout first
                     if (layoutData.layout) {
-                      foundName = searchInLayout(layoutData.layout);
+                      foundName = searchInLayout(layoutData.layout, tabId);
                     }
 
                     // If not found, search in borders
                     if (!foundName && layoutData.borders) {
-                      foundName = searchInBorders(layoutData.borders);
+                      foundName = searchInBorders(layoutData.borders, tabId);
                     }
 
                     if (foundName) {
                       panelName = foundName;
-                    } else {
                     }
                   } catch (error) {
                     logger.error(`Error parsing layout JSON:${error}`);
                   }
+                } else {
+                  logger.warn(`No layout config found for tab: ${mainTab.id}`);
                 }
 
                 if (onPanelTabClose) {
@@ -1055,36 +1078,27 @@ export class PanelIntegration {
 
             // Compare with previously saved layout (ignore ephemeral 'selected' indices)
             const appStore = useProjectLayoutStore.getState();
-            const prevStr = appStore.getLayoutConfig(mainTab.id);
-
-            const stripSelected = (obj: any): any => {
-              if (obj == null || typeof obj !== 'object') {
-                return obj;
-              }
-              if (Array.isArray(obj)) {
-                return obj.map(stripSelected);
-              }
-              const out: any = {};
-              for (const key of Object.keys(obj)) {
-                if (key === 'selected') {
-                  continue;
-                }
-                out[key] = stripSelected(obj[key]);
-              }
-              return out;
-            };
+            const previousString = appStore.getLayoutConfig(mainTab.id);
 
             try {
-              const prev = prevStr ? JSON.parse(prevStr) : null;
+              const previous = previousString
+                ? JSON.parse(previousString)
+                : null;
               const normalizedNew = stripSelected(layoutJson);
-              const normalizedPrev = prev ? stripSelected(prev) : null;
+              const normalizedPrevious = previous
+                ? stripSelected(previous)
+                : null;
 
-              if (normalizedPrev && deepEqual(normalizedNew, normalizedPrev)) {
+              if (
+                normalizedPrevious &&
+                deepEqual(normalizedNew, normalizedPrevious)
+              ) {
                 // No meaningful change - skip logging/saving
                 return;
               }
-            } catch {
+            } catch (error) {
               // If parse/compare fails, fall through to save/log
+              logger.warn(`Error comparing layouts: ${error}`);
             }
 
             logger.info(
@@ -1173,23 +1187,21 @@ export class PanelIntegration {
         useEffect(() => {
           let mounted = true;
           const unsubscribe = useProjectLayoutStore.subscribe(
-            (state, prevState) => {
+            (state, previousState) => {
               if (!mounted) {
                 return;
               }
 
               const currentLayout = state.projectTabLayouts.get(projectTab.id);
-              const prevLayout = prevState?.projectTabLayouts.get(
+              const previousLayout = previousState?.projectTabLayouts.get(
                 projectTab.id,
               );
 
-              if (currentLayout !== prevLayout) {
-                if (this.globalManager) {
-                  const newModel = this.globalManager.createFlexLayoutModel(
-                    projectTab.id,
-                  );
-                  setModel(newModel);
-                }
+              if (currentLayout !== previousLayout && this.globalManager) {
+                const newModel = this.globalManager.createFlexLayoutModel(
+                  projectTab.id,
+                );
+                setModel(newModel);
               }
             },
           );
@@ -1251,48 +1263,16 @@ export class PanelIntegration {
                     try {
                       const layoutData = JSON.parse(layoutJson);
 
-                      // Search in center layout
-                      const searchInLayout = (node: any): string | null => {
-                        if (node.id === tabId) {
-                          return node.name;
-                        }
-                        if (node.children) {
-                          for (const child of node.children) {
-                            const result = searchInLayout(child);
-                            if (result) {
-                              return result;
-                            }
-                          }
-                        }
-                        return null;
-                      };
-
-                      // Search in borders
-                      const searchInBorders = (
-                        borders: any[],
-                      ): string | null => {
-                        for (const border of borders) {
-                          if (border.children) {
-                            for (const tab of border.children) {
-                              if (tab.id === tabId) {
-                                return tab.name;
-                              }
-                            }
-                          }
-                        }
-                        return null;
-                      };
-
                       let foundName = null;
 
                       // Search in layout first
                       if (layoutData.layout) {
-                        foundName = searchInLayout(layoutData.layout);
+                        foundName = searchInLayout(layoutData.layout, tabId);
                       }
 
                       // If not found, search in borders
                       if (!foundName && layoutData.borders) {
-                        foundName = searchInBorders(layoutData.borders);
+                        foundName = searchInBorders(layoutData.borders, tabId);
                       }
 
                       if (foundName) {
@@ -1322,33 +1302,20 @@ export class PanelIntegration {
 
               // Compare with previously saved layout (ignore ephemeral 'selected' indices)
               const appStore = useProjectLayoutStore.getState();
-              const prevStr = appStore.getLayoutConfig(projectTab.id);
-
-              const stripSelected = (obj: any): any => {
-                if (obj == null || typeof obj !== 'object') {
-                  return obj;
-                }
-                if (Array.isArray(obj)) {
-                  return obj.map(stripSelected);
-                }
-                const out: any = {};
-                for (const key of Object.keys(obj)) {
-                  if (key === 'selected') {
-                    continue;
-                  }
-                  out[key] = stripSelected(obj[key]);
-                }
-                return out;
-              };
+              const previousString = appStore.getLayoutConfig(projectTab.id);
 
               try {
-                const prev = prevStr ? JSON.parse(prevStr) : null;
+                const previous = previousString
+                  ? JSON.parse(previousString)
+                  : null;
                 const normalizedNew = stripSelected(layoutJson);
-                const normalizedPrev = prev ? stripSelected(prev) : null;
+                const normalizedPrevious = previous
+                  ? stripSelected(previous)
+                  : null;
 
                 if (
-                  normalizedPrev &&
-                  deepEqual(normalizedNew, normalizedPrev)
+                  normalizedPrevious &&
+                  deepEqual(normalizedNew, normalizedPrevious)
                 ) {
                   // No meaningful change - skip logging/saving
                   return;

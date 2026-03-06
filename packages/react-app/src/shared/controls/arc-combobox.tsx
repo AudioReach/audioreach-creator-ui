@@ -12,7 +12,7 @@ import {useListCollection} from '@qualcomm-ui/react-core/collection';
  * ArcCombobox - A wrapper around the new Combobox from qualcomm-ui
  * Maintains backward compatibility with the old QCombobox API
  */
-export interface ArcComboboxProps<T = string> {
+export interface ArcComboboxProperties<T = string> {
   /** Custom CSS class name */
   className?: string;
   /** Whether the combobox is disabled */
@@ -50,7 +50,7 @@ export interface ArcComboboxProps<T = string> {
 }
 
 export const ArcCombobox = <T extends string = string>(
-  props: ArcComboboxProps<T>,
+  properties: ArcComboboxProperties<T>,
 ) => {
   const {
     className,
@@ -70,7 +70,7 @@ export const ArcCombobox = <T extends string = string>(
     style,
     value,
     width,
-  } = props;
+  } = properties;
 
   // Create collection from options array using the hook
   const {collection} = useListCollection({
@@ -133,7 +133,7 @@ export const ArcCombobox = <T extends string = string>(
 
         <Combobox.Control>
           <Combobox.Input
-            aria-label={!label ? placeholder || 'Select option' : undefined}
+            aria-label={label ? undefined : placeholder || 'Select option'}
             placeholder={placeholder}
           />
           <Combobox.Trigger />

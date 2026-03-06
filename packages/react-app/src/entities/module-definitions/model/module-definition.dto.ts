@@ -15,13 +15,13 @@ export interface SpfModuleDefinitionResponseDto {
   moduleId: number;
   moduleInfo: ModuleInfo;
   name: string;
-  paramDefinitionsSummaryInfo: ParamDefinitionsSummaryInfo[];
+  paramDefinitionsSummaryInfo: ParameterDefinitionsSummaryInfo[];
   processorInfo: ProcessorInfo;
   systemId: string;
   vocoderModuleType: string;
 }
 
-export interface ParamDefinitionsSummaryInfo {
+export interface ParameterDefinitionsSummaryInfo {
   deprecated: boolean;
   description: string;
   isHidden: boolean;

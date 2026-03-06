@@ -50,17 +50,21 @@ const edgeTypes = {
   'data-link': DataLinkEdge,
 };
 
-export interface UsecaseVisualizerProps {
+export interface UsecaseVisualizerProperties {
   edges: RFEdge[];
   nodes: RFNode[];
-  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void;
+  onScreenshotReady?: (
+    screenshotFunction: () => Promise<string | null>,
+  ) => void;
   projectId: string;
   userPreferences: UserPreferences;
 }
 
 // Inner component that has access to useReactFlow hook - must be child of ReactFlow
 const ScreenshotHandler: FC<{
-  onScreenshotReady?: (screenshotFn: () => Promise<string | null>) => void;
+  onScreenshotReady?: (
+    screenshotFunction: () => Promise<string | null>,
+  ) => void;
 }> = ({onScreenshotReady}) => {
   const {getNodes, getNodesBounds} = useReactFlow();
   const [theme] = useTheme();
@@ -142,7 +146,7 @@ const ScreenshotHandler: FC<{
   return null;
 };
 
-const FlowContent: FC<UsecaseVisualizerProps> = ({
+const FlowContent: FC<UsecaseVisualizerProperties> = ({
   edges,
   nodes,
   onScreenshotReady,
@@ -199,11 +203,11 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
           currentSelection.selectedNodes[0].id === node.id &&
           currentSelection.selectedEdges.length === 0;
 
-        if (!isSameSelection) {
+        if (isSameSelection) {
+          updatedNodes = currentSelection.selectedNodes;
+        } else {
           updatedNodes = [node as RFNode];
           setSelection(projectId, updatedNodes, []);
-        } else {
-          updatedNodes = currentSelection.selectedNodes;
         }
       }
 
@@ -252,11 +256,11 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
 
   // Handle pane click to clear selection
   const handlePaneClick = useCallback((): void => {
-    // Only clear if there's actually something selected
-    if (
+    const hasSelection =
       currentSelection.selectedNodes.length > 0 ||
-      currentSelection.selectedEdges.length > 0
-    ) {
+      currentSelection.selectedEdges.length > 0;
+    // Only clear if there's actually something selected
+    if (hasSelection) {
       clearSelection(projectId);
       // Also clear KeyConfigurator selection (Option A)
       clearKeyConfiguratorSelection();
@@ -275,11 +279,11 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
         // Only clear if there's actually something selected
         const selection =
           useVisualizerSelectionStore.getState().selections[projectId];
-        if (
+        const hasSelection =
           selection &&
           (selection.selectedNodes.length > 0 ||
-            selection.selectedEdges.length > 0)
-        ) {
+            selection.selectedEdges.length > 0);
+        if (hasSelection) {
           clearSelection(projectId);
           // Also clear KeyConfigurator selection
           clearKeyConfiguratorSelection();
@@ -287,9 +291,9 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      globalThis.removeEventListener('keydown', handleKeyDown);
     };
   }, [clearSelection, clearKeyConfiguratorSelection, projectId]);
 
@@ -373,7 +377,7 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
   );
 };
 
-export const UsecaseVisualizer: FC<UsecaseVisualizerProps> = ({
+export const UsecaseVisualizer: FC<UsecaseVisualizerProperties> = ({
   edges,
   nodes,
   onScreenshotReady,

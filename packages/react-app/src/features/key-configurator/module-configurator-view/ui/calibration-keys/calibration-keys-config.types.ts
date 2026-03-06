@@ -4,12 +4,12 @@
  */
 
 import type {
-  GraphKey as CalibrationKey,
+  
   Key,
   KeyValue,
 } from '~shared/types/key-configurator-config.types';
 
-export type {CalibrationKey};
+
 
 export interface CkvParameter {
   checked: boolean;
@@ -24,3 +24,5 @@ export interface ConfiguredCkv {
   }>;
   pidConfig: number[];
 }
+
+export {type GraphKey as CalibrationKey} from '~shared/types/key-configurator-config.types';
