@@ -11,6 +11,7 @@ import type {
   ElectronApi,
   KeyConfiguratorViewApi,
   LogViewApi,
+  ModuleListApi,
   MruProjectInfo,
   MruStoreApi,
   ProjectContextApi,
@@ -91,6 +92,21 @@ const logViewApi: LogViewApi = {
 };
 
 contextBridge.exposeInMainWorld('logViewApi', logViewApi);
+
+// Module List API
+const moduleListApi: ModuleListApi = {
+  onToggleModuleList: (callback: () => void) => {
+    ipcRenderer.on('menu:toggle-module-list', callback);
+    // Return cleanup function
+    return () => {
+      ipcRenderer.removeListener('menu:toggle-module-list', callback);
+    };
+  },
+  updateModuleListState: (isOpen: boolean) =>
+    ipcRenderer.invoke('module-list:update-state', isOpen),
+};
+
+contextBridge.exposeInMainWorld('moduleListApi', moduleListApi);
 
 // Project Context API
 const projectContextApi: ProjectContextApi = {

@@ -7,6 +7,7 @@ import {useEffect, useRef} from 'react';
 
 import {useKeyConfiguratorView} from '~features/key-configurator';
 import {useLogView} from '~features/log-view';
+import {useModuleList} from '~features/module-list';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {ArcSideNav} from '~shared/controls/arc-side-nav';
 import {GlobalToaster} from '~shared/controls/global-toaster';
@@ -75,6 +76,7 @@ export const EditorShell: React.FC = () => {
   const {isLogViewOpen, toggleLogView} = useLogView();
   const {isKeyConfiguratorViewOpen, toggleKeyConfiguratorView} =
     useKeyConfiguratorView();
+  const {isModuleListOpen, toggleModuleList} = useModuleList();
 
   // Set up IPC listener for log view toggle from menu
   useEffect(() => {
@@ -148,6 +150,43 @@ export const EditorShell: React.FC = () => {
     return cleanup;
   }, [toggleKeyConfiguratorView, isKeyConfiguratorViewOpen]);
 
+  // Set up IPC listener for module list toggle from menu
+  useEffect(() => {
+    if (!window.moduleListApi) {
+      logger.warn('Module List API not available', {
+        action: 'setup_module_list_listener',
+        component: 'EditorShell',
+      });
+      return;
+    }
+
+    const handleToggleModuleList = () => {
+      // Determine target state before toggling to avoid race/negation issues
+      const targetOpen = !isModuleListOpen();
+
+      // Toggle the module list
+      toggleModuleList();
+
+      // Update menu state to reflect the actual target state
+      window.moduleListApi
+        .updateModuleListState(targetOpen)
+        .catch((error: unknown) => {
+          logger.error('Failed to update module list menu state', {
+            action: 'update_menu_state',
+            component: 'EditorShell',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    };
+
+    // Register listener
+    const cleanup = window.moduleListApi.onToggleModuleList(
+      handleToggleModuleList,
+    );
+
+    return cleanup;
+  }, [toggleModuleList, isModuleListOpen]);
+
   // Monitor active tab group and update menu state accordingly
   useEffect(() => {
     if (!window.projectContextApi || !window.logViewApi) {
@@ -198,6 +237,23 @@ export const EditorShell: React.FC = () => {
             },
           );
         });
+
+      // Update module list menu state based on current project
+      if (window.moduleListApi) {
+        const moduleListOpen = isModuleListOpen();
+        window.moduleListApi
+          .updateModuleListState(moduleListOpen)
+          .catch((error: unknown) => {
+            logger.error(
+              'Failed to update module list state on project change',
+              {
+                action: 'update_module_list_state',
+                component: 'EditorShell',
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
+          });
+      }
     } else {
       // We're on Start page or no active group - hide menu
       window.projectContextApi
@@ -210,7 +266,12 @@ export const EditorShell: React.FC = () => {
           });
         });
     }
-  }, [store.activeTabGroup, isLogViewOpen, isKeyConfiguratorViewOpen]);
+  }, [
+    store.activeTabGroup,
+    isLogViewOpen,
+    isKeyConfiguratorViewOpen,
+    isModuleListOpen,
+  ]);
 
   // Initialize with a default app group and Start tab
   useEffect(() => {
