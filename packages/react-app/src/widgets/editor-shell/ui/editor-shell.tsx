@@ -3,10 +3,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 
 import {useKeyConfiguratorView} from '~features/key-configurator';
 import {useLogView} from '~features/log-view';
+import {
+  isModuleListOpen,
+  MODULE_LIST_PANEL_ID,
+  MODULE_LIST_PANEL_TITLE,
+  ModuleList,
+} from '~features/module-list';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {ArcSideNav} from '~shared/controls/arc-side-nav';
 import {GlobalToaster} from '~shared/controls/global-toaster';
@@ -18,8 +24,12 @@ import ProjectLayoutManager from '~shared/layout/project-layout-manager';
 import {logger} from '~shared/lib/logger';
 import {useKeyboardShortcuts} from '~shared/lib/side-nav';
 import {Theme, useTheme} from '~shared/providers/theme-provider';
-import {AppTabEntity, useProjectLayoutStore} from '~shared/store';
-import {TabGroupType} from '~shared/store/project-layout.types';
+import {
+  AppTabEntity,
+  PanelTabEntity,
+  useProjectLayoutStore,
+} from '~shared/store';
+import {PanelId, TabGroupType} from '~shared/store/project-layout.types';
 import ArcStartPage from '~widgets/start-page/ui/arc-start-page';
 
 const EditorShellContent: React.FC = () => {
@@ -75,6 +85,35 @@ export const EditorShell: React.FC = () => {
   const {isLogViewOpen, toggleLogView} = useLogView();
   const {isKeyConfiguratorViewOpen, toggleKeyConfiguratorView} =
     useKeyConfiguratorView();
+
+  // Helper function to toggle module list
+  const toggleModuleList = useCallback((): boolean => {
+    const activeProjectGroup = store.getActiveProjectGroup();
+    if (!activeProjectGroup) {
+      logger.warn('No active project group found. Cannot toggle module list.');
+      return false;
+    }
+
+    // Use the currently active tab
+    const activeTab = store.activeTab;
+    const targetTabId = activeTab?.id || activeProjectGroup.mainTab.id;
+
+    if (isModuleListOpen()) {
+      // Close module list from the active tab
+      return store.removePanelTab(targetTabId, MODULE_LIST_PANEL_ID);
+    } else {
+      // Open module list in the active tab
+      const moduleListPanel = new PanelTabEntity(
+        MODULE_LIST_PANEL_TITLE,
+        <ModuleList />,
+      );
+
+      (moduleListPanel as PanelTabEntity & {id: string}).id =
+        MODULE_LIST_PANEL_ID;
+
+      return store.addPanelTab(targetTabId, PanelId.LeftPanel, moduleListPanel);
+    }
+  }, [store]);
 
   // Set up IPC listener for log view toggle from menu
   useEffect(() => {
@@ -148,6 +187,43 @@ export const EditorShell: React.FC = () => {
     return cleanup;
   }, [toggleKeyConfiguratorView, isKeyConfiguratorViewOpen]);
 
+  // Set up IPC listener for module list toggle from menu
+  useEffect(() => {
+    if (!window.moduleListApi) {
+      logger.warn('Module List API not available', {
+        action: 'setup_module_list_listener',
+        component: 'EditorShell',
+      });
+      return;
+    }
+
+    const handleToggleModuleList = () => {
+      // Determine target state before toggling to avoid race/negation issues
+      const targetOpen = !isModuleListOpen();
+
+      // Toggle the module list
+      toggleModuleList();
+
+      // Update menu state to reflect the actual target state
+      window.moduleListApi
+        .updateModuleListState(targetOpen)
+        .catch((error: unknown) => {
+          logger.error('Failed to update module list menu state', {
+            action: 'update_menu_state',
+            component: 'EditorShell',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    };
+
+    // Register listener
+    const cleanup = window.moduleListApi.onToggleModuleList(
+      handleToggleModuleList,
+    );
+
+    return cleanup;
+  }, [toggleModuleList]);
+
   // Monitor active tab group and update menu state accordingly
   useEffect(() => {
     if (!window.projectContextApi || !window.logViewApi) {
@@ -198,6 +274,23 @@ export const EditorShell: React.FC = () => {
             },
           );
         });
+
+      // Update module list menu state based on current project
+      if (window.moduleListApi) {
+        const moduleListOpen = isModuleListOpen();
+        window.moduleListApi
+          .updateModuleListState(moduleListOpen)
+          .catch((error: unknown) => {
+            logger.error(
+              'Failed to update module list state on project change',
+              {
+                action: 'update_module_list_state',
+                component: 'EditorShell',
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
+          });
+      }
     } else {
       // We're on Start page or no active group - hide menu
       window.projectContextApi

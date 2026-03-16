@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+import type {SpfModuleDefinitionResponseDto} from '~entities/module-definitions/model/module-definition.dto';
+
+// Interface for dragged module information
+export interface DraggedModuleInfo {
+  dspType: string; // DSP Type (ADSP, MDSP, CDSP)
+  moduleId: string;
+}
+
+// Store interface
+export interface ModuleListStore {
+  // Controls whether modules can be dragged
+  isDragEnabled: boolean;
+
+  // Stores the module definitions from backend
+  moduleList: SpfModuleDefinitionResponseDto[];
+
+  // Stores the current search text
+  query: string;
+  // Dynamic filter state - stores selected DSP and Module types
+  selectedDspTypes: string[];
+
+  selectedModuleTypes: string[];
+
+  setDragEnabled: (enabled: boolean) => boolean;
+  setModuleList: (moduleList: SpfModuleDefinitionResponseDto[]) => boolean;
+
+  setSearchString: (query: string) => boolean;
+
+  setSelectedDspTypes: (types: string[]) => boolean;
+  setSelectedModuleTypes: (types: string[]) => boolean;
+}

@@ -15,3 +15,16 @@ export async function getSpfModuleDefinition(
     `/projects/${projectId}/definitions/modules/spf/${moduleSystemId}`,
   );
 }
+
+/**
+ * Fetch all SPF module definitions for a project
+ * @param projectId - The project identifier
+ * @returns ApiResult containing array of module definitions
+ */
+export async function getAllSpfModuleDefinitions(
+  projectId: string,
+): Promise<ApiResult<SpfModuleDefinitionResponseDto[]>> {
+  return httpClient.get<SpfModuleDefinitionResponseDto[]>(
+    `/projects/${projectId}/definitions/modules/spf`,
+  );
+}
