@@ -103,3 +103,17 @@ export interface ModuleFilterState {
   [FilterType.Dsp]: boolean;
   [FilterType.Module]: boolean;
 }
+
+// Interface for drag data
+export interface DragData {
+  category?: string;
+  group?: string;
+  id: string;
+  isCustomModule?: boolean;
+  moduleType?: string;
+  name: string;
+  subgraphId?: string;
+  subgraphName?: string;
+  subgraphType?: SubgraphType;
+  tooltip?: string;
+}

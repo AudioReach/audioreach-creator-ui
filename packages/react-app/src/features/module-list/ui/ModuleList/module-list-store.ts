@@ -16,12 +16,23 @@ import {
   type TreeNode,
 } from './module-list-types';
 
+// Counter for generating unique IDs
+let idCounter = 0;
+
+/**
+ * Generate a unique ID for tree nodes
+ * Uses timestamp + counter
+ */
+function generateUniqueId(): string {
+  idCounter += 1;
+  return `${Date.now()}-${idCounter}`;
+}
+
 export const useItemListStore = create<ItemListStore>((set) => ({
   addItem: (itemData: TreeNode) => {
     try {
       const generateModuleWithIds = (data: TreeNode): TreeNode => {
-        const id =
-          data.id || `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        const id = data.id || generateUniqueId();
 
         if (isModuleLeafNode(data)) {
           // ModuleLeafNode -  module properties
@@ -40,9 +51,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
             category: data.category,
             id,
             name: data.name,
-            subgraphId:
-              data.subgraphId ||
-              `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            subgraphId: data.subgraphId || generateUniqueId(),
             subgraphName: data.subgraphName,
             subgraphType: data.subgraphType,
           };
@@ -71,7 +80,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       }));
       return true;
     } catch (error) {
-      logger.error(`Failed to add module: ${error}`);
+      logger.error(`Failed to add module: ${String(error)}`);
       return false;
     }
   },
@@ -90,7 +99,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({isDragEnabled: enabled});
       return true;
     } catch (error) {
-      logger.error(`Failed to set drag enabled state: ${error}`);
+      logger.error(`Failed to set drag enabled state: ${String(error)}`);
       return false;
     }
   },
@@ -100,7 +109,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({expandedValue: value});
       return true;
     } catch (error) {
-      logger.error(`Failed to set expanded value: ${error}`);
+      logger.error(`Failed to set expanded value: ${String(error)}`);
       return false;
     }
   },
@@ -110,7 +119,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({filterState});
       return true;
     } catch (error) {
-      logger.error(`Failed to set filter state: ${error}`);
+      logger.error(`Failed to set filter state: ${String(error)}`);
       return false;
     }
   },
@@ -120,7 +129,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({items});
       return true;
     } catch (error) {
-      logger.error(`Failed to set items: ${error}`);
+      logger.error(`Failed to set items: ${String(error)}`);
       return false;
     }
   },
@@ -129,7 +138,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({loadedProjectId: projectId});
       return true;
     } catch (error) {
-      logger.error(`Failed to set loaded project ID: ${error}`);
+      logger.error(`Failed to set loaded project ID: ${String(error)}`);
       return false;
     }
   },
@@ -138,7 +147,7 @@ export const useItemListStore = create<ItemListStore>((set) => ({
       set({query});
       return true;
     } catch (error) {
-      logger.error(`Failed to set query: ${error}`);
+      logger.error(`Failed to set query: ${String(error)}`);
       return false;
     }
   },

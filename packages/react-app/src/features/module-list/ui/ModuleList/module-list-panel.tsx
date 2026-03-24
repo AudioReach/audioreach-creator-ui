@@ -7,7 +7,7 @@ import {useProjectLayoutStore} from '~shared/store';
 
 import {useLoadModuleList} from '../../hooks/use-load-module-list';
 
-import {ModuleTree} from './ModuleTree';
+import {ModuleTree} from './module-tree';
 
 export const ModuleListPanel = () => {
   // Get the active project ID from the project layout store

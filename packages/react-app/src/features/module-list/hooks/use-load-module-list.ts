@@ -8,7 +8,6 @@ import {logger} from '~shared/lib/logger';
 
 import {fetchModuleList} from '../api/fetch-module-list';
 import {useItemListStore} from '../ui/ModuleList/module-list-store';
-import type {TreeNode} from '../ui/ModuleList/module-list-types';
 
 /**
  * Hook to load module list data from the backend API
@@ -59,9 +58,9 @@ export function useLoadModuleList(projectId?: string) {
           setItems([]);
 
           // Add each top-level item (Subsystems, Modules, Subgraph)
-          result.data.forEach((item: TreeNode) => {
+          for (const item of result.data) {
             addItem(item);
-          });
+          }
 
           // Mark this project as loaded in the store
           setLoadedProjectId(projectId);
@@ -72,8 +71,8 @@ export function useLoadModuleList(projectId?: string) {
           logger.error(`[useLoadModuleList] ${errorMsg}`);
           setError(errorMsg);
         }
-      } catch (err) {
-        const errorMsg = `Failed to fetch module list: ${String(err)}`;
+      } catch (error_) {
+        const errorMsg = `Failed to fetch module list: ${String(error_)}`;
         logger.error(`[useLoadModuleList] ${errorMsg}`);
         setError(errorMsg);
       } finally {
@@ -81,7 +80,7 @@ export function useLoadModuleList(projectId?: string) {
       }
     };
 
-    loadModuleList();
+    void loadModuleList();
   }, [projectId]);
 
   return {error, isLoading};

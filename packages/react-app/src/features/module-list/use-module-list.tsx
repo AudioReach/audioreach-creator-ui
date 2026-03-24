@@ -13,45 +13,60 @@ import ModuleListPanel from './module-list-panel';
 const MODULE_LIST_PANEL_ID = 'module-list-panel';
 const MODULE_LIST_PANEL_TITLE = 'Module List';
 
+// Type definitions for FlexLayout structure
+interface LayoutNode {
+  children?: LayoutNode[];
+  id?: string;
+}
+
+interface LayoutBorder {
+  children?: Array<{id?: string}>;
+}
+
+interface LayoutData {
+  borders?: LayoutBorder[];
+  layout?: LayoutNode;
+}
+
+/**
+ * Recursively search for a panel ID in a layout node tree
+ */
+function searchInNode(node: LayoutNode, panelId: string): boolean {
+  if (node.id === panelId) {
+    return true;
+  }
+  if (node.children) {
+    return node.children.some((child) => searchInNode(child, panelId));
+  }
+  return false;
+}
+
+/**
+ * Search for a panel ID in layout borders
+ */
+function searchInBorders(borders: LayoutBorder[], panelId: string): boolean {
+  return borders.some(
+    (border) =>
+      border.children?.some((tab) => tab.id === panelId) ?? false,
+  );
+}
+
 /**
  * Search for a panel with specific ID in FlexLayout JSON structure
  */
-function findPanelInLayout(layoutData: any, panelId: string): boolean {
+function findPanelInLayout(layoutData: LayoutData, panelId: string): boolean {
   if (!layoutData) {
     return false;
   }
 
-  // Search in center layout
-  const searchInNode = (node: any): boolean => {
-    if (node.id === panelId) {
-      return true;
-    }
-    if (node.children) {
-      for (const child of node.children) {
-        if (searchInNode(child)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
   // Search in center panel
-  if (layoutData.layout && searchInNode(layoutData.layout)) {
+  if (layoutData.layout && searchInNode(layoutData.layout, panelId)) {
     return true;
   }
 
   // Search in borders
-  if (layoutData.borders) {
-    for (const border of layoutData.borders) {
-      if (border.children) {
-        for (const tab of border.children) {
-          if (tab.id === panelId) {
-            return true;
-          }
-        }
-      }
-    }
+  if (layoutData.borders && searchInBorders(layoutData.borders, panelId)) {
+    return true;
   }
 
   return false;
@@ -78,10 +93,10 @@ export function useModuleList() {
     const layoutJson = store.getLayoutConfig(mainTabId);
     if (layoutJson) {
       try {
-        const layoutData = JSON.parse(layoutJson);
+        const layoutData = JSON.parse(layoutJson) as LayoutData;
         return findPanelInLayout(layoutData, MODULE_LIST_PANEL_ID);
       } catch (error) {
-        logger.error(`Error parsing layout JSON:${error}`);
+        logger.error(`Error parsing layout JSON:${String(error)}`);
         return false;
       }
     }
@@ -124,7 +139,8 @@ export function useModuleList() {
     );
 
     // Force a stable, well-known tab ID so we can detect/remove correctly
-    (moduleListPanel as any).id = MODULE_LIST_PANEL_ID;
+    (moduleListPanel as PanelTabEntity & {id: string}).id =
+      MODULE_LIST_PANEL_ID;
 
     const result = store.addPanelTab(
       mainTabId,

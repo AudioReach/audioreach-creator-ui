@@ -5,7 +5,7 @@
 
 import type {FC} from 'react';
 
-import {ModuleListPanel as ModuleListPanelComponent} from './ui/ModuleList/ModuleListPanel';
+import {ModuleListPanel as ModuleListPanelComponent} from './ui/ModuleList/module-list-panel';
 
 /**
  * Wrapper for ModuleListPanel with proper styling for FlexLayout integration
