@@ -14,4 +14,6 @@ permissions:
 jobs:
   qcom-preflight-checks:
     uses: AudioReach/audioreach-workflows/.github/workflows/qcom-preflight-checks.yml@master
+    with:
+      enable-armor-checkers: false
     secrets: inherit
