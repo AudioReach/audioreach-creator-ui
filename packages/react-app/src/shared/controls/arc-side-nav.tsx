@@ -51,6 +51,40 @@ export function ArcSideNav() {
     },
   });
 
+  // Split items into top (widget) and bottom (default) sections at the item level.
+  // Default items are identified by the '__default_' id prefix set in side-nav-provider.
+  // Filtering per-item (not per-group) handles mixed groups where widget items and
+  // default items share the same 'ungrouped' bucket.
+  const allGroups = useMemo(() => {
+    return items.length > 0
+      ? collection.groupChildren(
+          [],
+          (node) => node.group ?? 'ungrouped',
+          groupOrder,
+        )
+      : [];
+  }, [items, collection, groupOrder]);
+
+  const topGroupsData = useMemo(() => {
+    return allGroups
+      .map((group) => ({
+        items: group.items.filter(
+          ({node}) => !node.id.startsWith('__default_'),
+        ),
+        key: group.key,
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [allGroups]);
+
+  const bottomGroupData = useMemo(() => {
+    const bottomItems = allGroups.flatMap((group) =>
+      group.items.filter(({node}) => node.id.startsWith('__default_')),
+    );
+    return bottomItems.length > 0
+      ? [{items: bottomItems, key: 'ungrouped'}]
+      : [];
+  }, [allGroups]);
+
   const handleNodeClick = (node: SideNavItem) => {
     const hasChildren = node.children && node.children.length > 0;
 
@@ -127,6 +161,86 @@ export function ArcSideNav() {
       </Tooltip>
     );
 
+  const renderGroups = (groups: typeof allGroups) =>
+    groups.map((group) => (
+      <SideNav.Group key={group.key}>
+        <SideNav.Divider />
+
+        {group.key === 'ungrouped' ? null : (
+          <SideNav.GroupLabel>{group.key}</SideNav.GroupLabel>
+        )}
+
+        {group.items.map(({indexPath, node}) => (
+          <SideNav.Nodes
+            key={collection.getNodeValue(node)}
+            indexPath={indexPath}
+            node={node}
+            renderBranch={({node}) =>
+              open ? (
+                <SideNav.BranchNode
+                  render={
+                    <button
+                      onClick={() => handleNodeClick(node)}
+                      type="button"
+                    />
+                  }
+                >
+                  <SideNav.NodeIndicator />
+                  {node.icon ? <SideNav.NodeIcon icon={node.icon} /> : null}
+                  <SideNav.NodeText>{node.label}</SideNav.NodeText>
+                  <SideNav.BranchTrigger />
+                </SideNav.BranchNode>
+              ) : (
+                <Tooltip
+                  positioning={{placement: 'right'}}
+                  trigger={
+                    <span>
+                      <SideNav.BranchNode
+                        render={
+                          <button
+                            onClick={() => handleNodeClick(node)}
+                            type="button"
+                          />
+                        }
+                      >
+                        <SideNav.NodeIndicator />
+                        {node.icon ? (
+                          <SideNav.NodeIcon icon={node.icon} />
+                        ) : null}
+                        <SideNav.BranchTrigger />
+                      </SideNav.BranchNode>
+                    </span>
+                  }
+                >
+                  {node.tooltip || node.label}
+                </Tooltip>
+              )
+            }
+            renderLeaf={({node}) =>
+              node.popoverContent ? (
+                <Popover
+                  lazyMount
+                  positioning={{placement: 'right'}}
+                  trigger={(triggerProps) =>
+                    renderLeafInner(node, triggerProps, false)
+                  }
+                  unmountOnExit
+                >
+                  {node.popoverContent}
+                </Popover>
+              ) : (
+                renderLeafInner(
+                  node,
+                  {onClick: () => handleNodeClick(node)},
+                  true,
+                )
+              )
+            }
+          />
+        ))}
+      </SideNav.Group>
+    ));
+
   return (
     <SideNav.Root
       collection={collection}
@@ -141,6 +255,7 @@ export function ArcSideNav() {
       style={{
         backgroundColor: 'var(--color-surface-secondary)',
         color: 'var(--color-text-neutral-primary)',
+        height: '100%',
       }}
     >
       <SideNav.Header>
@@ -148,89 +263,10 @@ export function ArcSideNav() {
         <SideNav.CollapseTrigger />
       </SideNav.Header>
 
-      {items.length > 0 &&
-        collection
-          .groupChildren([], (node) => node.group ?? 'ungrouped', groupOrder)
-          .map((group) => (
-            <SideNav.Group key={group.key}>
-              <SideNav.Divider />
-
-              {group.key === 'ungrouped' ? null : (
-                <SideNav.GroupLabel>{group.key}</SideNav.GroupLabel>
-              )}
-
-              {group.items.map(({indexPath, node}) => (
-                <SideNav.Nodes
-                  key={collection.getNodeValue(node)}
-                  indexPath={indexPath}
-                  node={node}
-                  renderBranch={({node}) =>
-                    open ? (
-                      <SideNav.BranchNode
-                        render={
-                          <button
-                            onClick={() => handleNodeClick(node)}
-                            type="button"
-                          />
-                        }
-                      >
-                        <SideNav.NodeIndicator />
-                        {node.icon ? (
-                          <SideNav.NodeIcon icon={node.icon} />
-                        ) : null}
-                        <SideNav.NodeText>{node.label}</SideNav.NodeText>
-                        <SideNav.BranchTrigger />
-                      </SideNav.BranchNode>
-                    ) : (
-                      <Tooltip
-                        positioning={{placement: 'right'}}
-                        trigger={
-                          <span>
-                            <SideNav.BranchNode
-                              render={
-                                <button
-                                  onClick={() => handleNodeClick(node)}
-                                  type="button"
-                                />
-                              }
-                            >
-                              <SideNav.NodeIndicator />
-                              {node.icon ? (
-                                <SideNav.NodeIcon icon={node.icon} />
-                              ) : null}
-                              <SideNav.BranchTrigger />
-                            </SideNav.BranchNode>
-                          </span>
-                        }
-                      >
-                        {node.tooltip || node.label}
-                      </Tooltip>
-                    )
-                  }
-                  renderLeaf={({node}) =>
-                    node.popoverContent ? (
-                      <Popover
-                        lazyMount
-                        positioning={{placement: 'right'}}
-                        trigger={(triggerProps) =>
-                          renderLeafInner(node, triggerProps, false)
-                        }
-                        unmountOnExit
-                      >
-                        {node.popoverContent}
-                      </Popover>
-                    ) : (
-                      renderLeafInner(
-                        node,
-                        {onClick: () => handleNodeClick(node)},
-                        true,
-                      )
-                    )
-                  }
-                />
-              ))}
-            </SideNav.Group>
-          ))}
+      <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+        <div>{renderGroups(topGroupsData)}</div>
+        <div style={{marginTop: 'auto'}}>{renderGroups(bottomGroupData)}</div>
+      </div>
     </SideNav.Root>
   );
 }
