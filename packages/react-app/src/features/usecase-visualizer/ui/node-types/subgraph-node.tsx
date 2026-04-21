@@ -8,20 +8,32 @@ import type {FC} from 'react';
 
 import type {NodeProps} from '@xyflow/react';
 
-import type {RFSubgraphNodeData} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import {
+  type RFSubgraphNodeData,
+  SEARCH_HIGHLIGHT_BG,
+  SEARCH_HIGHLIGHT_BORDER,
+} from '~features/usecase-visualizer/model/usecase-visualizer.types';
 
 export const SubgraphNode: FC<NodeProps> = ({data, selected}) => {
   const subgraphData = data as RFSubgraphNodeData;
+  const hl = subgraphData.searchHighlight ?? 'none';
+  const isHighlighted = hl === 'active' || hl === 'match';
 
   return (
     <div
       className="bg-1 rounded-md border-2 shadow-sm"
       style={{
-        backgroundColor: selected
-          ? 'var(--color-background-support-info-subtle)'
-          : undefined,
-        borderColor: selected ? 'var(--color-border-support-info)' : undefined,
-        borderWidth: selected ? '3px' : '2px',
+        backgroundColor: isHighlighted
+          ? SEARCH_HIGHLIGHT_BG[hl]
+          : selected
+            ? 'var(--color-background-support-info-subtle)'
+            : 'transparent',
+        borderColor: isHighlighted
+          ? SEARCH_HIGHLIGHT_BORDER[hl]
+          : selected
+            ? 'var(--color-border-support-info)'
+            : undefined,
+        borderWidth: isHighlighted || selected ? '3px' : '2px',
         height: '100%',
         position: 'relative',
         width: '100%',

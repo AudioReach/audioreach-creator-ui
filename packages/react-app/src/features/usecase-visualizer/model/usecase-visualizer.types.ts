@@ -28,11 +28,39 @@ export const EDGE_KIND = {
 
 export type EdgeKind = (typeof EDGE_KIND)[keyof typeof EDGE_KIND];
 
+/** Visual highlight state driven by search. */
+export type SearchHighlightState = 'active' | 'match' | 'none';
+
+/**
+ * Centralised colour constants for search highlight states.
+ * All node components import from here — change once, applies everywhere.
+ *
+ *   'active' → the currently focused search match  (orange)
+ *   'match'  → all other nodes in the result set   (yellow)
+ */
+export const SEARCH_HIGHLIGHT_BORDER: Record<SearchHighlightState, string> = {
+  active: '#e67300',
+  match: '#EAB308',
+  none: 'transparent',
+};
+
+export const SEARCH_HIGHLIGHT_BG: Record<SearchHighlightState, string> = {
+  active: '#e67300',
+  match: 'transparent',
+  none: 'transparent',
+};
+
 // Base node data
 export interface RFNodeBaseData {
   [key: string]: unknown;
   kind: NodeKind;
   label?: string;
+  /**
+   * Set by UsecaseVisualizer before rendering based on the search highlight
+   * store.  Node components read this to apply yellow ('match') or orange
+   * ('active') styling.  Defaults to 'none' when no search is active.
+   */
+  searchHighlight?: SearchHighlightState;
 }
 
 // Subsystem node (outer boundary)
@@ -77,6 +105,7 @@ export interface RFModuleNodeData extends RFNodeBaseData {
   controlPorts: ControlPort[];
   dataPorts: DataPort[];
   kind: typeof NODE_KIND.MODULE;
+  moduleId: number;
   name?: string;
   parentId?: number; // subsystem id
   showPortLabels?: boolean; // default false

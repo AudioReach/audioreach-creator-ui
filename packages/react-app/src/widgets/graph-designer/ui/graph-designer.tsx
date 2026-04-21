@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 
 import {
   Clipboard,
@@ -15,6 +15,7 @@ import {
   Package,
   Redo,
   Save,
+  Search,
   Type,
   Undo,
   Upload,
@@ -24,10 +25,18 @@ import {
 import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
 import {getSystemIdsFromFormattedUsecases} from '~entities/usecases/model/usecase-utils';
 import {
+  SearchComponent,
+  useSearchComponentStore,
+} from '~features/search-component';
+import {
   type UsecaseCategory,
   UsecaseSelectionControl,
 } from '~features/usecase-selection';
-import {layoutWithELK, UsecaseVisualizer} from '~features/usecase-visualizer';
+import {
+  layoutWithELK,
+  UsecaseVisualizer,
+  useVisualizerSelectionStore,
+} from '~features/usecase-visualizer';
 import {buildGraphViewFromUsecase} from '~features/usecase-visualizer/lib/adapter';
 import type {
   GraphSpec,
@@ -39,6 +48,8 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import {useUsecaseStore} from '~shared/store/use-usecase-store';
+
+import {searchNodes} from '../lib/graph-search';
 
 const EMPTY_SELECTED_USECASES: string[] = [];
 
@@ -72,6 +83,41 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const [edges, setEdges] = useState<RFEdge[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchFocusTrigger, setSearchFocusTrigger] = useState(0);
+
+  // Search state
+  const [hasSearched, setHasSearched] = useState(false);
+  const [matchingNodes, setMatchingNodes] = useState<RFNode[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  // Selection store actions
+  const clearSelection = useVisualizerSelectionStore((s) => s.clearSelection);
+  const setSearchHighlight = useVisualizerSelectionStore(
+    (s) => s.setSearchHighlight,
+  );
+  const clearSearchHighlight = useVisualizerSelectionStore(
+    (s) => s.clearSearchHighlight,
+  );
+
+  // Read the current search term from the store — single source of truth
+  const currentSearchTerm = useSearchComponentStore(
+    (s) => s.getProjectState(projectGroupId).searchTerm,
+  );
+
+  // Opens the search panel and focuses the input (works whether panel is new or already visible)
+  const openSearch = useCallback(() => {
+    setIsSearchVisible(true);
+    setSearchFocusTrigger((prev) => prev + 1);
+  }, []);
+
+  // Resets all search state — call when usecase changes or search is closed
+  const resetSearch = useCallback(() => {
+    setHasSearched(false);
+    setMatchingNodes([]);
+    setCurrentMatchIndex(0);
+    clearSearchHighlight(projectGroupId);
+  }, [projectGroupId, clearSearchHighlight]);
 
   // Handle screenshot function registration - directly register with passed registry
   const handleScreenshotReady = (
@@ -84,6 +130,79 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       projectId: projectGroupId,
     });
   };
+
+  // Re-run search when nodes change (handles both node add and node remove)
+  // Only fires if a search is already active — preserves results, does not reset
+  useEffect(() => {
+    if (!hasSearched || !currentSearchTerm.trim()) {
+      return;
+    }
+
+    const matches = searchNodes(nodes, currentSearchTerm);
+    setMatchingNodes(matches);
+
+    // Clamp the current index to the new valid range
+    const clampedIndex =
+      matches.length > 0 ? Math.min(currentMatchIndex, matches.length - 1) : 0;
+    setCurrentMatchIndex(clampedIndex);
+
+    const matchIds = new Set(matches.map((n) => n.id));
+    const activeId = matches[clampedIndex]?.id ?? null;
+    setSearchHighlight(projectGroupId, matchIds, activeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes]);
+
+  // Search handlers
+  const handleSearch = useCallback(
+    (term: string) => {
+      if (!term.trim()) {
+        resetSearch();
+        clearSelection(projectGroupId);
+        return;
+      }
+
+      setHasSearched(true);
+
+      const matches = searchNodes(nodes, term);
+      setMatchingNodes(matches);
+      setCurrentMatchIndex(0);
+
+      // Highlight all matching nodes and mark the first one as active
+      const matchIds = new Set(matches.map((n) => n.id));
+      const activeId = matches[0]?.id ?? null;
+      setSearchHighlight(projectGroupId, matchIds, activeId);
+    },
+    [nodes, projectGroupId, setSearchHighlight, clearSelection, resetSearch],
+  );
+
+  const handleSearchNext = useCallback(() => {
+    if (matchingNodes.length === 0) {
+      return;
+    }
+    const nextIndex = (currentMatchIndex + 1) % matchingNodes.length;
+    setCurrentMatchIndex(nextIndex);
+    // Update the active node in the highlight store
+    const matchIds = new Set(matchingNodes.map((n) => n.id));
+    setSearchHighlight(projectGroupId, matchIds, matchingNodes[nextIndex].id);
+  }, [matchingNodes, currentMatchIndex, projectGroupId, setSearchHighlight]);
+
+  const handleSearchPrevious = useCallback(() => {
+    if (matchingNodes.length === 0) {
+      return;
+    }
+    const prevIndex =
+      (currentMatchIndex - 1 + matchingNodes.length) % matchingNodes.length;
+    setCurrentMatchIndex(prevIndex);
+    // Update the active node in the highlight store
+    const matchIds = new Set(matchingNodes.map((n) => n.id));
+    setSearchHighlight(projectGroupId, matchIds, matchingNodes[prevIndex].id);
+  }, [matchingNodes, currentMatchIndex, projectGroupId, setSearchHighlight]);
+
+  const handleSearchClose = useCallback(() => {
+    setIsSearchVisible(false);
+    resetSearch();
+    clearSelection(projectGroupId);
+  }, [projectGroupId, clearSelection, resetSearch]);
 
   // Cleanup screenshot registration on unmount
   useEffect(() => {
@@ -100,6 +219,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Fetch graph data when selected usecases change
   useEffect(() => {
     const fetchGraphData = async () => {
+      // Reset search state when usecase selection changes
+      resetSearch();
+
       // Clear error state
       setError(null);
 
@@ -155,6 +277,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           setNodes(graphViewWithELK.nodes);
           setEdges(graphViewWithELK.edges);
 
+          // If the search panel is open and a term is present, re-run the
+          // search against the new graph.  Setting hasSearched=true here
+          // (after resetSearch cleared it at the top) causes the
+          // useEffect([nodes]) to fire and call searchNodes with the new nodes.
+          if (isSearchVisible && currentSearchTerm.trim()) {
+            setHasSearched(true);
+          }
+
           logger.verbose('Graph data loaded successfully', {
             action: 'fetch_graph_data',
             component: 'GraphDesigner',
@@ -184,6 +314,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     };
 
     fetchGraphData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUsecases, usecaseData, projectGroupId]);
 
   // Side nav implementation
@@ -241,6 +372,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         id: 'paste',
         label: 'Paste',
         shortcut: 'Ctrl+V',
+      },
+      {
+        group: 'Edit',
+        icon: Search,
+        id: 'search',
+        label: 'Search',
+        shortcut: 'Ctrl+F',
       },
       // Tools group
 
@@ -354,6 +492,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         });
         showToast('Save As dialog opened', 'info');
       },
+      search: () => {
+        openSearch();
+      },
       undo: () => {
         logger.info('Undo action triggered', {
           action: 'undo',
@@ -376,11 +517,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         showToast('Opening View/Edit Definitions', 'info');
       },
     }),
-    [],
+    [openSearch],
   );
 
   const sideNavShortcuts = useMemo(() => {
     const shortcuts: Record<string, () => void> = {
+      'Ctrl+f': () => {
+        openSearch();
+      },
       'Ctrl+Shift+S': () => {
         logger.info('Save As shortcut triggered', {
           action: 'save_as',
@@ -438,7 +582,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     }
 
     return shortcuts;
-  }, [hasUnsavedChanges, hasSelection, canUndoRedo]);
+  }, [hasUnsavedChanges, hasSelection, canUndoRedo, openSearch]);
 
   const sideNav = useSideNav(sideNavItems, sideNavHandlers, sideNavShortcuts);
 
@@ -464,8 +608,38 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       {/* Graph Visualizer below */}
       <div
         className="flex-1 overflow-hidden"
-        style={{backgroundColor: 'var(--color-surface-primary)'}}
+        style={{
+          backgroundColor: 'var(--color-surface-primary)',
+          position: 'relative',
+        }}
       >
+        {/* Search overlay – floats above the graph canvas at top-right */}
+        {isSearchVisible && (
+          <div
+            style={{
+              maxWidth: 'calc(100% - 24px)',
+              position: 'absolute',
+              right: '12px',
+              top: '5px',
+              width: '380px',
+              zIndex: 10,
+            }}
+          >
+            <SearchComponent
+              currentMatch={
+                matchingNodes.length > 0 ? currentMatchIndex + 1 : 0
+              }
+              focusTrigger={searchFocusTrigger}
+              onClose={handleSearchClose}
+              onNext={handleSearchNext}
+              onPrevious={handleSearchPrevious}
+              onSearch={handleSearch}
+              projectId={projectGroupId}
+              totalMatches={hasSearched ? matchingNodes.length : undefined}
+            />
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">

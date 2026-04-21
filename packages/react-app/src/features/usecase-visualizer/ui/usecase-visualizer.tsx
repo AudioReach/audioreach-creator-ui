@@ -151,12 +151,32 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
 }) => {
   const [theme] = useTheme();
   const colorMode: ColorMode = theme === Theme.Dark ? 'dark' : 'light';
+  const {fitView} = useReactFlow();
 
   // Get selection store actions and current selection
   const {clearSelection, setSelection} = useVisualizerSelectionStore();
   const selectionFromStore = useVisualizerSelectionStore(
     (state) => state.selections[projectId],
   );
+
+  // Get search highlight state for this project
+  const searchHighlight = useVisualizerSelectionStore(
+    (state) => state.searchHighlights[projectId],
+  );
+
+  // Pan/zoom the viewport to the active search match whenever it changes
+  useEffect(() => {
+    const activeId = searchHighlight?.activeNodeId;
+    if (!activeId) {
+      return;
+    }
+    fitView({
+      duration: 600, // smooth animated pan
+      nodes: [{id: activeId}],
+      padding: 0.5, // some breathing room around the node
+    });
+  }, [searchHighlight?.activeNodeId, fitView]);
+
   const currentSelection = useMemo(
     () => selectionFromStore || {selectedEdges: [], selectedNodes: []},
     [selectionFromStore],
@@ -334,11 +354,21 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       selected: currentSelection.selectedEdges.some((e) => e.id === edge.id),
     }));
 
-  // Mark selected nodes
-  const nodesWithSelection = nodes.map((node) => ({
-    ...node,
-    selected: currentSelection.selectedNodes.some((n) => n.id === node.id),
-  }));
+  // Mark selected nodes and annotate with search highlight state
+  const nodesWithSelection = nodes.map((node) => {
+    const isActive = searchHighlight?.activeNodeId === node.id;
+    const isMatch =
+      !isActive && (searchHighlight?.matchNodeIds.has(node.id) ?? false);
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        searchHighlight: isActive ? 'active' : isMatch ? 'match' : 'none',
+      },
+      selected: currentSelection.selectedNodes.some((n) => n.id === node.id),
+    };
+  });
 
   logger.verbose(
     `Rendering visualizer (selected nodes: ${nodesWithSelection.filter((n) => n.selected).length}/${nodesWithSelection.length}, selected edges: ${filteredEdges.filter((e) => e.selected).length}/${filteredEdges.length})`,

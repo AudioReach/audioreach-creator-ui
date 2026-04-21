@@ -201,6 +201,7 @@ export function buildGraphViewFromUsecase(
           : [],
         kind: NODE_KIND.MODULE,
         label: m.alias || m.name,
+        moduleId: m.moduleId,
         name: m.name,
         parentId: m.parentId,
         showPortLabels: false,

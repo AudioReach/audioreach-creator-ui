@@ -8,21 +8,33 @@ import type {FC} from 'react';
 
 import type {NodeProps} from '@xyflow/react';
 
-import type {RFSubsystemNodeData} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import {
+  type RFSubsystemNodeData,
+  SEARCH_HIGHLIGHT_BG,
+  SEARCH_HIGHLIGHT_BORDER,
+} from '~features/usecase-visualizer/model/usecase-visualizer.types';
 
 export const SubsystemNode: FC<NodeProps> = ({data, selected}) => {
   const subsystemData = data as RFSubsystemNodeData;
+  const hl = subsystemData.searchHighlight ?? 'none';
+  const isHighlighted = hl === 'active' || hl === 'match';
 
   return (
     <div
       className="rounded-md shadow-sm"
       style={{
-        backgroundColor: selected
-          ? 'var(--color-background-support-info-subtle)'
-          : undefined,
-        borderColor: selected ? 'var(--color-border-support-info)' : undefined,
+        backgroundColor: isHighlighted
+          ? SEARCH_HIGHLIGHT_BG[hl]
+          : selected
+            ? 'var(--color-background-support-info-subtle)'
+            : undefined,
+        borderColor: isHighlighted
+          ? SEARCH_HIGHLIGHT_BORDER[hl]
+          : selected
+            ? 'var(--color-border-support-info)'
+            : undefined,
         borderStyle: 'solid',
-        borderWidth: selected ? '3px' : '2px',
+        borderWidth: isHighlighted || selected ? '3px' : '2px',
         height: '100%',
         position: 'relative',
         width: '100%',
