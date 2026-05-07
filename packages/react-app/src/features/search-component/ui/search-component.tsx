@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Info,
   Search,
   X,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import {
 import {IconButton} from '@qualcomm-ui/react/button';
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 import {TextInput} from '@qualcomm-ui/react/text-input';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import {useSearchComponentStore} from '../model/use-search-component-store';
 
@@ -25,26 +27,16 @@ export interface SearchComponentProps {
   /** Current match index (1-based). Displayed as "N / total". */
   currentMatch?: number;
   /**
+   * Handles all open scenarios
    * Increment this counter to focus the search input.
-   * Handles all open scenarios:
-   *   - First open: SearchComponent mounts with focusTrigger=1 → fires
-   *   - Close + reopen: remounts with new focusTrigger value → fires
-   *   - Panel already visible, Ctrl+F again: value increments → fires
    */
   focusTrigger?: number;
-  /** Called when the user closes the search bar. */
   onClose: () => void;
-  /** Called when the user requests the next match (Enter key or ↓ button). */
   onNext: () => void;
-  /** Called when the user requests the previous match (↑ button). */
   onPrevious: () => void;
-  /** Called on every search-term change. */
   onSearch: (term: string) => void;
-  /** Placeholder text shown inside the input. */
   placeholder?: string;
-  /** Project ID used to isolate search state per project. */
   projectId: string;
-  /** Total number of matches found by the consumer. */
   totalMatches?: number;
 }
 
@@ -56,9 +48,6 @@ export interface SearchComponentProps {
  * - History toggle button with collapsible dropdown
  * - Match counter ("N / total")
  * - Previous / Next / Close navigation buttons
- *
- * Per-project state (searchTerm, history) is managed by `useSearchComponentStore`.
- * Match navigation and result counts are delegated to the consumer via props.
  */
 export const SearchComponent: FC<SearchComponentProps> = ({
   currentMatch,
@@ -72,28 +61,37 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   totalMatches,
 }) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Tracks which history item currently has keyboard focus (-1 = input focused)
+  const [focusedHistoryIndex, setFocusedHistoryIndex] = useState(-1);
+
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Select only the actions we need — stable function references, no re-render on data change
+  const historyItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Always track the latest onSearch callback to avoid stale closures in effects.
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
+
   const addToHistory = useSearchComponentStore((s) => s.addToHistory);
   const setSearchTerm = useSearchComponentStore((s) => s.setSearchTerm);
 
-  // Derive per-project state reactively via getProjectState.
   const {history, searchTerm} = useSearchComponentStore((state) =>
     state.getProjectState(projectId),
   );
 
+  const searchTermRef = useRef(searchTerm);
+  searchTermRef.current = searchTerm;
+
   // Focus the input whenever focusTrigger changes.
-  // Also re-applies the stored search term so results are shown immediately on reopen.
   useEffect(() => {
     const input = containerRef.current?.querySelector('input');
     input?.focus();
 
-    // Re-apply stored search term when panel is reopened
-    if (searchTerm.trim()) {
-      onSearch(searchTerm);
+    // Re-apply stored search term when panel is reopened.
+    if (searchTermRef.current.trim()) {
+      onSearchRef.current(searchTermRef.current);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTrigger]);
 
   // Close history dropdown when the user clicks outside the component
@@ -104,11 +102,11 @@ export const SearchComponent: FC<SearchComponentProps> = ({
         !containerRef.current.contains(event.target as Node)
       ) {
         setIsHistoryOpen(false);
+        setFocusedHistoryIndex(-1);
       }
     };
 
     // Use capture:true so this fires before ReactFlow (or any other layer)
-    // can call stopPropagation() and swallow the event.
     document.addEventListener('mousedown', handlePointerDown, {capture: true});
     return () => {
       document.removeEventListener('mousedown', handlePointerDown, {
@@ -117,6 +115,22 @@ export const SearchComponent: FC<SearchComponentProps> = ({
     };
   }, []);
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /** Return focus to the text input and reset the focused history index. */
+  const returnFocusToInput = () => {
+    const input = containerRef.current?.querySelector('input');
+    input?.focus();
+    setFocusedHistoryIndex(-1);
+  };
+
+  /** Close the history dropdown and return focus to the input. */
+  const closeHistory = () => {
+    setIsHistoryOpen(false);
+    setFocusedHistoryIndex(-1);
+    returnFocusToInput();
+  };
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleSearchChange = (value: string) => {
@@ -124,6 +138,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
     onSearch(value);
     if (!value) {
       setIsHistoryOpen(false);
+      setFocusedHistoryIndex(-1);
     }
   };
 
@@ -131,6 +146,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
     setSearchTerm(projectId, term);
     onSearch(term);
     setIsHistoryOpen(false);
+    setFocusedHistoryIndex(-1);
     const input = containerRef.current?.querySelector('input');
     input?.focus();
   };
@@ -140,14 +156,60 @@ export const SearchComponent: FC<SearchComponentProps> = ({
       if (searchTerm.trim()) {
         addToHistory(projectId, searchTerm);
       }
-      onNext();
+      if (event.shiftKey) {
+        onPrevious();
+      } else {
+        onNext();
+      }
     } else if (event.key === 'Escape') {
-      handleClose();
+      if (isHistoryOpen) {
+        closeHistory();
+      } else {
+        onClose();
+      }
+    } else if (
+      event.key === 'ArrowDown' &&
+      isHistoryOpen &&
+      history.length > 0
+    ) {
+      // Move focus into the first history item
+      event.preventDefault();
+      setFocusedHistoryIndex(0);
+      historyItemRefs.current[0]?.focus();
+    } else if (event.key === 'Tab' && isHistoryOpen) {
+      // Close the dropdown so it doesn't stay open when focus leaves
+      setIsHistoryOpen(false);
+      setFocusedHistoryIndex(-1);
     }
   };
 
-  const handleClose = () => {
-    onClose();
+  const handleHistoryItemKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    index: number,
+    term: string,
+  ) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const nextIndex = (index + 1) % history.length;
+      setFocusedHistoryIndex(nextIndex);
+      historyItemRefs.current[nextIndex]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (index === 0) {
+        returnFocusToInput();
+      } else {
+        const prevIndex = index - 1;
+        setFocusedHistoryIndex(prevIndex);
+        historyItemRefs.current[prevIndex]?.focus();
+      }
+    } else if (event.key === 'Enter') {
+      handleHistorySelect(term);
+    } else if (event.key === 'Escape') {
+      closeHistory();
+    } else if (event.key === 'Tab') {
+      setIsHistoryOpen(false); // Close dropdown;
+      setFocusedHistoryIndex(-1);
+    }
   };
 
   const handleNext = () => {
@@ -155,13 +217,6 @@ export const SearchComponent: FC<SearchComponentProps> = ({
       addToHistory(projectId, searchTerm);
     }
     onNext();
-  };
-
-  const handlePrevious = () => {
-    if (searchTerm.trim()) {
-      addToHistory(projectId, searchTerm);
-    }
-    onPrevious();
   };
 
   // ── Derived state ──────────────────────────────────────────────────────────
@@ -195,13 +250,71 @@ export const SearchComponent: FC<SearchComponentProps> = ({
               placeholder={placeholder}
             />
             <TextInput.ClearTrigger />
+            {/* Info icon — shows search syntax guide on hover */}
+            <Tooltip
+              arrowTipProps={{
+                className:
+                  '!bg-[var(--color-background-support-neutral-subtle)]',
+              }}
+              contentProps={{
+                className:
+                  'bg-[var(--color-background-support-neutral-subtle)]',
+              }}
+              positioning={{placement: 'bottom'}}
+              trigger={
+                <span style={{display: 'inline-flex'}}>
+                  <InlineIconButton
+                    aria-label="Search syntax help"
+                    icon={Info}
+                    size="sm"
+                    style={{backgroundColor: 'transparent'}}
+                  />
+                </span>
+              }
+            >
+              <div className="text-xs">
+                {[
+                  {
+                    example: 'PCM or 0xB0000006 or 0x4726',
+                    label: 'Search all components',
+                  },
+                  {
+                    example: 'sg:0xB0000006 or sg:StreamRx',
+                    label: 'Search subgraphs',
+                  },
+                  {
+                    example: 'ss:0xF010002A or ss:Loopback',
+                    label: 'Search subsystems',
+                  },
+                  {
+                    example: 'mod:0x0700101A or mod:0x4726 or mod:Volume',
+                    label: 'Search modules',
+                  },
+                  {example: 'cnt:0xE0000023', label: 'Search containers'},
+                ].map(({example, label}) => (
+                  <div
+                    key={label}
+                    className="mb-2 text-[var(--color-text-neutral-primary)]"
+                  >
+                    <div className="mb-1">{label}</div>
+                    <code className="block rounded bg-[var(--color-background-neutral-03)] px-1.5 py-0.5 text-[var(--color-text-neutral-primary)]">
+                      {example}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </Tooltip>
             {/* History toggle rendered inside the input box */}
             <InlineIconButton
+              aria-expanded={isHistoryOpen}
               aria-label={
                 isHistoryOpen ? 'Hide search history' : 'Show search history'
               }
               icon={isHistoryOpen ? ChevronUp : ChevronDown}
-              onClick={() => setIsHistoryOpen((prev) => !prev)}
+              onClick={() => {
+                setIsHistoryOpen((prev) => !prev);
+                setFocusedHistoryIndex(-1);
+              }}
               size="sm"
               style={{
                 backgroundColor: 'transparent',
@@ -212,26 +325,28 @@ export const SearchComponent: FC<SearchComponentProps> = ({
 
         {/* ── History dropdown ── */}
         {isHistoryOpen && (
-          <div className="absolute left-0 right-0 top-[calc(100%+1px)] z-[200] max-h-60 overflow-y-auto border border-[var(--color-border-neutral-02)] bg-[var(--color-surface-secondary)]">
+          <div
+            className="absolute left-0 right-0 top-[calc(100%+1px)] z-[200] max-h-60 overflow-y-auto border border-[var(--color-border-neutral-02)] bg-[var(--color-surface-secondary)]"
+            role="listbox"
+          >
             {history.length > 0 ? (
-              history.map((term: string) => (
+              history.map((term: string, index: number) => (
                 <div
                   key={term}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-neutral-primary)]"
+                  ref={(el) => {
+                    historyItemRefs.current[index] = el;
+                  }}
+                  aria-selected={focusedHistoryIndex === index}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-neutral-primary)] hover:bg-[var(--color-background-neutral-03)] focus:bg-[var(--color-background-neutral-03)] focus:outline-none"
                   onClick={() => handleHistorySelect(term)}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      'var(--color-background-neutral-03)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      'transparent';
-                  }}
+                  onKeyDown={(e) => handleHistoryItemKeyDown(e, index, term)}
+                  role="option"
+                  tabIndex={0}
                 >
                   <History
                     size={14}
                     style={{
-                      color: 'var(color-text-neutral-primary)',
+                      color: 'var(--color-text-neutral-primary)',
                       flexShrink: 0,
                     }}
                   />
@@ -266,34 +381,33 @@ export const SearchComponent: FC<SearchComponentProps> = ({
       {/* ── Navigation & close buttons ── */}
       <div
         style={{
-          // alignItems: 'center',
           display: 'flex',
           flexShrink: 0,
         }}
       >
         <IconButton
           aria-label="Previous match"
+          className="-mr-[15px]"
           disabled={!hasMatches}
           emphasis="neutral"
           icon={ArrowUp}
-          onClick={handlePrevious}
-          style={{marginRight: '-15px'}}
+          onClick={onPrevious}
           variant="ghost"
         />
         <IconButton
           aria-label="Next match"
+          className="-mr-[15px]"
           disabled={!hasMatches}
           emphasis="neutral"
           icon={ArrowDown}
           onClick={handleNext}
-          style={{marginRight: '-15px'}}
           variant="ghost"
         />
         <IconButton
           aria-label="Close search"
           emphasis="neutral"
           icon={X}
-          onClick={handleClose}
+          onClick={onClose}
           variant="ghost"
         />
       </div>

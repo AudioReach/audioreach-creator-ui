@@ -14,43 +14,18 @@ interface ProjectSelection {
   selectedNodes: RFNode[];
 }
 
-/**
- * Search highlight state for a project.
- * - `matchNodeIds`  — ReactFlow node IDs of all nodes matching the search term
- *                     (rendered in yellow)
- * - `activeNodeId`  — ReactFlow node ID of the currently focused match
- *                     (rendered in orange); null when no match is active
- */
-export interface SearchHighlight {
-  activeNodeId: string | null;
-  matchNodeIds: Set<string>;
-}
-
 interface VisualizerSelectionStore {
-  // Clear search highlights for a project (restores nodes to normal state)
-  clearSearchHighlight: (projectId: string) => void;
-
   // Clear selection for a project
   clearSelection: (projectId: string) => void;
 
   // Get selection for a project
   getSelection: (projectId: string) => ProjectSelection;
 
-  // Remove project (cleanup)
+  // Remove project (cleanup on unmount)
   removeProject: (projectId: string) => void;
-
-  // Per-project search highlight state
-  searchHighlights: Record<string, SearchHighlight>;
 
   // Per-project selection state
   selections: Record<string, ProjectSelection>;
-
-  // Set search highlights for a project
-  setSearchHighlight: (
-    projectId: string,
-    matchNodeIds: Set<string>,
-    activeNodeId: string | null,
-  ) => void;
 
   // Set selection for a project
   setSelection: (projectId: string, nodes: RFNode[], edges: RFEdge[]) => void;
@@ -58,15 +33,6 @@ interface VisualizerSelectionStore {
 
 export const useVisualizerSelectionStore = create<VisualizerSelectionStore>(
   (set, get) => ({
-    clearSearchHighlight: (projectId: string): void => {
-      set((state) => ({
-        searchHighlights: {
-          ...state.searchHighlights,
-          [projectId]: {activeNodeId: null, matchNodeIds: new Set<string>()},
-        },
-      }));
-    },
-
     clearSelection: (projectId: string): void => {
       set((state) => ({
         selections: {
@@ -86,30 +52,11 @@ export const useVisualizerSelectionStore = create<VisualizerSelectionStore>(
     removeProject: (projectId: string): void => {
       set((state) => {
         const {[projectId]: _sel, ...restSelections} = state.selections;
-        const {[projectId]: _hl, ...restHighlights} = state.searchHighlights;
-        return {searchHighlights: restHighlights, selections: restSelections};
+        return {selections: restSelections};
       });
     },
 
-    searchHighlights: {},
-
     selections: {},
-
-    setSearchHighlight: (
-      projectId: string,
-      matchNodeIds: Set<string>,
-      activeNodeId: string | null,
-    ): void => {
-      logger.verbose(
-        `Search highlight updated (project: ${projectId}, matches: ${matchNodeIds.size}, active: ${activeNodeId ?? 'none'})`,
-      );
-      set((state) => ({
-        searchHighlights: {
-          ...state.searchHighlights,
-          [projectId]: {activeNodeId, matchNodeIds},
-        },
-      }));
-    },
 
     setSelection: (
       projectId: string,

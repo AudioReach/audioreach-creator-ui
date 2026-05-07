@@ -473,12 +473,49 @@ describe('searchNodes — Prefix-based search', () => {
         expect(searchNodes(allNodes, 'cnt:5')).toHaveLength(0);
       });
 
-      it('does NOT match by string/name — containers are matched by numeric id only', () => {
-        expect(searchNodes(allNodes, 'cnt:Container')).toHaveLength(0);
+      it('first match gets active highlight', () => {
+        const matches = searchNodes(allNodes, 'cnt:50');
+        const activeId = matches[0]?.id ?? null;
+        const annotations = annotateHighlights(allNodes, matches, activeId);
+
+        expect(
+          annotations.find((a) => a.id === 'container-1-50')?.searchHighlight,
+        ).toBe('active');
+      });
+    });
+
+    describe('C2: Search Container by Name (ContainerName)', () => {
+      it('returns containers whose ContainerName partially matches', () => {
+        const results = searchNodes(allNodes, 'cnt:Container');
+
+        expect(results).toHaveLength(1);
+        expect(results[0].id).toBe('container-1-50');
+      });
+
+      it('returns containers whose ContainerName exactly matches', () => {
+        const results = searchNodes(allNodes, 'cnt:Container50');
+
+        expect(results).toHaveLength(1);
+        expect(results[0].id).toBe('container-1-50');
+      });
+
+      it('is case-insensitive for name search', () => {
+        const results = searchNodes(allNodes, 'cnt:container50');
+
+        expect(results).toHaveLength(1);
+        expect(results[0].id).toBe('container-1-50');
+      });
+
+      it('restricts results to CONTAINER kind — no other component types returned', () => {
+        const results = searchNodes(allNodes, 'cnt:Container');
+
+        expect(results.every((n) => n.data.kind === NODE_KIND.CONTAINER)).toBe(
+          true,
+        );
       });
 
       it('first match gets active highlight', () => {
-        const matches = searchNodes(allNodes, 'cnt:50');
+        const matches = searchNodes(allNodes, 'cnt:Container50');
         const activeId = matches[0]?.id ?? null;
         const annotations = annotateHighlights(allNodes, matches, activeId);
 

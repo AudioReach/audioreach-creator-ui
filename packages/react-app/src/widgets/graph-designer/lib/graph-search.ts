@@ -11,7 +11,7 @@
  * Prefix syntax:  <prefix>:<value>
  *   sg:   → Subgraph nodes  (by SubgraphId or SubgraphName)
  *   ss:   → Subsystem nodes (by SubsystemId or SubsystemName)
- *   cnt:  → Container nodes (by ContainerId only)
+ *   cnt:  → Container nodes (by ContainerId, ContainerName, or label)
  *   mod:  → Module nodes    (by ModuleId, InstanceId, ModuleName, or AliasName)
  *
  * Value rules:
@@ -33,7 +33,8 @@ import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 // Types
 // ---------------------------------------------------------------------------
 
-export type SearchPrefix = 'sg' | 'ss' | 'cnt' | 'mod';
+const KNOWN_PREFIXES = ['sg', 'ss', 'cnt', 'mod'] as const;
+export type SearchPrefix = (typeof KNOWN_PREFIXES)[number];
 
 export interface ParsedSearchTerm {
   /**
@@ -63,7 +64,6 @@ function extractNumericNodeId(rfNodeId: string): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
-/** Returns true if `nodeName` contains `searchTerm` (case-insensitive). */
 function matchesName(
   nodeName: string | undefined,
   searchTerm: string,
@@ -78,12 +78,6 @@ function matchesName(
 // Parse
 // ---------------------------------------------------------------------------
 
-/**
- * Parse a raw search term into a prefix + value pair.
- * If the term contains ":" the part before the first ":" is treated as the
- * prefix (case-insensitive).  Unknown prefixes are marked as `'invalid'`
- * and will produce no search results.
- */
 export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
   const colonIdx = rawSearchTerm.indexOf(':');
   if (colonIdx === -1) {
@@ -93,12 +87,9 @@ export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
   const prefixRaw = rawSearchTerm.slice(0, colonIdx).trim().toLowerCase();
   const value = rawSearchTerm.slice(colonIdx + 1);
 
-  // This array is just a runtime list of all valid prefix strings.
-  // TypeScript's union types only exist at compile time — they disappear at runtime
-  const knownPrefixes: SearchPrefix[] = ['sg', 'ss', 'cnt', 'mod'];
-  const prefix: SearchPrefix | 'invalid' = knownPrefixes.includes(
-    prefixRaw as SearchPrefix,
-  )
+  const prefix: SearchPrefix | 'invalid' = (
+    KNOWN_PREFIXES as readonly string[]
+  ).includes(prefixRaw)
     ? (prefixRaw as SearchPrefix)
     : 'invalid'; // Unknown prefix → treat as invalid, not default search
 
@@ -137,15 +128,15 @@ function matchesSubsystem(
 
 function matchesContainer(
   node: RFNode,
-  _value: string,
+  value: string,
   numericValue: number | null,
 ): boolean {
-  // Containers are matched by ContainerId only
-  if (numericValue === null) {
-    return false;
-  }
   const data = node.data as RFContainerNodeData;
-  return data.containerId === numericValue;
+  if (numericValue !== null) {
+    return data.containerId === numericValue;
+  }
+  // String search: name or label (consistent with other node matchers)
+  return matchesName(data.name, value) || matchesName(data.label, value);
 }
 
 function matchesModule(
@@ -168,12 +159,60 @@ function matchesModule(
 }
 
 // ---------------------------------------------------------------------------
+// Sort matches by visual position
+// ---------------------------------------------------------------------------
+
+/**
+ * Sort a set of matching nodes by their absolute canvas position
+ * (left → right, then top → bottom).
+ *
+ * ReactFlow nodes use *relative* positions — each node's `position` is
+ * relative to its parent. To determine the true visual order we walk the
+ * full parent chain (module → container → subgraph → subsystem) and sum
+ * the offsets to obtain the absolute canvas coordinate before sorting.
+ *
+ * @param matches  - The subset of nodes returned by `searchNodes`.
+ * @param allNodes - The complete node list used to resolve parent positions.
+ */
+export function sortMatchesByPosition(
+  matches: RFNode[],
+  allNodes: RFNode[],
+): RFNode[] {
+  const nodesById = new Map(allNodes.map((n) => [n.id, n]));
+
+  const getAbsolutePosition = (node: RFNode): {x: number; y: number} => {
+    let x = node.position?.x ?? 0;
+    let y = node.position?.y ?? 0;
+    let current: RFNode = node;
+    while (current.parentId) {
+      const parent = nodesById.get(current.parentId);
+      if (!parent) {
+        break;
+      }
+      x += parent.position?.x ?? 0;
+      y += parent.position?.y ?? 0;
+      current = parent;
+    }
+    return {x, y};
+  };
+
+  return [...matches].sort((a, b) => {
+    const posA = getAbsolutePosition(a);
+    const posB = getAbsolutePosition(b);
+    const xDiff = posA.x - posB.x;
+    if (Math.abs(xDiff) > 1) {
+      return xDiff;
+    } // primary: left → right
+    return posA.y - posB.y; // secondary: top → bottom
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main search function
 // ---------------------------------------------------------------------------
 
 /**
  * Filter `nodes` according to `searchTerm` and return the matching subset.
- *
  * Returns an empty array when `searchTerm` is blank.
  */
 export function searchNodes(nodes: RFNode[], searchTerm: string): RFNode[] {

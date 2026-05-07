@@ -29,6 +29,18 @@ export function useKeyboardShortcuts(
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      // Do not intercept shortcuts when the user is typing in an input,
+      // textarea, or any contentEditable element — let the browser handle
+      // native text-editing keys (paste, copy, cut, undo, etc.) normally.
+      const target = event.target as HTMLElement;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       // Build the key combination string
       // Normalize single letter keys to lowercase ONLY if Shift is not pressed
       // This handles Caps Lock while preserving intentional Shift+Letter combinations

@@ -32,7 +32,7 @@ export const ContainerNode: FC<NodeProps> = ({data, selected}) => {
           ? SEARCH_HIGHLIGHT_BORDER[hl]
           : selected
             ? 'var(--color-border-support-info)'
-            : 'var(--color-background-neutral-07)',
+            : 'var(--color-background-neutral-10)',
         borderWidth: isHighlighted || selected ? '3px' : '2px',
         height: '100%',
         position: 'relative',

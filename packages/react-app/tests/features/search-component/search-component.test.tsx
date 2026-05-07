@@ -283,6 +283,21 @@ describe('Search input & clear', () => {
     expect(defaultProps.onNext).toHaveBeenCalledTimes(1);
   });
 
+  it('pressing Shift+Enter calls onPrevious', () => {
+    // Pre-populate store so searchTerm is non-empty
+    useSearchComponentStore
+      .getState()
+      .setSearchTerm(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    const input = screen.getByTestId('search-input');
+    fireEvent.keyDown(input, {code: 'Enter', key: 'Enter', shiftKey: true});
+
+    expect(defaultProps.onPrevious).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onNext).not.toHaveBeenCalled();
+  });
+
   it('clear button empties the search input and calls onSearch with empty string', () => {
     useSearchComponentStore
       .getState()
@@ -379,6 +394,148 @@ describe('History dropdown', () => {
     expect(items[0]).toHaveTextContent('third');
     expect(items[1]).toHaveTextContent('second');
     expect(items[2]).toHaveTextContent('first');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// History dropdown — keyboard navigation
+// ---------------------------------------------------------------------------
+
+describe('History dropdown — keyboard navigation', () => {
+  it('ArrowDown from input moves focus to the first history item', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'VideoEncoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    // Open the dropdown
+    fireEvent.click(screen.getByLabelText('Show search history'));
+
+    // Press ArrowDown on the input
+    const input = screen.getByTestId('search-input');
+    fireEvent.keyDown(input, {code: 'ArrowDown', key: 'ArrowDown'});
+
+    // The most-recent item (VideoEncoder) is index 0 in the rendered list
+    const items = screen.getAllByRole('option');
+    expect(document.activeElement).toBe(items[0]);
+  });
+
+  it('ArrowDown from a history item moves focus to the next item', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'first');
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'second');
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'third');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+
+    const items = screen.getAllByRole('option');
+
+    // Focus the first item then press ArrowDown
+    items[0].focus();
+    fireEvent.keyDown(items[0], {code: 'ArrowDown', key: 'ArrowDown'});
+
+    expect(document.activeElement).toBe(items[1]);
+  });
+
+  it('ArrowUp from the first history item returns focus to the input', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+
+    const items = screen.getAllByRole('option');
+    items[0].focus();
+    fireEvent.keyDown(items[0], {code: 'ArrowUp', key: 'ArrowUp'});
+
+    expect(document.activeElement).toBe(screen.getByTestId('search-input'));
+  });
+
+  it('Enter on a focused history item selects it and calls onSearch', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+
+    const items = screen.getAllByRole('option');
+    items[0].focus();
+    fireEvent.keyDown(items[0], {code: 'Enter', key: 'Enter'});
+
+    expect(defaultProps.onSearch).toHaveBeenCalledWith('AudioDecoder');
+    // Dropdown should be closed
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('Escape on a focused history item closes the dropdown', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    const items = screen.getAllByRole('option');
+    items[0].focus();
+    fireEvent.keyDown(items[0], {code: 'Escape', key: 'Escape'});
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('Tab from input when history is open closes the dropdown', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    const input = screen.getByTestId('search-input');
+    fireEvent.keyDown(input, {code: 'Tab', key: 'Tab'});
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('Escape from input when history is open closes the dropdown (not the panel)', () => {
+    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
+
+    render(<SearchComponent {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Show search history'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    const input = screen.getByTestId('search-input');
+    fireEvent.keyDown(input, {code: 'Escape', key: 'Escape'});
+
+    // Dropdown closed but onClose NOT called
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(defaultProps.onClose).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Search syntax tooltip
+// ---------------------------------------------------------------------------
+
+describe('Search syntax tooltip', () => {
+  it('hovering the info icon reveals the search syntax guide', () => {
+    render(<SearchComponent {...defaultProps} />);
+
+    const infoBtn = screen.getByLabelText('Search syntax help');
+    fireEvent.mouseOver(infoBtn);
+
+    expect(screen.getByText('PCM or 0xB0000006 or 0x4726')).toBeInTheDocument();
+    expect(
+      screen.getByText('sg:0xB0000006 or sg:StreamRx'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('ss:0xF010002A or ss:Loopback'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('mod:0x0700101A or mod:0x4726 or mod:Volume'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('cnt:0xE0000023')).toBeInTheDocument();
   });
 });
 

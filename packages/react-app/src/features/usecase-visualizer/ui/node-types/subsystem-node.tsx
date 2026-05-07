@@ -32,7 +32,7 @@ export const SubsystemNode: FC<NodeProps> = ({data, selected}) => {
           ? SEARCH_HIGHLIGHT_BORDER[hl]
           : selected
             ? 'var(--color-border-support-info)'
-            : undefined,
+            : 'var(--color-background-neutral-10)',
         borderStyle: 'solid',
         borderWidth: isHighlighted || selected ? '3px' : '2px',
         height: '100%',

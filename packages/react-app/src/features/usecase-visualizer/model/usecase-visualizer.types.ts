@@ -33,19 +33,16 @@ export type SearchHighlightState = 'active' | 'match' | 'none';
 
 /**
  * Centralised colour constants for search highlight states.
- * All node components import from here — change once, applies everywhere.
- *
- *   'active' → the currently focused search match  (orange)
- *   'match'  → all other nodes in the result set   (yellow)
+ * All node components import from here.
  */
 export const SEARCH_HIGHLIGHT_BORDER: Record<SearchHighlightState, string> = {
-  active: '#e67300',
-  match: '#EAB308',
+  active: 'var(--color-category-orange-medium)',
+  match: 'var(--color-category-yellow-strong)',
   none: 'transparent',
 };
 
 export const SEARCH_HIGHLIGHT_BG: Record<SearchHighlightState, string> = {
-  active: '#e67300',
+  active: 'var(--color-category-orange-strong)',
   match: 'transparent',
   none: 'transparent',
 };
@@ -56,9 +53,8 @@ export interface RFNodeBaseData {
   kind: NodeKind;
   label?: string;
   /**
-   * Set by UsecaseVisualizer before rendering based on the search highlight
-   * store.  Node components read this to apply yellow ('match') or orange
-   * ('active') styling.  Defaults to 'none' when no search is active.
+   * Set by UsecaseVisualizer before rendering based
+   * on the search highlight store.
    */
   searchHighlight?: SearchHighlightState;
 }

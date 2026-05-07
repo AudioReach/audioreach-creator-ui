@@ -633,3 +633,28 @@ jest.mock('@qualcomm-ui/react-core/portal', () => ({
     return createElement('div', {'data-testid': 'portal'}, children);
   }),
 }));
+
+jest.mock('@qualcomm-ui/react/tooltip', () => ({
+  Tooltip: jest
+    .fn()
+    .mockImplementation(
+      ({
+        arrowProps: _arrowProps,
+        arrowTipProps: _arrowTipProps,
+        children,
+        contentProps: _contentProps,
+        hideArrow: _hideArrow,
+        portalProps: _portalProps,
+        positionerProps: _positionerProps,
+        trigger,
+        ...props
+      }) => {
+        return createElement(
+          'div',
+          {'data-testid': 'q-tooltip', ...props},
+          trigger,
+          children,
+        );
+      },
+    ),
+}));

@@ -16,6 +16,7 @@ const MAX_HISTORY_SIZE = 5;
 /** Default state returned for projects that have not been initialised yet */
 export const DEFAULT_PROJECT_STATE: ProjectSearchState = {
   history: [],
+  isSearchVisible: false,
   searchTerm: '',
 };
 
@@ -74,6 +75,18 @@ export const useSearchComponentStore = create<SearchComponentStore>(
           [projectId]: {
             ...(state.projects[projectId] ?? DEFAULT_PROJECT_STATE),
             searchTerm: term,
+          },
+        },
+      }));
+    },
+
+    setSearchVisible: (projectId, visible) => {
+      set((state) => ({
+        projects: {
+          ...state.projects,
+          [projectId]: {
+            ...(state.projects[projectId] ?? DEFAULT_PROJECT_STATE),
+            isSearchVisible: visible,
           },
         },
       }));

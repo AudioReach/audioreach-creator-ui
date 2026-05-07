@@ -22,6 +22,7 @@ import '@xyflow/react/dist/style.css';
 
 import {useKeyConfiguratorSelectionStore} from '~features/key-configurator';
 import {mapNodesToConfigItems} from '~features/usecase-visualizer/lib/node-to-config.mapper';
+import {useSearchHighlightStore} from '~features/usecase-visualizer/model/use-search-highlight-store';
 import {useVisualizerSelectionStore} from '~features/usecase-visualizer/model/use-visualizer-selection-store';
 import type {
   RFEdge,
@@ -160,7 +161,7 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
   );
 
   // Get search highlight state for this project
-  const searchHighlight = useVisualizerSelectionStore(
+  const searchHighlight = useSearchHighlightStore(
     (state) => state.searchHighlights[projectId],
   );
 
@@ -354,11 +355,12 @@ const FlowContent: FC<UsecaseVisualizerProps> = ({
       selected: currentSelection.selectedEdges.some((e) => e.id === edge.id),
     }));
 
+  const matchSet = new Set(searchHighlight?.matchNodeIds ?? []);
+
   // Mark selected nodes and annotate with search highlight state
   const nodesWithSelection = nodes.map((node) => {
     const isActive = searchHighlight?.activeNodeId === node.id;
-    const isMatch =
-      !isActive && (searchHighlight?.matchNodeIds.has(node.id) ?? false);
+    const isMatch = !isActive && matchSet.has(node.id);
 
     return {
       ...node,
