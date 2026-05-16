@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {KeyInfo, ValueInfo} from './usecase-component.dto';
+import type {ChangeInfoDto, KeyInfo, ValueInfo} from './usecase-component.dto';
 
-export interface UsecaseResponseDto {
-  usecases: UsecaseIdentifier[];
-}
-
-export interface UsecaseIdentifier {
-  filteredKV?: FilteredKV;
+/**
+ * Represents a usecase as returned by the API.
+ */
+export interface UsecaseDto {
+  changeInfo: ChangeInfoDto;
   keyValueCollection: KeyValueInfo[];
   relatedEndPointLinks?: RelatedEndPointLink[];
   systemId: string;
@@ -19,6 +18,8 @@ export interface UsecaseIdentifier {
   usecaseCategory?: string;
   usecaseType: 'Ec' | 'Regular' | 'Manual';
 }
+
+export interface UsecaseIdentifier extends UsecaseDto {}
 
 export interface KeyValueInfo {
   keyInfo: KeyInfo;

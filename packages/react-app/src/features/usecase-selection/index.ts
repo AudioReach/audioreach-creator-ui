@@ -5,7 +5,6 @@ export type {
   Usecase,
   KeyValue,
   FilteredKV,
-  UsecaseList,
   RelatedEndPointLink,
   SearchSetting,
   SearchKeyword,

@@ -5,32 +5,31 @@
 
 import type {UsecaseCategory} from '~features/usecase-selection';
 
-import type {UsecaseIdentifier, UsecaseResponseDto} from './usecase.dto';
+import type {UsecaseDto} from './usecase.dto';
 
 /**
- * Maps backend UsecaseResponseDto to UI UsecaseCategory format
+ * Maps backend UsecaseDto array to UI UsecaseCategory format
  * Following FSD principles: entity layer handles data transformation
+ * @param usecases - Array of UsecaseDto from the API
  */
 export function mapUsecaseDtoToCategories(
-  dtoArray: UsecaseResponseDto[],
+  usecases: UsecaseDto[],
 ): UsecaseCategory[] {
   const categories: UsecaseCategory[] = [];
 
   // Group usecases by category
-  const categoryMap = new Map<string, UsecaseIdentifier[]>();
+  const categoryMap = new Map<string, UsecaseDto[]>();
 
-  dtoArray.forEach((dto) => {
-    dto.usecases.forEach((usecaseIdentifier) => {
-      // Determine category based on usecase type or alias
-      const categoryName = usecaseIdentifier.usecaseAliasName
-        ? 'Recently Selected'
-        : 'Default';
+  usecases.forEach((usecase) => {
+    // Determine category based on usecase type or alias
+    const categoryName = usecase.usecaseAliasName
+      ? 'Recently Selected'
+      : 'Default';
 
-      if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, []);
-      }
-      categoryMap.get(categoryName)!.push(usecaseIdentifier);
-    });
+    if (!categoryMap.has(categoryName)) {
+      categoryMap.set(categoryName, []);
+    }
+    categoryMap.get(categoryName)!.push(usecase);
   });
 
   // Convert map to array of categories

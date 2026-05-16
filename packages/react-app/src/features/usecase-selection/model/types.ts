@@ -8,7 +8,6 @@ export type {
   UsecaseIdentifier as Usecase,
   KeyValueInfo as KeyValue,
   FilteredKV,
-  UsecaseResponseDto as UsecaseList,
   RelatedEndPointLink,
 } from '~entities/usecases/model/usecase.dto';
 

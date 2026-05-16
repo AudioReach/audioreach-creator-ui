@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-// Adapter: UsecaseComponentsDto → ReactFlow nodes/edges
+// Adapter: ComponentCollectionDto → ReactFlow nodes/edges
 import type {
+  ComponentCollectionDto,
   ControlLinkDto,
   DataLinkDto,
-  UsecaseComponentsDto,
 } from '~entities/usecases/model/usecase-component.dto';
 import {
   EDGE_KIND,
@@ -28,25 +28,21 @@ const edgeId = (kind: string, src: string, dst: string, idx = 0) =>
   `e-${kind}-${src}-${dst}-${idx}`;
 
 export function buildGraphViewFromUsecase(
-  dtoArray: UsecaseComponentsDto[],
+  dto: ComponentCollectionDto,
   _spec: GraphSpec,
 ): GraphView {
   const nodes: RFNode[] = [];
   const edges: RFEdge[] = [];
 
   // Validate input data
-  if (!Array.isArray(dtoArray) || dtoArray.length === 0) {
-    logger.error('[Adapter] Invalid DTO array provided');
+  if (!dto) {
+    logger.error('[Adapter] Invalid DTO provided');
     return {edges, nodes};
   }
 
-  // Merge data from all DTOs
-  const modules = dtoArray.flatMap((dto) =>
-    Array.isArray(dto.moduleInstances) ? dto.moduleInstances : [],
-  );
-  const subsystems = dtoArray.flatMap((dto) =>
-    Array.isArray(dto.subsystems) ? dto.subsystems : [],
-  );
+  // Extract data from DTO
+  const modules = Array.isArray(dto.spfModules) ? dto.spfModules : [];
+  const subsystems = Array.isArray(dto.subsystems) ? dto.subsystems : [];
 
   if (modules.length === 0) {
     logger.warn('[Adapter] No modules found in use case');
@@ -218,10 +214,8 @@ export function buildGraphViewFromUsecase(
     } as RFNode);
   }
 
-  // Data edges - merge from all DTOs
-  const dataLinks = dtoArray.flatMap((dto) =>
-    Array.isArray(dto.dataLinks) ? dto.dataLinks : [],
-  );
+  // Data edges
+  const dataLinks = Array.isArray(dto.dataLinks) ? dto.dataLinks : [];
   dataLinks.forEach((dl: DataLinkDto, idx) => {
     // For data links, we need to find the source and destination using the link's properties
     // The sourceId and destinationId in the DTO are numeric IDs that need to be mapped
@@ -272,10 +266,8 @@ export function buildGraphViewFromUsecase(
     });
   });
 
-  // Control edges - merge from all DTOs
-  const controlLinks = dtoArray.flatMap((dto) =>
-    Array.isArray(dto.controlLinks) ? dto.controlLinks : [],
-  );
+  // Control edges
+  const controlLinks = Array.isArray(dto.controlLinks) ? dto.controlLinks : [];
   controlLinks.forEach((cl: ControlLinkDto, idx) => {
     // For control links, use the numeric IDs to find the components
     const srcModule = modules.find((m) => m.id === cl.sourceId);

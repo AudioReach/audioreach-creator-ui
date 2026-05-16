@@ -11,6 +11,12 @@ export type ConnectionType =
   | 'SUBSYSTEM_MODULE'
   | 'SUBSYSTEM_SUBSYSTEM';
 
+export interface ChangeInfoDto {
+  changeId?: string;
+  changeStatus?: 'STAGED' | 'UNSTAGED';
+  changeType: 'NONE' | 'CREATE' | 'UPDATE' | 'DELETE';
+}
+
 export interface EndPointLink {
   description: string;
   hypertextRef: string;
@@ -18,12 +24,14 @@ export interface EndPointLink {
 }
 
 export interface DataPortDto {
+  changeInfo: ChangeInfoDto;
   id: number;
   name: string;
   portIoType: PortIOType;
   portType: PortType;
   relatedEndPointLinks: EndPointLink[];
   systemId: string;
+  totalLinksAtPort: number;
 }
 
 export interface ControlPortIntentDto {
@@ -32,16 +40,19 @@ export interface ControlPortIntentDto {
 }
 
 export interface ControlPortDto {
+  changeInfo: ChangeInfoDto;
   controlPortName: string;
   id: number;
   intents: ControlPortIntentDto[];
+  name: string;
   portType: PortType;
   relatedEndPointLinks: EndPointLink[];
   systemId: string;
 }
 
-export interface ModuleInstanceDto {
+export interface SpfModuleDto {
   alias: string;
+  changeInfo: ChangeInfoDto;
   containerId: number;
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
@@ -52,7 +63,7 @@ export interface ModuleInstanceDto {
   maxOutputPortsSupported: number;
   moduleId: number;
   name: string;
-  parentId?: number; // optional: subsystem
+  parentId?: number;
   relatedEndPointLinks: EndPointLink[];
   subgraphId: number;
   systemId: string;
@@ -105,6 +116,7 @@ export class ValueInfo {
 }
 
 export interface SubsystemDto {
+  changeInfo: ChangeInfoDto;
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
   filteredKeys: KeyInfo[];
@@ -116,6 +128,7 @@ export interface SubsystemDto {
 }
 
 export interface DataLinkDto {
+  changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
   destinationId: number;
   destinationPortId: number;
@@ -129,6 +142,7 @@ export interface DataLinkDto {
 }
 
 export interface ControlLinkDto {
+  changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
   destinationId: number;
   destinationPortId: number;
@@ -141,9 +155,25 @@ export interface ControlLinkDto {
   systemId: string;
 }
 
-export interface UsecaseComponentsDto {
+export interface KeyValueInfo {
+  keyInfo: KeyInfo;
+  valueInfo: ValueInfo;
+}
+
+export interface UsecaseIdentifierDto {
+  changeInfo: ChangeInfoDto;
+  keyValueCollection: KeyValueInfo[];
+  relatedEndPointLinks?: EndPointLink[];
+  systemId: string;
+  usecaseAliasId?: number;
+  usecaseAliasName?: string;
+  usecaseCategory?: string;
+  usecaseType: 'Ec' | 'Regular' | 'Manual';
+}
+
+export interface ComponentCollectionDto {
   controlLinks: ControlLinkDto[];
   dataLinks: DataLinkDto[];
-  moduleInstances: ModuleInstanceDto[];
-  subsystems: SubsystemDto[];
+  spfModules: SpfModuleDto[];
+  subsystems?: SubsystemDto[];
 }
