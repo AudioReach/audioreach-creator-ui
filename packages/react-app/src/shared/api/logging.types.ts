@@ -37,6 +37,6 @@ export interface LogContext {
   action?: string;
   component?: string;
   error?: string;
-  projectId?: string;
+  projectId?: string | null;
   tag?: string;
 }

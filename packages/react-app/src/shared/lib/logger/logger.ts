@@ -102,7 +102,10 @@ export class Logger {
       }
 
       // Get project ID from context or current active project
-      const projectId = context?.projectId || this.getCurrentProjectId();
+      const projectId =
+        context?.projectId != null
+          ? context.projectId
+          : this.getCurrentProjectId();
 
       // Emit log event with project context
       logEventEmitter.emit({
