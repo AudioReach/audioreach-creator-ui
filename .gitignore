@@ -114,6 +114,10 @@ tsconfig.*.tsbuildinfo
 !.vscode/launch.json
 !.vscode/tasks.json
 
+# Claude Code — commit settings.json (team-shared); ignore local overrides and worktrees
+.claude/settings.local.json
+.claude/worktrees/
+
 # Allow electron installer scripts (production deployment)
 packages/electron-app/installer/**
 !packages/electron-app/installer/*.bat
