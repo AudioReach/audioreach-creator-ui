@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+import type {StoreApi} from 'zustand';
+
+import {getAllSubgraphs} from '~entities/subgraph-definitions/api/subgraph-definition-api';
+import type {SubgraphDto} from '~entities/subgraph-definitions/model/subgraph-definition.dto';
+import {logger} from '~shared/lib/logger';
+
+import type {SliceStatus} from '../global-store.types';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface SubgraphDefinition {
+  category: string;
+  description: string;
+  subgraphId: string;
+  subgraphName: string;
+  subgraphType: string;
+}
+
+export interface SubgraphListSlice {
+  loadSubgraphList: () => Promise<void>;
+  setSubgraphListSearchQuery: (query: string) => void;
+  subgraphList: SubgraphDefinition[];
+  subgraphListSearchQuery: string;
+  subgraphListStatus: SliceStatus;
+}
+
+type SetState<T> = StoreApi<T>['setState'];
+type GetState<T> = StoreApi<T>['getState'];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function toSubgraphDefinition(dto: SubgraphDto): SubgraphDefinition {
+  return {
+    category: '',
+    description: dto.description ?? '',
+    subgraphId: String(dto.subgraphId),
+    subgraphName: dto.name,
+    subgraphType: dto.subgraphType,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Slice creator
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates the subgraph-list slice for composing into a tab store.
+ *
+ * The slice starts `'uninitialized'` and loads lazily when the palette is
+ * first opened. Both GraphDesignerStore and DiffMergeStore (graph-data edit
+ * mode) include this slice.
+ *
+ * @param set - Zustand set function bound to the parent store state.
+ * @param _get - Zustand get function bound to the parent store state.
+ * @returns The initial state and actions for the subgraph-list slice.
+ */
+export function createSubgraphListSlice<S extends SubgraphListSlice>(
+  set: SetState<S>,
+  _get: GetState<S>,
+  projectId: string,
+): SubgraphListSlice {
+  const setSlice = set as SetState<SubgraphListSlice>;
+  return {
+    loadSubgraphList: async () => {
+      logger.debug('subgraphListSlice: loadSubgraphList — starting', {
+        action: 'load_subgraph_list',
+        component: 'subgraphListSlice',
+      });
+
+      setSlice({subgraphListStatus: 'loading'});
+
+      try {
+        const result = await getAllSubgraphs(projectId);
+
+        if (!result.success || !result.data) {
+          logger.error('subgraphListSlice: loadSubgraphList — API error', {
+            action: 'load_subgraph_list',
+            component: 'subgraphListSlice',
+            error: result.message,
+          });
+          setSlice({subgraphListStatus: 'error'});
+          return;
+        }
+
+        setSlice({
+          subgraphList: result.data.map(toSubgraphDefinition),
+          subgraphListStatus: 'ready',
+        });
+
+        logger.debug('subgraphListSlice: loadSubgraphList — ready', {
+          action: 'load_subgraph_list',
+          component: 'subgraphListSlice',
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+
+        logger.error('subgraphListSlice: loadSubgraphList — failed', {
+          action: 'load_subgraph_list',
+          component: 'subgraphListSlice',
+          error: message,
+        });
+
+        setSlice({subgraphListStatus: 'error'});
+      }
+    },
+
+    setSubgraphListSearchQuery: (query: string) => {
+      logger.debug('subgraphListSlice: setSubgraphListSearchQuery', {
+        action: 'set_subgraph_list_search_query',
+        component: 'subgraphListSlice',
+      });
+      setSlice({subgraphListSearchQuery: query});
+    },
+
+    subgraphList: [],
+
+    subgraphListSearchQuery: '',
+
+    subgraphListStatus: 'uninitialized',
+  };
+}
