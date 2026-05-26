@@ -5,7 +5,8 @@
 
 import {createContext, useContext} from 'react';
 
-import type {StoreApi} from 'zustand';
+import {type StoreApi, useStore} from 'zustand';
+import {useShallow} from 'zustand/react/shallow';
 
 import type {ProjectStore} from './project-store.types';
 
@@ -22,4 +23,11 @@ export function useProjectStore(): ProjectStoreApi {
     );
   }
   return store;
+}
+
+export function useProjectStoreShallow<T>(
+  selector: (state: ProjectStore) => T,
+): T {
+  const store = useProjectStore();
+  return useStore(store, useShallow(selector));
 }

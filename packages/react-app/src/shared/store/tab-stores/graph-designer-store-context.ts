@@ -5,7 +5,8 @@
 
 import {createContext, useContext} from 'react';
 
-import type {StoreApi} from 'zustand';
+import {type StoreApi, useStore} from 'zustand';
+import {useShallow} from 'zustand/react/shallow';
 
 import type {GraphDesignerStore} from './graph-designer-store';
 
@@ -23,4 +24,11 @@ export function useGraphDesignerStore(): GraphDesignerStoreApi {
     );
   }
   return store;
+}
+
+export function useGraphDesignerStoreShallow<T>(
+  selector: (state: GraphDesignerStore) => T,
+): T {
+  const store = useGraphDesignerStore();
+  return useStore(store, useShallow(selector));
 }

@@ -42,7 +42,11 @@ export type {AppTab, ProjectGroup} from './use-session-store';
 // ── Project Store ──────────────────────────────────────────────────────────
 export {createProjectStore} from './project-store';
 export type {ProjectStore} from './project-store.types';
-export {ProjectStoreContext, useProjectStore} from './project-store-context';
+export {
+  ProjectStoreContext,
+  useProjectStore,
+  useProjectStoreShallow,
+} from './project-store-context';
 export type {ProjectStoreApi} from './project-store-context';
 export {
   ProjectStoreRegistry,
@@ -58,5 +62,6 @@ export type {GraphDesignerStore} from './tab-stores/graph-designer-store';
 export {
   GraphDesignerStoreContext,
   useGraphDesignerStore,
+  useGraphDesignerStoreShallow,
 } from './tab-stores/graph-designer-store-context';
 export type {GraphDesignerStoreApi} from './tab-stores/graph-designer-store-context';
