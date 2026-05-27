@@ -9,8 +9,8 @@ import {Database, FolderOpen, Smartphone, Trash2} from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
 
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import type DeviceInfo from '~shared/types/device-info.types';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 type UnifiedItem =
   | {data: ProjectInfo; type: 'project'}

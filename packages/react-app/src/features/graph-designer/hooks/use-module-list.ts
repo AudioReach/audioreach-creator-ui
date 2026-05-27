@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useGraphDesignerStoreShallow} from '~shared/store/tab-stores/graph-designer-store-context';
+import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-context';
 
 export function useModuleList() {
   return useGraphDesignerStoreShallow((state) => ({

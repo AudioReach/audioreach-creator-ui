@@ -7,7 +7,7 @@ import {Database, FolderOpen, Trash2} from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
 
-import type ProjectInfo from '~shared/types/project-info.types';
+import type ProjectInfo from '~entities/project/model/project-info.types';
 
 interface ProjectsListViewProps {
   onOpenProject: (project: ProjectInfo) => void;

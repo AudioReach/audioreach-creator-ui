@@ -20,7 +20,7 @@ export interface ModuleListStore {
   moduleList: SpfModuleDefinitionResponseDto[];
 
   // Per-project filter storage
-  projectFilters: Map<
+  projectFilters: Record<
     string,
     {dspFilter: string[]; moduleTypeFilter: string[]}
   >;

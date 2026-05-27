@@ -10,7 +10,7 @@ import type {PanelTab} from '~shared/store/panel-types';
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface PanelTabRegistrySlice {
-  panelTabRegistry: Map<string, PanelTab>;
+  panelTabRegistry: Record<string, PanelTab>;
   registerPanelTab: (tabId: string, panelTab: PanelTab) => void;
   unregisterPanelTab: (tabId: string) => void;
 }
@@ -25,24 +25,21 @@ export function createPanelTabRegistrySlice<S extends PanelTabRegistrySlice>(
   const setSlice = set as SetState<PanelTabRegistrySlice>;
 
   return {
-    panelTabRegistry: new Map(),
+    panelTabRegistry: {},
 
     registerPanelTab: (tabId, panelTab) => {
-      setSlice((state) => {
-        const registry = new Map(state.panelTabRegistry);
-        registry.set(tabId, panelTab);
-        return {panelTabRegistry: registry};
-      });
+      setSlice((state) => ({
+        panelTabRegistry: {...state.panelTabRegistry, [tabId]: panelTab},
+      }));
     },
 
     unregisterPanelTab: (tabId) => {
       setSlice((state) => {
-        if (!state.panelTabRegistry.has(tabId)) {
+        if (!(tabId in state.panelTabRegistry)) {
           return state;
         }
-        const registry = new Map(state.panelTabRegistry);
-        registry.delete(tabId);
-        return {panelTabRegistry: registry};
+        const {[tabId]: _, ...rest} = state.panelTabRegistry;
+        return {panelTabRegistry: rest};
       });
     },
   };

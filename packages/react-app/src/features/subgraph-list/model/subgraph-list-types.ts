@@ -17,7 +17,7 @@ export interface SubgraphListStore {
   isDragEnabled: boolean;
 
   // Map to store filter state per project
-  projectFilters: Map<string, {subgraphTypeFilter: string[]}>;
+  projectFilters: Record<string, {subgraphTypeFilter: string[]}>;
 
   query: string;
 

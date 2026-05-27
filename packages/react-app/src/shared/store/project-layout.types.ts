@@ -133,7 +133,7 @@ export interface ProjectLayoutStore {
   // Close specific app tab with confirmation
   closeAppTab: (appTabId: string) => void;
 
-  componentRegistry: Map<string, ReactNode>; // Map of panel tab ID to React component
+  componentRegistry: Record<string, ReactNode>;
   // Create new application group with initial tabs
   createAppGroup: (
     Id: string,
@@ -186,13 +186,13 @@ export interface ProjectLayoutStore {
   isProjectGroupAlreadyOpen: (projectKey: string) => ProjectGroup | null;
 
   nextColorId: number; // Track next available color ID (1-20, cycles)
-  panelTabRegistry: Map<string, PanelTab>; // Map of PanelTabID and PanelTab object
+  panelTabRegistry: Record<string, PanelTab>;
 
   previousActiveProjectGroupId: string | null; // Tracks last active project group for fallback when groups are closed
 
   projectGroups: ProjectGroup[]; // Array of all project groups
 
-  projectTabLayouts: Map<string, ProjectTabLayout>; // Map of tabid and projectlayout
+  projectTabLayouts: Record<string, ProjectTabLayout>;
 
   removeAppGroup: (appGroupId: string) => void; // Remove entire app group and all its tabs
   removePanelTab: (projectGroupId: string, tabId: string) => boolean; // Remove panel tab from project layout
@@ -220,7 +220,7 @@ export interface ProjectLayoutStore {
   setShowGroupTitle: (show: boolean) => void; // Control whether to show tooltips on group headers
   showGroupTitle: boolean; // false = show tooltip on hover (default), true = no tooltip
   switchToProjectGroup: (projectGroupId: string) => boolean; // Switch focus to specific project group
-  tabGroups: Map<string, TabGroup>; // Map of GroupID and TabGroup
+  tabGroups: Record<string, TabGroup>;
   // Panel tab component management
   updatePanelTabComponent: (tabId: string, newComponent: ReactNode) => boolean;
 }

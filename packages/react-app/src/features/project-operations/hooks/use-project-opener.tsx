@@ -5,6 +5,7 @@
 
 import {useState} from 'react';
 
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import {ProjectService} from '~entities/project/services/project-service';
 import {ModuleList} from '~features/module-list/ui/module-list';
 import useArcRecentProjects from '~features/recent-projects/hooks/use-recent-projects';
@@ -17,7 +18,6 @@ import {showToast} from '~shared/controls/global-toaster';
 import {PanelIntegration} from '~shared/layout/project-layout-manager';
 import {logger} from '~shared/lib/logger';
 import {useProjectLayoutStore} from '~shared/store';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 import type {ProjectLoadingState, ProjectOpenerHook} from '../model/types';
 

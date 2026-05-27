@@ -12,7 +12,7 @@ import type {ModuleListStore} from './module-list-types';
 export const useModuleListStore = create<ModuleListStore>((set) => ({
   isDragEnabled: false,
   moduleList: [],
-  projectFilters: new Map(),
+  projectFilters: {},
   query: '',
   selectedDspTypes: [],
   selectedModuleTypes: [],

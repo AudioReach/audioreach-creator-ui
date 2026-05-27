@@ -56,14 +56,6 @@ export function createBackendConnectionSlice(
       set({failCount: 0, lastError: null});
     },
 
-    setConnected: (connected: boolean) => {
-      set({isConnected: connected});
-      logger.debug('Backend connection status changed', {
-        action: 'set_connected',
-        component: 'BackendConnectionSlice',
-      });
-    },
-
     setLastHealthCheckAt: (ts: number) => {
       set({lastHealthCheckAt: ts});
     },

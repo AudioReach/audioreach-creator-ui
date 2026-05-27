@@ -55,13 +55,3 @@ export {
 
 // ── Tab Store Registry ─────────────────────────────────────────────────────
 export {TabStoreRegistry, createTabStoreRegistry} from './tab-store-registry';
-
-// ── Tab Stores ─────────────────────────────────────────────────────────────
-export {createGraphDesignerStore} from './tab-stores/graph-designer-store';
-export type {GraphDesignerStore} from './tab-stores/graph-designer-store';
-export {
-  GraphDesignerStoreContext,
-  useGraphDesignerStore,
-  useGraphDesignerStoreShallow,
-} from './tab-stores/graph-designer-store-context';
-export type {GraphDesignerStoreApi} from './tab-stores/graph-designer-store-context';

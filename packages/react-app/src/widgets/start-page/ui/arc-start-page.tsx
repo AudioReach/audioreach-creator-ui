@@ -28,6 +28,7 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 import {useListCollection} from '@qualcomm-ui/react-core/collection';
 import {useFilter} from '@qualcomm-ui/react-core/locale';
 
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import {ProjectService} from '~entities/project/services';
 import {useDeviceManager} from '~features/device-operations';
 import {
@@ -42,7 +43,6 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import type DeviceInfo from '~shared/types/device-info.types';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 const projectTypes = ['Active', 'Inactive', 'Diff/Merge'];
 

@@ -163,7 +163,7 @@ export function SubgraphList(): ReactElement {
     }
 
     const store = useSubgraphListStore.getState();
-    const savedProjectFilters = store.projectFilters.get(projectId);
+    const savedProjectFilters = store.projectFilters[projectId];
 
     if (savedProjectFilters) {
       setSelectedSubgraphTypes(savedProjectFilters.subgraphTypeFilter);
@@ -185,9 +185,9 @@ export function SubgraphList(): ReactElement {
     }
 
     const store = useSubgraphListStore.getState();
-    store.projectFilters.set(projectId, {
+    store.projectFilters[projectId] = {
       subgraphTypeFilter: selectedSubgraphTypes,
-    });
+    };
   }, [projectId, selectedSubgraphTypes, subgraphList.length]);
 
   // Show filter only if there are meaningful choices to make

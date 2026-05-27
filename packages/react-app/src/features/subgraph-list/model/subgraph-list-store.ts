@@ -11,7 +11,7 @@ import type {SubgraphListStore} from './subgraph-list-types';
 
 export const useSubgraphListStore = create<SubgraphListStore>((set) => ({
   isDragEnabled: false,
-  projectFilters: new Map(),
+  projectFilters: {},
   query: '',
   selectedSubgraphTypes: [],
   setDragEnabled: (enabled: boolean) => {

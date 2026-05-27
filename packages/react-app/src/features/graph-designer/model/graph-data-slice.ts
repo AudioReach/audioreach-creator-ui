@@ -7,10 +7,7 @@ import type {StoreApi} from 'zustand';
 
 import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
 import {logger} from '~shared/lib/logger';
-
-import type {SliceStatus} from '../global-store.types';
-
-import {buildSubsystemTree} from './subsystem-tree.utils';
+import type {SliceStatus} from '~shared/store/global-store.types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,7 +20,7 @@ export interface Port {
   isStatic: boolean;
   portId: string;
   portName: string;
-  portType: 'audio' | 'control' | 'data';
+  portType: 'control' | 'data';
 }
 
 export interface ModuleInstance {
@@ -73,11 +70,11 @@ export interface Subsystem {
 
 export interface UsecaseGraphData {
   connections: Connection[];
-  containers: Map<string, Container>;
-  moduleInstances: Map<string, ModuleInstance>;
+  containers: Record<string, Container>;
+  moduleInstances: Record<string, ModuleInstance>;
   selectedUsecases: string[];
-  subgraphs: Map<string, Subgraph>;
-  subsystems: Map<string, Subsystem>;
+  subgraphs: Record<string, Subgraph>;
+  subsystems: Record<string, Subsystem>;
 }
 
 export interface GraphDataSlice {
@@ -154,10 +151,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         component: 'graphDataSlice',
       });
 
-      set({
-        graphDataStatus: 'loading',
-        subsystemStatus: 'loading',
-      } as unknown as Partial<S>);
+      set({graphDataStatus: 'loading'} as unknown as Partial<S>);
 
       try {
         const result = await getUsecaseComponents(projectId, usecases);
@@ -168,10 +162,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
             component: 'graphDataSlice',
             error: result.message,
           });
-          set({
-            graphDataStatus: 'error',
-            subsystemStatus: 'error',
-          } as unknown as Partial<S>);
+          set({graphDataStatus: 'error'} as unknown as Partial<S>);
           return;
         }
 
@@ -189,7 +180,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         }
 
         // moduleInstances
-        const moduleInstances = new Map<string, ModuleInstance>();
+        const moduleInstances: Record<string, ModuleInstance> = {};
         for (const m of spfModules) {
           const inputPorts: Port[] = (m.dataPorts ?? [])
             .filter((p) => p.portIoType === 'Input')
@@ -233,37 +224,37 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
           if (diffState) {
             instance.diffState = diffState;
           }
-          moduleInstances.set(m.systemId, instance);
+          moduleInstances[m.systemId] = instance;
         }
 
         // containers — derived by grouping modules by containerId
-        const containers = new Map<string, Container>();
+        const containers: Record<string, Container> = {};
         for (const m of spfModules) {
           const cId = String(m.containerId);
-          if (!containers.has(cId)) {
-            containers.set(cId, {
+          if (!(cId in containers)) {
+            containers[cId] = {
               containerId: cId,
               containerName: `Container ${m.containerId}`,
               moduleInstances: [],
               subgraphId: String(m.subgraphId),
-            });
+            };
           }
-          containers.get(cId)!.moduleInstances.push(m.systemId);
+          containers[cId].moduleInstances.push(m.systemId);
         }
 
         // subgraphs — derived by grouping containers by subgraphId
-        const subgraphs = new Map<string, Subgraph>();
+        const subgraphs: Record<string, Subgraph> = {};
         for (const m of spfModules) {
           const sgId = String(m.subgraphId);
-          if (!subgraphs.has(sgId)) {
-            subgraphs.set(sgId, {
+          if (!(sgId in subgraphs)) {
+            subgraphs[sgId] = {
               containers: [],
               subgraphId: sgId,
               subgraphName: `Subgraph ${m.subgraphId}`,
               subgraphType: '',
-            });
+            };
           }
-          const sg = subgraphs.get(sgId)!;
+          const sg = subgraphs[sgId];
           const cId = String(m.containerId);
           if (!sg.containers.includes(cId)) {
             sg.containers.push(cId);
@@ -275,13 +266,13 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         }
 
         // subsystems
-        const subsystems = new Map<string, Subsystem>();
+        const subsystems: Record<string, Subsystem> = {};
         for (const ss of subsystemDtos) {
-          subsystems.set(ss.systemId, {
+          subsystems[ss.systemId] = {
             subgraphs: [],
             subsystemId: ss.systemId,
             subsystemName: ss.name,
-          });
+          };
         }
 
         // connections — data links + control links combined
@@ -316,8 +307,6 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         set({
           graphData,
           graphDataStatus: 'ready',
-          subsystemData: buildSubsystemTree(subsystemDtos, spfModules),
-          subsystemStatus: 'ready',
         } as unknown as Partial<S>);
 
         logger.debug('graphDataSlice: loadGraphData — ready', {
@@ -332,10 +321,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
           component: 'graphDataSlice',
           error: errorMessage,
         });
-        set({
-          graphDataStatus: 'error',
-          subsystemStatus: 'error',
-        } as unknown as Partial<S>);
+        set({graphDataStatus: 'error'} as unknown as Partial<S>);
       }
     },
 

@@ -179,7 +179,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     panelTab: PanelTab,
   ): boolean => {
     const state = get();
-    const layout = state.projectTabLayouts.get(tabId);
+    const layout = state.projectTabLayouts[tabId];
 
     if (!layout || !layout.flexLayoutData) {
       logger.warn(`Layout not found for tab ${tabId}`);
@@ -269,26 +269,23 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     if (updated) {
       // Update both FlexLayout JSON and component registry
       set((state) => {
-        const newLayouts = new Map(state.projectTabLayouts);
         const updatedLayout: ProjectTabLayout = {
           flexLayoutData: flexData,
         };
-        newLayouts.set(tabId, updatedLayout);
-
-        // Store both React component and full PanelTab object
-        const newComponentRegistry = new Map(state.componentRegistry);
-        newComponentRegistry.set(panelTab.id, panelTab.component);
-
-        // Store full PanelTab object for callback access
-        const newPanelTabRegistry = new Map(
-          state.panelTabRegistry || new Map(),
-        );
-        newPanelTabRegistry.set(panelTab.id, panelTab);
 
         return {
-          componentRegistry: newComponentRegistry,
-          panelTabRegistry: newPanelTabRegistry,
-          projectTabLayouts: newLayouts,
+          componentRegistry: {
+            ...state.componentRegistry,
+            [panelTab.id]: panelTab.component,
+          },
+          panelTabRegistry: {
+            ...state.panelTabRegistry,
+            [panelTab.id]: panelTab,
+          },
+          projectTabLayouts: {
+            ...state.projectTabLayouts,
+            [tabId]: updatedLayout,
+          },
         };
       });
       return true;
@@ -315,14 +312,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
         }
       });
 
-      // Update tabGroups Map to keep it synchronized
-      const updatedTabGroups = new Map(state.tabGroups);
+      // Update tabGroups to keep it synchronized
       const updatedProjectGroup = updatedProjectGroups.find(
         (p) => p.id === projectGroupId,
       );
-      if (updatedProjectGroup) {
-        updatedTabGroups.set(projectGroupId, updatedProjectGroup);
-      }
+      const updatedTabGroups = updatedProjectGroup
+        ? {...state.tabGroups, [projectGroupId]: updatedProjectGroup}
+        : state.tabGroups;
 
       return {
         projectGroups: updatedProjectGroups,
@@ -403,14 +399,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
           return appGroup;
         });
 
-        // Update tabGroups map
-        const updatedTabGroups = new Map(state.tabGroups);
+        // Update tabGroups
         const updatedGroup = updatedAppGroups.find(
           (ag) => ag.id === targetGroup.id,
         );
-        if (updatedGroup) {
-          updatedTabGroups.set(targetGroup.id, updatedGroup);
-        }
+        const updatedTabGroups = updatedGroup
+          ? {...state.tabGroups, [targetGroup.id]: updatedGroup}
+          : state.tabGroups;
 
         // Update global active tab if we closed the currently active tab
         let newGlobalActiveTab = state.activeTab;
@@ -434,7 +429,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       });
     }
   },
-  componentRegistry: new Map(), // Map<panelTabId, ReactNode>
+  componentRegistry: {}, // Record<panelTabId, ReactNode>
   // Creates new application group
   createAppGroup: (
     Id: string,
@@ -469,12 +464,10 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       };
       set((state) => {
         const updatedAppGroups = [...state.appGroups, newAppGroup];
-        const updatedTabGroups = new Map(state.tabGroups);
-        updatedTabGroups.set(Id, newAppGroup);
         const newState = {
           appGroups: updatedAppGroups,
           nextColorId, // Update next available color ID
-          tabGroups: updatedTabGroups,
+          tabGroups: {...state.tabGroups, [Id]: newAppGroup},
         };
         return newState;
       });
@@ -499,9 +492,12 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       };
 
       set((state) => {
-        const newLayouts = new Map(state.projectTabLayouts);
-        newLayouts.set(projectGroupId, newLayout);
-        return {projectTabLayouts: newLayouts};
+        return {
+          projectTabLayouts: {
+            ...state.projectTabLayouts,
+            [projectGroupId]: newLayout,
+          },
+        };
       });
       return true;
     } catch (error) {
@@ -574,13 +570,18 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
         }));
 
         // For accordion behavior: always set new group as active
-        const updatedTabGroups = new Map(state.tabGroups);
-        updatedTabGroups.set(Id, newProjectGroup);
+        const tabGroupsWithNewProject = {
+          ...state.tabGroups,
+          [Id]: newProjectGroup,
+        };
 
-        // Update tabGroups map with collapsed app groups
-        updatedAppGroups.forEach((appGroup) => {
-          updatedTabGroups.set(appGroup.id, appGroup);
-        });
+        // Update tabGroups with collapsed app groups
+        const updatedTabGroupsFinal = updatedAppGroups.reduce<
+          Record<string, TabGroup>
+        >(
+          (acc, appGroup) => ({...acc, [appGroup.id]: appGroup}),
+          tabGroupsWithNewProject,
+        );
 
         const newState = {
           activeTab: mainTab, // Set the main tab as the active tab
@@ -589,7 +590,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
           nextColorId, // Update next available color ID
           previousActiveProjectGroupId: state.activeTabGroup?.id,
           projectGroups: updatedProjectGroups,
-          tabGroups: updatedTabGroups,
+          tabGroups: updatedTabGroupsFinal,
         };
         return newState;
       });
@@ -607,7 +608,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
   // Accordion behavior - expand one group and collapse all others (Fixed based on working reference)
   expandTabGroup: (groupId: string): void => {
     set((state) => {
-      const clickedGroup = state.tabGroups.get(groupId);
+      const clickedGroup = state.tabGroups[groupId];
 
       if (!clickedGroup) {
         return state;
@@ -617,7 +618,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
 
       // Check if clicking on already active and expanded group - prevent refresh
       // BUT allow accordion behavior if there are other groups that need collapsing
-      const hasOtherGroups = state.tabGroups.size > 1;
+      const hasOtherGroups = Object.keys(state.tabGroups).length > 1;
       if (
         state.activeTabGroup?.id === groupId &&
         !isCurrentlyCollapsed &&
@@ -714,18 +715,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
         };
       });
 
-      // Update tabGroups map - collapse ALL other groups (both app and project)
-      const updatedTabGroups = new Map(state.tabGroups);
-
-      // Create new map with updated collapse states
-      const finalTabGroups = new Map<string, TabGroup>();
-      updatedTabGroups.forEach((tabGroup, key) => {
-        if (tabGroup.id !== groupId) {
-          finalTabGroups.set(key, {...tabGroup, isCollapsed: true});
-        } else {
-          finalTabGroups.set(key, {...tabGroup, isCollapsed: false});
-        }
-      });
+      // Update tabGroups - collapse ALL other groups (both app and project)
+      const finalTabGroups = Object.fromEntries(
+        Object.entries(state.tabGroups).map(([key, tabGroup]) => [
+          key,
+          {...tabGroup, isCollapsed: tabGroup.id !== groupId},
+        ]),
+      ) as Record<string, TabGroup>;
 
       const newState = {
         activeTab: newActiveTab, // Set appropriate active tab
@@ -786,13 +782,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
   // Gets project tab layout by tab ID
   getLayout: (tabId: string): ProjectTabLayout | null => {
     const state = get();
-    return state.projectTabLayouts.get(tabId) || null;
+    return state.projectTabLayouts[tabId] ?? null;
   },
 
   // Gets FlexLayout configuration as JSON string
   getLayoutConfig: (projectGroupId: string): string | null => {
     const state = get();
-    const layout = state.projectTabLayouts.get(projectGroupId);
+    const layout = state.projectTabLayouts[projectGroupId];
     return layout?.flexLayoutData
       ? JSON.stringify(layout.flexLayoutData)
       : null;
@@ -856,13 +852,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
 
   nextColorId: 1, // Track next available color ID (1-20, cycles)
 
-  panelTabRegistry: new Map(), // Map<panelTabId, PanelTab>
+  panelTabRegistry: {}, // Record<panelTabId, PanelTab>
 
   previousActiveProjectGroupId: null,
 
   projectGroups: [],
 
-  projectTabLayouts: new Map(), // Map<projectGroupId, ProjectTabLayout>
+  projectTabLayouts: {}, // Record<projectGroupId, ProjectTabLayout>
   // Removes app group from store
   removeAppGroup: (appGroupId: string): void => {
     set((state) => {
@@ -870,9 +866,9 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
         (appGroup) => appGroup.id !== appGroupId,
       );
 
-      // Update tabGroups map
-      const updatedTabGroups = new Map(state.tabGroups);
-      updatedTabGroups.delete(appGroupId);
+      // Remove group from tabGroups
+      const {[appGroupId]: _removedAppGroup, ...updatedTabGroups} =
+        state.tabGroups;
 
       let newActiveTabGroup: TabGroup | null = null;
       let newActiveTab = state.activeTab;
@@ -920,8 +916,8 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
             };
           }
 
-          // Update tabGroups map with expanded project group
-          updatedTabGroups.set(firstProject.id, firstProject);
+          // Update tabGroups with expanded project group
+          updatedTabGroups[firstProject.id] = firstProject;
 
           // Return updated project groups with the modified first project
           const finalProjectGroups = updatedProjectGroups.map((pg, index) =>
@@ -955,7 +951,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
   // Removes panel tab from project layout
   removePanelTab: (projectGroupId: string, tabId: string): boolean => {
     const state = get();
-    const layout = state.projectTabLayouts.get(projectGroupId);
+    const layout = state.projectTabLayouts[projectGroupId];
 
     if (!layout || !layout.flexLayoutData) {
       logger.warn(`Layout not found for project ${projectGroupId}`);
@@ -1007,19 +1003,18 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     if (updated) {
       // Update both FlexLayout JSON and remove from component registry
       set((state) => {
-        const newLayouts = new Map(state.projectTabLayouts);
         const updatedLayout: ProjectTabLayout = {
           flexLayoutData: flexData,
         };
-        newLayouts.set(projectGroupId, updatedLayout);
-
-        // Remove React component from registry
-        const newComponentRegistry = new Map(state.componentRegistry);
-        newComponentRegistry.delete(tabId);
+        const {[tabId]: _removedComponent, ...newComponentRegistry} =
+          state.componentRegistry;
 
         return {
           componentRegistry: newComponentRegistry,
-          projectTabLayouts: newLayouts,
+          projectTabLayouts: {
+            ...state.projectTabLayouts,
+            [projectGroupId]: updatedLayout,
+          },
         };
       });
       return true;
@@ -1042,9 +1037,9 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       }
 
       // Clean up all layouts and components for this project
-      const newLayouts = new Map(state.projectTabLayouts);
-      const newComponentRegistry = new Map(state.componentRegistry);
-      const newPanelTabRegistry = new Map(state.panelTabRegistry);
+      let newLayouts = {...state.projectTabLayouts};
+      let newComponentRegistry = {...state.componentRegistry};
+      let newPanelTabRegistry = {...state.panelTabRegistry};
 
       // Helper function to extract panel IDs from FlexLayout data
       const extractPanelIds = (flexLayoutData: any): string[] => {
@@ -1077,20 +1072,27 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       };
 
       // Remove main tab layout
-      newLayouts.delete(projectToRemove.mainTab.id);
+      const {
+        [projectToRemove.mainTab.id]: _removedMainLayout,
+        ...layoutsAfterMain
+      } = newLayouts;
+      newLayouts = layoutsAfterMain;
 
       // Remove project tab layouts and their components
       projectToRemove.projectTabs.forEach((tab) => {
-        const layout = newLayouts.get(tab.id);
+        const layout = newLayouts[tab.id];
         if (layout?.flexLayoutData) {
           // Find and remove all panel components
           const panelIds = extractPanelIds(layout.flexLayoutData);
           panelIds.forEach((panelId) => {
-            newComponentRegistry.delete(panelId);
-            newPanelTabRegistry.delete(panelId);
+            const {[panelId]: _rc, ...restComponents} = newComponentRegistry;
+            newComponentRegistry = restComponents;
+            const {[panelId]: _rp, ...restPanelTabs} = newPanelTabRegistry;
+            newPanelTabRegistry = restPanelTabs;
           });
         }
-        newLayouts.delete(tab.id);
+        const {[tab.id]: _rl, ...restLayouts} = newLayouts;
+        newLayouts = restLayouts;
       });
 
       let updatedProjectGroups = state.projectGroups.filter((projectGroup) => {
@@ -1104,7 +1106,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       let newActiveTabGroup: TabGroup | null = null;
       let newActiveTab = state.activeTab;
       let updatedAppGroups = state.appGroups;
-      const updatedTabGroups = new Map(state.tabGroups);
+      let updatedTabGroups = {...state.tabGroups};
 
       if (updatedProjectGroups.length > 0) {
         // Try to use previous active group if it still exists
@@ -1159,8 +1161,11 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
           index === groupToExpandIndex ? groupToExpand : pg,
         );
 
-        // Update tabGroups map with the final groupToExpand state
-        updatedTabGroups.set(groupToExpand.id, groupToExpand);
+        // Update tabGroups with the final groupToExpand state
+        updatedTabGroups = {
+          ...updatedTabGroups,
+          [groupToExpand.id]: groupToExpand,
+        };
       } else {
         // No project groups remain - expand app group if available
         if (state.appGroups.length > 0) {
@@ -1174,13 +1179,17 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
           newActiveTabGroup = firstAppGroup;
           newActiveTab = firstAppGroup.appTabs[0]; // Use first tab in array
 
-          // Update tabGroups map
-          updatedTabGroups.set(firstAppGroup.id, firstAppGroup);
+          // Update tabGroups
+          updatedTabGroups = {
+            ...updatedTabGroups,
+            [firstAppGroup.id]: firstAppGroup,
+          };
         }
       }
 
-      // Remove the deleted project group from tabGroups map
-      updatedTabGroups.delete(projectGroupId);
+      // Remove the deleted project group from tabGroups
+      const {[projectGroupId]: _removedProjectGroup, ...finalTabGroups} =
+        updatedTabGroups;
 
       return {
         activeTab: newActiveTab,
@@ -1190,7 +1199,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
         panelTabRegistry: newPanelTabRegistry,
         projectGroups: updatedProjectGroups,
         projectTabLayouts: newLayouts,
-        tabGroups: updatedTabGroups,
+        tabGroups: finalTabGroups,
       };
     });
     return removed;
@@ -1201,7 +1210,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     const state = get();
 
     // Before removing, notify all panel tabs in this project tab
-    const layout = state.projectTabLayouts.get(tabId);
+    const layout = state.projectTabLayouts[tabId];
     if (layout && layout.flexLayoutData) {
       // Find all panel tabs and call their onProjectClose callbacks
       const panelTabIds: string[] = [];
@@ -1238,7 +1247,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
 
       // Call onProjectClose for each panel tab
       panelTabIds.forEach((panelTabId) => {
-        const panelTab = state.panelTabRegistry.get(panelTabId);
+        const panelTab = state.panelTabRegistry[panelTabId];
         if (panelTab && panelTab.onProjectClose) {
           // This is a dynamic panel with registered callback
           panelTab.onProjectClose(panelTabId, panelTab.title);
@@ -1345,12 +1354,15 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     try {
       const layoutConfig = JSON.parse(layoutConfigJSON);
       set((state) => {
-        const newLayouts = new Map(state.projectTabLayouts);
         const newLayout: ProjectTabLayout = {
           flexLayoutData: layoutConfig,
         };
-        newLayouts.set(projectGroupId, newLayout);
-        return {projectTabLayouts: newLayouts};
+        return {
+          projectTabLayouts: {
+            ...state.projectTabLayouts,
+            [projectGroupId]: newLayout,
+          },
+        };
       });
       return true;
     } catch (error) {
@@ -1476,7 +1488,7 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     return true;
   },
 
-  tabGroups: new Map(), // Map<groupId,TabGroup>
+  tabGroups: {}, // Record<groupId, TabGroup>
 
   // Updates React component for existing panel tab
   updatePanelTabComponent: (
@@ -1490,11 +1502,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
     let panelName = tabId;
 
     // First check: componentRegistry (dynamic panels)
-    if (state.componentRegistry.has(tabId)) {
+    if (tabId in state.componentRegistry) {
       panelExists = true;
     } else {
       // Second check: Look for panel in FlexLayout JSON (config panels)
-      for (const [_projectTabId, layout] of state.projectTabLayouts) {
+      for (const [_projectTabId, layout] of Object.entries(
+        state.projectTabLayouts,
+      )) {
         if (layout && layout.flexLayoutData) {
           // Check center panels
           if (
@@ -1546,23 +1560,17 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
 
     // Update the component in registry (works for both config and dynamic panels)
     set((state) => {
-      const newComponentRegistry = new Map(state.componentRegistry);
-      newComponentRegistry.set(tabId, newComponent);
-
       // Also auto-register config panels in panelTabRegistry if not already there
-      const newPanelTabRegistry = new Map(state.panelTabRegistry);
-      if (!newPanelTabRegistry.has(tabId)) {
-        // This is a config panel - create a PanelTab object for it
-        const configPanelTab = {
-          component: newComponent,
-          id: tabId,
-          title: panelName,
-        };
-        newPanelTabRegistry.set(tabId, configPanelTab);
-      }
+      const newPanelTabRegistry =
+        tabId in state.panelTabRegistry
+          ? state.panelTabRegistry
+          : {
+              ...state.panelTabRegistry,
+              [tabId]: {component: newComponent, id: tabId, title: panelName},
+            };
 
       return {
-        componentRegistry: newComponentRegistry,
+        componentRegistry: {...state.componentRegistry, [tabId]: newComponent},
         panelTabRegistry: newPanelTabRegistry,
       };
     });

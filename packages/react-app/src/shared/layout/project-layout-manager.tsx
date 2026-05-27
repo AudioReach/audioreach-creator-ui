@@ -358,7 +358,7 @@ class ProjectLayoutManager extends Component<
     // Handle panel tabs with component registry lookup
     if (component === 'panel-tab') {
       const appStore = useProjectLayoutStore.getState();
-      const panelComponent = appStore.componentRegistry.get(tabId);
+      const panelComponent = appStore.componentRegistry[tabId];
 
       if (panelComponent) {
         return panelComponent;
@@ -452,13 +452,12 @@ class ProjectLayoutManager extends Component<
             const updatedAppGroups = state.appGroups.map((ag) =>
               ag.id === appGroup.id ? {...ag, activeTabId: tabId} : ag,
             );
-            const updatedTabGroups = new Map(state.tabGroups);
             const updatedAppGroup = updatedAppGroups.find(
               (ag) => ag.id === appGroup.id,
             );
-            if (updatedAppGroup) {
-              updatedTabGroups.set(appGroup.id, updatedAppGroup);
-            }
+            const updatedTabGroups = updatedAppGroup
+              ? {...state.tabGroups, [appGroup.id]: updatedAppGroup}
+              : state.tabGroups;
             return {
               appGroups: updatedAppGroups,
               tabGroups: updatedTabGroups,
@@ -897,8 +896,8 @@ export class PanelIntegration {
               return;
             }
 
-            const currentLayout = state.projectTabLayouts.get(mainTab.id);
-            const prevLayout = prevState?.projectTabLayouts.get(mainTab.id);
+            const currentLayout = state.projectTabLayouts[mainTab.id];
+            const prevLayout = prevState?.projectTabLayouts[mainTab.id];
             const currentRegistry = state.componentRegistry;
             const prevRegistry = prevState?.componentRegistry;
 
@@ -937,7 +936,7 @@ export class PanelIntegration {
             // Handle panel tabs with component registry lookup
             if (component === 'panel-tab') {
               const appStore = useProjectLayoutStore.getState();
-              const panelComponent = appStore.componentRegistry.get(tabId);
+              const panelComponent = appStore.componentRegistry[tabId];
 
               if (panelComponent) {
                 return panelComponent;
@@ -961,8 +960,8 @@ export class PanelIntegration {
               const appStore = useProjectLayoutStore.getState();
 
               // Check if this is a panel tab (either from componentRegistry or config)
-              const isDynamicPanel = appStore.componentRegistry.has(tabId);
-              const panelTab = appStore.panelTabRegistry.get(tabId);
+              const isDynamicPanel = tabId in appStore.componentRegistry;
+              const panelTab = appStore.panelTabRegistry[tabId];
 
               if (isDynamicPanel && panelTab) {
                 // This is a dynamic panel tab - get the PanelTab object and call its callback
@@ -1177,10 +1176,8 @@ export class PanelIntegration {
                 return;
               }
 
-              const currentLayout = state.projectTabLayouts.get(projectTab.id);
-              const prevLayout = prevState?.projectTabLayouts.get(
-                projectTab.id,
-              );
+              const currentLayout = state.projectTabLayouts[projectTab.id];
+              const prevLayout = prevState?.projectTabLayouts[projectTab.id];
 
               if (currentLayout !== prevLayout) {
                 if (this.globalManager) {
@@ -1222,8 +1219,8 @@ export class PanelIntegration {
                 const appStore = useProjectLayoutStore.getState();
 
                 // Check if this is a panel tab (either from componentRegistry or config)
-                const isDynamicPanel = appStore.componentRegistry.has(tabId);
-                const panelTab = appStore.panelTabRegistry.get(tabId);
+                const isDynamicPanel = tabId in appStore.componentRegistry;
+                const panelTab = appStore.panelTabRegistry[tabId];
 
                 if (isDynamicPanel && panelTab) {
                   // This is a dynamic panel tab - get the PanelTab object and call its callback

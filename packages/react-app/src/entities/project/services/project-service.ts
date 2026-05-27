@@ -9,11 +9,11 @@ import {
   openProject,
   openWorkspaceProject,
 } from '~entities/project/api/projects-api';
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import {getAllUsecases} from '~entities/usecases/api/usecases-api';
 import {mapUsecaseDtoToCategories} from '~entities/usecases/model/usecase.mapper';
 import {electronApi} from '~shared/api';
 import {logger} from '~shared/lib/logger';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 export interface ProjectOpenResponse {
   message?: string;

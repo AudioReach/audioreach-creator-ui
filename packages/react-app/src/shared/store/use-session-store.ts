@@ -5,11 +5,10 @@
 
 import {create} from 'zustand';
 
-import {openWorkspaceProject} from '~entities/project/api/projects-api';
 import {logger} from '~shared/lib/logger';
 
 import {useGlobalStore} from './global-store';
-import type {ProjectStore} from './project-store.types';
+import {projectStoreRegistry} from './project-store-registry';
 import {generateId} from './tab-entities';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -23,13 +22,9 @@ export interface AppTab {
 }
 
 export interface ProjectGroup {
-  // Assigned once on creation, cycles 1–20. Used as a color indicator so all
-  // tabs belonging to the same project share a consistent visual identity.
   colorId: number;
   filePath: string;
   projectId: string;
-  // The full ProjectStore instance — wired by the project-opening flow.
-  store: ProjectStore | null;
 }
 
 interface SessionStore {
@@ -38,13 +33,6 @@ interface SessionStore {
   appTabs: AppTab[];
 
   closeAppTab: (tabId: string) => void;
-  createProjectGroup: (
-    acdbFile: File,
-    workspaceFile: File,
-    filePath: string,
-    projectName?: string,
-    projectDescription?: string,
-  ) => Promise<void>;
 
   // ── App tab actions ──────────────────────────────────────────────────────
 
@@ -59,14 +47,7 @@ interface SessionStore {
 
   // ── Project group actions ────────────────────────────────────────────────
 
-  // Used by the project-opening flow (which already has the projectId from the
-  // backend) to register a project group without going through the full
-  // createProjectGroup flow.
-  registerProjectGroup: (
-    projectId: string,
-    filePath: string,
-    projectStore: ProjectStore,
-  ) => void;
+  registerProjectGroup: (projectId: string, filePath: string) => void;
 
   removeProjectGroup: (projectId: string) => void;
   setActiveAppTab: (tabId: string) => void;
@@ -91,68 +72,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     logger.debug('App tab closed', {
       action: 'close_app_tab',
       component: 'SessionStore',
-    });
-  },
-  createProjectGroup: async (
-    acdbFile: File,
-    workspaceFile: File,
-    filePath: string,
-    projectName?: string,
-    projectDescription?: string,
-  ): Promise<void> => {
-    const existing = get().projectGroups.find((pg) => pg.filePath === filePath);
-
-    if (existing) {
-      useGlobalStore.getState().setActiveProject(existing.projectId);
-      logger.debug('Project already open — switching to existing', {
-        action: 'create_project_group',
-        component: 'SessionStore',
-        projectId: existing.projectId,
-      });
-      return;
-    }
-
-    const result = await openWorkspaceProject(
-      acdbFile,
-      workspaceFile,
-      projectName,
-      projectDescription,
-    );
-
-    if (!result.success || !result.data) {
-      logger.error('Failed to open project via backend', {
-        action: 'create_project_group',
-        component: 'SessionStore',
-        error: result.message,
-      });
-      throw new Error(result.message ?? 'Failed to open project');
-    }
-
-    const projectId = result.data.projectId;
-
-    set((state) => {
-      const assignedColorId = state.nextColorId;
-      return {
-        nextColorId: (assignedColorId % 20) + 1,
-        projectGroups: [
-          ...state.projectGroups,
-          {colorId: assignedColorId, filePath, projectId, store: null},
-        ],
-      };
-    });
-
-    useGlobalStore.getState().setActiveProject(projectId);
-    useGlobalStore.getState().upsertRecentProject({
-      filePath,
-      lastOpenedAt: Date.now(),
-      projectId,
-      projectName: result.data.name ?? projectName ?? filePath,
-    });
-
-    logger.debug('Project group created', {
-      action: 'create_project_group',
-      component: 'SessionStore',
-      projectId,
     });
   },
 
@@ -183,11 +102,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   projectGroups: [],
 
-  registerProjectGroup: (
-    projectId: string,
-    filePath: string,
-    projectStore: ProjectStore,
-  ): void => {
+  registerProjectGroup: (projectId: string, filePath: string): void => {
     const existing = get().projectGroups.find(
       (pg) => pg.projectId === projectId,
     );
@@ -201,7 +116,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         nextColorId: (assignedColorId % 20) + 1,
         projectGroups: [
           ...state.projectGroups,
-          {colorId: assignedColorId, filePath, projectId, store: projectStore},
+          {colorId: assignedColorId, filePath, projectId},
         ],
       };
     });
@@ -216,8 +131,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   removeProjectGroup: (projectId: string): void => {
     const wasActive = useGlobalStore.getState().activeProjectId === projectId;
 
-    const group = get().projectGroups.find((pg) => pg.projectId === projectId);
-    group?.store?.closeProject();
+    projectStoreRegistry.get(projectId)?.getState().closeProject();
+    projectStoreRegistry.remove(projectId);
 
     set((prev) => ({
       projectGroups: prev.projectGroups.filter(

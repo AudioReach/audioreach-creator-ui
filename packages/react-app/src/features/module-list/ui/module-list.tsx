@@ -200,7 +200,7 @@ export function ModuleList(): ReactElement {
     }
 
     const store = useModuleListStore.getState();
-    const savedProjectFilters = store.projectFilters.get(projectId);
+    const savedProjectFilters = store.projectFilters[projectId];
 
     if (savedProjectFilters) {
       setSelectedDspTypes(savedProjectFilters.dspFilter);
@@ -226,10 +226,10 @@ export function ModuleList(): ReactElement {
     }
 
     const store = useModuleListStore.getState();
-    store.projectFilters.set(projectId, {
+    store.projectFilters[projectId] = {
       dspFilter: selectedDspTypes,
       moduleTypeFilter: selectedModuleTypes,
-    });
+    };
   }, [projectId, selectedDspTypes, selectedModuleTypes]);
 
   // Show filter only if there are meaningful choices to make

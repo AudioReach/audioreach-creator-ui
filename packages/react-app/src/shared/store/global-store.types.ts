@@ -39,7 +39,6 @@ export interface BackendConnectionSlice {
   markUnavailable: (errorMessage?: string) => void;
   registrationStatus: RegistrationStatus;
   resetFailures: () => void;
-  setConnected: (connected: boolean) => void;
   setLastHealthCheckAt: (ts: number) => void;
   setRegistrationStatus: (status: RegistrationStatus) => void;
 }

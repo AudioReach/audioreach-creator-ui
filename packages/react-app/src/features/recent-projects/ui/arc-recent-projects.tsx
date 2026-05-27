@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import {SessionMode} from '~entities/project/model/project.dto';
 import ArcProjectCard from '~shared/controls/arc-project-card';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 interface ArcProjectSectionProps {
   onOpenProject?: (project: ProjectInfo) => void;

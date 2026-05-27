@@ -7,8 +7,7 @@ import type {
   SpfModuleDto,
   SubsystemDto,
 } from '~entities/usecases/model/usecase-component.dto';
-
-import type {SubsystemBrowserTreeNode} from './subsystem-slice';
+import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 
 /**
  * Builds a hierarchical subsystem tree from a flat SubsystemDto array.

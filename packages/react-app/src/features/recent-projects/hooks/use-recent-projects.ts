@@ -9,8 +9,8 @@ import type {MruProjectInfo} from '@audioreach-creator-ui/api-utils';
 import {toPng} from 'html-to-image';
 
 import {getProjects} from '~entities/project/api/projects-api';
+import type ProjectInfo from '~entities/project/model/project-info.types';
 import {logger} from '~shared/lib/logger';
-import type ProjectInfo from '~shared/types/project-info.types';
 
 interface ArcRecentProjectsApi {
   /** Adds a new project to the recent files list. The project will be ignored

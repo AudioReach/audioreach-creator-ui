@@ -8,8 +8,7 @@ import type {StoreApi} from 'zustand';
 import {getAllSubgraphs} from '~entities/subgraph-definitions/api/subgraph-definition-api';
 import type {SubgraphDto} from '~entities/subgraph-definitions/model/subgraph-definition.dto';
 import {logger} from '~shared/lib/logger';
-
-import type {SliceStatus} from '../global-store.types';
+import type {SliceStatus} from '~shared/store/global-store.types';
 
 // ---------------------------------------------------------------------------
 // Types

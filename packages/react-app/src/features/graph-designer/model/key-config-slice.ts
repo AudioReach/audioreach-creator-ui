@@ -10,8 +10,7 @@ import {
   getAllTagDefinitions,
 } from '~entities/key-definitions/api/key-definition-api';
 import {logger} from '~shared/lib/logger';
-
-import type {SliceStatus} from '../global-store.types';
+import type {SliceStatus} from '~shared/store/global-store.types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,8 +47,6 @@ export interface ConfigurationContext {
 }
 
 export interface KeyConfigSlice {
-  /** Internal — the active configuration context. Not intended for direct use by UI consumers. */
-  _configContext: ConfigurationContext | null;
   calibrationKeys: CalibrationKey[];
   initializeConfiguration: (context: ConfigurationContext) => Promise<boolean>;
   isEditable: boolean;
@@ -63,7 +60,6 @@ export interface KeyConfigSlice {
 }
 
 type SetState<T> = StoreApi<T>['setState'];
-type GetState<T> = StoreApi<T>['getState'];
 
 // ---------------------------------------------------------------------------
 // Slice creator
@@ -79,12 +75,10 @@ type GetState<T> = StoreApi<T>['getState'];
  */
 export function createKeyConfigSlice<S extends KeyConfigSlice>(
   set: SetState<S>,
-  get: GetState<S>,
 ): KeyConfigSlice {
   const setSlice = set as SetState<KeyConfigSlice>;
-  const getSlice = get as GetState<KeyConfigSlice>;
+  let configContext: ConfigurationContext | null = null;
   return {
-    _configContext: null,
     calibrationKeys: [],
     initializeConfiguration: async (
       context: ConfigurationContext,
@@ -138,8 +132,8 @@ export function createKeyConfigSlice<S extends KeyConfigSlice>(
             })),
         );
 
+        configContext = context;
         setSlice({
-          _configContext: context,
           calibrationKeys,
           keyConfigStatus: 'ready',
           moduleTagKeys,
@@ -173,8 +167,8 @@ export function createKeyConfigSlice<S extends KeyConfigSlice>(
         component: 'keyConfigSlice',
       });
 
+      configContext = null;
       setSlice({
-        _configContext: null,
         calibrationKeys: [],
         isEditable: false,
         keyConfigStatus: 'uninitialized',
@@ -185,7 +179,7 @@ export function createKeyConfigSlice<S extends KeyConfigSlice>(
     },
 
     saveConfiguration: async (): Promise<boolean> => {
-      const context = getSlice()._configContext;
+      const context = configContext;
 
       if (context === null || context.projectId === '') {
         logger.warn(

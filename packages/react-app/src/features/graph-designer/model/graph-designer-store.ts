@@ -7,18 +7,6 @@ import {createStore, type StoreApi} from 'zustand';
 
 import {useGlobalStore} from '~shared/store/global-store';
 import {
-  createGraphDataSlice,
-  type GraphDataSlice,
-} from '~shared/store/tab-store-slices/graph-data-slice';
-import {
-  createKeyConfigSlice,
-  type KeyConfigSlice,
-} from '~shared/store/tab-store-slices/key-config-slice';
-import {
-  createModuleListSlice,
-  type ModuleListSlice,
-} from '~shared/store/tab-store-slices/module-list-slice';
-import {
   createPanelLayoutSlice,
   type PanelLayoutSlice,
 } from '~shared/store/tab-store-slices/panel-layout-slice';
@@ -30,10 +18,6 @@ import {
   createPropertiesViewSlice,
   type PropertiesViewSlice,
 } from '~shared/store/tab-store-slices/properties-view-slice';
-import {
-  createSubgraphListSlice,
-  type SubgraphListSlice,
-} from '~shared/store/tab-store-slices/subgraph-list-slice';
 import {
   createSubsystemSlice,
   type SubsystemSlice,
@@ -50,6 +34,14 @@ import {
   createVisualizerSlice,
   type VisualizerSlice,
 } from '~shared/store/tab-store-slices/visualizer-slice';
+
+import {createGraphDataSlice, type GraphDataSlice} from './graph-data-slice';
+import {createKeyConfigSlice, type KeyConfigSlice} from './key-config-slice';
+import {createModuleListSlice, type ModuleListSlice} from './module-list-slice';
+import {
+  createSubgraphListSlice,
+  type SubgraphListSlice,
+} from './subgraph-list-slice';
 
 // ── Store type ──────────────────────────────────────────────────────────────
 
@@ -79,7 +71,7 @@ export function createGraphDesignerStore(
     ...createGraphDataSlice(set, projectId),
     ...createVisualizerSlice(set),
     ...createSubsystemSlice(set, get),
-    ...createKeyConfigSlice(set, get),
+    ...createKeyConfigSlice(set),
     ...createValidationResultSlice(set, get),
     ...createModuleListSlice(set, get, projectId),
     ...createSubgraphListSlice(set, get, projectId),
