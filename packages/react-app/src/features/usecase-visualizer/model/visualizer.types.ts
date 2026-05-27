@@ -272,6 +272,15 @@ export interface XY {
 
 export interface SearchHighlights {
   activeId?: string;
+  /**
+   * Currently-rendered node ids whose subtree (at deeper levels or behind a
+   * collapsed proxy) contains a match. Typically SubsystemNode ids
+   * (drill-in affordance) or SubgraphProxyNode ids (expand affordance).
+   * Consumer-supplied — the Visualizer only sees the current LevelView and
+   * cannot compute this. Visualizer applies a contains-match CSS class to
+   * each node in this list, regardless of node kind.
+   */
+  containsMatchNodeIds?: string[];
   highlightedIds: string[];
 }
 
@@ -318,8 +327,8 @@ export interface VisualizerEventHandlers {
   onNodeDoubleClick?: (nodeId: string) => void;
   onNodeDragEnd?: (payload: NodeDragEndPayload) => void;
   onSelectionChange?: (payload: SelectionChangePayload) => void;
-  onSubgraphCollapse?: (subgraphId: string) => void;
-  onSubgraphExpand?: (subgraphId: string) => void;
+  onSubgraphCollapse?: (subgraphId: number) => void;
+  onSubgraphExpand?: (subgraphId: number) => void;
   onViewportChange?: (viewport: ViewportState) => void;
   // group: authoring — only active when mode === VISUALIZER_MODE.EDIT
   onEdgeConnected?: (payload: EdgeConnectPayload) => void;
@@ -338,6 +347,12 @@ export interface UsecaseVisualizerProps {
   initialViewport?: ViewportState;
   lodThreshold?: number;
   mode?: VisualizerMode;
+  /**
+   * Receives an imperative capture function once the canvas is mounted.
+   * Consumer stores it and calls it on demand to capture a PNG data URL of
+   * the current canvas. Resolves to null if capture fails or no nodes exist.
+   */
+  onScreenshotApiReady?: (capture: () => Promise<string | null>) => void;
   rendering?: VisualizerRenderingConfig;
   searchHighlights?: SearchHighlights;
 }

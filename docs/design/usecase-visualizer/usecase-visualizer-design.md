@@ -33,6 +33,7 @@ The Visualizer is a reusable React component. Every consumer gets the following 
 - [Drill-down](#drill-down)
 - [Viewport Management](#viewport-management)
 - [Search Highlights](#search-highlights)
+- [Screenshot capability](#screenshot-capability)
 - [Performance](#performance)
 - [Post-MVP Extensions](#post-mvp-extensions)
 - [Implementation Notes](#implementation-notes)
@@ -326,6 +327,11 @@ interface UsecaseVisualizerProps {
   // Consumer saves viewport via onViewportChange and restores on remount via this
   // prop to preserve the user's viewport after navigation away and back.
   initialViewport?: ViewportState;
+
+  // ── Screenshot capability ──────────────────────────────────────────────────
+  // Fires once after canvas mount with an imperative capture function.
+  // See Screenshot capability section.
+  onScreenshotApiReady?: (capture: () => Promise<string | null>) => void;
 }
 ```
 
@@ -389,11 +395,16 @@ interface VisualizerEventHandlers {
   // ── Readonly ───────────────────────────────────────────────────────────────
   onSelectionChange?: (payload: SelectionChangePayload) => void;
   onNodeDragEnd?: (payload: NodeDragEndPayload) => void;
-  onSubgraphCollapse?: (subgraphId: string) => void;
-  onSubgraphExpand?: (subgraphId: string) => void;
+  onSubgraphCollapse?: (subgraphId: number) => void;
+  onSubgraphExpand?: (subgraphId: number) => void;
   // Fired on any node double-click. Visualizer saves viewport to viewportCache
   // before firing when the double-clicked node is a SubsystemNode.
   onNodeDoubleClick?: (nodeId: string) => void;
+  // Fires on every viewport mutation — both user-initiated (pan, zoom, Space-drag)
+  // and Visualizer-initiated (fitView on drill-in/collapse, setViewport on
+  // drill-out cache restore, setCenter on search snap). Consumers persisting the
+  // viewport across mounts can wire this to a setter and pass the saved value
+  // back via initialViewport on the next mount.
   onViewportChange?: (viewport: ViewportState) => void;
 
   // ── Authoring (only active when mode === 'edit') ──────────────────────────
@@ -458,7 +469,7 @@ drill-in, drag, and selection all wired up.
 function GraphDesigner() {
   const [mode, setMode] = useState<'readonly' | 'edit'>('readonly');
   const [canvasKey, setCanvasKey] = useState(0);
-  const [collapseState, setCollapseState] = useState(new Set<string>());
+  const [collapseState, setCollapseState] = useState(new Set<number>());
   const [drillStack, setDrillStack] = useState([
     {subsystemId: null, label: 'Top'},
   ]);
@@ -614,7 +625,7 @@ type ModuleShape =
 type PortIoType = 'input' | 'output' | 'control';
 
 export interface Port {
-  id: number;
+  id: string;
   /** Prevents new connections and hides context menu for this port. */
   locked?: boolean;
   /** Max edges connectable to this port. Absent means unlimited. */
@@ -743,6 +754,13 @@ interface ContextMenuItem {
 The Visualizer owns an internal Zustand store that no external component writes to.
 External state arrives only via props.
 
+**Per-mount instance.** Each `<UsecaseVisualizer>` mount creates its own store via a
+`createVisualizerStore` factory. Multiple Visualizer instances rendered on the same
+page (e.g. side-by-side editors, picture-in-picture preview) therefore have fully
+independent selection, hover, viewport cache, and search-highlight slices. The factory
+also lets `key`-driven remounts start from a clean store rather than carrying stale
+state from the previous mount.
+
 ```typescript
 interface VisualizerInternalStore {
   // Drives ghost vs full render
@@ -770,6 +788,16 @@ interface VisualizerInternalStore {
     selectedNodeIds: string[];
     selectedEdgeIds: string[];
   };
+
+  // Search highlights — mirrored from the searchHighlights prop into a
+  // per-node-id Map so node components subscribe by id and only those whose
+  // status changed re-render. Avoids re-creating the rfNodes array on every
+  // search keystroke. containsMatchNodeIds carries the contains-match overlay
+  // for any currently-rendered ancestor whose subtree holds a deeper-level
+  // match — typically SubsystemNode (drill-in) or SubgraphProxyNode (expand).
+  // Consumer-supplied (see Search Highlights section).
+  searchHighlightById: Record<string, SearchHighlightState>;
+  containsMatchNodeIds: string[];
 }
 
 interface ViewportState {
@@ -1360,7 +1388,7 @@ When `graph.levelId` changes:
 
 | Transition                                       | Action                                                                                                                                                                    |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New `levelId` (unseen), `initialViewport` set    | Restore `initialViewport` instead of `fitView` — consumer re-hydrates the saved viewport on mount                                                                         |
+| New `levelId` (unseen), `initialViewport` set    | Restore `initialViewport` instead of `fitView` — consumer re-hydrates the saved viewport on mount. Also seeds `viewportCache[levelId]` with the same value (see below).   |
 | New `levelId` (unseen), no `initialViewport`     | `fitView()` after DOM commit — first visit to a level                                                                                                                     |
 | Known `levelId` (seen before, cache populated)   | Restore exact cached viewport (zoom + pan) after DOM commit — drill-out returns the user to where they were looking, not a fresh fitView                                  |
 | Known `levelId` (seen before, cache empty)       | `fitView()` — cache can be absent if the Visualizer was remounted (e.g. `key` reset); fall through to fit rather than leaving the viewport at an arbitrary previous state |
@@ -1371,6 +1399,15 @@ The Visualizer saves the current viewport to `viewportCache[currentLevelId]` imm
 before firing `onNodeDoubleClick` on a SubsystemNode. No `currentViewport` parameter is
 passed in the event. The cache stores only `{ x, y, zoom }` — a camera position with no
 node or edge data — and cannot become stale when graph content changes.
+
+**Why `initialViewport` also seeds the cache.** In the typical flow (mount → drill-in →
+drill-out → ...), drill-in saves the current viewport, so drill-out finds it. But if the
+consumer changes `graph.levelId` programmatically without a double-click — deep-link
+restore, search-driven cross-level jump, breadcrumb that skips a level — the top-level
+viewport never reaches the cache. A later return to that level would then fall into the
+"known levelId, empty cache" branch and run `fitView`, losing the value the consumer
+just restored. Seeding the cache from `initialViewport` on mount makes the restore
+sticky across all navigation paths, not just user-driven ones.
 
 ---
 
@@ -1384,6 +1421,13 @@ no imperative calls.
 searchHighlights?: {
   highlightedIds: string[];   // Visualizer renders a highlight ring on each matched node
   activeId?: string;          // Visualizer snaps viewport to this node when it changes
+  // Currently-rendered node ids whose subtree (at deeper levels or behind a
+  // collapsed proxy) contains a match. Typically SubsystemNode ids (drill-in
+  // affordance) or SubgraphProxyNode ids (expand affordance). The consumer
+  // computes — they own the full level hierarchy and the collapse state.
+  // The Visualizer applies a distinct contains-match class to each node in
+  // this list, regardless of node kind.
+  containsMatchNodeIds?: string[];
 }
 ```
 
@@ -1409,12 +1453,21 @@ only components whose highlight status changed re-render.
 are not rendered, so they carry no visible ring until the consumer navigates to their
 level.
 
-When a `highlightedIds` entry names a node that exists in the current `LevelView` but is
-not rendered (e.g. it lives inside a `SubsystemNode` that has not been drilled into), the
-Visualizer applies a **contains-match** ring to that `SubsystemNode` instead. This
-signals to the user that a match is present inside the subsystem without requiring
-navigation. The contains-match ring uses a distinct CSS class from the direct-match ring
-so the consumer can style them differently.
+A match can also be hidden behind a currently-rendered ancestor:
+
+- inside a `SubsystemNode` the user has not drilled into, or
+- inside a `SubgraphProxyNode` (a collapsed subgraph whose children are not in the
+  current `LevelView`).
+
+The Visualizer cannot detect either case on its own — for the first it does not have
+the deeper levels; for the second the collapsed children were already filtered out by
+the consumer's `applyCollapses` step before the `LevelView` was built. The consumer,
+which owns the full `Map<levelId, LevelView>` plus the collapse state, computes which
+currently-rendered nodes should expose a contains-match affordance and passes their ids
+in `searchHighlights.containsMatchNodeIds`. The Visualizer applies a distinct
+**contains-match** CSS class to each id in that list. The class is independent of the
+direct-match ring class so consumers can style them differently and stack them when a
+node is both a direct match and contains a deeper match.
 
 ### Snap to `activeId`
 
@@ -1431,6 +1484,72 @@ same render (cross-level navigation to a search match), two RAF callbacks queue:
 `fitView` from the levelId change, then `setCenter` from the activeId change. Both
 execute in the same frame in definition order — `fitView` first, `setCenter` last. The
 final viewport position is the matched node, which is the correct outcome.
+
+---
+
+## Screenshot capability
+
+The Visualizer can produce a PNG data URL of the current canvas on demand. Consumers
+typically use this to attach an image preview to saved use cases.
+
+### Why a callback, not a ref
+
+The architecture rule that "consumer holds no `ref` to the canvas" prevents the consumer
+from reaching into ReactFlow internals or DOM directly. The screenshot feature still
+needs ReactFlow's hooks (`getNodes`, `getNodesBounds`, `getViewportForBounds`) and DOM
+access to the `.react-flow__viewport` element. Both live inside the Visualizer.
+
+To expose this without breaking the no-ref rule, the Visualizer accepts an
+`onScreenshotApiReady` callback that fires once after mount with an imperative capture
+function. The consumer stores it in a ref and calls it on demand:
+
+```tsx
+const captureRef = useRef<(() => Promise<string | null>) | null>(null);
+
+<UsecaseVisualizer
+  graph={currentLevel}
+  onScreenshotApiReady={(capture) => { captureRef.current = capture; }}
+/>
+
+// Later, e.g. on save:
+const dataUrl = await captureRef.current?.();
+```
+
+### How capture works
+
+The internal helper (`lib/capture-screenshot.ts`) replicates the legacy behaviour:
+
+1. Read all current nodes via `useReactFlow().getNodes()`. Return `null` if zero nodes.
+2. Compute their bounding box with `getNodesBounds(nodes)`.
+3. Compute a viewport transform via `getViewportForBounds(bounds, w, h, 0.5, 2, 0.1)`.
+4. Resolve a theme-aware background colour from QUI tokens (no hardcoded hex).
+5. Call `toPng(viewportEl, { backgroundColor, pixelRatio: 2, skipFonts: true, ... })`
+   on the `.react-flow__viewport` DOM node.
+6. Resolve to the data URL, or `null` on error.
+
+The capture function is bound to the ReactFlow context of the mounted Visualizer; it
+becomes a no-op (returns `null`) once the component unmounts. The consumer is
+responsible for not calling a stale capture function after unmount — typical practice
+is to clear the ref on a `componentWillUnmount`-style effect cleanup.
+
+### What the consumer is responsible for
+
+- Saving the captured data URL to disk / backend
+- UI affordances around capture (button, hotkey)
+- Aspect-ratio constraints if any (the Visualizer captures the full bounding box)
+- Theme switch behaviour: capture uses the theme active at call time
+
+The capture function does not pan, zoom, or fit the canvas — it captures whatever is
+currently rendered. If the consumer wants a "fit and capture" workflow, it can call
+`fitView` (via a separate Visualizer ref API, post-MVP) or include all-nodes-visible
+state in the user flow before calling capture.
+
+### Why not include `fitBeforeCapture`
+
+The combinatorial space of pre-capture options (fit, zoom level, padding, animate) is
+better expressed as a separate `useVisualizerImperativeApi` hook in a future iteration
+than as overloaded options on a one-shot callback. For MVP, a single `capture()` call
+is enough.
 
 ---
 
@@ -1523,12 +1642,13 @@ features/usecase-visualizer/
   lib/
     to-reactflow.ts                     ← toReactFlowNodes / toReactFlowEdges (internal; not exported)
     node-dimensions.ts                  ← NODE_DIMENSIONS export (new)
+    capture-screenshot.ts               ← internal helper; see Screenshot capability
   model/
-    usecase-visualizer.types.ts         ← LevelView, node/edge domain interfaces
-    usecase-visualizer-store.types.ts   ← VisualizerInternalStore interface
-    usecase-visualizer.store.ts         ← Zustand store + actions
+    visualizer.types.ts                 ← LevelView, node/edge domain interfaces (canonical types — replaces legacy usecase-visualizer.types.ts at cutover)
+    usecase-visualizer.store.ts         ← Zustand store + actions (state slices co-located in store file; no separate types file)
   ui/
-    usecase-visualizer.tsx              ← root component
+    usecase-visualizer.tsx              ← root component (new)
+    usecase-visualizer-legacy.tsx       ← verbatim copy of pre-revamp root, retired in cutover
     edge-types/
       data-link-edge.tsx
       control-link-edge.tsx
@@ -1760,18 +1880,24 @@ interface VisualizerInternalStore {
     nodeId: string | null,
     logicalContainerId: string | null,
   ) => void;
-  setSelection: (selected: SelectionChangePayload) => void;
+  // Takes only the new selected ids. Store computes delta from previousSelection
+  // before producing the SelectionChangePayload that's emitted via onSelectionChange.
+  setSelection: (selectedNodeIds: string[], selectedEdgeIds: string[]) => void;
   clearSelection: () => void;
+  // Mirrors the searchHighlights prop into searchHighlightById +
+  // containsMatchSubsystemIds. Pass undefined to clear.
+  syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
 }
 ```
 
-| Action             | Called by                                | When                                                 |
-| ------------------ | ---------------------------------------- | ---------------------------------------------------- |
-| `setLodZoom`       | `onMove` ReactFlow handler               | Every viewport move                                  |
-| `setViewportCache` | Drill-in handler                         | Before firing `onNodeDoubleClick` on a SubsystemNode |
-| `setHoverState`    | Node `onMouseEnter` / `onMouseLeave`     | On node hover                                        |
-| `setSelection`     | ReactFlow `onSelectionChange` handler    | On any selection change                              |
-| `clearSelection`   | Drill-in/out and collapse/expand effects | After level or structure change                      |
+| Action                  | Called by                                | When                                                 |
+| ----------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `setLodZoom`            | `onMove` ReactFlow handler               | Every viewport move                                  |
+| `setViewportCache`      | Drill-in handler                         | Before firing `onNodeDoubleClick` on a SubsystemNode |
+| `setHoverState`         | Node `onMouseEnter` / `onMouseLeave`     | On node hover                                        |
+| `setSelection`          | ReactFlow `onSelectionChange` handler    | On any selection change                              |
+| `clearSelection`        | Drill-in/out and collapse/expand effects | After level or structure change                      |
+| `syncSearchHighlights`  | Effect on `searchHighlights` prop change | Whenever the prop reference changes                  |
 
 ---
 
@@ -1816,9 +1942,10 @@ const SEARCH_HIGHLIGHT_BG: Record<SearchHighlightState, string> = {
 `none` = all other nodes.
 
 Node components subscribe to their own `SearchHighlightState` from the internal store.
-The Visualizer also applies a distinct `contains-match` CSS class to any `SubsystemNode`
-whose interior contains a highlighted node that is not currently rendered (i.e. it has
-not been drilled into).
+Any node whose id appears in `containsMatchNodeIds` additionally receives a distinct
+`contains-match` CSS class — typically applied to SubsystemNodes (drill-in hint) and
+SubgraphProxyNodes (expand hint), but applied uniformly to whatever node kind the
+consumer requests.
 
 ---
 
