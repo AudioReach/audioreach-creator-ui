@@ -1,6 +1,8 @@
 // UsecaseVisualizer feature - public API
 export {UsecaseVisualizer} from './ui/usecase-visualizer';
 export type {UsecaseVisualizerProps} from './ui/usecase-visualizer';
+export {UsecaseVisualizerLegacy} from './ui/legacy/usecase-visualizer';
+export type {UsecaseVisualizerLegacyProps} from './ui/legacy/usecase-visualizer';
 
 // Export types for consumers
 export type {

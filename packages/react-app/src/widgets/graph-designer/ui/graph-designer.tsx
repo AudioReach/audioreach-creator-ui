@@ -34,7 +34,7 @@ import {
 } from '~features/usecase-selection';
 import {
   layoutWithELK,
-  UsecaseVisualizer,
+  UsecaseVisualizerLegacy,
   useSearchHighlightStore,
   useVisualizerSelectionStore,
 } from '~features/usecase-visualizer';
@@ -743,7 +743,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             </div>
           </div>
         ) : (
-          <UsecaseVisualizer
+          <UsecaseVisualizerLegacy
             edges={edges}
             nodes={nodes}
             onScreenshotReady={handleScreenshotReady}
