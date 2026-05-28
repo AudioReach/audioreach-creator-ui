@@ -5,7 +5,13 @@
 
 import {create, type StoreApi, type UseBoundStore} from 'zustand';
 
-import type {SearchHighlights, ViewportState} from './visualizer.types';
+import type {
+  AnyNode,
+  NodeContentOverride,
+  NodeDisplayConfig,
+  SearchHighlights,
+  ViewportState,
+} from './visualizer.types';
 
 /**
  * Per-mount Zustand store powering the Visualizer's internal state slices:
@@ -30,6 +36,16 @@ interface SelectionState {
   selectedNodeIds: string[];
 }
 
+export interface RenderingConfigSlice {
+  lodThreshold: number;
+  nodeDisplayConfig: NodeDisplayConfig | undefined;
+  renderNodeContent:
+    | ((node: AnyNode) => NodeContentOverride | null)
+    | undefined;
+}
+
+const DEFAULT_LOD_THRESHOLD = 0.4;
+
 const EMPTY_SELECTION: SelectionState = {
   selectedEdgeIds: [],
   selectedNodeIds: [],
@@ -44,8 +60,13 @@ export interface VisualizerInternalStore {
   clearSelection: () => void;
   containsMatchNodeIds: string[];
   hoverState: HoverState;
+  lodThreshold: number;
   lodZoom: number;
+  nodeDisplayConfig: NodeDisplayConfig | undefined;
   previousSelection: SelectionState;
+  renderNodeContent:
+    | ((node: AnyNode) => NodeContentOverride | null)
+    | undefined;
   searchHighlightById: Record<string, SearchHighlightState>;
   selection: SelectionState;
   setHoverState: (
@@ -53,13 +74,16 @@ export interface VisualizerInternalStore {
     logicalContainerId: string | null,
   ) => void;
   setLodZoom: (zoom: number) => void;
+  setRenderingConfig: (config: Partial<RenderingConfigSlice>) => void;
   setSelection: (selectedNodeIds: string[], selectedEdgeIds: string[]) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
   syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
   viewportCache: Record<string, ViewportState>;
 }
 
-type CreatedVisualizerStore = UseBoundStore<StoreApi<VisualizerInternalStore>>;
+export type CreatedVisualizerStore = UseBoundStore<
+  StoreApi<VisualizerInternalStore>
+>;
 
 export function createVisualizerStore(): CreatedVisualizerStore {
   return create<VisualizerInternalStore>((set) => ({
@@ -71,8 +95,11 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     },
     containsMatchNodeIds: [],
     hoverState: EMPTY_HOVER,
+    lodThreshold: DEFAULT_LOD_THRESHOLD,
     lodZoom: 1,
+    nodeDisplayConfig: undefined,
     previousSelection: EMPTY_SELECTION,
+    renderNodeContent: undefined,
     searchHighlightById: {},
     selection: EMPTY_SELECTION,
     setHoverState: (nodeId, logicalContainerId) => {
@@ -85,6 +112,22 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     },
     setLodZoom: (zoom) => {
       set({lodZoom: zoom});
+    },
+    setRenderingConfig: (config) => {
+      set((state) => ({
+        // lodThreshold is required (number); ?? keeps the stored value
+        // when callers omit the field or pass undefined. The optional
+        // fields below use 'in' so callers can explicitly clear them.
+        lodThreshold: config.lodThreshold ?? state.lodThreshold,
+        nodeDisplayConfig:
+          'nodeDisplayConfig' in config
+            ? config.nodeDisplayConfig
+            : state.nodeDisplayConfig,
+        renderNodeContent:
+          'renderNodeContent' in config
+            ? config.renderNodeContent
+            : state.renderNodeContent,
+      }));
     },
     setSelection: (selectedNodeIds, selectedEdgeIds) => {
       set((state) => ({

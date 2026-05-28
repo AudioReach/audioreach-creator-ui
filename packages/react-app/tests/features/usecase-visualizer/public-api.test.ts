@@ -6,7 +6,7 @@
 // Mock the legacy and revamp roots so the public-api barrel imports cleanly
 // in a node test environment without pulling in QUI subpath modules
 // (e.g. @qualcomm-ui/react/tabs) that the jest setup does not stub.
-jest.mock('~features/usecase-visualizer/ui/usecase-visualizer-legacy', () => ({
+jest.mock('~features/usecase-visualizer/ui/legacy/usecase-visualizer', () => ({
   UsecaseVisualizerLegacy: () => null,
 }));
 jest.mock('~features/usecase-visualizer/ui/usecase-visualizer', () => ({
