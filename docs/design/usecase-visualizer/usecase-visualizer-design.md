@@ -1645,7 +1645,7 @@ features/usecase-visualizer/
     capture-screenshot.ts               ← internal helper; see Screenshot capability
   model/
     visualizer.types.ts                 ← LevelView, node/edge domain interfaces (canonical types — replaces legacy usecase-visualizer.types.ts at cutover)
-    usecase-visualizer.store.ts         ← Zustand store + actions (state slices co-located in store file; no separate types file)
+    usecase-visualizer-store.ts         ← Zustand store + actions (state slices co-located in store file; no separate types file)
   ui/
     usecase-visualizer.tsx              ← root component (new)
     usecase-visualizer-legacy.tsx       ← verbatim copy of pre-revamp root, retired in cutover

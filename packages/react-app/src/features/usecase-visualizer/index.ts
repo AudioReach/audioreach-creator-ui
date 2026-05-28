@@ -37,6 +37,7 @@ export {
   PORT_STATUS,
   VISUALIZER_MODE,
 } from './model/visualizer.types';
+export {calculateModuleHeight, NODE_DIMENSIONS} from './lib/node-dimensions';
 export type {
   // Discriminant types
   EdgeKind,
