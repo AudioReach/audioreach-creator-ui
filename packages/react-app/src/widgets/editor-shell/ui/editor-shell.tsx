@@ -7,6 +7,7 @@ import {useEffect, useRef} from 'react';
 
 import {useKeyConfiguratorView} from '~features/key-configurator';
 import {useLogView} from '~features/log-view';
+import {PanelIconBar} from '~features/panel-collapse';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {ArcSideNav} from '~shared/controls/arc-side-nav';
 import {GlobalToaster} from '~shared/controls/global-toaster';
@@ -52,6 +53,7 @@ const EditorShellContent: React.FC = () => {
             AudioReach™ Creator
           </div>
         </div>
+        <PanelIconBar />
       </div>
 
       <div
@@ -75,7 +77,6 @@ export const EditorShell: React.FC = () => {
   const {isLogViewOpen, toggleLogView} = useLogView();
   const {isKeyConfiguratorViewOpen, toggleKeyConfiguratorView} =
     useKeyConfiguratorView();
-
   // Set up IPC listener for log view toggle from menu
   useEffect(() => {
     if (!window.logViewApi) {

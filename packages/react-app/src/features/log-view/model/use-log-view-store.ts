@@ -272,19 +272,15 @@ class LogViewStoreManager {
 // Global instance
 const logViewStoreManager = new LogViewStoreManager();
 
+// Fallback store created once at module level — reused across renders to avoid
+const fallbackStore = createLogViewStore();
+
 /**
  * Hook to get the LogView store for the current project
  */
 export function useLogViewStore() {
   const currentStore = logViewStoreManager.getCurrentProjectStore();
-
-  if (!currentStore) {
-    // Fallback: create a temporary store if no project is active
-    // This prevents crashes during app initialization
-    return createLogViewStore()();
-  }
-
-  return currentStore();
+  return currentStore ? currentStore() : fallbackStore();
 }
 
 export {logViewStoreManager};

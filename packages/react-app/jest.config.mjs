@@ -35,6 +35,9 @@ export default {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       'jest-transform-stub',
+    // flexlayout-react only exports via 'import' condition; map directly to dist for Jest
+    '^flexlayout-react$':
+      '<rootDir>/node_modules/flexlayout-react/dist/index.js',
     '^~assets/(.*)$': '<rootDir>/src/assets/$1',
     '^~data/(.*)$': '<rootDir>/src/data/$1',
     '^~entities/(.*)$': '<rootDir>/src/entities/$1',
@@ -87,10 +90,9 @@ export default {
     '<rootDir>/dist/',
     '<rootDir>/build/',
   ],
-
   // Transform configuration
   transform: {
-    '^.+\\.(ts|tsx)$': [
+    '^.+\\.(ts|tsx|js)$': [
       'ts-jest',
       {
         tsconfig: {
@@ -103,6 +105,9 @@ export default {
       },
     ],
   },
+
+  // Transform flexlayout-react (ESM) so Jest can process it
+  transformIgnorePatterns: ['/node_modules/(?!flexlayout-react)'],
 
   // Verbose output
   verbose: true,

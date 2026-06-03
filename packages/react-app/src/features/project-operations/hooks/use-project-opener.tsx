@@ -5,11 +5,15 @@
 
 import {useState} from 'react';
 
+import type {IJsonModel} from 'flexlayout-react';
+
 import type ProjectInfo from '~entities/project/model/project-info.types';
 import {ProjectService} from '~entities/project/services/project-service';
+import {LogViewPanel} from '~features/log-view';
 import {ModuleList} from '~features/module-list/ui/module-list';
 import useArcRecentProjects from '~features/recent-projects/hooks/use-recent-projects';
 import {SubgraphList} from '~features/subgraph-list/ui/subgraph-list';
+import {ConfigFileManager} from '~shared/config/config-manager';
 import {
   GetFlexLayoutConfig,
   GRAPH_DESIGNER_COMPONENT_NAME,
@@ -65,8 +69,16 @@ export function useProjectOpener({
     // Create project group in the ProjectLayoutStore
     const layoutStore = useProjectLayoutStore.getState();
 
-    // Build default FlexLayout config (GraphDesigner center; borders available)
-    const flexLayoutConfig = GetFlexLayoutConfig();
+    // Use saved layout if available (restores user's panel positions), otherwise use default
+    const savedLayout = ConfigFileManager.instance.getProjectConfigData(
+      project.filepath,
+      'layout.flexLayout',
+    );
+    const isValidFlexLayout = (v: unknown): v is IJsonModel =>
+      !!v && typeof v === 'object' && 'layout' in v;
+    const flexLayoutConfig = isValidFlexLayout(savedLayout)
+      ? savedLayout
+      : GetFlexLayoutConfig();
 
     // Dynamically import GraphDesigner and create main tab via PanelIntegration
     const GraphDesigner = (
@@ -74,6 +86,7 @@ export function useProjectOpener({
     ).default;
 
     const mainTab = PanelIntegration.createProjectMainTab(
+      project.filepath,
       `project_${project.id}`,
       () => true, // onClose callback
       (node: any) => {
@@ -99,6 +112,9 @@ export function useProjectOpener({
         }
         if (component === 'subgraph-list' || name === 'Subgraph List') {
           return <SubgraphList />;
+        }
+        if (component === 'log-view' || name === 'Log View') {
+          return <LogViewPanel />;
         }
         return null;
       },

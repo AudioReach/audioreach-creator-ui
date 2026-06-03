@@ -15,6 +15,12 @@
   }
 }
 
+/* flexlayout-react sets min-height: 1 on these elements, blocking true 0-weight collapse */
+.flexlayout__tabset_container,
+.flexlayout__row {
+  min-height: 0 !important;
+}
+
 :root {
   font-family: 'Roboto Flex', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;

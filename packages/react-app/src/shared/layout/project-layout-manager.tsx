@@ -9,18 +9,27 @@ import {
   type MouseEvent,
   type ReactNode,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
 import {
   type Action,
+  type DockLocation,
   type IJsonModel,
   Layout,
   Model,
+  type Node,
   type TabNode,
 } from 'flexlayout-react';
 import {Files} from 'lucide-react';
 
+import {
+  createPanelCollapseLogic,
+  removeSidePlaceholdersIfNeeded,
+  syncPanelStateFromModel,
+} from '~features/panel-collapse';
+import {ConfigFileManager} from '~shared/config/config-manager';
 import {logger} from '~shared/lib/logger';
 
 import type {
@@ -37,6 +46,29 @@ import {getColorName} from '../utils/color-utils';
 import {deepEqual} from '../utils/deep-equality';
 
 import 'flexlayout-react/style/combined.css';
+
+// Render function for placeholder — called each time to produce a fresh element instance
+// (a shared constant would confuse React's reconciler when multiple placeholders are mounted)
+const renderPlaceholder = () =>
+  createElement(
+    'div',
+    {
+      className:
+        'flex items-center justify-center h-full font-body-xs text-neutral-secondary',
+    },
+    'Drop panels here',
+  );
+
+// Traverses up from 'node' to find its direct ancestor under the root row
+const findAncestorUnderRoot = (node: Node): Node | null => {
+  let currentNode: Node = node;
+  let parentNode: Node | undefined = currentNode.getParent();
+  while (parentNode && parentNode.getId() !== 'root') {
+    currentNode = parentNode;
+    parentNode = currentNode.getParent();
+  }
+  return parentNode ? currentNode : null;
+};
 
 interface ProjectLayoutManagerProps {
   // Empty props interface - using object type instead of empty interface
@@ -848,6 +880,7 @@ export class PanelIntegration {
   /**
    * Create project Maintab from JSON config file.
    * Project Maintab may have a list of PanelTabs
+   * @param projectFilePath project.filepath — used as the key for ConfigFileManager disk persistence only.
    * @param tabTitle Main tab title
    * @param onMainTabClose Callback when this tab is closed
    * @param factory callback to create panels
@@ -855,6 +888,7 @@ export class PanelIntegration {
    * @param onPanelTabClose Optional callback for config panel tabs
    */
   static createProjectMainTab(
+    projectFilePath: string,
     tabTitle: string,
     onMainTabClose: OnTabClose,
     factory: (node: TabNode) => ReactNode,
@@ -888,7 +922,53 @@ export class PanelIntegration {
         return this.globalManager.createFlexLayoutModel(mainTab.id);
       });
 
+      // Per-instance debounce timers — avoid firing on every drag event during splitter resize
+      const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+        null,
+      );
+      const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+        null,
+      );
+
       useEffect(() => {
+        // Drop filtering: left/right panels allow only top/bottom splits; bottom panel allows
+        // only left/right splits; center panel disallows all drops.
+        model.setOnAllowDrop(
+          (
+            _: Node,
+            {location, node: dropTarget}: {location: DockLocation; node: Node},
+          ): boolean => {
+            if (!dropTarget || !location) {
+              return true;
+            }
+            const dropLocationName = location.getName();
+            const rootChild = findAncestorUnderRoot(dropTarget);
+            if (!rootChild) {
+              return true;
+            }
+            // FlexLayout may wrap center-panel in a row after tree restructuring.
+            const containsCenterPanel = (node: Node): boolean => {
+              if (node.getId() === 'center-panel') {
+                return true;
+              }
+              return node
+                .getChildren()
+                .some((child) => containsCenterPanel(child as Node));
+            };
+            if (!containsCenterPanel(rootChild)) {
+              // Left or right panel — block left/right splits
+              return (
+                dropLocationName !== 'left' && dropLocationName !== 'right'
+              );
+            }
+            // Bottom area — block top/bottom splits
+            return dropLocationName !== 'top' && dropLocationName !== 'bottom';
+          },
+        );
+
+        // Sync store with model state on load — handles panels that were saved as collapsed
+        syncPanelStateFromModel(model, mainTab.id);
+
         let mounted = true;
         const unsubscribe = useProjectLayoutStore.subscribe(
           (state, prevState) => {
@@ -896,32 +976,45 @@ export class PanelIntegration {
               return;
             }
 
-            const currentLayout = state.projectTabLayouts[mainTab.id];
-            const prevLayout = prevState?.projectTabLayouts[mainTab.id];
-            const currentRegistry = state.componentRegistry;
-            const prevRegistry = prevState?.componentRegistry;
+            // Rebuild model if registry or layout content changed
+            const currentLayoutStr = state.getLayoutConfig(mainTab.id);
+            const prevLayoutStr =
+              prevState?.getLayoutConfig(mainTab.id) ?? null;
+            const registryChanged =
+              state.componentRegistry !== prevState?.componentRegistry;
 
             if (
-              currentLayout !== prevLayout ||
-              currentRegistry !== prevRegistry
+              (registryChanged || currentLayoutStr !== prevLayoutStr) &&
+              this.globalManager
             ) {
-              if (this.globalManager) {
-                const newModel = this.globalManager.createFlexLayoutModel(
-                  mainTab.id,
-                );
-                setModel(newModel);
-              }
+              const newModel = this.globalManager.createFlexLayoutModel(
+                mainTab.id,
+              );
+              setModel(newModel);
             }
           },
         );
 
+        // Subscribe to layout store changes for panel toggling
+        // doAction updates weights in-place and triggers onModelChange, which saves to ConfigFileManager
+        const unsubscribeLayout = createPanelCollapseLogic(model);
+
         return () => {
           mounted = false;
+          if (syncDebounceRef.current) {
+            clearTimeout(syncDebounceRef.current);
+          }
+          if (saveDebounceRef.current) {
+            clearTimeout(saveDebounceRef.current);
+          }
           if (unsubscribe) {
             unsubscribe();
           }
+          if (unsubscribeLayout) {
+            unsubscribeLayout();
+          }
         };
-      }, []);
+      }, [model]);
 
       return createElement(
         'div',
@@ -932,6 +1025,10 @@ export class PanelIntegration {
           factory: (node: any) => {
             const component = node.getComponent();
             const tabId = node.getId();
+
+            if (component === 'panel-placeholder') {
+              return renderPlaceholder();
+            }
 
             // Handle panel tabs with component registry lookup
             if (component === 'panel-tab') {
@@ -1049,6 +1146,21 @@ export class PanelIntegration {
             return action;
           },
           onModelChange: (newModel: any) => {
+            removeSidePlaceholdersIfNeeded(newModel);
+
+            // Debounced sync — avoids firing on every drag event during splitter resize
+            if (syncDebounceRef.current) {
+              clearTimeout(syncDebounceRef.current);
+            }
+            syncDebounceRef.current = setTimeout(() => {
+              const activeProjectId = useProjectLayoutStore
+                .getState()
+                .getActiveProjectGroup()?.mainTab.id;
+              if (activeProjectId) {
+                syncPanelStateFromModel(newModel, activeProjectId);
+              }
+            }, 200);
+
             const layoutJson = newModel.toJson();
 
             // Compare with previously saved layout (ignore ephemeral 'selected' indices)
@@ -1085,12 +1197,36 @@ export class PanelIntegration {
               // If parse/compare fails, fall through to save/log
             }
 
-            logger.info(
-              `Layout Updated (Main Tab: ${mainTab.title}):${JSON.stringify(layoutJson, null, 2)}`,
+            // Debounced save — avoids writing to store/disk on every drag event
+            if (saveDebounceRef.current) {
+              clearTimeout(saveDebounceRef.current);
+            }
+            saveDebounceRef.current = setTimeout(() => {
+              // Serialize once so both stores get independent snapshots from the same moment
+              const layoutStr = JSON.stringify(layoutJson);
+              logger.info(
+                `Layout Updated (Main Tab: ${mainTab.title}):${JSON.stringify(layoutJson, null, 2)}`,
+              );
+              useProjectLayoutStore
+                .getState()
+                .saveLayoutConfig(mainTab.id, layoutStr);
+              ConfigFileManager.instance.setProjectConfigData(
+                projectFilePath,
+                'layout.flexLayout',
+                JSON.parse(layoutStr),
+              );
+            }, 300);
+          },
+          onTabSetPlaceHolder: (tabSetNode: Node) => {
+            const parent: Node | undefined = tabSetNode.getParent();
+            const siblings: Node[] = parent?.getChildren() ?? [];
+            const hasContent = siblings.some(
+              (siblingNode: Node) =>
+                siblingNode !== tabSetNode &&
+                siblingNode.getType() === 'tabset' &&
+                (siblingNode.getChildren()?.length ?? 0) > 0,
             );
-            useProjectLayoutStore
-              .getState()
-              .saveLayoutConfig(mainTab.id, JSON.stringify(layoutJson));
+            return hasContent ? null : renderPlaceholder();
           },
         }),
       );

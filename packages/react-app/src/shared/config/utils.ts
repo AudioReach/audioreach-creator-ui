@@ -4,9 +4,8 @@
  */
 
 import type {
-  IBorderLocation,
-  IJsonBorderNode,
   IJsonModel,
+  IJsonRowNode,
   IJsonTabNode,
   IJsonTabSetNode,
 } from 'flexlayout-react';
@@ -16,7 +15,6 @@ export type JSONDataMap = {
 };
 
 export const GRAPH_DESIGNER_COMPONENT_NAME = 'usecase';
-
 /**
  * Constant representing an invalid/undefined project ID
  */
@@ -47,55 +45,77 @@ export const graphDesignerLayout = {
  * @returns Complete IJsonModel ready to use with FlexLayout
  */
 export function GetFlexLayoutConfig(): IJsonModel {
-  const tabNode: IJsonTabNode = {
+  // Tab nodes
+  const moduleListTab: IJsonTabNode = {
+    component: 'module-list',
+    enableClose: false,
+    id: 'module-list-panel',
+    name: 'Module List',
+    type: 'tab',
+  };
+
+  const graphDesignerTab: IJsonTabNode = {
     component: GRAPH_DESIGNER_COMPONENT_NAME,
     id: 'usecase-main',
     name: 'Graph Designer',
     type: 'tab',
   };
 
-  const tabSet: IJsonTabSetNode = {
-    children: [tabNode],
-    enableTabStrip: false,
+  const logViewTab: IJsonTabNode = {
+    component: 'log-view',
+    enableClose: false,
+    id: 'log-view-panel',
+    name: 'Log View',
+    type: 'tab',
+  };
+
+  const subgraphListTab: IJsonTabNode = {
+    component: 'subgraph-list',
+    enableClose: false,
+    id: 'subgraph-list-panel',
+    name: 'Subgraph List',
+    type: 'tab',
+  };
+
+  // Tabset nodes
+  const leftTabset: IJsonTabSetNode = {
+    children: [moduleListTab],
     type: 'tabset',
+    weight: 20,
   };
 
-  const borderLeft: IJsonBorderNode = {
-    children: [
-      {
-        component: 'module-list',
-        id: 'module-list-panel',
-        name: 'Module List',
-        type: 'tab',
-      } as IJsonTabNode,
-      {
-        component: 'subgraph-list',
-        id: 'subgraph-list-panel',
-        name: 'Subgraph List',
-        type: 'tab',
-      } as IJsonTabNode,
-    ],
-    location: 'left' as IBorderLocation,
-    type: 'border',
+  const centerTabset: IJsonTabSetNode = {
+    children: [graphDesignerTab],
+    enableDivide: false,
+    enableDrop: false,
+    enableTabStrip: false,
+    id: 'center-panel',
+    type: 'tabset',
+    weight: 80,
   };
 
-  const borderBottom: IJsonBorderNode = {
-    children: [] as IJsonTabNode[],
-    location: 'bottom' as IBorderLocation,
-    type: 'border',
+  const bottomTabset: IJsonTabSetNode = {
+    children: [logViewTab],
+    type: 'tabset',
+    weight: 20,
   };
 
-  const borderRight: IJsonBorderNode = {
-    children: [] as IJsonTabNode[],
-    location: 'right' as IBorderLocation,
-    type: 'border',
+  const rightTabset: IJsonTabSetNode = {
+    children: [subgraphListTab],
+    type: 'tabset',
+    weight: 20,
+  };
+
+  const centerColumn: IJsonRowNode = {
+    children: [centerTabset, bottomTabset],
+    type: 'column',
+    weight: 60,
   };
 
   const flexLayoutConfig: IJsonModel = {
-    borders: [borderLeft, borderBottom, borderRight],
-    global: {},
+    borders: [],
     layout: {
-      children: [tabSet],
+      children: [leftTabset, centerColumn, rightTabset],
       id: 'root',
       type: 'row',
     },
