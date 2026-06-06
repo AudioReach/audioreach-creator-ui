@@ -4,7 +4,10 @@
  */
 
 import {createVisualizerStore} from '~features/usecase-visualizer/model/usecase-visualizer-store';
-import type {SearchHighlights} from '~features/usecase-visualizer/model/visualizer.types';
+import type {
+  SearchHighlights,
+  VisualizerEventHandlers,
+} from '~features/usecase-visualizer/model/visualizer.types';
 
 describe('createVisualizerStore — instances are isolated', () => {
   it('returns a fresh store on every call with independent state', () => {
@@ -165,5 +168,51 @@ describe('createVisualizerStore — syncSearchHighlights', () => {
     store.getState().syncSearchHighlights(undefined);
     expect(store.getState().searchHighlightById).toEqual({});
     expect(store.getState().containsMatchNodeIds).toEqual([]);
+  });
+});
+
+describe('createVisualizerStore — clearHoverStateIfNode', () => {
+  it('clears hover state when the given nodeId matches the hovered node', () => {
+    const store = createVisualizerStore();
+    store.getState().setHoverState('n1', 'lc-1');
+    store.getState().clearHoverStateIfNode('n1');
+    expect(store.getState().hoverState).toEqual({
+      hoveredLogicalContainerId: null,
+      hoveredNodeId: null,
+    });
+  });
+
+  it('does not clear hover state when the given nodeId does not match', () => {
+    const store = createVisualizerStore();
+    store.getState().setHoverState('n2', 'lc-2');
+    store.getState().clearHoverStateIfNode('n1');
+    expect(store.getState().hoverState).toEqual({
+      hoveredLogicalContainerId: 'lc-2',
+      hoveredNodeId: 'n2',
+    });
+  });
+});
+
+describe('createVisualizerStore — setEventHandlers', () => {
+  it('defaults eventHandlers to undefined', () => {
+    const store = createVisualizerStore();
+    expect(store.getState().eventHandlers).toBeUndefined();
+  });
+
+  it('stores the passed handlers object', () => {
+    const store = createVisualizerStore();
+    const handlers: VisualizerEventHandlers = {
+      onNodeDoubleClick: jest.fn(),
+      onSubgraphCollapse: jest.fn(),
+    };
+    store.getState().setEventHandlers(handlers);
+    expect(store.getState().eventHandlers).toBe(handlers);
+  });
+
+  it('clears handlers when called with undefined', () => {
+    const store = createVisualizerStore();
+    store.getState().setEventHandlers({onSubgraphExpand: jest.fn()});
+    store.getState().setEventHandlers(undefined);
+    expect(store.getState().eventHandlers).toBeUndefined();
   });
 });

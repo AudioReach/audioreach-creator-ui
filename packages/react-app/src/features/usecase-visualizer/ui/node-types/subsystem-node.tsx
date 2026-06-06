@@ -3,46 +3,41 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-// SubsystemNode component
-import type {FC} from 'react';
+import type {Node, NodeProps} from '@xyflow/react';
 
-import type {NodeProps} from '@xyflow/react';
+import type {SubsystemNode as SubsystemNodeData} from '../../model/visualizer.types';
 
-import {
-  type RFSubsystemNodeData,
-  SEARCH_HIGHLIGHT_BG,
-  SEARCH_HIGHLIGHT_BORDER,
-} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import {PortHandles} from './port-handles';
 
-export const SubsystemNode: FC<NodeProps> = ({data, selected}) => {
-  const subsystemData = data as RFSubsystemNodeData;
-  const hl = subsystemData.searchHighlight ?? 'none';
-  const isHighlighted = hl === 'active' || hl === 'match';
+type SubsystemNodeProps = NodeProps<
+  Node<SubsystemNodeData & Record<string, unknown>>
+>;
+
+export function SubsystemNode({data: node, selected}: SubsystemNodeProps) {
+  const isLocked = node.locked === true;
 
   return (
     <div
-      className="rounded-md shadow-sm"
+      className="subsystem-node relative rounded-md border"
+      data-locked={isLocked || undefined}
+      data-node-id={node.id}
+      data-testid="subsystem-node"
       style={{
-        backgroundColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BG[hl]
-          : selected
-            ? 'var(--color-background-support-info-subtle)'
-            : undefined,
-        borderColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BORDER[hl]
-          : selected
-            ? 'var(--color-border-support-info)'
-            : 'var(--color-background-neutral-10)',
-        borderStyle: 'solid',
-        borderWidth: isHighlighted || selected ? '3px' : '2px',
+        backgroundColor: selected
+          ? 'var(--color-background-support-info-subtle)'
+          : 'var(--color-background-neutral-05)',
+        borderColor: selected
+          ? 'var(--color-border-support-info)'
+          : 'var(--color-border-neutral-10)',
         height: '100%',
-        position: 'relative',
         width: '100%',
       }}
     >
-      <div className="bg-yellow-50 text-yellow-700 absolute left-2 top-1 rounded px-2 py-1 text-sm font-semibold">
-        {subsystemData.label}
-      </div>
+      <span className="text-primary absolute inset-x-2 top-1 truncate text-sm font-semibold">
+        {node.label}
+      </span>
+
+      <PortHandles node={node} />
     </div>
   );
-};
+}

@@ -7,7 +7,7 @@ import {Handle, Position} from '@xyflow/react';
 
 import type {AnyNode, Port} from '../model/visualizer.types';
 
-const PORT_PADDING = 12;
+import {controlHandleId, dataHandleId, offsetForIndex} from './port-geometry';
 
 interface GhostNodeProps {
   node: AnyNode;
@@ -43,27 +43,27 @@ function buildHandleDescriptors(ports: Port[]): {
   for (const port of ports) {
     if (port.portIoType === 'input') {
       input.push({
-        id: `Data:${port.id}`,
+        id: dataHandleId(port.id),
         port,
         position: Position.Left,
         type: 'target',
       });
     } else if (port.portIoType === 'output') {
       output.push({
-        id: `Data:${port.id}`,
+        id: dataHandleId(port.id),
         port,
         position: Position.Right,
         type: 'source',
       });
     } else {
       control.push({
-        id: `Control:${port.id}-source`,
+        id: controlHandleId(port.id, 'source'),
         port,
         position: Position.Top,
         type: 'source',
       });
       control.push({
-        id: `Control:${port.id}-target`,
+        id: controlHandleId(port.id, 'target'),
         port,
         position: Position.Top,
         type: 'target',
@@ -72,15 +72,6 @@ function buildHandleDescriptors(ports: Port[]): {
   }
 
   return {control, input, output};
-}
-
-function offsetForIndex(
-  totalLength: number,
-  count: number,
-  index: number,
-): number {
-  const step = (totalLength - 2 * PORT_PADDING) / (count + 1);
-  return PORT_PADDING + step * (index + 1);
 }
 
 const HANDLE_HIDDEN_CLASS = 'pointer-events-none opacity-0 ghost-node-handle';

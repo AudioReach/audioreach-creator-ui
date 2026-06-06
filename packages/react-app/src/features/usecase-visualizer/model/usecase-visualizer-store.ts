@@ -11,6 +11,7 @@ import type {
   NodeDisplayConfig,
   SearchHighlights,
   ViewportState,
+  VisualizerEventHandlers,
 } from './visualizer.types';
 
 /**
@@ -57,8 +58,10 @@ const EMPTY_HOVER: HoverState = {
 };
 
 export interface VisualizerInternalStore {
+  clearHoverStateIfNode: (nodeId: string) => void;
   clearSelection: () => void;
   containsMatchNodeIds: string[];
+  eventHandlers: VisualizerEventHandlers | undefined;
   hoverState: HoverState;
   lodThreshold: number;
   lodZoom: number;
@@ -69,6 +72,7 @@ export interface VisualizerInternalStore {
     | undefined;
   searchHighlightById: Record<string, SearchHighlightState>;
   selection: SelectionState;
+  setEventHandlers: (handlers: VisualizerEventHandlers | undefined) => void;
   setHoverState: (
     nodeId: string | null,
     logicalContainerId: string | null,
@@ -87,6 +91,13 @@ export type CreatedVisualizerStore = UseBoundStore<
 
 export function createVisualizerStore(): CreatedVisualizerStore {
   return create<VisualizerInternalStore>((set) => ({
+    clearHoverStateIfNode: (nodeId) => {
+      set((state) =>
+        state.hoverState.hoveredNodeId === nodeId
+          ? {hoverState: EMPTY_HOVER}
+          : state,
+      );
+    },
     clearSelection: () => {
       set((state) => ({
         previousSelection: state.selection,
@@ -94,6 +105,7 @@ export function createVisualizerStore(): CreatedVisualizerStore {
       }));
     },
     containsMatchNodeIds: [],
+    eventHandlers: undefined,
     hoverState: EMPTY_HOVER,
     lodThreshold: DEFAULT_LOD_THRESHOLD,
     lodZoom: 1,
@@ -102,6 +114,9 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     renderNodeContent: undefined,
     searchHighlightById: {},
     selection: EMPTY_SELECTION,
+    setEventHandlers: (handlers) => {
+      set({eventHandlers: handlers});
+    },
     setHoverState: (nodeId, logicalContainerId) => {
       set({
         hoverState: {

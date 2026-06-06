@@ -34,11 +34,11 @@ import {Theme, useTheme} from '~shared/providers/theme-provider';
 
 import {ControlLinkEdge} from '../edge-types/control-link-edge';
 import {DataLinkEdge} from '../edge-types/data-link-edge';
-import {ContainerNode} from '../node-types/container-node';
-import {SubgraphNode} from '../node-types/subgraph-node';
-import {SubsystemNode} from '../node-types/subsystem-node';
 
+import {ContainerNode} from './node-types/container-node';
 import {ModuleNode} from './node-types/module-node';
+import {SubgraphNode} from './node-types/subgraph-node';
+import {SubsystemNode} from './node-types/subsystem-node';
 
 const nodeTypes = {
   container: ContainerNode,

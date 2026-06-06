@@ -3,45 +3,53 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-// ContainerNode (segment per containerId:subgraphId)
-import type {FC} from 'react';
+import type {Node, NodeProps} from '@xyflow/react';
 
-import type {NodeProps} from '@xyflow/react';
+import {useVisualizerStore} from '../../model/visualizer-store-context';
+import type {ContainerNode as ContainerNodeData} from '../../model/visualizer.types';
 
-import {
-  type RFContainerNodeData,
-  SEARCH_HIGHLIGHT_BG,
-  SEARCH_HIGHLIGHT_BORDER,
-} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+type ContainerNodeProps = NodeProps<
+  Node<ContainerNodeData & Record<string, unknown>>
+>;
 
-export const ContainerNode: FC<NodeProps> = ({data, selected}) => {
-  const containerData = data as RFContainerNodeData;
-  const hl = containerData.searchHighlight ?? 'none';
-  const isHighlighted = hl === 'active' || hl === 'match';
+export function ContainerNode({data: node}: ContainerNodeProps) {
+  const clearHoverStateIfNode = useVisualizerStore(
+    (state) => state.clearHoverStateIfNode,
+  );
+  const hoveredLogicalContainerId = useVisualizerStore(
+    (state) => state.hoverState.hoveredLogicalContainerId,
+  );
+  const setHoverState = useVisualizerStore((state) => state.setHoverState);
+
+  const isHighlighted =
+    node.logicalContainerId != null &&
+    hoveredLogicalContainerId === node.logicalContainerId;
 
   return (
     <div
-      className="rounded-md border-2 border-dotted shadow-sm"
+      className={
+        isHighlighted
+          ? 'container-node container-hover-highlight relative rounded-md border border-dotted'
+          : 'container-node relative rounded-md border border-dotted'
+      }
+      data-node-id={node.id}
+      data-testid="container-node"
+      onMouseEnter={() =>
+        setHoverState(node.id, node.logicalContainerId ?? null)
+      }
+      onMouseLeave={() => clearHoverStateIfNode(node.id)}
       style={{
-        backgroundColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BG[hl]
-          : selected
-            ? 'var(--color-background-support-info-subtle)'
-            : 'var(--color-background-neutral-02)',
+        backgroundColor: 'var(--color-background-neutral-02)',
         borderColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BORDER[hl]
-          : selected
-            ? 'var(--color-border-support-info)'
-            : 'var(--color-background-neutral-10)',
-        borderWidth: isHighlighted || selected ? '3px' : '2px',
+          ? 'var(--color-border-support-info)'
+          : 'var(--color-border-neutral-10)',
         height: '100%',
-        position: 'relative',
         width: '100%',
       }}
     >
-      <div className="text-disabled text-xxs absolute left-2 top-2 rounded font-semibold">
-        {containerData.label}
+      <div className="text-secondary text-xxs absolute left-2 top-2 font-semibold">
+        {node.label}
       </div>
     </div>
   );
-};
+}

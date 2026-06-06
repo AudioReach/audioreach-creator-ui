@@ -20,6 +20,8 @@ import type {
   SubsystemNode,
 } from '../model/visualizer.types';
 
+import {controlHandleId, dataHandleId} from './port-geometry';
+
 /**
  * LevelView → ReactFlow conversion.
  *
@@ -27,9 +29,8 @@ import type {
  * into a single ReactFlow node or edge list. The Visualizer's nodeTypes /
  * edgeTypes registry uses the `type` strings produced here.
  *
- * Handle id convention (matches what node components render):
- *   data ports     → `Data:{portId}`
- *   control ports  → `Control:{portId}-source` and `Control:{portId}-target`
+ * Handle ids come from `dataHandleId` / `controlHandleId` so this conversion
+ * stays in lockstep with what node components render.
  *
  * See docs/design/usecase-visualizer/usecase-visualizer-design.md
  *   → Implementation Notes → Handle ID naming convention.
@@ -87,9 +88,9 @@ function toDataEdge<TData extends DataLink | ProxyDataLink>(
     id: edge.id,
     label: edge.label,
     source: edge.sourceNodeId,
-    sourceHandle: `Data:${edge.sourcePortId}`,
+    sourceHandle: dataHandleId(edge.sourcePortId),
     target: edge.targetNodeId,
-    targetHandle: `Data:${edge.targetPortId}`,
+    targetHandle: dataHandleId(edge.targetPortId),
     type,
   };
 }
@@ -103,9 +104,9 @@ function toControlEdge<TData extends ControlLink | ProxyControlLink>(
     id: edge.id,
     label: edge.label,
     source: edge.sourceNodeId,
-    sourceHandle: `Control:${edge.sourcePortId}-source`,
+    sourceHandle: controlHandleId(edge.sourcePortId, 'source'),
     target: edge.targetNodeId,
-    targetHandle: `Control:${edge.targetPortId}-target`,
+    targetHandle: controlHandleId(edge.targetPortId, 'target'),
     type,
   };
 }

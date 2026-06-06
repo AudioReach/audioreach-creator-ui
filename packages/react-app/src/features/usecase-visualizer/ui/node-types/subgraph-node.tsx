@@ -3,45 +3,76 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-// SubgraphNode component
-import type {FC} from 'react';
+import type {Node, NodeProps} from '@xyflow/react';
+import {ChevronDown} from 'lucide-react';
 
-import type {NodeProps} from '@xyflow/react';
+import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
-import {
-  type RFSubgraphNodeData,
-  SEARCH_HIGHLIGHT_BG,
-  SEARCH_HIGHLIGHT_BORDER,
-} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import {useVisualizerStore} from '../../model/visualizer-store-context';
+import type {SubgraphNode as SubgraphNodeData} from '../../model/visualizer.types';
 
-export const SubgraphNode: FC<NodeProps> = ({data, selected}) => {
-  const subgraphData = data as RFSubgraphNodeData;
-  const hl = subgraphData.searchHighlight ?? 'none';
-  const isHighlighted = hl === 'active' || hl === 'match';
+type SubgraphNodeProps = NodeProps<
+  Node<SubgraphNodeData & Record<string, unknown>>
+>;
+
+export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
+  const renderNodeContent = useVisualizerStore(
+    (state) => state.renderNodeContent,
+  );
+  const nodeDisplayConfig = useVisualizerStore(
+    (state) => state.nodeDisplayConfig,
+  );
+  const onSubgraphCollapse = useVisualizerStore(
+    (state) => state.eventHandlers?.onSubgraphCollapse,
+  );
+
+  const override = renderNodeContent ? renderNodeContent(node) : null;
+  // SubgraphNode supports the `header` slot only. `footer` and `coreOverrides`
+  // from NodeContentOverride are not rendered here — subgraphs have no footer
+  // or corner-overlay region per the design spec.
+  const showSubgraphId = nodeDisplayConfig?.showSubgraphId !== false;
 
   return (
     <div
-      className="bg-1 rounded-md border-2 shadow-sm"
+      className="subgraph-node rounded-md border"
+      data-locked={node.locked === true || undefined}
+      data-node-id={node.id}
+      data-testid="subgraph-node"
       style={{
-        backgroundColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BG[hl]
-          : selected
-            ? 'var(--color-background-support-info-subtle)'
-            : 'transparent',
-        borderColor: isHighlighted
-          ? SEARCH_HIGHLIGHT_BORDER[hl]
-          : selected
-            ? 'var(--color-border-support-info)'
-            : 'var(--color-background-neutral-10)',
-        borderWidth: isHighlighted || selected ? '3px' : '2px',
+        backgroundColor: selected
+          ? 'var(--color-background-support-info-subtle)'
+          : 'transparent',
+        borderColor: selected
+          ? 'var(--color-border-support-info)'
+          : 'var(--color-border-neutral-10)',
         height: '100%',
-        position: 'relative',
         width: '100%',
       }}
     >
-      <div className="text-secondary absolute left-2 top-1 rounded px-2 py-1 text-xs font-semibold">
-        {subgraphData.label}
+      <div
+        className="subgraph-header flex items-center justify-between gap-2 px-2 py-1"
+        data-testid="subgraph-header"
+      >
+        <span className="text-primary flex items-center gap-1 truncate text-xs font-semibold">
+          {node.label}
+          {showSubgraphId ? (
+            <span className="text-secondary" data-testid="subgraph-id">
+              {`#${node.subgraphId}`}
+            </span>
+          ) : null}
+        </span>
+        {override?.header ? (
+          <span data-testid="subgraph-header-slot">{override.header}</span>
+        ) : null}
+        {onSubgraphCollapse ? (
+          <InlineIconButton
+            aria-label="Collapse subgraph"
+            icon={ChevronDown}
+            onClick={() => onSubgraphCollapse(node.subgraphId)}
+            size="sm"
+          />
+        ) : null}
       </div>
     </div>
   );
-};
+}

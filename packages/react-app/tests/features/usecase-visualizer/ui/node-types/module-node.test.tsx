@@ -4,7 +4,7 @@
  */
 
 import {render, screen} from '@testing-library/react';
-import {type NodeProps, ReactFlowProvider} from '@xyflow/react';
+import {ReactFlowProvider} from '@xyflow/react';
 
 import {createVisualizerStore} from '~features/usecase-visualizer/model/usecase-visualizer-store';
 import {VisualizerStoreProvider} from '~features/usecase-visualizer/model/visualizer-store-context';
@@ -15,6 +15,8 @@ import type {
   NodeDisplayConfig,
 } from '~features/usecase-visualizer/model/visualizer.types';
 import {ModuleNode} from '~features/usecase-visualizer/ui/node-types/module-node';
+
+import {makeModuleNodeProps} from './node-props';
 
 function makeModule(overrides: Partial<ModuleNodeData> = {}): ModuleNodeData {
   return {
@@ -30,23 +32,6 @@ function makeModule(overrides: Partial<ModuleNodeData> = {}): ModuleNodeData {
     y: 0,
     ...overrides,
   };
-}
-
-function makeNodeProps(node: ModuleNodeData): NodeProps {
-  return {
-    data: node,
-    deletable: true,
-    draggable: true,
-    dragging: false,
-    id: node.id,
-    isConnectable: true,
-    positionAbsoluteX: 0,
-    positionAbsoluteY: 0,
-    selectable: true,
-    selected: false,
-    type: 'module',
-    zIndex: 0,
-  } as unknown as NodeProps;
 }
 
 interface RenderOptions {
@@ -69,7 +54,7 @@ function renderModuleNode(node: ModuleNodeData, options: RenderOptions = {}) {
   return render(
     <ReactFlowProvider>
       <VisualizerStoreProvider store={store}>
-        <ModuleNode {...makeNodeProps(node)} />
+        <ModuleNode {...makeModuleNodeProps(node)} />
       </VisualizerStoreProvider>
     </ReactFlowProvider>,
   );

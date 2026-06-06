@@ -3,41 +3,28 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {Fragment, type ReactNode} from 'react';
+import type {ReactNode} from 'react';
 
-import {Handle, type Node, type NodeProps, Position} from '@xyflow/react';
+import type {Node, NodeProps} from '@xyflow/react';
 
 import {useVisualizerStore} from '../../model/visualizer-store-context';
 import type {
+  CoreOverride,
   ModuleNode as ModuleNodeData,
-  Port,
 } from '../../model/visualizer.types';
+
+import {PortHandles} from './port-handles';
 
 type ModuleNodeProps = NodeProps<
   Node<ModuleNodeData & Record<string, unknown>>
 >;
 
-const PORT_PADDING = 12;
-
-const CORNER_CLASSES: Record<string, string> = {
+const CORNER_CLASSES: Record<CoreOverride['position'], string> = {
   'bottom-left': 'absolute bottom-0 left-0',
   'bottom-right': 'absolute bottom-0 right-0',
   'top-left': 'absolute left-0 top-0',
   'top-right': 'absolute right-0 top-0',
 };
-
-function offsetForIndex(
-  totalLength: number,
-  count: number,
-  index: number,
-): number {
-  const step = (totalLength - 2 * PORT_PADDING) / (count + 1);
-  return PORT_PADDING + step * (index + 1);
-}
-
-function portStatusClass(port: Port): string {
-  return port.portStatus ? `port-status-${port.portStatus}` : '';
-}
 
 function defaultFooter(
   node: ModuleNodeData,
@@ -59,8 +46,7 @@ function defaultFooter(
   );
 }
 
-export function ModuleNode({data}: ModuleNodeProps) {
-  const node = data;
+export function ModuleNode({data: node}: ModuleNodeProps) {
   const renderNodeContent = useVisualizerStore(
     (state) => state.renderNodeContent,
   );
@@ -71,13 +57,8 @@ export function ModuleNode({data}: ModuleNodeProps) {
   const override = renderNodeContent ? renderNodeContent(node) : null;
   const showModuleInstanceId = nodeDisplayConfig?.showModuleInstanceId ?? true;
 
-  const inputs = node.ports.filter((p) => p.portIoType === 'input');
-  const outputs = node.ports.filter((p) => p.portIoType === 'output');
-  const controls = node.ports.filter((p) => p.portIoType === 'control');
-
   const shape = node.shape ?? 'rect';
   const isLocked = node.locked === true;
-  const connectable = !isLocked;
 
   const footer = override?.footer ?? defaultFooter(node, showModuleInstanceId);
 
@@ -122,74 +103,7 @@ export function ModuleNode({data}: ModuleNodeProps) {
         {footer}
       </div>
 
-      {inputs.map((port, i) => (
-        <Handle
-          key={`input-${port.id}`}
-          className={`port-handle ${portStatusClass(port)}`.trim()}
-          data-port-id={port.id}
-          id={`Data:${port.id}`}
-          isConnectable={connectable && !port.locked}
-          position={Position.Left}
-          style={{
-            backgroundColor: 'var(--color-background-neutral-06)',
-            borderColor: 'var(--color-border-neutral-10)',
-            top: offsetForIndex(node.height, inputs.length, i),
-          }}
-          type="target"
-        />
-      ))}
-
-      {outputs.map((port, i) => (
-        <Handle
-          key={`output-${port.id}`}
-          className={`port-handle ${portStatusClass(port)}`.trim()}
-          data-port-id={port.id}
-          id={`Data:${port.id}`}
-          isConnectable={connectable && !port.locked}
-          position={Position.Right}
-          style={{
-            backgroundColor: 'var(--color-background-neutral-06)',
-            borderColor: 'var(--color-border-neutral-10)',
-            top: offsetForIndex(node.height, outputs.length, i),
-          }}
-          type="source"
-        />
-      ))}
-
-      {controls.map((port, i) => {
-        const left = offsetForIndex(node.width, controls.length, i);
-        const className = `port-handle ${portStatusClass(port)}`.trim();
-        return (
-          <Fragment key={port.id}>
-            <Handle
-              className={className}
-              data-port-id={port.id}
-              id={`Control:${port.id}-source`}
-              isConnectable={connectable && !port.locked}
-              position={Position.Top}
-              style={{
-                backgroundColor: 'var(--color-background-neutral-06)',
-                borderColor: 'var(--color-border-neutral-10)',
-                left,
-              }}
-              type="source"
-            />
-            <Handle
-              className={className}
-              data-port-id={port.id}
-              id={`Control:${port.id}-target`}
-              isConnectable={connectable && !port.locked}
-              position={Position.Top}
-              style={{
-                backgroundColor: 'var(--color-background-neutral-06)',
-                borderColor: 'var(--color-border-neutral-10)',
-                left,
-              }}
-              type="target"
-            />
-          </Fragment>
-        );
-      })}
+      <PortHandles node={node} />
     </div>
   );
 }
