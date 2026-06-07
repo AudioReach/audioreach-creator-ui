@@ -221,7 +221,7 @@ export function ModuleList(): ReactElement {
 
   // Auto-save filters when they change
   useEffect(() => {
-    if (!projectId) {
+    if (!projectId || moduleList.length === 0) {
       return;
     }
 
@@ -230,7 +230,7 @@ export function ModuleList(): ReactElement {
       dspFilter: selectedDspTypes,
       moduleTypeFilter: selectedModuleTypes,
     };
-  }, [projectId, selectedDspTypes, selectedModuleTypes]);
+  }, [projectId, selectedDspTypes, selectedModuleTypes, moduleList.length]);
 
   // Show filter only if there are meaningful choices to make
   // Hide when there's only 1 DSP type AND 1 Module type (nothing to filter)
@@ -294,9 +294,7 @@ export function ModuleList(): ReactElement {
                         icon={Check}
                         size="sm"
                       />
-                      <span className="text-[10px]">
-                        {dspType.toLowerCase()}
-                      </span>
+                      <span className="text-[10px]">{dspType}</span>
                     </div>
                   ))}
                 </div>
@@ -334,9 +332,7 @@ export function ModuleList(): ReactElement {
                         icon={Check}
                         size="sm"
                       />
-                      <span className="text-[10px]">
-                        {moduleType.toLowerCase()}
-                      </span>
+                      <span className="text-[10px]">{moduleType}</span>
                     </div>
                   ))}
                 </div>
