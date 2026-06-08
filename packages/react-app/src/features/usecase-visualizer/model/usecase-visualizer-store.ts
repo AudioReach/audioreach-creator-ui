@@ -5,13 +5,16 @@
 
 import {create, type StoreApi, type UseBoundStore} from 'zustand';
 
-import type {
-  AnyNode,
-  NodeContentOverride,
-  NodeDisplayConfig,
-  SearchHighlights,
-  ViewportState,
-  VisualizerEventHandlers,
+import {
+  type AnyNode,
+  type NodeContentOverride,
+  type NodeDisplayConfig,
+  type SearchHighlights,
+  type ViewportState,
+  VISUALIZER_MODE,
+  type VisualizerContextMenuConfig,
+  type VisualizerEventHandlers,
+  type VisualizerMode,
 } from './visualizer.types';
 
 /**
@@ -61,23 +64,26 @@ export interface VisualizerInternalStore {
   clearHoverStateIfNode: (nodeId: string) => void;
   clearSelection: () => void;
   containsMatchNodeIds: string[];
+  contextMenu: VisualizerContextMenuConfig | undefined;
   eventHandlers: VisualizerEventHandlers | undefined;
   hoverState: HoverState;
   lodThreshold: number;
   lodZoom: number;
+  mode: VisualizerMode;
   nodeDisplayConfig: NodeDisplayConfig | undefined;
-  previousSelection: SelectionState;
   renderNodeContent:
     | ((node: AnyNode) => NodeContentOverride | null)
     | undefined;
   searchHighlightById: Record<string, SearchHighlightState>;
   selection: SelectionState;
+  setContextMenu: (config: VisualizerContextMenuConfig | undefined) => void;
   setEventHandlers: (handlers: VisualizerEventHandlers | undefined) => void;
   setHoverState: (
     nodeId: string | null,
     logicalContainerId: string | null,
   ) => void;
   setLodZoom: (zoom: number) => void;
+  setMode: (mode: VisualizerMode) => void;
   setRenderingConfig: (config: Partial<RenderingConfigSlice>) => void;
   setSelection: (selectedNodeIds: string[], selectedEdgeIds: string[]) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
@@ -99,21 +105,22 @@ export function createVisualizerStore(): CreatedVisualizerStore {
       );
     },
     clearSelection: () => {
-      set((state) => ({
-        previousSelection: state.selection,
-        selection: EMPTY_SELECTION,
-      }));
+      set({selection: EMPTY_SELECTION});
     },
     containsMatchNodeIds: [],
+    contextMenu: undefined,
     eventHandlers: undefined,
     hoverState: EMPTY_HOVER,
     lodThreshold: DEFAULT_LOD_THRESHOLD,
     lodZoom: 1,
+    mode: VISUALIZER_MODE.READONLY,
     nodeDisplayConfig: undefined,
-    previousSelection: EMPTY_SELECTION,
     renderNodeContent: undefined,
     searchHighlightById: {},
     selection: EMPTY_SELECTION,
+    setContextMenu: (config) => {
+      set({contextMenu: config});
+    },
     setEventHandlers: (handlers) => {
       set({eventHandlers: handlers});
     },
@@ -127,6 +134,9 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     },
     setLodZoom: (zoom) => {
       set({lodZoom: zoom});
+    },
+    setMode: (mode) => {
+      set({mode});
     },
     setRenderingConfig: (config) => {
       set((state) => ({
@@ -145,10 +155,7 @@ export function createVisualizerStore(): CreatedVisualizerStore {
       }));
     },
     setSelection: (selectedNodeIds, selectedEdgeIds) => {
-      set((state) => ({
-        previousSelection: state.selection,
-        selection: {selectedEdgeIds, selectedNodeIds},
-      }));
+      set({selection: {selectedEdgeIds, selectedNodeIds}});
     },
     setViewportCache: (levelId, viewport) => {
       set((state) => ({

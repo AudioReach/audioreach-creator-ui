@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {render} from '@testing-library/react';
+import {act, render} from '@testing-library/react';
 
 import type {
   ContainerNode,
@@ -18,6 +18,8 @@ import type {
   SubsystemNode,
 } from '~features/usecase-visualizer/model/visualizer.types';
 import {UsecaseVisualizer} from '~features/usecase-visualizer/ui/usecase-visualizer';
+
+import {latestReactFlowProps} from '../test-utils/xyflow-mock-factory';
 
 jest.mock('@xyflow/react', () =>
   require('../test-utils/xyflow-mock-factory').createXyflowMockFactory(),
@@ -168,5 +170,26 @@ describe('UsecaseVisualizer — smoke', () => {
     expect(dom.querySelector('[data-edge-id="c1"]')).not.toBeNull();
     expect(dom.querySelector('[data-edge-id="pd1"]')).not.toBeNull();
     expect(dom.querySelector('[data-edge-id="pc1"]')).not.toBeNull();
+  });
+
+  it('onNodeDragStop fires onNodeDragEnd with nodeId and position', async () => {
+    const onNodeDragEnd = jest.fn();
+    render(
+      <UsecaseVisualizer eventHandlers={{onNodeDragEnd}} graph={fixture} />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeDragStop?.(
+        {},
+        {
+          id: 'm-a',
+          position: {x: 10, y: 20},
+        },
+      );
+    });
+
+    expect(onNodeDragEnd).toHaveBeenCalledWith(
+      expect.objectContaining({nodeId: 'm-a', position: {x: 10, y: 20}}),
+    );
   });
 });

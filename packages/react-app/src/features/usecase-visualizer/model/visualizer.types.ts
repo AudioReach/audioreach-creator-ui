@@ -11,6 +11,8 @@
 
 import type {ReactNode} from 'react';
 
+import type {LucideIcon} from 'lucide-react';
+
 // ── Kind / shape constants ────────────────────────────────────────────────────
 
 export const NODE_KIND = {
@@ -213,7 +215,7 @@ export interface ContextMenuItem {
   children?: ContextMenuItem[];
   disabled?: boolean;
   dividerBefore?: boolean;
-  icon?: string;
+  icon?: LucideIcon;
   id: string;
   label: string;
   tooltip?: string;

@@ -28,10 +28,6 @@ describe('createVisualizerStore — instances are isolated', () => {
       selectedEdgeIds: [],
       selectedNodeIds: [],
     });
-    expect(state.previousSelection).toEqual({
-      selectedEdgeIds: [],
-      selectedNodeIds: [],
-    });
     expect(state.hoverState).toEqual({
       hoveredLogicalContainerId: null,
       hoveredNodeId: null,
@@ -43,16 +39,12 @@ describe('createVisualizerStore — instances are isolated', () => {
 });
 
 describe('createVisualizerStore — setSelection / clearSelection', () => {
-  it('setSelection records new ids and moves previous into previousSelection', () => {
+  it('setSelection records new ids', () => {
     const store = createVisualizerStore();
     store.getState().setSelection(['n1'], ['e1']);
     expect(store.getState().selection).toEqual({
       selectedEdgeIds: ['e1'],
       selectedNodeIds: ['n1'],
-    });
-    expect(store.getState().previousSelection).toEqual({
-      selectedEdgeIds: [],
-      selectedNodeIds: [],
     });
 
     store.getState().setSelection(['n2'], []);
@@ -60,23 +52,15 @@ describe('createVisualizerStore — setSelection / clearSelection', () => {
       selectedEdgeIds: [],
       selectedNodeIds: ['n2'],
     });
-    expect(store.getState().previousSelection).toEqual({
-      selectedEdgeIds: ['e1'],
-      selectedNodeIds: ['n1'],
-    });
   });
 
-  it('clearSelection resets selection and stores the previous value', () => {
+  it('clearSelection resets selection', () => {
     const store = createVisualizerStore();
     store.getState().setSelection(['n1', 'n2'], ['e1']);
     store.getState().clearSelection();
     expect(store.getState().selection).toEqual({
       selectedEdgeIds: [],
       selectedNodeIds: [],
-    });
-    expect(store.getState().previousSelection).toEqual({
-      selectedEdgeIds: ['e1'],
-      selectedNodeIds: ['n1', 'n2'],
     });
   });
 });

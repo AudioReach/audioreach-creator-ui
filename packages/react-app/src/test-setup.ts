@@ -465,6 +465,43 @@ jest.mock('@qualcomm-ui/react/combobox', () => ({
   },
 }));
 
+jest.mock('@qualcomm-ui/react/menu', () => {
+  const passthrough = ({children}: {children?: React.ReactNode}) =>
+    createElement('div', {}, children);
+  const Item = ({
+    children,
+    disabled,
+    onSelect,
+    value,
+  }: {
+    children?: React.ReactNode;
+    disabled?: boolean;
+    onSelect?: () => void;
+    value: string;
+  }) =>
+    createElement(
+      'button',
+      {
+        'data-menu-item': value,
+        disabled,
+        onClick: () => onSelect && onSelect(),
+        type: 'button',
+      },
+      children,
+    );
+  return {
+    Menu: {
+      Content: passthrough,
+      Item,
+      ItemLabel: passthrough,
+      Positioner: passthrough,
+      Root: ({children}: {children?: React.ReactNode}) =>
+        createElement('div', {'data-testid': 'menu-root'}, children),
+      Separator: () => createElement('hr', {'data-testid': 'menu-separator'}),
+    },
+  };
+});
+
 jest.mock('@qualcomm-ui/react/divider', () => ({
   Divider: jest
     .fn()

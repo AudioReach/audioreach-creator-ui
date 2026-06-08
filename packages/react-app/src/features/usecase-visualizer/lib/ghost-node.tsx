@@ -5,85 +5,25 @@
 
 import {Handle, Position} from '@xyflow/react';
 
-import type {AnyNode, Port} from '../model/visualizer.types';
+import type {AnyNode} from '../model/visualizer.types';
 
-import {controlHandleId, dataHandleId, offsetForIndex} from './port-geometry';
+import {getPortAnchors} from './port-anchors';
 
 interface GhostNodeProps {
   node: AnyNode;
 }
 
-interface PortHandle {
-  id: string;
-  port: Port;
-  position: Position;
-  type: 'source' | 'target';
-}
-
-function getNodePorts(node: AnyNode): Port[] {
-  if (
-    node.nodeKind === 'module' ||
-    node.nodeKind === 'subsystem' ||
-    node.nodeKind === 'subgraph-proxy'
-  ) {
-    return node.ports;
-  }
-  return [];
-}
-
-function buildHandleDescriptors(ports: Port[]): {
-  control: PortHandle[];
-  input: PortHandle[];
-  output: PortHandle[];
-} {
-  const input: PortHandle[] = [];
-  const output: PortHandle[] = [];
-  const control: PortHandle[] = [];
-
-  for (const port of ports) {
-    if (port.portIoType === 'input') {
-      input.push({
-        id: dataHandleId(port.id),
-        port,
-        position: Position.Left,
-        type: 'target',
-      });
-    } else if (port.portIoType === 'output') {
-      output.push({
-        id: dataHandleId(port.id),
-        port,
-        position: Position.Right,
-        type: 'source',
-      });
-    } else {
-      control.push({
-        id: controlHandleId(port.id, 'source'),
-        port,
-        position: Position.Top,
-        type: 'source',
-      });
-      control.push({
-        id: controlHandleId(port.id, 'target'),
-        port,
-        position: Position.Top,
-        type: 'target',
-      });
-    }
-  }
-
-  return {control, input, output};
-}
-
 const HANDLE_HIDDEN_CLASS = 'pointer-events-none opacity-0 ghost-node-handle';
 
 export function GhostNode({node}: GhostNodeProps) {
-  const ports = getNodePorts(node);
-  const {control, input, output} = buildHandleDescriptors(ports);
-
-  const inputCount = input.length;
-  const outputCount = output.length;
-  // Two handle descriptors (source + target) are built per control port.
-  const controlPortCount = control.length / 2;
+  const ports =
+    node.nodeKind === 'module' ||
+    node.nodeKind === 'subsystem' ||
+    node.nodeKind === 'subgraph-proxy'
+      ? node.ports
+      : [];
+  const shape = node.nodeKind === 'module' ? node.shape : undefined;
+  const anchors = getPortAnchors(shape, ports, node.width, node.height);
 
   return (
     <div
@@ -105,47 +45,23 @@ export function GhostNode({node}: GhostNodeProps) {
         {node.label}
       </span>
 
-      {input.map((h, i) => (
+      {anchors.map((anchor) => (
         <Handle
-          key={h.id}
+          key={anchor.handleId}
           aria-hidden="true"
           className={HANDLE_HIDDEN_CLASS}
-          id={h.id}
+          id={anchor.handleId}
           isConnectable={false}
-          position={h.position}
-          style={{top: offsetForIndex(node.height, inputCount, i)}}
-          type={h.type}
+          position={anchor.position}
+          style={
+            anchor.position === Position.Top ||
+            anchor.position === Position.Bottom
+              ? {left: anchor.x}
+              : {top: anchor.y}
+          }
+          type={anchor.handleKind}
         />
       ))}
-      {output.map((h, i) => (
-        <Handle
-          key={h.id}
-          aria-hidden="true"
-          className={HANDLE_HIDDEN_CLASS}
-          id={h.id}
-          isConnectable={false}
-          position={h.position}
-          style={{top: offsetForIndex(node.height, outputCount, i)}}
-          type={h.type}
-        />
-      ))}
-      {control.map((h, pairIdx) => {
-        const pairIndex = Math.floor(pairIdx / 2);
-        return (
-          <Handle
-            key={h.id}
-            aria-hidden="true"
-            className={HANDLE_HIDDEN_CLASS}
-            id={h.id}
-            isConnectable={false}
-            position={h.position}
-            style={{
-              left: offsetForIndex(node.width, controlPortCount, pairIndex),
-            }}
-            type={h.type}
-          />
-        );
-      })}
     </div>
   );
 }

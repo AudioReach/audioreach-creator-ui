@@ -23,10 +23,19 @@ interface FakeEdge {
 export interface FakeReactFlowProps {
   edges: FakeEdge[];
   edgeTypes: Record<string, ComponentType<Record<string, unknown>>>;
+  multiSelectionKeyCode?: string;
   nodes: FakeNode[];
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>;
+  onEdgeContextMenu?: (event: unknown, edge: FakeEdge) => void;
   onMoveEnd?: (event: unknown, viewport: unknown) => void;
+  onNodeContextMenu?: (event: unknown, node: FakeNode) => void;
   onNodeDoubleClick?: (event: unknown, node: FakeNode) => void;
+  onNodeDragStop?: (event: unknown, node: FakeNode) => void;
+  onPaneContextMenu?: (event: unknown) => void;
+  onSelectionChange?: (params: {edges: FakeEdge[]; nodes: FakeNode[]}) => void;
+  panActivationKeyCode?: string;
+  selectionOnDrag?: boolean;
+  selectNodesOnDrag?: boolean;
 }
 
 /**
