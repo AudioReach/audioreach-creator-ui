@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ComponentType, type ReactNode, useState} from 'react';
+import {
+  type ComponentType,
+  type DragEvent,
+  type ReactNode,
+  useState,
+} from 'react';
 
 interface FakeNode {
   data: Record<string, unknown>;
@@ -25,8 +30,21 @@ export interface FakeReactFlowProps {
   edgeTypes: Record<string, ComponentType<Record<string, unknown>>>;
   multiSelectionKeyCode?: string;
   nodes: FakeNode[];
+  nodesConnectable?: boolean;
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>;
+  onConnect?: (connection: {
+    source: string;
+    sourceHandle: string | null;
+    target: string;
+    targetHandle: string | null;
+  }) => void;
+  onDragOver?: (event: DragEvent) => void;
+  onDrop?: (event: DragEvent) => void;
   onEdgeContextMenu?: (event: unknown, edge: FakeEdge) => void;
+  onMove?: (
+    event: MouseEvent | TouchEvent | null,
+    viewport: {x: number; y: number; zoom: number},
+  ) => void;
   onMoveEnd?: (event: unknown, viewport: unknown) => void;
   onNodeContextMenu?: (event: unknown, node: FakeNode) => void;
   onNodeDoubleClick?: (event: unknown, node: FakeNode) => void;
@@ -57,9 +75,13 @@ export const latestReactFlowProps: {current: FakeReactFlowProps | null} = {
 export function createXyflowMockFactory() {
   const FakeReactFlow = (props: FakeReactFlowProps) => {
     latestReactFlowProps.current = props;
-    const {edges, edgeTypes, nodes, nodeTypes} = props;
+    const {edges, edgeTypes, nodes, nodeTypes, onDragOver, onDrop} = props;
     return (
-      <div data-testid="fake-react-flow">
+      <div
+        data-testid="fake-react-flow"
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
         <div data-testid="fake-nodes-host">
           {nodes.map((n) => {
             const Component = nodeTypes[n.type];
@@ -146,8 +168,25 @@ export function createXyflowMockFactory() {
   const nodesChangeStub = jest.fn();
   const edgesChangeStub = jest.fn();
   const fitViewStub = jest.fn();
+  const getNodesStub = jest.fn(() => []);
   const getViewportStub = jest.fn(() => ({x: 0, y: 0, zoom: 1}));
+  const setCenterStub = jest.fn();
   const setViewportStub = jest.fn();
+
+  const screenToFlowPositionStub = jest.fn(
+    (pos: {x: number; y: number}) => pos,
+  );
+
+  // Stable object — same reference on every render so effects that close over
+  // rfInstance (e.g. the screenshot effect) don't re-fire on re-renders.
+  const stableReactFlowInstance = {
+    fitView: fitViewStub,
+    getNodes: getNodesStub,
+    getViewport: getViewportStub,
+    screenToFlowPosition: screenToFlowPositionStub,
+    setCenter: setCenterStub,
+    setViewport: setViewportStub,
+  };
 
   return {
     BaseEdge,
@@ -157,6 +196,7 @@ export function createXyflowMockFactory() {
     Position: {Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top'},
     ReactFlow: FakeReactFlow,
     ReactFlowProvider,
+    setCenterStub,
     useEdgesState: (initial: unknown[]) => {
       const [edges, setEdges] = useState(initial);
       return [edges, setEdges, edgesChangeStub];
@@ -165,10 +205,6 @@ export function createXyflowMockFactory() {
       const [nodes, setNodes] = useState(initial);
       return [nodes, setNodes, nodesChangeStub];
     },
-    useReactFlow: () => ({
-      fitView: fitViewStub,
-      getViewport: getViewportStub,
-      setViewport: setViewportStub,
-    }),
+    useReactFlow: () => stableReactFlowInstance,
   };
 }

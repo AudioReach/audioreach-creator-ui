@@ -5,6 +5,7 @@
 
 import {
   Fragment,
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useCallback,
@@ -16,6 +17,7 @@ import {
 
 import {
   applyNodeChanges,
+  type Connection,
   type Edge,
   type Node,
   type NodeChange,
@@ -32,6 +34,7 @@ import {Portal} from '@qualcomm-ui/react-core/portal';
 import '@xyflow/react/dist/style.css';
 
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
+import {parsePortIdFromHandleId} from '../lib/port-geometry';
 import {recalculateParentSizes} from '../lib/recalculate-parent-sizes';
 import {toReactFlowEdges, toReactFlowNodes} from '../lib/to-reactflow';
 import {withGhostFallback} from '../lib/with-ghost-fallback';
@@ -45,8 +48,10 @@ import {
   type AnyNode,
   type ContextMenuItem,
   type ContextMenuTarget,
+  EDGE_KIND,
   type LevelView,
   NODE_KIND,
+  PORT_IO_TYPE,
   type UsecaseVisualizerProps,
   type ViewportState,
   VISUALIZER_MODE,
@@ -129,6 +134,10 @@ function renderMenuItems(
   ));
 }
 
+function isDropTarget(kind: AnyNode['nodeKind']): boolean {
+  return kind === NODE_KIND.CONTAINER || kind === NODE_KIND.SUBGRAPH;
+}
+
 interface CanvasProps {
   contextMenu: UsecaseVisualizerProps['contextMenu'];
   eventHandlers: UsecaseVisualizerProps['eventHandlers'];
@@ -150,7 +159,8 @@ function VisualizerCanvas({
   rendering,
   store,
 }: CanvasProps) {
-  const {fitView, getViewport, setViewport} = useReactFlow();
+  const {fitView, getViewport, screenToFlowPosition, setViewport} =
+    useReactFlow();
 
   const [rfNodes, setRfNodes] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -160,7 +170,7 @@ function VisualizerCanvas({
   // Two patterns intentionally coexist: useVisualizerStore selectors for
   // render-time reactive values, store.getState() in callbacks to avoid
   // stale closures on a stable store reference.
-  const clearSelection = useVisualizerStore((s) => s.clearSelection);
+  const activeMode = useVisualizerStore((s) => s.mode);
 
   const prevLevelIdRef = useRef<string | undefined>(undefined);
   const prevProxiesCountRef = useRef<number>(
@@ -217,7 +227,7 @@ function VisualizerCanvas({
     const proxiesChanged = proxiesCount !== prevProxiesCountRef.current;
 
     if (levelChanged || proxiesChanged) {
-      clearSelection();
+      store.getState().clearSelection();
     }
 
     const rafId = requestAnimationFrame(() => {
@@ -246,15 +256,7 @@ function VisualizerCanvas({
     prevProxiesCountRef.current = proxiesCount;
 
     return () => cancelAnimationFrame(rafId);
-  }, [
-    clearSelection,
-    fitView,
-    graph,
-    setRfEdges,
-    setRfNodes,
-    setViewport,
-    store,
-  ]);
+  }, [fitView, graph, setRfEdges, setRfNodes, setViewport, store]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -308,6 +310,126 @@ function VisualizerCanvas({
     el.addEventListener('keydown', handleKeyDown);
     return () => el.removeEventListener('keydown', handleKeyDown);
   }, [store]);
+
+  const handleDragOver = useCallback(
+    (event: ReactDragEvent) => {
+      const types = event.dataTransfer.types;
+      if (types.includes('application/x-audioreach-node-type-subgraph')) {
+        const pos = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const overSubgraph = rfNodesRef.current.some(
+          (n) =>
+            (n.data as unknown as AnyNode).nodeKind === NODE_KIND.SUBGRAPH &&
+            pos.x >= n.position.x &&
+            pos.x <= n.position.x + (n.width ?? 0) &&
+            pos.y >= n.position.y &&
+            pos.y <= n.position.y + (n.height ?? 0),
+        );
+        if (!overSubgraph) {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (types.includes('application/json')) {
+        event.preventDefault();
+      }
+    },
+    [screenToFlowPosition],
+  );
+
+  const handleDrop = useCallback(
+    (event: ReactDragEvent) => {
+      event.preventDefault();
+      const dropData = event.dataTransfer.getData('application/json');
+      if (!dropData) {
+        return;
+      }
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      let targetContainerId: string | undefined;
+      let targetSubgraphId: string | undefined;
+      // Container nodes take absolute priority — break on first hit.
+      // Subgraph nodes are kept as fallback (last writer wins, no break).
+      for (const n of rfNodesRef.current) {
+        const nodeData = n.data as unknown as AnyNode;
+        const inBounds =
+          position.x >= n.position.x &&
+          position.x <= n.position.x + (n.width ?? 0) &&
+          position.y >= n.position.y &&
+          position.y <= n.position.y + (n.height ?? 0);
+        if (inBounds && isDropTarget(nodeData.nodeKind)) {
+          if (nodeData.nodeKind === NODE_KIND.CONTAINER) {
+            targetContainerId = n.id;
+            targetSubgraphId = undefined;
+            break;
+          }
+          targetSubgraphId = n.id;
+        }
+      }
+      store.getState().eventHandlers?.onNodeDropped?.({
+        dropData,
+        position,
+        ...(targetContainerId !== undefined ? {targetContainerId} : {}),
+        ...(targetSubgraphId !== undefined ? {targetSubgraphId} : {}),
+      });
+    },
+    [screenToFlowPosition, store],
+  );
+
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      const {source, sourceHandle, target, targetHandle} = connection;
+      if (!sourceHandle || !targetHandle) {
+        return;
+      }
+      // Parse port ids from handle ids produced by dataHandleId / controlHandleId.
+      const sourcePortId = parsePortIdFromHandleId(sourceHandle, 'source');
+      const targetPortId = parsePortIdFromHandleId(targetHandle, 'target');
+      if (!sourcePortId || !targetPortId) {
+        return;
+      }
+      // Look up ports on source and target nodes.
+      const sourceNode = rfNodesRef.current.find((n) => n.id === source);
+      const targetNode = rfNodesRef.current.find((n) => n.id === target);
+      const sourceNodeData = sourceNode?.data as unknown as AnyNode | undefined;
+      const targetNodeData = targetNode?.data as unknown as AnyNode | undefined;
+      const sourcePorts =
+        sourceNodeData && 'ports' in sourceNodeData
+          ? sourceNodeData.ports
+          : undefined;
+      const targetPorts =
+        targetNodeData && 'ports' in targetNodeData
+          ? targetNodeData.ports
+          : undefined;
+      const sourcePort = sourcePorts?.find((p) => p.id === sourcePortId);
+      const targetPort = targetPorts?.find((p) => p.id === targetPortId);
+      if (!sourcePort || !targetPort) {
+        return;
+      }
+      if (sourcePort.locked === true || targetPort.locked === true) {
+        return;
+      }
+      const sourceIsControl = sourcePort.portIoType === PORT_IO_TYPE.CONTROL;
+      const targetIsControl = targetPort.portIoType === PORT_IO_TYPE.CONTROL;
+      // Mismatch: one is control and the other is not.
+      if (sourceIsControl !== targetIsControl) {
+        return;
+      }
+      const edgeKind = sourceIsControl ? EDGE_KIND.CONTROL : EDGE_KIND.DATA;
+      store.getState().eventHandlers?.onEdgeConnected?.({
+        edgeKind,
+        sourceNodeId: source,
+        sourcePortId,
+        targetNodeId: target,
+        targetPortId,
+      });
+    },
+    [store],
+  );
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -500,6 +622,12 @@ function VisualizerCanvas({
         multiSelectionKeyCode="Control"
         nodeTypes={nodeTypes}
         nodes={rfNodes}
+        nodesConnectable={activeMode === VISUALIZER_MODE.EDIT}
+        onConnect={handleConnect}
+        onDragOver={
+          activeMode === VISUALIZER_MODE.EDIT ? handleDragOver : undefined
+        }
+        onDrop={activeMode === VISUALIZER_MODE.EDIT ? handleDrop : undefined}
         onEdgeContextMenu={handleEdgeContextMenu}
         onEdgesChange={onEdgesChange}
         onMove={handleMove}
@@ -527,7 +655,11 @@ function VisualizerCanvas({
           >
             <Menu.Positioner>
               <Menu.Content>
-                {renderMenuItems(openMenu.items, openMenu.target, handleMenuAction)}
+                {renderMenuItems(
+                  openMenu.items,
+                  openMenu.target,
+                  handleMenuAction,
+                )}
               </Menu.Content>
             </Menu.Positioner>
           </Menu.Root>

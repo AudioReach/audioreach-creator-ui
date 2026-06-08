@@ -30,3 +30,22 @@ export function controlHandleId(
 ): string {
   return `Control:${portId}-${kind}`;
 }
+
+/**
+ * Recovers the portId from a handle id produced by dataHandleId or
+ * controlHandleId. Returns undefined when the format is unrecognised.
+ */
+export function parsePortIdFromHandleId(
+  handleId: string,
+  role: 'source' | 'target',
+): string | undefined {
+  if (handleId.startsWith('Data:')) {
+    return handleId.slice('Data:'.length);
+  }
+  if (handleId.startsWith('Control:')) {
+    const inner = handleId.slice('Control:'.length);
+    const suffix = `-${role}`;
+    return inner.endsWith(suffix) ? inner.slice(0, -suffix.length) : inner;
+  }
+  return undefined;
+}
