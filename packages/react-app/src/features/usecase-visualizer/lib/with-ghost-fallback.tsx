@@ -33,7 +33,7 @@ export function withGhostFallback<TNode extends AnyNode>(
     );
 
     if (isGhost) {
-      return <GhostNode node={props.data} />;
+      return <GhostNode node={props.data} selected={props.selected} />;
     }
     return <Component {...props} />;
   }

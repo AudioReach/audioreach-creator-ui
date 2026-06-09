@@ -30,14 +30,23 @@ import {
   UsecaseSelectionControl,
 } from '~features/usecase-selection';
 import {
+  type LevelView,
   type SearchHighlights,
   UsecaseVisualizer,
+  type ViewportState,
+  type XY,
 } from '~features/usecase-visualizer';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 
-import {searchGraphData} from '../lib/graph-search';
+import {applyCollapses} from '../lib/apply-collapses';
+import {applyPositionOverrides} from '../lib/apply-position-overrides';
+import {
+  computeContainsMatchIds,
+  searchLevelView,
+  type SearchMatch,
+} from '../lib/graph-search';
 import {buildLevelViewFromGraphData} from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
 
@@ -47,6 +56,8 @@ interface GraphDesignerProps {
   tabId?: string;
   usecaseData: UsecaseCategory[];
 }
+
+const EMPTY_SET: ReadonlySet<number> = new Set<number>();
 
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectGroupId,
@@ -75,17 +86,44 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const setLevelView = useGraphDesignerStoreShallow((s) => s.setLevelView);
   const clearLevelView = useGraphDesignerStoreShallow((s) => s.clearLevelView);
 
+  // Collapse, position-override, and viewport state (consumer-owned).
+  const [collapseByLevel, setCollapseByLevel] = useState<
+    Record<string, Set<number>>
+  >({});
+  const [positionOverrides, setPositionOverrides] = useState<
+    Record<string, XY>
+  >({});
+  const [parentSizes, setParentSizes] = useState<
+    Record<string, {height: number; width: number}>
+  >({});
+  const [viewportByLevel, setViewportByLevel] = useState<
+    Record<string, ViewportState>
+  >({});
+
+  const levelId = levelView?.levelId ?? '';
+  const collapsedSubgraphs = (collapseByLevel[levelId] ??
+    EMPTY_SET) as Set<number>;
+
+  const graph = useMemo<LevelView>(() => {
+    if (!levelView) {
+      return {levelId: ''};
+    }
+    const collapsed = applyCollapses(levelView, collapsedSubgraphs);
+    return applyPositionOverrides(collapsed, positionOverrides, parentSizes);
+  }, [levelView, collapsedSubgraphs, positionOverrides, parentSizes]);
+
   // Guards against stale layout results when selectedUsecases changes rapidly.
   const layoutGenerationRef = useRef(0);
 
   // Search state
   const [searchFocusTrigger, setSearchFocusTrigger] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
+  const [matchingNodes, setMatchingNodes] = useState<SearchMatch[]>([]);
   const [searchHighlights, setSearchHighlights] = useState<
     SearchHighlights | undefined
   >(undefined);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const matchCount = searchHighlights?.highlightedIds.length ?? 0;
+  const matchCount = matchingNodes.length;
 
   const clearSelection = useGraphDesignerStoreShallow((s) => s.clearSelection);
   const setSearchHighlight = useGraphDesignerStoreShallow(
@@ -127,6 +165,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Resets all search state — call when usecase changes or search is closed
   const resetSearch = useCallback(() => {
     setHasSearched(false);
+    setMatchingNodes([]);
     setSearchHighlights(undefined);
     setCurrentMatchIndex(0);
     clearSearchHighlight();
@@ -145,47 +184,74 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   };
 
   // Search handlers
+  const buildHighlights = useCallback(
+    (activeId: string | undefined): SearchHighlights => ({
+      activeId,
+      containsMatchNodeIds: computeContainsMatchIds(
+        matchingNodes,
+        collapsedSubgraphs,
+      ),
+      highlightedIds: matchingNodes.map((m) => m.nodeId),
+    }),
+    [collapsedSubgraphs, matchingNodes],
+  );
+
   const handleSearch = useCallback(
     (term: string) => {
-      if (!term.trim() || !graphData) {
+      if (!term.trim() || !levelView) {
         resetSearch();
         clearSelection();
         return;
       }
-
       setHasSearched(true);
-      const result = searchGraphData(graphData, term);
-      setSearchHighlights(result);
+      const matches = searchLevelView(levelView, term);
+      setMatchingNodes(matches);
       setCurrentMatchIndex(0);
-      setSearchHighlight(result.highlightedIds, result.activeId ?? null);
+      const highlights: SearchHighlights = {
+        activeId: matches[0]?.nodeId,
+        containsMatchNodeIds: computeContainsMatchIds(
+          matches,
+          collapsedSubgraphs,
+        ),
+        highlightedIds: matches.map((m) => m.nodeId),
+      };
+      setSearchHighlights(highlights);
+      setSearchHighlight(
+        highlights.highlightedIds,
+        highlights.activeId ?? null,
+      );
     },
-    [graphData, resetSearch, clearSelection, setSearchHighlight],
+    [
+      clearSelection,
+      collapsedSubgraphs,
+      levelView,
+      resetSearch,
+      setSearchHighlight,
+    ],
   );
 
   const handleSearchNext = useCallback(() => {
-    if (!searchHighlights || searchHighlights.highlightedIds.length === 0) {
+    if (matchingNodes.length === 0) {
       return;
     }
-    const nextIndex =
-      (currentMatchIndex + 1) % searchHighlights.highlightedIds.length;
+    const nextIndex = (currentMatchIndex + 1) % matchingNodes.length;
     setCurrentMatchIndex(nextIndex);
-    const nextId = searchHighlights.highlightedIds[nextIndex];
-    setSearchHighlights({...searchHighlights, activeId: nextId});
-    setSearchHighlight(searchHighlights.highlightedIds, nextId);
-  }, [searchHighlights, currentMatchIndex, setSearchHighlight]);
+    const highlights = buildHighlights(matchingNodes[nextIndex].nodeId);
+    setSearchHighlights(highlights);
+    setSearchHighlight(highlights.highlightedIds, highlights.activeId ?? null);
+  }, [buildHighlights, currentMatchIndex, matchingNodes, setSearchHighlight]);
 
   const handleSearchPrevious = useCallback(() => {
-    if (!searchHighlights || searchHighlights.highlightedIds.length === 0) {
+    if (matchingNodes.length === 0) {
       return;
     }
     const prevIndex =
-      (currentMatchIndex - 1 + searchHighlights.highlightedIds.length) %
-      searchHighlights.highlightedIds.length;
+      (currentMatchIndex - 1 + matchingNodes.length) % matchingNodes.length;
     setCurrentMatchIndex(prevIndex);
-    const prevId = searchHighlights.highlightedIds[prevIndex];
-    setSearchHighlights({...searchHighlights, activeId: prevId});
-    setSearchHighlight(searchHighlights.highlightedIds, prevId);
-  }, [searchHighlights, currentMatchIndex, setSearchHighlight]);
+    const highlights = buildHighlights(matchingNodes[prevIndex].nodeId);
+    setSearchHighlights(highlights);
+    setSearchHighlight(highlights.highlightedIds, highlights.activeId ?? null);
+  }, [buildHighlights, currentMatchIndex, matchingNodes, setSearchHighlight]);
 
   const handleSearchClose = useCallback(() => {
     setSearchVisible(false);
@@ -211,6 +277,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   useEffect(() => {
     resetSearch();
     clearLevelView();
+    setCollapseByLevel({});
+    setPositionOverrides({});
+    setParentSizes({});
+    setViewportByLevel({});
     if (selectedUsecases.length === 0) {
       return;
     }
@@ -246,9 +316,47 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Side nav implementation
   const hasUnsavedChanges = false; // TODO: Implement actual unsaved changes detection
-  const hasSelection =
-    levelView !== null && (levelView.modules?.length ?? 0) > 0;
+  const hasSelection = (graph.modules?.length ?? 0) > 0;
   const canUndoRedo = false; // TODO: Support undo/redo stack
+
+  const eventHandlers = useMemo(
+    () => ({
+      onNodeDragEnd: ({
+        nodeId,
+        position,
+        resizedParents,
+      }: {
+        nodeId: string;
+        position: XY;
+        resizedParents?: Record<string, {height: number; width: number}>;
+      }) => {
+        setPositionOverrides((p) => ({...p, [nodeId]: position}));
+        if (resizedParents) {
+          setParentSizes((p) => ({...p, ...resizedParents}));
+        }
+      },
+      onSubgraphCollapse: (subgraphId: number) => {
+        setCollapseByLevel((prev) => ({
+          ...prev,
+          [levelId]: new Set(prev[levelId] ?? []).add(subgraphId),
+        }));
+      },
+      onSubgraphExpand: (subgraphId: number) => {
+        setCollapseByLevel((prev) => {
+          const next = new Set(prev[levelId] ?? []);
+          next.delete(subgraphId);
+          return {...prev, [levelId]: next};
+        });
+        // Position overrides keyed to the re-exposed nodes are intentionally
+        // retained so that modules dragged before collapse snap back to where
+        // the user left them rather than reverting to ELK defaults.
+      },
+      onViewportChange: (viewport: ViewportState) => {
+        setViewportByLevel((p) => ({...p, [levelId]: viewport}));
+      },
+    }),
+    [levelId],
+  );
 
   const sideNavItems = useMemo(
     () => [
@@ -619,7 +727,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           </div>
         ) : levelView ? (
           <UsecaseVisualizer
-            graph={levelView}
+            eventHandlers={eventHandlers}
+            graph={graph}
+            initialViewport={viewportByLevel[levelId]}
             onScreenshotApiReady={handleScreenshotReady}
             searchHighlights={searchHighlights}
           />

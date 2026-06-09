@@ -5,17 +5,12 @@
 
 import {type EdgeProps, getBezierPath} from '@xyflow/react';
 
-import {
-  DATA_ARROW_MARKER_ID,
-  type EdgeData,
-  pickEdgeStrokeWidth,
-} from '../../lib/edge-stroke';
+import {DATA_ARROW_MARKER_ID, pickEdgeStrokeWidth} from '../../lib/edge-stroke';
 
 import {EdgeBody} from './edge-body';
 
 export function DataLinkEdge(props: EdgeProps) {
   const {
-    data,
     id,
     label,
     selected,
@@ -36,8 +31,7 @@ export function DataLinkEdge(props: EdgeProps) {
     targetY,
   });
 
-  const edgeKind = (data as EdgeData | undefined)?.edgeKind;
-  const strokeWidth = pickEdgeStrokeWidth(selected, edgeKind);
+  const strokeWidth = pickEdgeStrokeWidth(selected);
 
   return (
     <EdgeBody

@@ -12,9 +12,10 @@ describe('NODE_DIMENSIONS — exact constants', () => {
   it('module dimensions match the spec', () => {
     expect(NODE_DIMENSIONS.module).toEqual({
       baseHeight: 80,
-      footerHeight: 32,
+      footerHeight: 56,
+      minHeight: 120,
+      minWidth: 160,
       portRowHeight: 24,
-      width: 160,
     });
   });
 
@@ -27,7 +28,7 @@ describe('NODE_DIMENSIONS — exact constants', () => {
   });
 
   it('subgraphProxy dimensions match the spec', () => {
-    expect(NODE_DIMENSIONS.subgraphProxy).toEqual({height: 60, width: 160});
+    expect(NODE_DIMENSIONS.subgraphProxy).toEqual({height: 60, width: 240});
   });
 
   it('subgraph dimensions match the spec', () => {
@@ -40,30 +41,32 @@ describe('NODE_DIMENSIONS — exact constants', () => {
 });
 
 describe('calculateModuleHeight', () => {
-  const {baseHeight, footerHeight, portRowHeight} = NODE_DIMENSIONS.module;
+  const {footerHeight, minHeight, portRowHeight} = NODE_DIMENSIONS.module;
 
-  it('1 input + 1 output + footer visible = baseHeight + footerHeight', () => {
-    expect(calculateModuleHeight(1, 1, true)).toBe(baseHeight + footerHeight);
+  it('small port count is clamped to minHeight + footerHeight', () => {
+    // 1in + 1out: natural = 80 + 44 = 124 < minHeight(120) + 44 = 164
+    expect(calculateModuleHeight(1, 1, true)).toBe(minHeight + footerHeight);
   });
 
-  it('3 input + 1 output + footer visible adds 2 port rows', () => {
+  it('3 input + 1 output + footer visible adds 2 port rows above minimum', () => {
+    // natural = 80 + 2*24 + 44 = 172 > 164 → natural wins
     expect(calculateModuleHeight(3, 1, true)).toBe(
-      baseHeight + 2 * portRowHeight + footerHeight,
+      80 + 2 * portRowHeight + footerHeight,
     );
   });
 
-  it('1 input + 1 output without footer = baseHeight only', () => {
-    expect(calculateModuleHeight(1, 1, false)).toBe(baseHeight);
+  it('small port count without footer is clamped to minHeight', () => {
+    // 1in + 1out: natural = 80 < minHeight(120) → minHeight wins
+    expect(calculateModuleHeight(1, 1, false)).toBe(minHeight);
   });
 
-  it('1 input + 3 output without footer adds 2 port rows', () => {
-    expect(calculateModuleHeight(1, 3, false)).toBe(
-      baseHeight + 2 * portRowHeight,
-    );
+  it('1 input + 3 output without footer adds 2 port rows above minimum', () => {
+    // natural = 80 + 2*24 = 128 > 120 → natural wins
+    expect(calculateModuleHeight(1, 3, false)).toBe(80 + 2 * portRowHeight);
   });
 
-  it('zero ports clamps to baseHeight (no negative rows)', () => {
-    expect(calculateModuleHeight(0, 0, false)).toBe(baseHeight);
-    expect(calculateModuleHeight(0, 0, true)).toBe(baseHeight + footerHeight);
+  it('zero ports clamps to minHeight', () => {
+    expect(calculateModuleHeight(0, 0, false)).toBe(minHeight);
+    expect(calculateModuleHeight(0, 0, true)).toBe(minHeight + footerHeight);
   });
 });

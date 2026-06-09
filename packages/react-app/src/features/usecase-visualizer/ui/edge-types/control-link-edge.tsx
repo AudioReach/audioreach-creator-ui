@@ -5,13 +5,12 @@
 
 import {type EdgeProps, getBezierPath} from '@xyflow/react';
 
-import {type EdgeData, pickEdgeStrokeWidth} from '../../lib/edge-stroke';
+import {pickEdgeStrokeWidth} from '../../lib/edge-stroke';
 
 import {EdgeBody} from './edge-body';
 
 export function ControlLinkEdge(props: EdgeProps) {
   const {
-    data,
     id,
     label,
     selected,
@@ -32,8 +31,7 @@ export function ControlLinkEdge(props: EdgeProps) {
     targetY,
   });
 
-  const edgeKind = (data as EdgeData | undefined)?.edgeKind;
-  const strokeWidth = pickEdgeStrokeWidth(selected, edgeKind);
+  const strokeWidth = pickEdgeStrokeWidth(selected);
 
   return (
     <EdgeBody

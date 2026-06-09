@@ -20,7 +20,7 @@ const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.layered.spacing.nodeNodeBetweenLayers': '50',
-  'elk.padding': '[top=25,left=25,bottom=25,right=25]',
+  'elk.padding': '[top=44,left=20,bottom=20,right=20]',
   'elk.spacing.nodeNode': '30',
 };
 
@@ -53,7 +53,7 @@ export async function layoutLevelView(graph: LevelView): Promise<LevelView> {
     moduleElkNodes[node.id] = {
       height: calculateModuleHeight(inputCount, outputCount, false),
       id: node.id,
-      width: NODE_DIMENSIONS.module.width,
+      width: NODE_DIMENSIONS.module.minWidth,
     };
   }
 

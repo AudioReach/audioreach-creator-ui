@@ -69,7 +69,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('7a — selection and delta', () => {
+describe('selection and delta', () => {
   it('passes ReactFlow selection/pan props', () => {
     render(<UsecaseVisualizer graph={makeGraph()} />);
     const props = latestReactFlowProps.current;

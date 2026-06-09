@@ -6,6 +6,7 @@
 import {render, screen} from '@testing-library/react';
 import {ReactFlowProvider} from '@xyflow/react';
 
+import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
 import {createVisualizerStore} from '~features/usecase-visualizer/model/usecase-visualizer-store';
 import {VisualizerStoreProvider} from '~features/usecase-visualizer/model/visualizer-store-context';
 import type {ModuleNode as ModuleNodeData} from '~features/usecase-visualizer/model/visualizer.types';
@@ -14,6 +15,11 @@ import {ModuleNode} from '~features/usecase-visualizer/ui/node-types/module-node
 import {makeModuleNodeProps} from './node-props';
 
 jest.mock('~shared/lib/logger');
+
+// Ports anchor to the visible shape box, which is the node height minus the
+// external footer strip.
+const boxHeight = (h: number): number =>
+  h - NODE_DIMENSIONS.module.footerHeight;
 
 function makeModule(overrides: Partial<ModuleNodeData> = {}): ModuleNodeData {
   return {
@@ -65,34 +71,32 @@ describe('ModuleNode — shape layer clip-path classes', () => {
     expect(layer.className).not.toContain('clip-path');
   });
 
-  it('circle: applies circle(50%) clip-path', () => {
+  it('circle: renders SVG shape outline, no clip-path class', () => {
     renderModuleNode(makeModule({shape: 'circle'}));
     const layer = screen.getByTestId('module-shape-layer');
-    expect(layer.className).toContain('[clip-path:circle(50%)]');
+    expect(layer.className).not.toContain('clip-path');
+    expect(screen.getByTestId('module-shape-svg')).toBeInTheDocument();
   });
 
-  it('trapezoid-source: applies correct polygon clip-path', () => {
+  it('trapezoid-source: renders SVG shape outline, no clip-path class', () => {
     renderModuleNode(makeModule({shape: 'trapezoid-source'}));
     const layer = screen.getByTestId('module-shape-layer');
-    expect(layer.className).toContain(
-      '[clip-path:polygon(0_0,100%_15%,100%_85%,0_100%)]',
-    );
+    expect(layer.className).not.toContain('clip-path');
+    expect(screen.getByTestId('module-shape-svg')).toBeInTheDocument();
   });
 
-  it('trapezoid-sink: applies correct polygon clip-path', () => {
+  it('trapezoid-sink: renders SVG shape outline, no clip-path class', () => {
     renderModuleNode(makeModule({shape: 'trapezoid-sink'}));
     const layer = screen.getByTestId('module-shape-layer');
-    expect(layer.className).toContain(
-      '[clip-path:polygon(0_15%,100%_0,100%_100%,0_85%)]',
-    );
+    expect(layer.className).not.toContain('clip-path');
+    expect(screen.getByTestId('module-shape-svg')).toBeInTheDocument();
   });
 
-  it('triangle: applies correct polygon clip-path', () => {
+  it('triangle: renders SVG shape outline, no clip-path class', () => {
     renderModuleNode(makeModule({shape: 'triangle'}));
     const layer = screen.getByTestId('module-shape-layer');
-    expect(layer.className).toContain(
-      '[clip-path:polygon(0_0,100%_50%,0_100%)]',
-    );
+    expect(layer.className).not.toContain('clip-path');
+    expect(screen.getByTestId('module-shape-svg')).toBeInTheDocument();
   });
 });
 
@@ -124,8 +128,8 @@ describe('ModuleNode — handle placement by shape', () => {
     expect(handle).not.toBeNull();
     expect(handle?.getAttribute('data-handlepos')).toBe('right');
     const topPx = parseFloat(handle?.style.top ?? '0');
-    expect(topPx).toBeGreaterThanOrEqual(H * 0.15);
-    expect(topPx).toBeLessThanOrEqual(H * 0.85);
+    expect(topPx).toBeGreaterThanOrEqual(boxHeight(H) * 0.15);
+    expect(topPx).toBeLessThanOrEqual(boxHeight(H) * 0.85);
   });
 
   it('trapezoid-sink: single input handle y is within inset range [0.15h, 0.85h]', () => {
@@ -142,8 +146,8 @@ describe('ModuleNode — handle placement by shape', () => {
     expect(handle).not.toBeNull();
     expect(handle?.getAttribute('data-handlepos')).toBe('left');
     const topPx = parseFloat(handle?.style.top ?? '0');
-    expect(topPx).toBeGreaterThanOrEqual(H * 0.15);
-    expect(topPx).toBeLessThanOrEqual(H * 0.85);
+    expect(topPx).toBeGreaterThanOrEqual(boxHeight(H) * 0.15);
+    expect(topPx).toBeLessThanOrEqual(boxHeight(H) * 0.85);
   });
 
   it('triangle: output handle is on the right and top = height/2', () => {
@@ -159,10 +163,10 @@ describe('ModuleNode — handle placement by shape', () => {
     );
     expect(handle).not.toBeNull();
     expect(handle?.getAttribute('data-handlepos')).toBe('right');
-    expect(handle?.style.top).toBe(`${H / 2}px`);
+    expect(handle?.style.top).toBe(`${boxHeight(H) / 2}px`);
   });
 
-  it('circle: control port handle uses style.left, not style.top', () => {
+  it('circle: control port handle is centered (both left and top set)', () => {
     const node = makeModule({
       ports: [{id: 'c1', portIoType: 'control'}],
       shape: 'circle',
@@ -174,7 +178,7 @@ describe('ModuleNode — handle placement by shape', () => {
     expect(handles.length).toBeGreaterThan(0);
     for (const h of handles) {
       expect(h.style.left).toBeTruthy();
-      expect(h.style.top).toBe('');
+      expect(h.style.top).toBeTruthy();
     }
   });
 });

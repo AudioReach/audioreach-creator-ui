@@ -61,11 +61,11 @@ function renderModuleNode(node: ModuleNodeData, options: RenderOptions = {}) {
 }
 
 describe('ModuleNode — default footer', () => {
-  it('renders label and #moduleId by default', () => {
+  it('renders label and #moduleId as hex by default', () => {
     renderModuleNode(makeModule({label: 'Gain', moduleId: 42}));
     const footer = screen.getByTestId('module-default-footer');
     expect(footer).toHaveTextContent('Gain');
-    expect(footer).toHaveTextContent('#42');
+    expect(footer).toHaveTextContent('IID: 0x0000002A');
   });
 
   it('uses alias instead of label when alias is set', () => {
@@ -263,7 +263,7 @@ describe('ModuleNode — locked', () => {
 });
 
 describe('ModuleNode — even spacing', () => {
-  it('places three input ports at 31, 50, 69 on a 100px-tall node with 12px padding', () => {
+  it('places three input ports evenly across the shape box (height minus footer)', () => {
     const node = makeModule({
       height: 100,
       ports: [
@@ -284,6 +284,7 @@ describe('ModuleNode — even spacing', () => {
     });
     expect(handles).toHaveLength(3);
     const tops = handles.map((h) => h.style.top);
-    expect(tops).toEqual(['31px', '50px', '69px']);
+    // boxHeight = 100 - 56 footer = 44; step = (44 - 24) / 4 = 5
+    expect(tops).toEqual(['17px', '22px', '27px']);
   });
 });

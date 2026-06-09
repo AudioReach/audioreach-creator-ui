@@ -36,10 +36,10 @@ export function useNodeHighlight(nodeId: string): NodeHighlight {
   );
 
   return {
-    activeBackgroundColor: 'var(--color-background-support-info-subtle)',
+    activeBackgroundColor: 'var(--color-background-support-warning)',
     borderColor:
       state !== 'none'
-        ? 'var(--color-border-support-info)'
+        ? 'var(--color-border-support-warning)'
         : 'var(--color-border-neutral-10)',
     containsMatchClass: isContainsMatch ? 'search-contains-match' : '',
     highlightActiveClass: state === 'active' ? 'search-highlight-active' : '',

@@ -15,6 +15,8 @@ import {
   useState,
 } from 'react';
 
+import type * as VisualizerStoreContext from '~features/usecase-visualizer/model/visualizer-store-context';
+
 // Suppress console warnings in tests (optional)
 const originalError = console.error;
 beforeAll(() => {
@@ -670,6 +672,39 @@ jest.mock('@qualcomm-ui/react-core/portal', () => ({
     return createElement('div', {'data-testid': 'portal'}, children);
   }),
 }));
+
+jest.mock('~shared/providers/theme-provider', () => ({
+  Theme: {Dark: 'dark', Light: 'light'},
+  ThemeProvider: ({children}: {children: React.ReactNode}) => children,
+  useTheme: () => ['light', jest.fn()],
+}));
+
+jest.mock('~features/usecase-visualizer/model/visualizer-store-context', () => {
+  const actual = jest.requireActual(
+    '~features/usecase-visualizer/model/visualizer-store-context',
+  ) as typeof VisualizerStoreContext;
+  const defaultState = {
+    containsMatchNodeIds: [] as string[],
+    eventHandlers: undefined,
+    nodeDisplayConfig: undefined,
+    renderNodeContent: undefined,
+    searchHighlightById: {} as Record<string, unknown>,
+  };
+  return {
+    ...actual,
+    useVisualizerStore: (
+      selector: (s: typeof defaultState) => unknown,
+    ): unknown => {
+      try {
+        return actual.useVisualizerStore(
+          selector as Parameters<typeof actual.useVisualizerStore>[0],
+        );
+      } catch {
+        return selector(defaultState);
+      }
+    },
+  };
+});
 
 jest.mock('@qualcomm-ui/react/tooltip', () => ({
   Tooltip: jest

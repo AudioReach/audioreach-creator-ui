@@ -84,6 +84,8 @@ function circleAnchors(
 ): PortAnchor[] {
   const {controls, inputs, outputs} = grouped;
 
+  // The circle renders centered with radius min(w,h)/2 (see ShapeOutline), so
+  // anchors ride that circle's perimeter.
   const cx = width / 2;
   const cy = height / 2;
   const r = Math.min(width, height) / 2;
@@ -145,12 +147,6 @@ function circleAnchors(
   return anchors;
 }
 
-// Vertical offset for port i of count within the trapezoid inset range (15%–85%).
-// Matches the clip-path polygon slant so ports stay on the visible edge.
-function trapezoidInsetY(height: number, count: number, i: number): number {
-  return height * 0.15 + ((height * 0.7) / (count + 1)) * (i + 1);
-}
-
 function trapezoidSourceAnchors(
   grouped: GroupedPorts,
   width: number,
@@ -158,9 +154,10 @@ function trapezoidSourceAnchors(
 ): PortAnchor[] {
   const {outputs} = grouped;
 
-  // Inputs and controls fall through to rect — left edge and top are vertical.
-  // Outputs sit on the right edge, y confined to the inset range (15%–85%)
-  // matching the clip-path polygon: polygon(0 0, 100% 15%, 100% 85%, 0 100%).
+  // Source pentagon converges to a point on the right:
+  // polygon(0 0, 72% 0, 100% 50%, 72% 100%, 0 100%). Inputs (left edge) and
+  // controls (top) are vertical/straight, so they fall through to rect. A
+  // single output sits at the right tip; multiple outputs fall back to rect.
   const rectFallback = rectAnchors(
     {controls: grouped.controls, inputs: grouped.inputs, outputs: []},
     width,
@@ -168,15 +165,26 @@ function trapezoidSourceAnchors(
   );
 
   const anchors: PortAnchor[] = [...rectFallback];
-  for (let i = 0; i < outputs.length; i++) {
-    const port = outputs[i];
+  if (outputs.length === 1) {
     anchors.push({
-      handleId: dataHandleId(port.id),
+      handleId: dataHandleId(outputs[0].id),
       handleKind: 'source',
-      port,
+      port: outputs[0],
       position: Position.Right,
-      y: trapezoidInsetY(height, outputs.length, i),
+      x: width,
+      y: height / 2,
     });
+  } else {
+    for (let i = 0; i < outputs.length; i++) {
+      const port = outputs[i];
+      anchors.push({
+        handleId: dataHandleId(port.id),
+        handleKind: 'source',
+        port,
+        position: Position.Right,
+        y: offsetForIndex(height, outputs.length, i),
+      });
+    }
   }
 
   return anchors;
@@ -189,9 +197,9 @@ function trapezoidSinkAnchors(
 ): PortAnchor[] {
   const {inputs} = grouped;
 
-  // Outputs and controls fall through to rect — right edge and top are vertical.
-  // Inputs sit on the left edge, y confined to the inset range (15%–85%)
-  // matching the clip-path polygon: polygon(0 15%, 100% 0, 100% 100%, 0 85%).
+  // Mirror of source: flat right edge (outputs) and top (controls) fall through
+  // to rect; a single input sits at the left point. Multiple inputs fall back
+  // to rect distribution.
   const rectFallback = rectAnchors(
     {controls: grouped.controls, inputs: [], outputs: grouped.outputs},
     width,
@@ -199,15 +207,26 @@ function trapezoidSinkAnchors(
   );
 
   const anchors: PortAnchor[] = [...rectFallback];
-  for (let i = 0; i < inputs.length; i++) {
-    const port = inputs[i];
+  if (inputs.length === 1) {
     anchors.push({
-      handleId: dataHandleId(port.id),
+      handleId: dataHandleId(inputs[0].id),
       handleKind: 'target',
-      port,
+      port: inputs[0],
       position: Position.Left,
-      y: trapezoidInsetY(height, inputs.length, i),
+      x: 0,
+      y: height / 2,
     });
+  } else {
+    for (let i = 0; i < inputs.length; i++) {
+      const port = inputs[i];
+      anchors.push({
+        handleId: dataHandleId(port.id),
+        handleKind: 'target',
+        port,
+        position: Position.Left,
+        y: offsetForIndex(height, inputs.length, i),
+      });
+    }
   }
 
   return anchors;

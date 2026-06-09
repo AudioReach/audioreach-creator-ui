@@ -10,24 +10,10 @@ export const STROKE_DASHARRAY_DASHED = '5 5';
 export const STROKE_WIDTH_DEFAULT = 2;
 export const STROKE_WIDTH_EMPHASIZED = 3;
 
-const PROXY_KINDS: ReadonlySet<EdgeKind> = new Set([
-  'proxy-control',
-  'proxy-data',
-]);
-
 export interface EdgeData {
   edgeKind?: EdgeKind;
 }
 
-export function pickEdgeStrokeWidth(
-  selected: boolean | undefined,
-  edgeKind: EdgeKind | undefined,
-): number {
-  if (selected === true) {
-    return STROKE_WIDTH_EMPHASIZED;
-  }
-  if (edgeKind && PROXY_KINDS.has(edgeKind)) {
-    return STROKE_WIDTH_EMPHASIZED;
-  }
-  return STROKE_WIDTH_DEFAULT;
+export function pickEdgeStrokeWidth(selected: boolean | undefined): number {
+  return selected === true ? STROKE_WIDTH_EMPHASIZED : STROKE_WIDTH_DEFAULT;
 }

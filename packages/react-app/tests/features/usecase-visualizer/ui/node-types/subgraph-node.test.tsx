@@ -170,7 +170,7 @@ describe('SubgraphNode — selection styling', () => {
 describe('SubgraphNode — showSubgraphId', () => {
   it('renders the subgraph id by default', () => {
     renderSubgraphNode(makeSubgraph({subgraphId: 7}));
-    expect(screen.getByTestId('subgraph-id')).toHaveTextContent('#7');
+    expect(screen.getByTestId('subgraph-id')).toHaveTextContent('#0x00000007');
   });
 
   it('hides the subgraph id when showSubgraphId is false', () => {

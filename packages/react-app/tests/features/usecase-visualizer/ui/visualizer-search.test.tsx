@@ -75,7 +75,7 @@ afterEach(() => {
 
 // ── 9a — search highlights ────────────────────────────────────────────────────
 
-describe('9a — search highlights', () => {
+describe('search highlights', () => {
   it('adds search-highlight-match class to highlighted node', () => {
     const highlights: SearchHighlights = {
       highlightedIds: ['m-1'],
@@ -172,7 +172,7 @@ describe('9a — search highlights', () => {
 
 // ── 9b — activeId snap ────────────────────────────────────────────────────────
 
-describe('9b — activeId snap', () => {
+describe('activeId snap', () => {
   it('calls setCenter with the center of the active node and correct zoom', () => {
     const highlights: SearchHighlights = {
       activeId: 'm-2',

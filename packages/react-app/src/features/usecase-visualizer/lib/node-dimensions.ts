@@ -20,9 +20,10 @@ export const NODE_DIMENSIONS = {
   },
   module: {
     baseHeight: 80,
-    footerHeight: 32,
+    footerHeight: 56,
+    minHeight: 120,
+    minWidth: 160,
     portRowHeight: 24,
-    width: 160,
   },
   subgraph: {
     headerHeight: 40,
@@ -30,7 +31,7 @@ export const NODE_DIMENSIONS = {
   },
   subgraphProxy: {
     height: 60,
-    width: 160,
+    width: 240,
   },
   subsystem: {
     baseHeight: 100,
@@ -45,9 +46,13 @@ export function calculateModuleHeight(
   footerVisible: boolean,
 ): number {
   const extraRows = Math.max(0, Math.max(inputCount, outputCount) - 1);
-  return (
+  const natural =
     NODE_DIMENSIONS.module.baseHeight +
     extraRows * NODE_DIMENSIONS.module.portRowHeight +
-    (footerVisible ? NODE_DIMENSIONS.module.footerHeight : 0)
+    (footerVisible ? NODE_DIMENSIONS.module.footerHeight : 0);
+  return Math.max(
+    natural,
+    NODE_DIMENSIONS.module.minHeight +
+      (footerVisible ? NODE_DIMENSIONS.module.footerHeight : 0),
   );
 }

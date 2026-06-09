@@ -4,7 +4,7 @@
  */
 
 import type {Node, NodeProps} from '@xyflow/react';
-import {ChevronRight} from 'lucide-react';
+import {Maximize2} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
@@ -18,7 +18,10 @@ type SubgraphProxyNodeProps = NodeProps<
   Node<SubgraphProxyNodeData & Record<string, unknown>>
 >;
 
-export function SubgraphProxyNode({data: node}: SubgraphProxyNodeProps) {
+export function SubgraphProxyNode({
+  data: node,
+  selected,
+}: SubgraphProxyNodeProps) {
   const onSubgraphExpand = useVisualizerStore(
     (state) => state.eventHandlers?.onSubgraphExpand,
   );
@@ -35,6 +38,11 @@ export function SubgraphProxyNode({data: node}: SubgraphProxyNodeProps) {
     .filter(Boolean)
     .join(' ');
 
+  const borderColor =
+    selected && highlight.state === 'none'
+      ? 'var(--color-border-support-info)'
+      : highlight.borderColor;
+
   return (
     <div
       className={classNames}
@@ -46,7 +54,7 @@ export function SubgraphProxyNode({data: node}: SubgraphProxyNodeProps) {
           highlight.state === 'active'
             ? highlight.activeBackgroundColor
             : 'var(--color-background-neutral-04)',
-        borderColor: highlight.borderColor,
+        borderColor,
         height: '100%',
         width: '100%',
       }}
@@ -57,9 +65,10 @@ export function SubgraphProxyNode({data: node}: SubgraphProxyNodeProps) {
         </span>
         <InlineIconButton
           aria-label="Expand subgraph"
-          icon={ChevronRight}
+          icon={Maximize2}
           onClick={() => onSubgraphExpand?.(node.subgraphId)}
-          size="sm"
+          size="lg"
+          variant="scale"
         />
       </div>
 

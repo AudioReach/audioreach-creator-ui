@@ -154,9 +154,9 @@ describe('getPortAnchors', () => {
       expect(anchors[0].handleKind).toBe('source');
     });
 
-    it('y is within inset range [0.15h, 0.85h]', () => {
-      expect(anchors[0].y).toBeGreaterThanOrEqual(H * 0.15);
-      expect(anchors[0].y).toBeLessThanOrEqual(H * 0.85);
+    it('single output sits at the right tip: x = width, y = height/2', () => {
+      expect(anchors[0].x).toBe(W);
+      expect(anchors[0].y).toBe(H / 2);
     });
   });
 
@@ -168,18 +168,15 @@ describe('getPortAnchors', () => {
       (a) => a.handleKind === 'source' && a.position === Position.Right,
     );
 
-    it('both outputs within inset range', () => {
+    it('both outputs present', () => {
       expect(outputs).toHaveLength(2);
-      for (const a of outputs) {
-        expect(a.y).toBeGreaterThanOrEqual(H * 0.15);
-        expect(a.y).toBeLessThanOrEqual(H * 0.85);
-      }
     });
 
-    it('outputs are evenly spaced within inset range', () => {
-      const step = (H * 0.7) / 3;
-      expect(outputs[0].y).toBeCloseTo(H * 0.15 + step, 5);
-      expect(outputs[1].y).toBeCloseTo(H * 0.15 + step * 2, 5);
+    it('multiple outputs fall back to rect: evenly spaced via offsetForIndex', () => {
+      // offsetForIndex: step = (H - 2*12) / (2+1) = 76/3; y[i] = 12 + step*(i+1)
+      const step = (H - 24) / 3;
+      expect(outputs[0].y).toBeCloseTo(12 + step, 5);
+      expect(outputs[1].y).toBeCloseTo(12 + step * 2, 5);
     });
   });
 
@@ -194,9 +191,9 @@ describe('getPortAnchors', () => {
       expect(anchors[0].handleKind).toBe('target');
     });
 
-    it('y is within inset range [0.15h, 0.85h]', () => {
-      expect(anchors[0].y).toBeGreaterThanOrEqual(H * 0.15);
-      expect(anchors[0].y).toBeLessThanOrEqual(H * 0.85);
+    it('single input sits at the left tip: x = 0, y = height/2', () => {
+      expect(anchors[0].x).toBe(0);
+      expect(anchors[0].y).toBe(H / 2);
     });
   });
 

@@ -77,7 +77,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('6a — graph effect viewport logic', () => {
+describe('graph effect viewport logic', () => {
   it('calls fitView on first mount when no cached viewport', () => {
     render(<UsecaseVisualizer graph={makeGraph({levelId: 'root'})} />);
     expect(mockFitView).toHaveBeenCalledTimes(1);
@@ -144,7 +144,7 @@ describe('6a — graph effect viewport logic', () => {
   });
 });
 
-describe('6b — double-click subsystem saves viewport before consumer callback', () => {
+describe('double-click subsystem saves viewport before consumer callback', () => {
   it('getViewport is called before onNodeDoubleClick consumer callback', () => {
     const callOrder: string[] = [];
     mockGetViewport.mockImplementation(() => {
@@ -195,7 +195,7 @@ describe('6b — double-click subsystem saves viewport before consumer callback'
   });
 });
 
-describe('6c — initialViewport on first mount', () => {
+describe('initialViewport on first mount', () => {
   it('calls setViewport with initialViewport instead of fitView', () => {
     const initialViewport = {x: 100, y: 200, zoom: 0.8};
     render(
@@ -228,7 +228,7 @@ describe('6c — initialViewport on first mount', () => {
   });
 });
 
-describe('6d — onViewportChange wiring', () => {
+describe('onViewportChange wiring', () => {
   it('fires onViewportChange when onMoveEnd is triggered on the canvas', () => {
     const onViewportChange = jest.fn();
     render(

@@ -30,7 +30,7 @@ function makeContainer(
   };
 }
 
-describe('7b — multi-instance logicalContainerId highlight', () => {
+describe('multi-instance logicalContainerId highlight', () => {
   it('highlights every ContainerNode sharing the hovered logicalContainerId', () => {
     const store = createVisualizerStore();
     render(

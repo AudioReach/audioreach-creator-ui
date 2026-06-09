@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import type {CSSProperties} from 'react';
+
 import type {Port} from '../model/visualizer.types';
 
 export const PORT_PADDING = 12;
@@ -48,4 +50,25 @@ export function parsePortIdFromHandleId(
     return inner.endsWith(suffix) ? inner.slice(0, -suffix.length) : inner;
   }
   return undefined;
+}
+
+/**
+ * Compute the inline style for a ReactFlow Handle based on its anchor
+ * coordinates. When both x and y are set (curved/pointed shapes) the handle
+ * is centered on that exact point; otherwise only the set axis is pinned.
+ */
+export function anchorStyle(anchor: {x?: number; y?: number}): CSSProperties {
+  const centered = anchor.x !== undefined && anchor.y !== undefined;
+  return centered
+    ? {
+        bottom: 'auto' as const,
+        left: anchor.x,
+        right: 'auto' as const,
+        top: anchor.y,
+        transform: 'translate(-50%, -50%)',
+      }
+    : {
+        ...(anchor.x !== undefined ? {left: anchor.x} : {}),
+        ...(anchor.y !== undefined ? {top: anchor.y} : {}),
+      };
 }

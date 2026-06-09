@@ -108,7 +108,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('7d — keyboard: Escape', () => {
+describe('keyboard: Escape', () => {
   it('clears selection and fires onSelectionChange with prior selection removed', () => {
     const onSelectionChange = jest.fn();
     render(
@@ -142,7 +142,7 @@ describe('7d — keyboard: Escape', () => {
   });
 });
 
-describe('7d — keyboard: Delete', () => {
+describe('keyboard: Delete', () => {
   it('fires onNodesDeleted for non-locked selected nodes in edit mode', () => {
     const onNodesDeleted = jest.fn();
     render(

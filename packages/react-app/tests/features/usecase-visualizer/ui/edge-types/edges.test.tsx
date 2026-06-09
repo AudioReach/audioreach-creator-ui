@@ -156,7 +156,7 @@ describe('ControlLinkEdge', () => {
 });
 
 describe('proxy edge variants', () => {
-  it('DataLinkEdge with edgeKind=proxy-data renders thicker stroke (3)', () => {
+  it('DataLinkEdge with edgeKind=proxy-data renders default stroke width (2)', () => {
     const {container} = renderEdge(
       <DataLinkEdge
         {...makeEdgeProps({
@@ -166,13 +166,13 @@ describe('proxy edge variants', () => {
       />,
     );
     const path = findEdgePath(container);
-    expect(path.style.strokeWidth).toBe('3');
+    expect(path.style.strokeWidth).toBe('2');
     expect(path.getAttribute('marker-end')).toBe(
       `url(#${DATA_ARROW_MARKER_ID})`,
     );
   });
 
-  it('ControlLinkEdge with edgeKind=proxy-control renders thicker stroke (3) and stays dashed', () => {
+  it('ControlLinkEdge with edgeKind=proxy-control renders default stroke width (2) and stays dashed', () => {
     const {container} = renderEdge(
       <ControlLinkEdge
         {...makeEdgeProps({
@@ -182,7 +182,7 @@ describe('proxy edge variants', () => {
       />,
     );
     const path = findEdgePath(container);
-    expect(path.style.strokeWidth).toBe('3');
+    expect(path.style.strokeWidth).toBe('2');
     expect(path.style.strokeDasharray).toBe('5 5');
     expect(path.getAttribute('marker-end')).toBeNull();
   });

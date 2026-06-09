@@ -13,7 +13,7 @@ type ContainerNodeProps = NodeProps<
   Node<ContainerNodeData & Record<string, unknown>>
 >;
 
-export function ContainerNode({data: node}: ContainerNodeProps) {
+export function ContainerNode({data: node, selected}: ContainerNodeProps) {
   const clearHoverStateIfNode = useVisualizerStore(
     (state) => state.clearHoverStateIfNode,
   );
@@ -37,9 +37,10 @@ export function ContainerNode({data: node}: ContainerNodeProps) {
     .filter(Boolean)
     .join(' ');
 
-  // Search highlight takes precedence over hover highlight for borderColor.
+  // Search highlight and selection both show the info border; search wins,
+  // then selection, then hover, then the neutral default.
   const borderColor =
-    highlight.state !== 'none' || isHighlighted
+    highlight.state !== 'none' || selected || isHighlighted
       ? 'var(--color-border-support-info)'
       : 'var(--color-border-neutral-10)';
 

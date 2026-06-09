@@ -65,7 +65,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('9c — LOD zoom tracking', () => {
+describe('LOD zoom tracking', () => {
   it('renders GhostNode when zoom drops below default threshold (0.4)', () => {
     render(<UsecaseVisualizer graph={makeGraph()} />);
 

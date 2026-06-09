@@ -4,9 +4,11 @@
  */
 
 import type {Node, NodeProps} from '@xyflow/react';
-import {ChevronDown} from 'lucide-react';
+import {Minimize2} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
+
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import {useNodeHighlight} from '../../model/use-node-highlight';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
@@ -70,7 +72,7 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
           {node.label}
           {showSubgraphId ? (
             <span className="text-secondary" data-testid="subgraph-id">
-              {`#${node.subgraphId}`}
+              {`#${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
             </span>
           ) : null}
         </span>
@@ -80,9 +82,10 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
         {onSubgraphCollapse ? (
           <InlineIconButton
             aria-label="Collapse subgraph"
-            icon={ChevronDown}
+            icon={Minimize2}
             onClick={() => onSubgraphCollapse(node.subgraphId)}
-            size="sm"
+            size="lg"
+            variant="scale"
           />
         ) : null}
       </div>

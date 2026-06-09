@@ -5,56 +5,78 @@
 
 jest.mock('~shared/lib/logger');
 
-import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import type {LevelView} from '~features/usecase-visualizer';
 import {
+  computeContainsMatchIds,
   parseSearchTerm,
-  searchGraphData,
+  searchLevelView,
 } from '~widgets/graph-designer/lib/graph-search';
 
-const graph: UsecaseGraphData = {
-  connections: [],
-  containers: {
-    '10': {
-      containerId: '10',
-      containerName: 'Container 10',
-      moduleInstances: ['sys-module-1'],
-      subgraphId: '1',
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+const level: LevelView = {
+  containers: [
+    {
+      containerId: 10,
+      height: 100,
+      id: 'container-10:1',
+      label: 'Container 10',
+      nodeKind: 'container',
+      parentId: 'subgraph-1',
+      width: 200,
+      x: 10,
+      y: 10,
     },
-  },
-  moduleInstances: {
-    'sys-module-1': {
-      containerId: '10',
-      displayName: 'AudioDecoder',
-      inputPorts: [],
-      moduleId: '200',
-      moduleInstanceId: 'sys-module-1',
-      moduleName: 'AudioDecoder',
+  ],
+  levelId: 'test',
+  modules: [
+    {
+      alias: 'MyDecoder',
+      height: 80,
+      id: 'module-1',
+      label: 'AudioDecoder',
+      moduleId: 200,
       moduleType: 'AudioDecoder',
-      outputPorts: [],
-      position: {x: 0, y: 0},
-      subgraphId: '1',
+      nodeKind: 'module',
+      parentId: 'container-10:1',
+      ports: [],
+      width: 120,
+      x: 5,
+      y: 5,
     },
-  },
-  selectedUsecases: [],
-  subgraphs: {
-    '1': {
-      containers: ['10'],
-      subgraphId: '1',
-      subgraphName: 'Subgraph 1',
-      subgraphType: '',
+  ],
+  subgraphs: [
+    {
+      height: 200,
+      id: 'subgraph-1',
+      label: 'Subgraph 1',
+      nodeKind: 'subgraph',
+      subgraphId: 1,
+      width: 300,
+      x: 0,
+      y: 0,
     },
-  },
-  subsystems: {
-    '1': {
-      controlPorts: [],
-      dataPorts: [],
-      id: 1,
-      subgraphs: [],
+  ],
+  subsystems: [
+    {
+      height: 150,
+      id: 'subsystem-1',
+      label: 'AudioSubsystem',
+      nodeKind: 'subsystem',
+      ports: [],
       subsystemId: '1',
-      subsystemName: 'AudioSubsystem',
+      width: 200,
+      x: 400,
+      y: 0,
     },
-  },
+  ],
 };
+
+// ---------------------------------------------------------------------------
+// parseSearchTerm
+// ---------------------------------------------------------------------------
 
 describe('parseSearchTerm', () => {
   it('returns null prefix for plain text (no colon)', () => {
@@ -95,300 +117,240 @@ describe('parseSearchTerm', () => {
   });
 });
 
-describe('searchGraphData — edge cases', () => {
-  it('returns empty highlights for blank search term', () => {
-    const result = searchGraphData(graph, '');
-    expect(result.highlightedIds).toHaveLength(0);
-    expect(result.activeId).toBeUndefined();
+// ---------------------------------------------------------------------------
+// searchLevelView — edge cases
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — edge cases', () => {
+  it('returns empty array for blank search term', () => {
+    expect(searchLevelView(level, '')).toHaveLength(0);
   });
 
-  it('returns empty highlights for whitespace-only search term', () => {
-    const result = searchGraphData(graph, '   ');
-    expect(result.highlightedIds).toHaveLength(0);
-    expect(result.activeId).toBeUndefined();
+  it('returns empty array for whitespace-only search term', () => {
+    expect(searchLevelView(level, '   ')).toHaveLength(0);
   });
 
-  it('returns empty highlights for unknown prefix', () => {
-    const result = searchGraphData(graph, 'xyz:Audio');
-    expect(result.highlightedIds).toHaveLength(0);
-    expect(result.activeId).toBeUndefined();
+  it('returns empty array for unknown prefix', () => {
+    expect(searchLevelView(level, 'xyz:Audio')).toHaveLength(0);
   });
 
-  it('returns empty highlights for prefix with empty value (mod:)', () => {
-    const result = searchGraphData(graph, 'mod:');
-    expect(result.highlightedIds).toHaveLength(0);
+  it('returns empty array for prefix with empty value (mod:)', () => {
+    expect(searchLevelView(level, 'mod:')).toHaveLength(0);
   });
 
-  it('returns empty highlights when no nodes match', () => {
-    const result = searchGraphData(graph, 'NonExistentTerm');
-    expect(result.highlightedIds).toHaveLength(0);
+  it('returns empty array when no nodes match', () => {
+    expect(searchLevelView(level, 'NonExistentTerm')).toHaveLength(0);
   });
 
-  it('first match in highlightedIds is set as activeId', () => {
-    const result = searchGraphData(graph, 'mod:200');
-    expect(result.highlightedIds.length).toBeGreaterThan(0);
-    expect(result.activeId).toBe(result.highlightedIds[0]);
+  it('first match nodeId equals the first element', () => {
+    const matches = searchLevelView(level, 'mod:200');
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches[0].nodeId).toBe('module-1');
   });
 });
 
-describe('searchGraphData — mod: prefix', () => {
+// ---------------------------------------------------------------------------
+// searchLevelView — mod: prefix
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — mod: prefix', () => {
   it('finds module by moduleId (numeric exact match)', () => {
-    const result = searchGraphData(graph, 'mod:200');
-    expect(result.highlightedIds).toContain('sys-module-1');
+    const ids = searchLevelView(level, 'mod:200').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
   });
 
   it('does not match by partial numeric value (mod:20 ≠ moduleId 200)', () => {
-    const result = searchGraphData(graph, 'mod:20');
-    expect(result.highlightedIds).not.toContain('sys-module-1');
-  });
-
-  it('mod:<number> matches moduleId field, not the node id string', () => {
-    const byIdString = searchGraphData(graph, 'mod:1');
-    expect(byIdString.highlightedIds).not.toContain('sys-module-1');
-
-    const byModuleId = searchGraphData(graph, 'mod:200');
-    expect(byModuleId.highlightedIds).toContain('sys-module-1');
+    const ids = searchLevelView(level, 'mod:20').map((m) => m.nodeId);
+    expect(ids).not.toContain('module-1');
   });
 
   it('finds module by label (case-insensitive partial match)', () => {
-    const result = searchGraphData(graph, 'mod:audiodecoder');
-    expect(result.highlightedIds).toContain('sys-module-1');
+    const ids = searchLevelView(level, 'mod:audiodecoder').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
+  });
+
+  it('finds module by alias', () => {
+    const ids = searchLevelView(level, 'mod:mydecoder').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
   });
 
   it('does not return non-module nodes for mod: prefix', () => {
-    const result = searchGraphData(graph, 'mod:AudioDecoder');
-    expect(
-      result.highlightedIds.every((id) =>
-        Object.keys(graph.moduleInstances).includes(id),
-      ),
-    ).toBe(true);
-  });
-
-  it('sets activeId to the matching module id', () => {
-    const result = searchGraphData(graph, 'mod:200');
-    expect(result.activeId).toBe('sys-module-1');
+    const matches = searchLevelView(level, 'mod:AudioDecoder');
+    expect(matches.every((m) => m.node.nodeKind === 'module')).toBe(true);
   });
 });
 
-describe('searchGraphData — sg: prefix', () => {
+// ---------------------------------------------------------------------------
+// searchLevelView — sg: prefix
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — sg: prefix', () => {
   it('finds subgraph by subgraphId (numeric exact match)', () => {
-    const result = searchGraphData(graph, 'sg:1');
-    expect(result.highlightedIds).toContain('subgraph-1');
+    const ids = searchLevelView(level, 'sg:1').map((m) => m.nodeId);
+    expect(ids).toContain('subgraph-1');
   });
 
   it('does not match by partial numeric value (sg:10 ≠ subgraphId 1)', () => {
-    const result = searchGraphData(graph, 'sg:10');
-    expect(result.highlightedIds).not.toContain('subgraph-1');
+    const ids = searchLevelView(level, 'sg:10').map((m) => m.nodeId);
+    expect(ids).not.toContain('subgraph-1');
   });
 
   it('finds subgraph by label (case-insensitive partial match)', () => {
-    const result = searchGraphData(graph, 'sg:Subgraph');
-    expect(result.highlightedIds).toContain('subgraph-1');
+    const ids = searchLevelView(level, 'sg:Subgraph').map((m) => m.nodeId);
+    expect(ids).toContain('subgraph-1');
   });
 
   it('does not return non-subgraph nodes for sg: prefix', () => {
-    const result = searchGraphData(graph, 'sg:Subgraph 1');
-    expect(
-      result.highlightedIds.every((id) => id.startsWith('subgraph-')),
-    ).toBe(true);
-  });
-
-  it('sets activeId to the matching subgraph id', () => {
-    const result = searchGraphData(graph, 'sg:1');
-    expect(result.activeId).toBe('subgraph-1');
+    const matches = searchLevelView(level, 'sg:Subgraph 1');
+    expect(matches.every((m) => m.node.nodeKind === 'subgraph')).toBe(true);
   });
 });
 
-describe('searchGraphData — ss: prefix', () => {
+// ---------------------------------------------------------------------------
+// searchLevelView — ss: prefix
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — ss: prefix', () => {
   it('finds subsystem by label (partial match)', () => {
-    const result = searchGraphData(graph, 'ss:AudioSubsystem');
-    expect(result.highlightedIds).toContain('1');
+    const ids = searchLevelView(level, 'ss:AudioSubsystem').map(
+      (m) => m.nodeId,
+    );
+    expect(ids).toContain('subsystem-1');
   });
 
-  it('finds subsystem by label (case-insensitive partial match)', () => {
-    const result = searchGraphData(graph, 'ss:audio');
-    expect(result.highlightedIds).toContain('1');
+  it('finds subsystem by label (case-insensitive)', () => {
+    const ids = searchLevelView(level, 'ss:audio').map((m) => m.nodeId);
+    expect(ids).toContain('subsystem-1');
   });
 
-  it('finds subsystem by numeric subsystemId', () => {
-    const result = searchGraphData(graph, 'ss:1');
-    expect(result.highlightedIds).toContain('1');
+  it('finds subsystem by numeric id suffix', () => {
+    const ids = searchLevelView(level, 'ss:1').map((m) => m.nodeId);
+    expect(ids).toContain('subsystem-1');
   });
 
   it('does not return non-subsystem nodes for ss: prefix', () => {
-    const result = searchGraphData(graph, 'ss:AudioSubsystem');
-    expect(
-      result.highlightedIds.every((id) =>
-        Object.keys(graph.subsystems).includes(id),
-      ),
-    ).toBe(true);
-  });
-
-  it('sets activeId to the matching subsystem id', () => {
-    const result = searchGraphData(graph, 'ss:AudioSubsystem');
-    expect(result.activeId).toBe('1');
+    const matches = searchLevelView(level, 'ss:AudioSubsystem');
+    expect(matches.every((m) => m.node.nodeKind === 'subsystem')).toBe(true);
   });
 });
 
-describe('searchGraphData — cnt: prefix', () => {
+// ---------------------------------------------------------------------------
+// searchLevelView — cnt: prefix
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — cnt: prefix', () => {
   it('finds container by containerId (numeric exact match)', () => {
-    const result = searchGraphData(graph, 'cnt:10');
-    expect(result.highlightedIds).toContain('container-10:1');
+    const ids = searchLevelView(level, 'cnt:10').map((m) => m.nodeId);
+    expect(ids).toContain('container-10:1');
   });
 
   it('does not match by partial numeric value (cnt:1 ≠ containerId 10)', () => {
-    const result = searchGraphData(graph, 'cnt:1');
-    expect(result.highlightedIds).not.toContain('container-10:1');
+    const ids = searchLevelView(level, 'cnt:1').map((m) => m.nodeId);
+    expect(ids).not.toContain('container-10:1');
   });
 
   it('finds container by label (case-insensitive partial match)', () => {
-    const result = searchGraphData(graph, 'cnt:container');
-    expect(result.highlightedIds).toContain('container-10:1');
+    const ids = searchLevelView(level, 'cnt:container').map((m) => m.nodeId);
+    expect(ids).toContain('container-10:1');
   });
 
   it('does not return non-container nodes for cnt: prefix', () => {
-    const result = searchGraphData(graph, 'cnt:Container 10');
-    expect(
-      result.highlightedIds.every((id) => id.startsWith('container-')),
-    ).toBe(true);
-  });
-
-  it('sets activeId to the matching container id', () => {
-    const result = searchGraphData(graph, 'cnt:10');
-    expect(result.activeId).toBe('container-10:1');
+    const matches = searchLevelView(level, 'cnt:Container 10');
+    expect(matches.every((m) => m.node.nodeKind === 'container')).toBe(true);
   });
 });
 
-describe('searchGraphData — default search (no prefix)', () => {
+// ---------------------------------------------------------------------------
+// searchLevelView — default search (no prefix)
+// ---------------------------------------------------------------------------
+
+describe('searchLevelView — default search (no prefix)', () => {
   it('finds module by label', () => {
-    const result = searchGraphData(graph, 'AudioDecoder');
-    expect(result.highlightedIds).toContain('sys-module-1');
+    const ids = searchLevelView(level, 'AudioDecoder').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
   });
 
   it('finds subgraph by label', () => {
-    const result = searchGraphData(graph, 'Subgraph 1');
-    expect(result.highlightedIds).toContain('subgraph-1');
+    const ids = searchLevelView(level, 'Subgraph 1').map((m) => m.nodeId);
+    expect(ids).toContain('subgraph-1');
   });
 
   it('finds subsystem by label', () => {
-    const result = searchGraphData(graph, 'AudioSubsystem');
-    expect(result.highlightedIds).toContain('1');
+    const ids = searchLevelView(level, 'AudioSubsystem').map((m) => m.nodeId);
+    expect(ids).toContain('subsystem-1');
   });
 
   it('finds container by label', () => {
-    const result = searchGraphData(graph, 'Container 10');
-    expect(result.highlightedIds).toContain('container-10:1');
+    const ids = searchLevelView(level, 'Container 10').map((m) => m.nodeId);
+    expect(ids).toContain('container-10:1');
   });
 
   it('finds module by moduleId numeric match', () => {
-    const result = searchGraphData(graph, '200');
-    expect(result.highlightedIds).toContain('sys-module-1');
-  });
-
-  it('does not match partial numeric value across all kinds', () => {
-    const result = searchGraphData(graph, '20');
-    expect(result.highlightedIds).toHaveLength(0);
-  });
-
-  it('sets activeId to the first match in highlightedIds', () => {
-    const result = searchGraphData(graph, 'AudioDecoder');
-    expect(result.activeId).toBe(result.highlightedIds[0]);
+    const ids = searchLevelView(level, '200').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
   });
 
   it('is case-insensitive', () => {
-    const result = searchGraphData(graph, 'audiodecoder');
-    expect(result.highlightedIds).toContain('sys-module-1');
+    const ids = searchLevelView(level, 'audiodecoder').map((m) => m.nodeId);
+    expect(ids).toContain('module-1');
   });
 });
 
-// Multi-level hierarchy: subsystem → subgraph → container → two modules.
-// Subgraph → subsystem link is not tracked in UsecaseGraphData, so ancestry
-// stops at the subgraph level.
-const deepGraph: UsecaseGraphData = {
-  connections: [],
-  containers: {
-    '20': {
-      containerId: '20',
-      containerName: 'Container 20',
-      moduleInstances: ['mod-deep', 'mod-top'],
-      subgraphId: '5',
-    },
-  },
-  moduleInstances: {
-    'mod-deep': {
-      containerId: '20',
-      displayName: 'AudioEncoder',
-      inputPorts: [],
-      moduleId: '300',
-      moduleInstanceId: 'mod-deep',
-      moduleName: 'AudioEncoder',
-      moduleType: 'AudioEncoder',
-      outputPorts: [],
-      position: {x: 0, y: 0},
-      subgraphId: '5',
-    },
-    'mod-top': {
-      containerId: '20',
-      displayName: 'TopModule',
-      inputPorts: [],
-      moduleId: '400',
-      moduleInstanceId: 'mod-top',
-      moduleName: 'TopModule',
-      moduleType: 'TopModule',
-      outputPorts: [],
-      position: {x: 0, y: 0},
-      subgraphId: '5',
-    },
-  },
-  selectedUsecases: [],
-  subgraphs: {
-    '5': {
-      containers: ['20'],
-      subgraphId: '5',
-      subgraphName: 'MainSubgraph',
-      subgraphType: '',
-    },
-  },
-  subsystems: {
-    '1': {
-      controlPorts: [],
-      dataPorts: [],
-      id: 1,
-      subgraphs: [],
-      subsystemId: '1',
-      subsystemName: 'MainSubsystem',
-    },
-  },
-};
+// ---------------------------------------------------------------------------
+// computeContainsMatchIds
+// ---------------------------------------------------------------------------
 
-describe('searchGraphData — containsMatchNodeIds', () => {
-  it('is empty when matched node has no parents in the hierarchy', () => {
-    const result = searchGraphData(deepGraph, 'sg:5');
-    expect(result.highlightedIds).toContain('subgraph-5');
-    expect(result.containsMatchNodeIds).toHaveLength(0);
+describe('computeContainsMatchIds', () => {
+  it('returns empty when no subgraphs are collapsed', () => {
+    const matches = searchLevelView(level, 'mod:200');
+    expect(computeContainsMatchIds(matches, new Set())).toHaveLength(0);
   });
 
-  it('collects direct parent (container) of matched module', () => {
-    const result = searchGraphData(deepGraph, 'mod:300');
-    expect(result.highlightedIds).toContain('mod-deep');
-    expect(result.containsMatchNodeIds).toContain('container-20:5');
+  it('returns proxy id when match is inside a collapsed subgraph', () => {
+    // module-1 is in container-10:1 which is inside subgraph-1 (subgraphId 1)
+    const matches = searchLevelView(level, 'mod:200');
+    const ids = computeContainsMatchIds(matches, new Set([1]));
+    expect(ids).toContain('subgraph-proxy-1');
   });
 
-  it('collects full ancestor chain up to subgraph (module → container → subgraph)', () => {
-    const result = searchGraphData(deepGraph, 'mod:300');
-    expect(result.containsMatchNodeIds).toContain('container-20:5');
-    expect(result.containsMatchNodeIds).toContain('subgraph-5');
-    expect(result.containsMatchNodeIds).toHaveLength(2);
+  it('returns empty when matched node is a subgraph (subgraph is not inside itself)', () => {
+    const matches = searchLevelView(level, 'sg:1');
+    // subgraphId 1 is collapsed, but the match IS the subgraph node — it is
+    // not inside itself, so no proxy affordance should be set
+    const ids = computeContainsMatchIds(matches, new Set([1]));
+    expect(ids).toHaveLength(0);
   });
 
-  it('deduplicates ancestors shared by multiple matches', () => {
-    const result = searchGraphData(deepGraph, 'mod:300');
-    const unique = new Set(result.containsMatchNodeIds);
-    expect(unique.size).toBe(result.containsMatchNodeIds.length);
+  it('does not return proxy when the containing subgraph is not collapsed', () => {
+    const matches = searchLevelView(level, 'mod:200');
+    // subgraphId 99 is collapsed, but module-1 is inside subgraphId 1
+    const ids = computeContainsMatchIds(matches, new Set([99]));
+    expect(ids).not.toContain('subgraph-proxy-1');
   });
 
-  it('is empty for no-match searches', () => {
-    const result = searchGraphData(deepGraph, 'zzznomatch');
-    expect(result.containsMatchNodeIds).toHaveLength(0);
+  it('deduplicates proxy ids when multiple matches share the same collapsed subgraph', () => {
+    const levelWithTwo: LevelView = {
+      ...level,
+      modules: [
+        ...(level.modules ?? []),
+        {
+          alias: undefined,
+          height: 80,
+          id: 'module-2',
+          label: 'AudioEncoder',
+          moduleId: 201,
+          moduleType: 'AudioEncoder',
+          nodeKind: 'module',
+          parentId: 'container-10:1',
+          ports: [],
+          width: 120,
+          x: 5,
+          y: 5,
+        },
+      ],
+    };
+    const matches = searchLevelView(levelWithTwo, 'Audio');
+    const ids = computeContainsMatchIds(matches, new Set([1]));
+    expect(ids.filter((id) => id === 'subgraph-proxy-1')).toHaveLength(1);
   });
 });

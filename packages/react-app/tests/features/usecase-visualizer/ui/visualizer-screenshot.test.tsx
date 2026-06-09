@@ -45,7 +45,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('9d — onScreenshotApiReady', () => {
+describe('onScreenshotApiReady', () => {
   it('fires onScreenshotApiReady once after mount with a capture function', () => {
     const onScreenshotApiReady = jest.fn();
 

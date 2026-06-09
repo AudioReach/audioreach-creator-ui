@@ -107,6 +107,7 @@ describe('captureScreenshot', () => {
     expect(mockToPng).not.toHaveBeenCalled();
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.stringContaining('--color-background-neutral-01'),
+      expect.objectContaining({component: 'captureScreenshot'}),
     );
   });
 });

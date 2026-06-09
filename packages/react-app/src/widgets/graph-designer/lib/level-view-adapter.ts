@@ -11,6 +11,8 @@ import {
   EDGE_KIND,
   type LevelView,
   type ModuleNode,
+  type ModuleShape,
+  NODE_DIMENSIONS,
   NODE_KIND,
   type Port,
   PORT_IO_TYPE,
@@ -19,6 +21,24 @@ import {
 } from '~features/usecase-visualizer';
 
 import {containerNodeId, subgraphNodeId} from './node-id';
+
+function resolveModuleShape(name: string): ModuleShape | undefined {
+  const t = name.toLowerCase();
+  if (
+    t.includes('data log') ||
+    t.includes('datalog') ||
+    t.includes('logging')
+  ) {
+    return 'circle';
+  }
+  if (t.includes('source')) {
+    return 'trapezoid-source';
+  }
+  if (t.includes('sink')) {
+    return 'trapezoid-sink';
+  }
+  return undefined;
+}
 
 export function buildLevelViewFromGraphData(
   data: UsecaseGraphData,
@@ -64,7 +84,8 @@ export function buildLevelViewFromGraphData(
       nodeKind: NODE_KIND.MODULE,
       parentId: containerNodeId(m.containerId, m.subgraphId),
       ports,
-      width: 0,
+      shape: resolveModuleShape(m.displayName),
+      width: NODE_DIMENSIONS.module.minWidth,
       x: 0,
       y: 0,
     };

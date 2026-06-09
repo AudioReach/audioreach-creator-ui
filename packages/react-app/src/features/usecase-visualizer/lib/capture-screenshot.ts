@@ -36,6 +36,7 @@ export async function captureScreenshot(
   if (!bgColor) {
     logger.warn(
       'QUI token --color-background-neutral-01 did not resolve; aborting screenshot',
+      {action: 'capture_screenshot', component: 'captureScreenshot'},
     );
     return null;
   }

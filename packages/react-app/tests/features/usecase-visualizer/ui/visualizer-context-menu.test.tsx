@@ -139,7 +139,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('7c — context menu', () => {
+describe('context menu', () => {
   it('calls getItems with {kind:"module", node} on node right-click', async () => {
     const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(() => []);
     const node = makeModule();

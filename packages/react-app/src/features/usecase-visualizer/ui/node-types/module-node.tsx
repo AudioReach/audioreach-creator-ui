@@ -6,7 +6,11 @@
 import type {ReactNode} from 'react';
 
 import type {Node, NodeProps} from '@xyflow/react';
+import {Box, LogIn, LogOut, type LucideIcon, ScrollText} from 'lucide-react';
 
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
+
+import {NODE_DIMENSIONS} from '../../lib/node-dimensions';
 import {useNodeHighlight} from '../../model/use-node-highlight';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
 import type {
@@ -28,13 +32,74 @@ const CORNER_CLASSES: Record<CoreOverride['position'], string> = {
   'top-right': 'absolute right-0 top-0',
 };
 
-const SHAPE_CLASSES: Record<ModuleShape, string> = {
-  circle: '[clip-path:circle(50%)]',
-  rect: '',
-  'trapezoid-sink': '[clip-path:polygon(0_15%,100%_0,100%_100%,0_85%)]',
-  'trapezoid-source': '[clip-path:polygon(0_0,100%_15%,100%_85%,0_100%)]',
-  triangle: '[clip-path:polygon(0_0,100%_50%,0_100%)]',
+// Non-rect shapes are drawn as an SVG <polygon>/<circle> with an explicit
+// stroke. A CSS border + clip-path would clip the border on the slanted/curved
+// edges, leaving the outline partial — drawing the stroke in SVG keeps the full
+// colored boundary. rect keeps its cheaper CSS border.
+type PolygonShape = 'trapezoid-sink' | 'trapezoid-source' | 'triangle';
+
+const SHAPE_POINTS: Record<PolygonShape, (w: number, h: number) => string> = {
+  // Mirror of source: flat right edge, a short triangular point on the left
+  // (signal flows in at the left tip).
+  'trapezoid-sink': (w, h) =>
+    `${w * 0.25},0 ${w},0 ${w},${h} ${w * 0.25},${h} 0,${h / 2}`,
+  // Home-plate pentagon: mostly rectangular with a short point on the right
+  // (signal out).
+  'trapezoid-source': (w, h) =>
+    `0,0 ${w * 0.75},0 ${w},${h / 2} ${w * 0.75},${h} 0,${h}`,
+  triangle: (w, h) => `0,0 ${w},${h / 2} 0,${h}`,
 };
+
+// Default Lucide icon per shape, used when the node carries no explicit icon.
+const SHAPE_ICONS: Record<ModuleShape, LucideIcon> = {
+  circle: ScrollText, // data logging
+  rect: Box, // generic module
+  'trapezoid-sink': LogIn,
+  'trapezoid-source': LogOut,
+  triangle: Box,
+};
+
+function ShapeOutline({
+  background,
+  border,
+  height,
+  shape,
+  width,
+}: {
+  background: string;
+  border: string;
+  height: number;
+  shape: Exclude<ModuleShape, 'rect'>;
+  width: number;
+}): ReactNode {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0"
+      data-testid="module-shape-svg"
+      height={height}
+      style={{overflow: 'visible'}}
+      width={width}
+    >
+      {shape === 'circle' ? (
+        <circle
+          cx={width / 2}
+          cy={height / 2}
+          fill={background}
+          r={Math.min(width, height) / 2 - 1}
+          stroke={border}
+          strokeWidth={1.5}
+        />
+      ) : (
+        <polygon
+          fill={background}
+          points={SHAPE_POINTS[shape](width, height)}
+          stroke={border}
+          strokeWidth={1.5}
+        />
+      )}
+    </svg>
+  );
+}
 
 function defaultFooter(
   node: ModuleNodeData,
@@ -42,21 +107,22 @@ function defaultFooter(
 ): ReactNode {
   return (
     <div
-      className="text-primary text-xxs flex items-center justify-between gap-1 px-1"
+      className="text-primary text-xxs flex flex-col items-center leading-tight"
       data-testid="module-default-footer"
     >
-      <span className="truncate">{node.alias ?? node.label}</span>
+      <span className="max-w-full whitespace-normal break-words text-center">
+        {node.alias ?? node.label}
+      </span>
       {showModuleInstanceId ? (
-        <span
-          className="text-secondary"
-          data-testid="module-instance-id"
-        >{`#${node.moduleId}`}</span>
+        <span className="text-secondary" data-testid="module-instance-id">
+          {`IID: ${ConvertNumberToHexString(node.moduleId) ?? node.moduleId}`}
+        </span>
       ) : null}
     </div>
   );
 }
 
-export function ModuleNode({data: node}: ModuleNodeProps) {
+export function ModuleNode({data: node, selected}: ModuleNodeProps) {
   const renderNodeContent = useVisualizerStore(
     (state) => state.renderNodeContent,
   );
@@ -70,8 +136,26 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
 
   const shape = node.shape ?? 'rect';
   const isLocked = node.locked === true;
+  const ShapeIcon = SHAPE_ICONS[shape];
 
   const footer = override?.footer ?? defaultFooter(node, showModuleInstanceId);
+  // The shape box occupies the node minus the external footer strip, so ports
+  // anchor to the visible box and the caption hangs in the gap below it.
+  const boxHeight = Math.max(
+    0,
+    node.height - NODE_DIMENSIONS.module.footerHeight,
+  );
+
+  const background =
+    highlight.state === 'active'
+      ? highlight.activeBackgroundColor
+      : 'var(--color-background-neutral-05)';
+  // Selection shows the same info-coloured border as a search match; search
+  // state still wins when present.
+  const borderColor =
+    selected && highlight.state === 'none'
+      ? 'var(--color-border-support-info)'
+      : highlight.borderColor;
 
   return (
     <div
@@ -83,9 +167,8 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
     >
       <div
         className={[
-          'module-node',
-          'h-full w-full rounded border',
-          SHAPE_CLASSES[shape],
+          'module-node relative w-full',
+          shape === 'rect' ? 'rounded border' : '',
           highlight.highlightMatchClass,
           highlight.highlightActiveClass,
           highlight.containsMatchClass,
@@ -95,21 +178,37 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
         data-node-id={node.id}
         data-testid="module-shape-layer"
         style={{
-          backgroundColor:
-            highlight.state === 'active'
-              ? highlight.activeBackgroundColor
-              : 'var(--color-background-neutral-05)',
-          borderColor: highlight.borderColor,
+          height: boxHeight,
+          ...(shape === 'rect'
+            ? {backgroundColor: background, borderColor}
+            : {}),
         }}
       >
+        {shape !== 'rect' ? (
+          <ShapeOutline
+            background={background}
+            border={borderColor}
+            height={boxHeight}
+            shape={shape}
+            width={node.width}
+          />
+        ) : null}
+
         {node.icon ? (
           <img
             alt=""
-            className="module-icon mx-auto block h-6 w-6"
+            className="module-icon absolute left-1/2 top-1/2 block h-6 w-6 -translate-x-1/2 -translate-y-1/2"
             data-testid="module-icon"
             src={node.icon}
           />
-        ) : null}
+        ) : (
+          <ShapeIcon
+            aria-hidden
+            className="module-icon text-secondary absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            data-testid="module-shape-icon"
+            size={20}
+          />
+        )}
 
         {override?.coreOverrides?.map((slot, idx) => (
           <div
@@ -121,16 +220,19 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
             {slot.content}
           </div>
         ))}
-
-        <div
-          className="module-footer absolute inset-x-0 bottom-0"
-          data-testid="module-footer"
-        >
-          {footer}
-        </div>
       </div>
 
-      <PortHandles node={node} />
+      <PortHandles anchorHeight={boxHeight} node={node} />
+
+      {/* Footer sits in the reserved strip below the box with a small gap so
+          it doesn't hug the module core. */}
+      <div
+        className="module-footer absolute inset-x-0"
+        data-testid="module-footer"
+        style={{top: boxHeight + 8}}
+      >
+        {footer}
+      </div>
     </div>
   );
 }

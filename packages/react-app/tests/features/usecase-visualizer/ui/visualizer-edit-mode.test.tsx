@@ -118,7 +118,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('8a — nodesConnectable', () => {
+describe('nodesConnectable', () => {
   it('readonly: nodesConnectable is falsy', () => {
     render(
       <UsecaseVisualizer graph={makeGraph()} mode={VISUALIZER_MODE.READONLY} />,
@@ -184,7 +184,7 @@ function fakeDragOverEvent(
   } as unknown as ReactDragEvent & {preventDefault: jest.Mock};
 }
 
-describe('8b — palette drop', () => {
+describe('palette drop', () => {
   it('drop over empty canvas fires onNodeDropped without target ids', () => {
     const onNodeDropped = jest.fn();
     render(
@@ -311,7 +311,7 @@ describe('8b — palette drop', () => {
   });
 });
 
-describe('8c — edge connect', () => {
+describe('edge connect', () => {
   it('valid data connect (output→input) fires onEdgeConnected with edgeKind data', () => {
     const onEdgeConnected = jest.fn();
     const graph = makeGraph({

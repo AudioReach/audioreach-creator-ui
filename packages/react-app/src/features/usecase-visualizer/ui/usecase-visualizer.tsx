@@ -17,8 +17,11 @@ import {
 
 import {
   applyNodeChanges,
+  type ColorMode,
   type Connection,
+  Controls,
   type Edge,
+  MiniMap,
   type Node,
   type NodeChange,
   ReactFlow,
@@ -30,6 +33,8 @@ import {
 
 import {Menu} from '@qualcomm-ui/react/menu';
 import {Portal} from '@qualcomm-ui/react-core/portal';
+
+import {Theme, useTheme} from '~shared/providers/theme-provider';
 
 import '@xyflow/react/dist/style.css';
 
@@ -168,6 +173,9 @@ function VisualizerCanvas({
   const {fitView, getViewport, screenToFlowPosition, setCenter, setViewport} =
     rfInstance;
 
+  const [theme] = useTheme();
+  const colorMode: ColorMode = theme === Theme.Dark ? 'dark' : 'light';
+
   const [rfNodes, setRfNodes] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -244,8 +252,24 @@ function VisualizerCanvas({
       return;
     }
     snappedActiveIdRef.current = activeId;
-    const cx = node.position.x + (node.width ?? 0) / 2;
-    const cy = node.position.y + (node.height ?? 0) / 2;
+    // node.position is relative to the node's parent (module → container →
+    // subgraph). setCenter needs absolute flow coordinates, so sum the parent
+    // chain's offsets before computing the centre.
+    const byId = new Map(rfNodes.map((n) => [n.id, n]));
+    let absX = node.position.x;
+    let absY = node.position.y;
+    let parentId = node.parentId;
+    while (parentId) {
+      const parent = byId.get(parentId);
+      if (!parent) {
+        break;
+      }
+      absX += parent.position.x;
+      absY += parent.position.y;
+      parentId = parent.parentId;
+    }
+    const cx = absX + (node.width ?? 0) / 2;
+    const cy = absY + (node.height ?? 0) / 2;
     const zoom = Math.max(
       store.getState().lodZoom,
       store.getState().lodThreshold + 0.1,
@@ -671,21 +695,23 @@ function VisualizerCanvas({
         <defs>
           <marker
             id={DATA_ARROW_MARKER_ID}
-            markerHeight="10"
+            markerHeight="6"
             markerUnits="strokeWidth"
-            markerWidth="10"
+            markerWidth="6"
             orient="auto-start-reverse"
-            refX="8"
-            refY="5"
-            viewBox="0 0 10 10"
+            refX="5"
+            refY="3"
+            viewBox="0 0 6 6"
           >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
+            <path d="M 0 0 L 6 3 L 0 6 z" fill="context-stroke" />
           </marker>
         </defs>
       </svg>
       <ReactFlow
+        colorMode={colorMode}
         edgeTypes={edgeTypes}
         edges={rfEdges}
+        minZoom={0.05}
         multiSelectionKeyCode="Control"
         nodeTypes={nodeTypes}
         nodes={rfNodes}
@@ -708,7 +734,10 @@ function VisualizerCanvas({
         panActivationKeyCode="Space"
         selectNodesOnDrag={false}
         selectionOnDrag
-      />
+      >
+        <Controls />
+        <MiniMap pannable zoomable />
+      </ReactFlow>
       {openMenu ? (
         <Portal>
           <Menu.Root
