@@ -209,14 +209,13 @@ describe('ModuleNode — port status class', () => {
 });
 
 describe('ModuleNode — shape class', () => {
-  it('defaults to module-shape-rect when shape is unset', () => {
+  it('defaults to data-shape="rect" when shape is unset', () => {
     renderModuleNode(makeModule());
     const root = screen.getByTestId('module-node');
-    expect(root.className).toContain('module-shape-rect');
     expect(root.getAttribute('data-shape')).toBe('rect');
   });
 
-  it('applies module-shape-${shape} for every shape', () => {
+  it('sets data-shape for every shape', () => {
     const shapes = [
       'rect',
       'circle',
@@ -227,7 +226,7 @@ describe('ModuleNode — shape class', () => {
     for (const shape of shapes) {
       const {unmount} = renderModuleNode(makeModule({shape}));
       const root = screen.getByTestId('module-node');
-      expect(root.className).toContain(`module-shape-${shape}`);
+      expect(root.getAttribute('data-shape')).toBe(shape);
       unmount();
     }
   });
