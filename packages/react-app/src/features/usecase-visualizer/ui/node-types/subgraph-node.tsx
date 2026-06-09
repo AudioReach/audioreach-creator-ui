@@ -8,6 +8,7 @@ import {ChevronDown} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
+import {useNodeHighlight} from '../../model/use-node-highlight';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
 import type {SubgraphNode as SubgraphNodeData} from '../../model/visualizer.types';
 
@@ -25,6 +26,7 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
   const onSubgraphCollapse = useVisualizerStore(
     (state) => state.eventHandlers?.onSubgraphCollapse,
   );
+  const highlight = useNodeHighlight(node.id);
 
   const override = renderNodeContent ? renderNodeContent(node) : null;
   // SubgraphNode supports the `header` slot only. `footer` and `coreOverrides`
@@ -32,19 +34,30 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
   // or corner-overlay region per the design spec.
   const showSubgraphId = nodeDisplayConfig?.showSubgraphId !== false;
 
+  const classNames = [
+    'subgraph-node rounded-md border',
+    highlight.highlightMatchClass,
+    highlight.highlightActiveClass,
+    highlight.containsMatchClass,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div
-      className="subgraph-node rounded-md border"
+      className={classNames}
       data-locked={node.locked === true || undefined}
       data-node-id={node.id}
       data-testid="subgraph-node"
       style={{
-        backgroundColor: selected
-          ? 'var(--color-background-support-info-subtle)'
-          : 'transparent',
-        borderColor: selected
-          ? 'var(--color-border-support-info)'
-          : 'var(--color-border-neutral-10)',
+        backgroundColor:
+          selected || highlight.state === 'active'
+            ? 'var(--color-background-support-info-subtle)'
+            : 'transparent',
+        borderColor:
+          selected || highlight.state !== 'none'
+            ? 'var(--color-border-support-info)'
+            : 'var(--color-border-neutral-10)',
         height: '100%',
         width: '100%',
       }}

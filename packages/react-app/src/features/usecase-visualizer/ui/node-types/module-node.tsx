@@ -7,6 +7,7 @@ import type {ReactNode} from 'react';
 
 import type {Node, NodeProps} from '@xyflow/react';
 
+import {useNodeHighlight} from '../../model/use-node-highlight';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
 import type {
   CoreOverride,
@@ -53,6 +54,7 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
   const nodeDisplayConfig = useVisualizerStore(
     (state) => state.nodeDisplayConfig,
   );
+  const highlight = useNodeHighlight(node.id);
 
   const override = renderNodeContent ? renderNodeContent(node) : null;
   const showModuleInstanceId = nodeDisplayConfig?.showModuleInstanceId ?? true;
@@ -64,14 +66,26 @@ export function ModuleNode({data: node}: ModuleNodeProps) {
 
   return (
     <div
-      className={`module-node module-shape-${shape} relative rounded border`}
+      className={[
+        'module-node',
+        `module-shape-${shape}`,
+        'relative rounded border',
+        highlight.highlightMatchClass,
+        highlight.highlightActiveClass,
+        highlight.containsMatchClass,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       data-locked={isLocked || undefined}
       data-node-id={node.id}
       data-shape={shape}
       data-testid="module-node"
       style={{
-        backgroundColor: 'var(--color-background-neutral-05)',
-        borderColor: 'var(--color-border-neutral-10)',
+        backgroundColor:
+          highlight.state === 'active'
+            ? highlight.activeBackgroundColor
+            : 'var(--color-background-neutral-05)',
+        borderColor: highlight.borderColor,
         height: node.height,
         width: node.width,
       }}

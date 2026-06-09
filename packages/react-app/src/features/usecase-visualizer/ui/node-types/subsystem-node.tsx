@@ -5,6 +5,7 @@
 
 import type {Node, NodeProps} from '@xyflow/react';
 
+import {useNodeHighlight} from '../../model/use-node-highlight';
 import type {SubsystemNode as SubsystemNodeData} from '../../model/visualizer.types';
 
 import {PortHandles} from './port-handles';
@@ -15,20 +16,32 @@ type SubsystemNodeProps = NodeProps<
 
 export function SubsystemNode({data: node, selected}: SubsystemNodeProps) {
   const isLocked = node.locked === true;
+  const highlight = useNodeHighlight(node.id);
+
+  const classNames = [
+    'subsystem-node relative rounded-md border',
+    highlight.highlightMatchClass,
+    highlight.highlightActiveClass,
+    highlight.containsMatchClass,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
-      className="subsystem-node relative rounded-md border"
+      className={classNames}
       data-locked={isLocked || undefined}
       data-node-id={node.id}
       data-testid="subsystem-node"
       style={{
-        backgroundColor: selected
-          ? 'var(--color-background-support-info-subtle)'
-          : 'var(--color-background-neutral-05)',
-        borderColor: selected
-          ? 'var(--color-border-support-info)'
-          : 'var(--color-border-neutral-10)',
+        backgroundColor:
+          selected || highlight.state === 'active'
+            ? 'var(--color-background-support-info-subtle)'
+            : 'var(--color-background-neutral-05)',
+        borderColor:
+          selected || highlight.state !== 'none'
+            ? 'var(--color-border-support-info)'
+            : 'var(--color-border-neutral-10)',
         height: '100%',
         width: '100%',
       }}

@@ -33,6 +33,7 @@ import {Portal} from '@qualcomm-ui/react-core/portal';
 
 import '@xyflow/react/dist/style.css';
 
+import {captureScreenshot} from '../lib/capture-screenshot';
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
 import {parsePortIdFromHandleId} from '../lib/port-geometry';
 import {recalculateParentSizes} from '../lib/recalculate-parent-sizes';
@@ -145,7 +146,9 @@ interface CanvasProps {
   initialViewport: ViewportState | undefined;
   lodThreshold: number | undefined;
   mode: UsecaseVisualizerProps['mode'];
+  onScreenshotApiReady: UsecaseVisualizerProps['onScreenshotApiReady'];
   rendering: UsecaseVisualizerProps['rendering'];
+  searchHighlights: UsecaseVisualizerProps['searchHighlights'];
   store: ReturnType<typeof createVisualizerStore>;
 }
 
@@ -156,11 +159,14 @@ function VisualizerCanvas({
   initialViewport,
   lodThreshold,
   mode,
+  onScreenshotApiReady,
   rendering,
+  searchHighlights,
   store,
 }: CanvasProps) {
-  const {fitView, getViewport, screenToFlowPosition, setViewport} =
-    useReactFlow();
+  const rfInstance = useReactFlow();
+  const {fitView, getViewport, screenToFlowPosition, setCenter, setViewport} =
+    rfInstance;
 
   const [rfNodes, setRfNodes] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -214,6 +220,67 @@ function VisualizerCanvas({
       renderNodeContent: rendering?.renderNodeContent,
     });
   }, [lodThreshold, rendering, store]);
+
+  useEffect(() => {
+    store.getState().syncSearchHighlights(searchHighlights);
+  }, [searchHighlights, store]);
+
+  // Tracks the activeId for which we've already fired setCenter so we don't
+  // snap repeatedly when rfNodes updates but activeId hasn't changed.
+  const snappedActiveIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const activeId = searchHighlights?.activeId;
+    if (!activeId) {
+      snappedActiveIdRef.current = undefined;
+      return;
+    }
+    // Already snapped for this activeId — skip unless activeId changed.
+    if (snappedActiveIdRef.current === activeId) {
+      return;
+    }
+    const node = rfNodes.find((n) => n.id === activeId);
+    if (!node) {
+      return;
+    }
+    snappedActiveIdRef.current = activeId;
+    const cx = node.position.x + (node.width ?? 0) / 2;
+    const cy = node.position.y + (node.height ?? 0) / 2;
+    const zoom = Math.max(
+      store.getState().lodZoom,
+      store.getState().lodThreshold + 0.1,
+    );
+    const rafId = requestAnimationFrame(() => {
+      setCenter(cx, cy, {duration: 300, zoom});
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [searchHighlights?.activeId, rfNodes, store, setCenter]);
+
+  // Registers the imperative screenshot capture function once per mount.
+  // The alive flag ensures a stale closure can't return a capture after unmount.
+
+  useEffect(() => {
+    const onReady = onScreenshotApiReady;
+    if (!onReady) {
+      return;
+    }
+    let alive = true;
+    onReady(async () => {
+      if (!alive) {
+        return null;
+      }
+      const viewport = containerRef.current?.querySelector<HTMLElement>(
+        '.react-flow__viewport',
+      );
+      if (!viewport) {
+        return null;
+      }
+      return captureScreenshot(rfInstance, viewport);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [onScreenshotApiReady, rfInstance]); // intentionally empty — captured once at mount
 
   useEffect(() => {
     setRfNodes(toReactFlowNodes(graph));
@@ -676,7 +743,9 @@ export function UsecaseVisualizer({
   initialViewport,
   lodThreshold,
   mode,
+  onScreenshotApiReady,
   rendering,
+  searchHighlights,
 }: UsecaseVisualizerProps) {
   const store = useMemo(() => createVisualizerStore(), []);
   return (
@@ -689,7 +758,9 @@ export function UsecaseVisualizer({
           initialViewport={initialViewport}
           lodThreshold={lodThreshold}
           mode={mode}
+          onScreenshotApiReady={onScreenshotApiReady}
           rendering={rendering}
+          searchHighlights={searchHighlights}
           store={store}
         />
       </VisualizerStoreProvider>
