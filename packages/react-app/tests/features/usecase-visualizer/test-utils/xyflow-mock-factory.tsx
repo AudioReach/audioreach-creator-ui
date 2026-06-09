@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ComponentType, ReactNode} from 'react';
+import {type ComponentType, type ReactNode, useState} from 'react';
 
 interface FakeNode {
   data: Record<string, unknown>;
@@ -20,83 +20,95 @@ interface FakeEdge {
   type: string;
 }
 
-interface FakeReactFlowProps {
+export interface FakeReactFlowProps {
   edges: FakeEdge[];
   edgeTypes: Record<string, ComponentType<Record<string, unknown>>>;
   nodes: FakeNode[];
   nodeTypes: Record<string, ComponentType<Record<string, unknown>>>;
+  onMoveEnd?: (event: unknown, viewport: unknown) => void;
+  onNodeDoubleClick?: (event: unknown, node: FakeNode) => void;
 }
 
 /**
- * Factory used by `jest.mock('@xyflow/react', () => require(...).createXyflowMockFactory())`.
- * Kept in a separate module so tests outside `smoke.test.tsx` can share the
- * stub without duplicating ~100 lines of factory body.
+ * Module-level ref so the jest.mock factory instance and tests share the same
+ * pointer to the most recently rendered FakeReactFlow props.
+ */
+export const latestReactFlowProps: {current: FakeReactFlowProps | null} = {
+  current: null,
+};
+
+/**
+ * Factory used by `jest.mock('@xyflow/react', () =>
+ * require(...).createXyflowMockFactory())`. Kept in a separate module so tests
+ * can share the stub without duplicating ~100 lines of factory body.
+ *
+ * Tests can read `latestReactFlowProps.current` after render to invoke captured
+ * callbacks (onMoveEnd, onNodeDoubleClick, etc.) directly.
  */
 export function createXyflowMockFactory() {
-  const FakeReactFlow = ({
-    edges,
-    edgeTypes,
-    nodes,
-    nodeTypes,
-  }: FakeReactFlowProps) => (
-    <div data-testid="fake-react-flow">
-      <div data-testid="fake-nodes-host">
-        {nodes.map((n) => {
-          const Component = nodeTypes[n.type];
-          if (!Component) {
-            return null;
-          }
-          return (
-            <div key={n.id} data-node-host={n.id}>
-              <Component
-                data={n.data}
-                deletable
-                draggable
-                dragging={false}
-                id={n.id}
-                isConnectable={false}
-                positionAbsoluteX={0}
-                positionAbsoluteY={0}
-                selectable
-                selected={false}
-                type={n.type}
-                zIndex={0}
-              />
-            </div>
-          );
-        })}
+  const FakeReactFlow = (props: FakeReactFlowProps) => {
+    latestReactFlowProps.current = props;
+    const {edges, edgeTypes, nodes, nodeTypes} = props;
+    return (
+      <div data-testid="fake-react-flow">
+        <div data-testid="fake-nodes-host">
+          {nodes.map((n) => {
+            const Component = nodeTypes[n.type];
+            if (!Component) {
+              return null;
+            }
+            return (
+              <div key={n.id} data-node-host={n.id}>
+                <Component
+                  data={n.data}
+                  deletable
+                  draggable
+                  dragging={false}
+                  id={n.id}
+                  isConnectable={false}
+                  positionAbsoluteX={0}
+                  positionAbsoluteY={0}
+                  selectable
+                  selected={false}
+                  type={n.type}
+                  zIndex={0}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <svg data-testid="fake-edges-host">
+          {edges.map((e) => {
+            const Component = edgeTypes[e.type];
+            if (!Component) {
+              return null;
+            }
+            return (
+              <g key={e.id} data-edge-id={e.id} data-edge-type={e.type}>
+                <Component
+                  data={e.data}
+                  deletable
+                  id={e.id}
+                  interactionWidth={20}
+                  label={e.label}
+                  selectable
+                  selected={false}
+                  source={e.source}
+                  sourcePosition="right"
+                  sourceX={0}
+                  sourceY={0}
+                  target={e.target}
+                  targetPosition="left"
+                  targetX={120}
+                  targetY={120}
+                />
+              </g>
+            );
+          })}
+        </svg>
       </div>
-      <svg data-testid="fake-edges-host">
-        {edges.map((e) => {
-          const Component = edgeTypes[e.type];
-          if (!Component) {
-            return null;
-          }
-          return (
-            <g key={e.id} data-edge-id={e.id} data-edge-type={e.type}>
-              <Component
-                data={e.data}
-                deletable
-                id={e.id}
-                interactionWidth={20}
-                label={e.label}
-                selectable
-                selected={false}
-                source={e.source}
-                sourcePosition="right"
-                sourceX={0}
-                sourceY={0}
-                target={e.target}
-                targetPosition="left"
-                targetX={120}
-                targetY={120}
-              />
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+    );
+  };
 
   const ReactFlowProvider = ({children}: {children: ReactNode}) => (
     <>{children}</>
@@ -122,6 +134,12 @@ export function createXyflowMockFactory() {
     />
   );
 
+  const nodesChangeStub = jest.fn();
+  const edgesChangeStub = jest.fn();
+  const fitViewStub = jest.fn();
+  const getViewportStub = jest.fn(() => ({x: 0, y: 0, zoom: 1}));
+  const setViewportStub = jest.fn();
+
   return {
     BaseEdge,
     EdgeLabelRenderer,
@@ -130,5 +148,18 @@ export function createXyflowMockFactory() {
     Position: {Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top'},
     ReactFlow: FakeReactFlow,
     ReactFlowProvider,
+    useEdgesState: (initial: unknown[]) => {
+      const [edges, setEdges] = useState(initial);
+      return [edges, setEdges, edgesChangeStub];
+    },
+    useNodesState: (initial: unknown[]) => {
+      const [nodes, setNodes] = useState(initial);
+      return [nodes, setNodes, nodesChangeStub];
+    },
+    useReactFlow: () => ({
+      fitView: fitViewStub,
+      getViewport: getViewportStub,
+      setViewport: setViewportStub,
+    }),
   };
 }
