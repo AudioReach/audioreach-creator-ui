@@ -32,9 +32,8 @@ import type {UserPreferences} from '~shared/config/user-preferences-types';
 import {logger} from '~shared/lib/logger';
 import {Theme, useTheme} from '~shared/providers/theme-provider';
 
-import {ControlLinkEdge} from '../edge-types/control-link-edge';
-import {DataLinkEdge} from '../edge-types/data-link-edge';
-
+import {ControlLinkEdge} from './edge-types/control-link-edge';
+import {DataLinkEdge} from './edge-types/data-link-edge';
 import {ContainerNode} from './node-types/container-node';
 import {ModuleNode} from './node-types/module-node';
 import {SubgraphNode} from './node-types/subgraph-node';
@@ -106,7 +105,8 @@ const ScreenshotHandler: FC<{
       // Use theme-aware background color for screenshot
       const backgroundColor = theme === Theme.Dark ? '#000000' : '#ffffff';
 
-      // Capture the viewport with proper transformation (ReactFlow standard approach)
+      // Capture the viewport with proper transformation (ReactFlow standard
+      // approach)
       const dataUrl = await toPng(viewport, {
         backgroundColor,
         cacheBust: true,

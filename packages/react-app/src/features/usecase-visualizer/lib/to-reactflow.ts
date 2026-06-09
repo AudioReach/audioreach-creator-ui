@@ -83,6 +83,8 @@ function toDataEdge<TData extends DataLink | ProxyDataLink>(
   edge: TData,
   type: string,
 ): ReactFlowEdge<TData> {
+  // Domain invariant: each (sourcePortId, targetPortId) pair has at most one
+  // DataLink, so Bezier paths cannot overlap — no per-edge offset is needed.
   return {
     data: edge as TData & Record<string, unknown>,
     id: edge.id,
