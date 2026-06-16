@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {Search} from 'lucide-react';
 import {createPortal} from 'react-dom';
@@ -14,9 +14,6 @@ import {TextInput} from '@qualcomm-ui/react/text-input';
 import {deleteUsecases} from '~entities/usecases/api/usecases-api';
 import type {KeyValueInfo} from '~entities/usecases/model/usecase.dto';
 import {showToast} from '~shared/controls/global-toaster';
-import {useUsecaseStore} from '~shared/store/use-usecase-store';
-
-const EMPTY_SELECTED_USECASES: string[] = [];
 
 import type {KeyValue, Usecase, UsecaseCategory} from '../model/types';
 
@@ -30,12 +27,16 @@ const formatUsecaseDisplay = (usecase: Usecase): string => {
 };
 
 interface UsecaseSelectionControlProps {
-  projectGroupId: string;
+  onSelectedUsecasesChange: (usecases: string[]) => void;
+  projectId: string;
+  selectedUsecases: string[];
   usecaseData: UsecaseCategory[];
 }
 
 const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
-  projectGroupId,
+  onSelectedUsecasesChange,
+  projectId,
+  selectedUsecases,
   usecaseData,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -46,17 +47,6 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
   );
   const [localUsecaseData, setLocalUsecaseData] =
     useState<UsecaseCategory[]>(usecaseData);
-
-  // Get selected usecases from store - ensure stable reference when empty
-  const selectedUsecases = useUsecaseStore(
-    (state) =>
-      state.selectedUsecases[projectGroupId] ?? EMPTY_SELECTED_USECASES,
-  );
-
-  // Get store method - this is stable and won't cause re-renders
-  const setSelectedUsecases = useUsecaseStore(
-    (state) => state.setSelectedUsecases,
-  );
 
   const toggleCategoryExpansion = (categoryName: string) => {
     setExpandedCategories((prev) =>
@@ -74,7 +64,8 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
         return;
       }
       const target = event.target as Element;
-      // Ignore dialog portal clicks — prevents dropdown from closing before delete runs
+      // Ignore dialog portal clicks — prevents dropdown from closing before delete
+      // runs
       if (target.closest('[data-scope="dialog"]')) {
         return;
       }
@@ -112,13 +103,9 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
     isSelected: boolean,
   ) => {
     if (isSelected) {
-      setSelectedUsecases(projectGroupId, [
-        ...selectedUsecases,
-        formattedUsecase,
-      ]);
+      onSelectedUsecasesChange([...selectedUsecases, formattedUsecase]);
     } else {
-      setSelectedUsecases(
-        projectGroupId,
+      onSelectedUsecasesChange(
         selectedUsecases.filter((uc) => uc !== formattedUsecase),
       );
     }
@@ -126,12 +113,12 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
 
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
-      const allUsecaseStrings = localUsecaseData.flatMap((category) =>
+      const allUsecaseStrings = usecaseData.flatMap((category) =>
         category.usecases.map((uc: Usecase) => formatUsecaseDisplay(uc)),
       );
-      setSelectedUsecases(projectGroupId, allUsecaseStrings);
+      onSelectedUsecasesChange(allUsecaseStrings);
     } else {
-      setSelectedUsecases(projectGroupId, []);
+      onSelectedUsecasesChange([]);
     }
   };
 
@@ -139,12 +126,12 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
     setIsDeleting(true);
     const selectedSet = new Set(selectedUsecases);
 
-    const systemIds = localUsecaseData
+    const systemIds = usecaseData
       .flatMap((category) => category.usecases)
       .filter((usecase) => selectedSet.has(formatUsecaseDisplay(usecase)))
       .map((usecase) => usecase.systemId);
 
-    const nextData = localUsecaseData
+    const nextData = usecaseData
       .map((category) => ({
         ...category,
         usecases: category.usecases.filter(
@@ -152,9 +139,9 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
         ),
       }))
       .filter((category) => category.usecases.length > 0);
-    if ((await deleteUsecases(projectGroupId, systemIds)).success) {
+    if ((await deleteUsecases(projectId, systemIds)).success) {
       setLocalUsecaseData(nextData);
-      setSelectedUsecases(projectGroupId, []);
+      onSelectedUsecasesChange([]);
       setIsDropdownOpen(false);
     } else {
       showToast(
@@ -172,26 +159,31 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
   };
 
   // Filter usecases based on search term
-  const filteredUsecaseData = localUsecaseData
-    .map((category) => ({
-      ...category,
-      usecases: category.usecases.filter((usecase: Usecase) => {
-        if (!searchTerm) {
-          return true;
-        }
-        const formattedUsecase = formatUsecaseDisplay(usecase).toLowerCase();
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          formattedUsecase.includes(searchLower) ||
-          usecase.keyValueCollection.some(
-            (kv: KeyValue) =>
-              kv.keyInfo.keyLabel.toLowerCase().includes(searchLower) ||
-              kv.valueInfo.valueLabel.toLowerCase().includes(searchLower),
-          )
-        );
-      }),
-    }))
-    .filter((category) => category.usecases.length > 0);
+  const filteredUsecaseData = useMemo(
+    () =>
+      localUsecaseData
+        .map((category) => ({
+          ...category,
+          usecases: category.usecases.filter((usecase: Usecase) => {
+            if (!searchTerm) {
+              return true;
+            }
+            const formattedUsecase =
+              formatUsecaseDisplay(usecase).toLowerCase();
+            const searchLower = searchTerm.toLowerCase();
+            return (
+              formattedUsecase.includes(searchLower) ||
+              usecase.keyValueCollection.some(
+                (kv: KeyValue) =>
+                  kv.keyInfo.keyLabel.toLowerCase().includes(searchLower) ||
+                  kv.valueInfo.valueLabel.toLowerCase().includes(searchLower),
+              )
+            );
+          }),
+        }))
+        .filter((category) => category.usecases.length > 0),
+    [localUsecaseData, searchTerm],
+  );
 
   return (
     <div ref={containerRef} className="relative">

@@ -95,7 +95,8 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
           activeProjects.map((p) => [p.projectId, p]),
         );
 
-        // 4. Build merged list: All MRU projects enriched with backend data if active
+        // 4. Build merged list: All MRU projects enriched with backend data if
+        // active
         const mergedProjects: ProjectInfo[] = [];
         const processedIds = new Set<string>();
 

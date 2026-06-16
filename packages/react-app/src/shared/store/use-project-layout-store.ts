@@ -117,7 +117,7 @@ export class ProjectTabEntity implements ProjectTab {
       typeof panelLayoutOrComponent === 'object' &&
       'flexLayoutData' in panelLayoutOrComponent
     ) {
-      this.panelLayout = panelLayoutOrComponent as ProjectTabLayout;
+      this.panelLayout = panelLayoutOrComponent;
       this.component = undefined;
     } else {
       this.component = panelLayoutOrComponent as ReactNode;

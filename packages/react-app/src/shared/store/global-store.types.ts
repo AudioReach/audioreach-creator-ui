@@ -56,3 +56,30 @@ export interface RecentProjectsSlice {
   removeRecentProject: (projectId: string) => void;
   upsertRecentProject: (project: RecentProject) => void;
 }
+
+export interface AppTab {
+  id: string;
+  tabType: string;
+  title: string;
+}
+
+export interface SessionSlice {
+  activeAppTabId: string | null;
+  appTabs: AppTab[];
+  closeAppTab: (tabId: string) => void;
+  openAppTab: (tabType: string, title: string, tabId?: string) => string;
+  setActiveAppTab: (tabId: string) => void;
+}
+
+export interface ProjectGroup {
+  colorId: number;
+  filePath: string;
+  projectId: string;
+}
+
+export interface ProjectGroupSlice {
+  nextColorId: number;
+  openProjects: ProjectGroup[];
+  registerProjectGroup: (projectId: string, filePath: string) => void;
+  removeProjectGroup: (projectId: string) => void;
+}

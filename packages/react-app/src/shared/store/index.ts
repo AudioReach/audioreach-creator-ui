@@ -19,8 +19,6 @@ export type {
   ApplicationConfig,
 } from './project-layout.types';
 
-export {useUsecaseStore} from './use-usecase-store';
-
 // ── Global Store ───────────────────────────────────────────────────────────
 export {useGlobalStore} from './global-store';
 export type {GlobalStore} from './global-store';
@@ -35,9 +33,13 @@ export type {
   TabType,
 } from './global-store.types';
 
-// ── Session Store ──────────────────────────────────────────────────────────
-export {useSessionStore} from './use-session-store';
-export type {AppTab, ProjectGroup} from './use-session-store';
+// ── New Global Store Types ─────────────────────────────────────────────────
+export type {
+  AppTab,
+  ProjectGroup,
+  ProjectGroupSlice,
+  SessionSlice,
+} from './global-store.types';
 
 // ── Project Store ──────────────────────────────────────────────────────────
 export {createProjectStore} from './project-store';

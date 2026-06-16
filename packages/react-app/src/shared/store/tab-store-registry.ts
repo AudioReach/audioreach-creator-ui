@@ -12,25 +12,35 @@ import type {TabType} from './global-store.types';
 // ── Types ──────────────────────────────────────────────────────────────────
 
 // Opaque tab store instance — concrete type added when tab stores are composed.
-type TabStoreInstance = StoreApi<Record<string, unknown>>;
+export type TabStoreInstance = StoreApi<Record<string, unknown>>;
 
 type TabStoreFactory = (tabId: string, projectId: string) => TabStoreInstance;
 
 // ── Registry ───────────────────────────────────────────────────────────────
 
 export class TabStoreRegistry {
-  private stores: Map<string, TabStoreInstance> = new Map();
+  private cleanups: Map<string, () => void> = new Map();
   private factories: Map<TabType, TabStoreFactory> = new Map();
+  private stores: Map<string, TabStoreInstance> = new Map();
 
   registerFactory(tabType: TabType, factory: TabStoreFactory): void {
     this.factories.set(tabType, factory);
   }
 
-  createTabStore(
+  registerCleanup(tabId: string, fn: () => void): void {
+    this.cleanups.set(tabId, fn);
+  }
+
+  /**
+   * Returns the store for `tabId` cast to `StoreApi<T>`. The caller is
+   * responsible for ensuring `T` matches the concrete type produced by the
+   * factory registered under `tabType` — there is no runtime check.
+   */
+  createTabStore<T = Record<string, unknown>>(
     tabId: string,
     tabType: TabType,
     projectId: string,
-  ): TabStoreInstance {
+  ): StoreApi<T> {
     const factory = this.factories.get(tabType);
     if (!factory) {
       throw new Error(`No factory registered for tab type: ${tabType}`);
@@ -44,7 +54,7 @@ export class TabStoreRegistry {
       component: 'TabStoreRegistry',
     });
 
-    return store;
+    return store as unknown as StoreApi<T>;
   }
 
   getTabStore(tabId: string): TabStoreInstance | undefined {
@@ -52,6 +62,8 @@ export class TabStoreRegistry {
   }
 
   destroyTabStore(tabId: string): void {
+    this.cleanups.get(tabId)?.();
+    this.cleanups.delete(tabId);
     this.stores.delete(tabId);
 
     logger.debug('Tab store destroyed', {
@@ -61,6 +73,8 @@ export class TabStoreRegistry {
   }
 
   destroyAllStores(): void {
+    this.cleanups.forEach((fn) => fn());
+    this.cleanups.clear();
     this.stores.clear();
   }
 
