@@ -3,37 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/**
- * Graph search utility
- *
- * Supports prefix-based and default search across ReactFlow nodes.
- *
- * Prefix syntax:  <prefix>:<value>
- *   sg:   → Subgraph nodes  (by SubgraphId or SubgraphName)
- *   ss:   → Subsystem nodes (by SubsystemId or SubsystemName)
- *   cnt:  → Container nodes (by ContainerId, ContainerName, or label)
- *   mod:  → Module nodes    (by ModuleId, InstanceId, ModuleName, or AliasName)
- *
- * Value rules:
- *   - Starts with "0x" or is all digits → numeric ID search (via ConvertStringToNumber)
- *   - Otherwise                         → case-insensitive label/name search
- */
-
-import {
-  NODE_KIND,
-  type RFContainerNodeData,
-  type RFModuleNodeData,
-  type RFNode,
-  type RFSubgraphNodeData,
-  type RFSubsystemNodeData,
-} from '~features/usecase-visualizer/model/usecase-visualizer.types';
+import type {
+  Container,
+  ModuleInstance,
+  Subgraph,
+  Subsystem,
+  UsecaseGraphData,
+} from '~features/graph-designer/model/graph-data-slice';
+import type {SearchHighlights} from '~features/usecase-visualizer';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import {containerNodeId, subgraphNodeId} from './node-id';
 
-const KNOWN_PREFIXES = ['sg', 'ss', 'cnt', 'mod'] as const;
+const KNOWN_PREFIXES = ['cnt', 'mod', 'sg', 'ss'] as const;
 export type SearchPrefix = (typeof KNOWN_PREFIXES)[number];
 
 export interface ParsedSearchTerm {
@@ -47,36 +29,12 @@ export interface ParsedSearchTerm {
   value: string;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Extract the numeric ID embedded in a ReactFlow node ID string.
- *  Node ID formats: "subsystem-{id}", "subgraph-{id}", "module-{id}"
- */
-function extractNumericNodeId(rfNodeId: string): number | null {
-  const dashIdx = rfNodeId.lastIndexOf('-');
-  if (dashIdx === -1) {
-    return null;
-  }
-  const numStr = rfNodeId.slice(dashIdx + 1);
-  const num = parseInt(numStr, 10);
-  return Number.isFinite(num) ? num : null;
-}
-
-function matchesName(
-  nodeName: string | undefined,
-  searchTerm: string,
-): boolean {
-  if (!nodeName) {
+function matchesName(name: string | undefined, term: string): boolean {
+  if (!name) {
     return false;
   }
-  return nodeName.toLowerCase().includes(searchTerm.toLowerCase());
+  return name.toLowerCase().includes(term.toLowerCase());
 }
-
-// ---------------------------------------------------------------------------
-// Parse
-// ---------------------------------------------------------------------------
 
 export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
   const colonIdx = rawSearchTerm.indexOf(':');
@@ -91,193 +49,182 @@ export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
     KNOWN_PREFIXES as readonly string[]
   ).includes(prefixRaw)
     ? (prefixRaw as SearchPrefix)
-    : 'invalid'; // Unknown prefix → treat as invalid, not default search
+    : 'invalid';
 
   return {prefix, value};
 }
 
-// ---------------------------------------------------------------------------
-// Per-kind matchers
-// ---------------------------------------------------------------------------
-
 function matchesSubgraph(
-  node: RFNode,
+  node: Subgraph,
   value: string,
   numericValue: number | null,
 ): boolean {
-  const data = node.data as RFSubgraphNodeData;
   if (numericValue !== null) {
-    const sgId = extractNumericNodeId(node.id);
-    return sgId === numericValue;
+    return Number(node.subgraphId) === numericValue;
   }
-  return matchesName(data.label, value) || matchesName(data.name, value);
+  return matchesName(node.subgraphName, value);
 }
 
 function matchesSubsystem(
-  node: RFNode,
+  node: Subsystem,
   value: string,
   numericValue: number | null,
 ): boolean {
-  const data = node.data as RFSubsystemNodeData;
   if (numericValue !== null) {
-    const ssId = extractNumericNodeId(node.id);
-    return ssId === numericValue;
+    return node.id === numericValue;
   }
-  return matchesName(data.label, value) || matchesName(data.name, value);
-}
-
-function matchesContainer(
-  node: RFNode,
-  value: string,
-  numericValue: number | null,
-): boolean {
-  const data = node.data as RFContainerNodeData;
-  if (numericValue !== null) {
-    return data.containerId === numericValue;
-  }
-  // String search: name or label (consistent with other node matchers)
-  return matchesName(data.name, value) || matchesName(data.label, value);
-}
-
-function matchesModule(
-  node: RFNode,
-  value: string,
-  numericValue: number | null,
-): boolean {
-  const data = node.data as RFModuleNodeData;
-  if (numericValue !== null) {
-    // Match by InstanceId (node.id) or ModuleId (data.moduleId)
-    const instanceId = extractNumericNodeId(node.id);
-    return instanceId === numericValue || data.moduleId === numericValue;
-  }
-  // String search: name, alias, or label
   return (
-    matchesName(data.name, value) ||
-    matchesName(data.alias, value) ||
-    matchesName(data.label, value)
+    matchesName(node.subsystemName, value) ||
+    matchesName(node.subsystemId, value)
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sort matches by visual position
-// ---------------------------------------------------------------------------
-
-/**
- * Sort a set of matching nodes by their absolute canvas position
- * (left → right, then top → bottom).
- *
- * ReactFlow nodes use *relative* positions — each node's `position` is
- * relative to its parent. To determine the true visual order we walk the
- * full parent chain (module → container → subgraph → subsystem) and sum
- * the offsets to obtain the absolute canvas coordinate before sorting.
- *
- * @param matches  - The subset of nodes returned by `searchNodes`.
- * @param allNodes - The complete node list used to resolve parent positions.
- */
-export function sortMatchesByPosition(
-  matches: RFNode[],
-  allNodes: RFNode[],
-): RFNode[] {
-  const nodesById = new Map(allNodes.map((n) => [n.id, n]));
-
-  const getAbsolutePosition = (node: RFNode): {x: number; y: number} => {
-    let x = node.position?.x ?? 0;
-    let y = node.position?.y ?? 0;
-    let current: RFNode = node;
-    while (current.parentId) {
-      const parent = nodesById.get(current.parentId);
-      if (!parent) {
-        break;
-      }
-      x += parent.position?.x ?? 0;
-      y += parent.position?.y ?? 0;
-      current = parent;
-    }
-    return {x, y};
-  };
-
-  return [...matches].sort((a, b) => {
-    const posA = getAbsolutePosition(a);
-    const posB = getAbsolutePosition(b);
-    const xDiff = posA.x - posB.x;
-    if (Math.abs(xDiff) > 1) {
-      return xDiff;
-    } // primary: left → right
-    return posA.y - posB.y; // secondary: top → bottom
-  });
+function matchesContainer(
+  node: Container,
+  value: string,
+  numericValue: number | null,
+): boolean {
+  if (numericValue !== null) {
+    return Number(node.containerId) === numericValue;
+  }
+  return matchesName(node.containerName, value);
 }
 
-// ---------------------------------------------------------------------------
-// Main search function
-// ---------------------------------------------------------------------------
+function matchesModule(
+  node: ModuleInstance,
+  value: string,
+  numericValue: number | null,
+): boolean {
+  if (numericValue !== null) {
+    return Number(node.moduleId) === numericValue;
+  }
+  return (
+    matchesName(node.displayName, value) ||
+    matchesName(node.moduleName, value) ||
+    matchesName(node.moduleType, value)
+  );
+}
+
+function emptyHighlights(): SearchHighlights {
+  return {activeId: undefined, containsMatchNodeIds: [], highlightedIds: []};
+}
 
 /**
- * Filter `nodes` according to `searchTerm` and return the matching subset.
- * Returns an empty array when `searchTerm` is blank.
+ * Search all nodes in GraphData and return SearchHighlights.
+ * Returns empty highlights when `term` is blank or uses an unknown prefix.
+ *
+ * Node IDs in the returned highlights use LevelView composite ID format so
+ * they align with what UsecaseVisualizer renders.
  */
-export function searchNodes(nodes: RFNode[], searchTerm: string): RFNode[] {
-  const trimmed = searchTerm.trim();
+export function searchGraphData(
+  graphData: UsecaseGraphData,
+  term: string,
+): SearchHighlights {
+  const trimmed = term.trim();
   if (!trimmed) {
-    return [];
+    return emptyHighlights();
   }
 
   const {prefix, value} = parseSearchTerm(trimmed);
-  // Unknown prefix → reject the search entirely (return no results)
   if (prefix === 'invalid') {
-    return [];
+    return emptyHighlights();
   }
 
   const valueTrimmed = value.trim();
-
   if (!valueTrimmed) {
-    return [];
+    return emptyHighlights();
   }
 
-  // Determine if the value is numeric (decimal or hex)
   const numericValue = ConvertStringToNumber(valueTrimmed);
 
-  return nodes.filter((node) => {
-    const kind = node.data.kind;
+  const allSubgraphs = Object.values(graphData.subgraphs);
+  const allSubsystems = Object.values(graphData.subsystems);
+  const allContainers = Object.values(graphData.containers);
+  const allModules = Object.values(graphData.moduleInstances);
 
-    switch (prefix) {
-      case 'sg':
-        return (
-          kind === NODE_KIND.SUBGRAPH &&
-          matchesSubgraph(node, valueTrimmed, numericValue)
-        );
+  let matchedIds: string[];
 
-      case 'ss':
-        return (
-          kind === NODE_KIND.SUBSYSTEM &&
-          matchesSubsystem(node, valueTrimmed, numericValue)
-        );
+  switch (prefix) {
+    case 'sg':
+      matchedIds = allSubgraphs
+        .filter((n) => matchesSubgraph(n, valueTrimmed, numericValue))
+        .map((n) => subgraphNodeId(n.subgraphId));
+      break;
+    case 'ss':
+      matchedIds = allSubsystems
+        .filter((n) => matchesSubsystem(n, valueTrimmed, numericValue))
+        .map((n) => n.subsystemId);
+      break;
+    case 'cnt':
+      matchedIds = allContainers
+        .filter((n) => matchesContainer(n, valueTrimmed, numericValue))
+        .map((n) => containerNodeId(n.containerId, n.subgraphId));
+      break;
+    case 'mod':
+      matchedIds = allModules
+        .filter((n) => matchesModule(n, valueTrimmed, numericValue))
+        .map((n) => n.moduleInstanceId);
+      break;
+    default:
+      matchedIds = [
+        ...allSubgraphs
+          .filter((n) => matchesSubgraph(n, valueTrimmed, numericValue))
+          .map((n) => subgraphNodeId(n.subgraphId)),
+        ...allSubsystems
+          .filter((n) => matchesSubsystem(n, valueTrimmed, numericValue))
+          .map((n) => n.subsystemId),
+        ...allContainers
+          .filter((n) => matchesContainer(n, valueTrimmed, numericValue))
+          .map((n) => containerNodeId(n.containerId, n.subgraphId)),
+        ...allModules
+          .filter((n) => matchesModule(n, valueTrimmed, numericValue))
+          .map((n) => n.moduleInstanceId),
+      ];
+  }
 
-      case 'cnt':
-        return (
-          kind === NODE_KIND.CONTAINER &&
-          matchesContainer(node, valueTrimmed, numericValue)
-        );
+  if (matchedIds.length === 0) {
+    return emptyHighlights();
+  }
 
-      case 'mod':
-        return (
-          kind === NODE_KIND.MODULE &&
-          matchesModule(node, valueTrimmed, numericValue)
-        );
+  // sg and ss nodes are hierarchy roots — no ancestor walk needed.
+  if (prefix === 'sg' || prefix === 'ss') {
+    return {
+      activeId: matchedIds[0],
+      containsMatchNodeIds: [],
+      highlightedIds: matchedIds,
+    };
+  }
 
-      default:
-        // Default search: all node kinds
-        switch (kind) {
-          case NODE_KIND.SUBGRAPH:
-            return matchesSubgraph(node, valueTrimmed, numericValue);
-          case NODE_KIND.SUBSYSTEM:
-            return matchesSubsystem(node, valueTrimmed, numericValue);
-          case NODE_KIND.CONTAINER:
-            return matchesContainer(node, valueTrimmed, numericValue);
-          case NODE_KIND.MODULE:
-            return matchesModule(node, valueTrimmed, numericValue);
-          default:
-            return false;
-        }
+  // Build parent map: LevelView node ID → parent LevelView node ID.
+  // Hierarchy: moduleInstance → container → subgraph.
+  // Subgraph → subsystem link is absent from UsecaseGraphData (Subsystem.subgraphs
+  // is not populated by the API builder), so that edge is omitted.
+  const parentMap = new Map<string, string>();
+  for (const m of allModules) {
+    parentMap.set(
+      m.moduleInstanceId,
+      containerNodeId(m.containerId, m.subgraphId),
+    );
+  }
+  for (const c of allContainers) {
+    parentMap.set(
+      containerNodeId(c.containerId, c.subgraphId),
+      subgraphNodeId(c.subgraphId),
+    );
+  }
+
+  const ancestorIds = new Set<string>();
+  for (const id of matchedIds) {
+    let parentId = parentMap.get(id);
+    while (parentId !== undefined) {
+      ancestorIds.add(parentId);
+      parentId = parentMap.get(parentId);
     }
-  });
+  }
+
+  return {
+    activeId: matchedIds[0],
+    containsMatchNodeIds: [...ancestorIds],
+    highlightedIds: matchedIds,
+  };
 }

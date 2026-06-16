@@ -5,6 +5,10 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
+// Side-effect import: registers the graph-designer tab store factory with
+// tabStoreRegistry so createTabStore('graph-designer') works when a project opens.
+import '~features/graph-designer';
+
 import {
   Clipboard,
   Copy,
@@ -22,37 +26,24 @@ import {
   Wand2,
 } from 'lucide-react';
 
-import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
 import {getSystemIdsFromFormattedUsecases} from '~entities/usecases/model/usecase-utils';
-import {
-  SearchComponent,
-  useSearchComponentStore,
-} from '~features/search-component';
+import {useGraphDesignerStoreShallow} from '~features/graph-designer/model/graph-designer-store-context';
+import {SearchComponent} from '~features/search-component';
 import {
   type UsecaseCategory,
   UsecaseSelectionControl,
 } from '~features/usecase-selection';
 import {
-  layoutWithELK,
-  UsecaseVisualizerLegacy,
-  useSearchHighlightStore,
-  useVisualizerSelectionStore,
+  type SearchHighlights,
+  UsecaseVisualizer,
 } from '~features/usecase-visualizer';
-import {buildGraphViewFromUsecase} from '~features/usecase-visualizer/lib/adapter';
-import type {
-  GraphSpec,
-  RFEdge,
-  RFNode,
-} from '~features/usecase-visualizer/model/usecase-visualizer.types';
-import {useUserPreferences} from '~shared/config/hooks';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
-import {useUsecaseStore} from '~shared/store/use-usecase-store';
 
-import {searchNodes, sortMatchesByPosition} from '../lib/graph-search';
-
-const EMPTY_SELECTED_USECASES: string[] = [];
+import {searchGraphData} from '../lib/graph-search';
+import {buildLevelViewFromGraphData} from '../lib/level-view-adapter';
+import {layoutLevelView} from '../lib/level-view-layout';
 
 interface GraphDesignerProps {
   projectGroupId: string;
@@ -67,48 +58,59 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   tabId,
   usecaseData: initialUsecaseData,
 }) => {
-  // Get user preferences for this project
-  const {preferences} = useUserPreferences(projectGroupId);
-
-  // Get selected usecases directly for this project group - use a stable selector
-  const selectedUsecases = useUsecaseStore(
-    (state) =>
-      state.selectedUsecases[projectGroupId] ?? EMPTY_SELECTED_USECASES,
+  // Get selected usecases from tab store
+  const selectedUsecases = useGraphDesignerStoreShallow(
+    (state) => state.selectedUsecases,
+  );
+  const setSelectedUsecases = useGraphDesignerStoreShallow(
+    (state) => state.setSelectedUsecases,
   );
 
-  // Use usecaseData from initial prop (passed from parent)
-  const usecaseData = useMemo(() => initialUsecaseData, [initialUsecaseData]);
+  const usecaseData = initialUsecaseData;
 
-  // Local state for graph visualization
-  const [nodes, setNodes] = useState<RFNode[]>([]);
-  const [edges, setEdges] = useState<RFEdge[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchFocusTrigger, setSearchFocusTrigger] = useState(0);
+  // Graph data from store
+  const graphData = useGraphDesignerStoreShallow((s) => s.graphData);
+  const graphDataError = useGraphDesignerStoreShallow((s) => s.graphDataError);
+  const graphDataStatus = useGraphDesignerStoreShallow(
+    (s) => s.graphDataStatus,
+  );
+  const loadGraphData = useGraphDesignerStoreShallow((s) => s.loadGraphData);
+  const levelView = useGraphDesignerStoreShallow((s) => s.levelView);
+  const setLevelView = useGraphDesignerStoreShallow((s) => s.setLevelView);
+  const clearLevelView = useGraphDesignerStoreShallow((s) => s.clearLevelView);
+
+  // Guards against stale layout results when selectedUsecases changes rapidly.
+  const layoutGenerationRef = useRef(0);
 
   // Search state
+  const [searchFocusTrigger, setSearchFocusTrigger] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
-  const [matchingNodes, setMatchingNodes] = useState<RFNode[]>([]);
+  const [searchHighlights, setSearchHighlights] = useState<
+    SearchHighlights | undefined
+  >(undefined);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const matchCount = searchHighlights?.highlightedIds.length ?? 0;
 
-  // Selection store actions
-  const clearSelection = useVisualizerSelectionStore((s) => s.clearSelection);
-  const setSearchHighlight = useSearchHighlightStore(
+  const clearSelection = useGraphDesignerStoreShallow((s) => s.clearSelection);
+  const setSearchHighlight = useGraphDesignerStoreShallow(
     (s) => s.setSearchHighlight,
   );
-  const clearSearchHighlight = useSearchHighlightStore(
+  const clearSearchHighlight = useGraphDesignerStoreShallow(
     (s) => s.clearSearchHighlight,
   );
-
-  // Reterives the state when switching between projects.
-  const isSearchVisible = useSearchComponentStore(
-    (s) => s.getProjectState(projectGroupId).isSearchVisible,
+  const isSearchVisible = useGraphDesignerStoreShallow(
+    (s) => s.isSearchVisible,
   );
-  const setSearchVisible = useSearchComponentStore((s) => s.setSearchVisible);
-
-  // Read the current search term from the store — single source of truth
-  const currentSearchTerm = useSearchComponentStore(
-    (s) => s.getProjectState(projectGroupId).searchTerm,
+  const setSearchVisible = useGraphDesignerStoreShallow(
+    (s) => s.setSearchVisible,
+  );
+  const currentSearchTerm = useGraphDesignerStoreShallow((s) => s.searchTerm);
+  const {addToHistory, history, setSearchTerm} = useGraphDesignerStoreShallow(
+    (s) => ({
+      addToHistory: s.addToHistory,
+      history: s.history,
+      setSearchTerm: s.setSearchTerm,
+    }),
   );
 
   // Always keep the ref pointing to the latest isSearchVisible and currentSearchTerm
@@ -119,19 +121,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const currentSearchTermRef = useRef(currentSearchTerm);
   currentSearchTermRef.current = currentSearchTerm;
 
-  // Opens the search panel and focuses the input (works whether panel is new or already visible)
+  // Opens the search panel and focuses the input (works whether panel is new or
+  // already visible)
   const openSearch = useCallback(() => {
-    setSearchVisible(projectGroupId, true);
+    setSearchVisible(true);
     setSearchFocusTrigger((prev) => prev + 1);
-  }, [projectGroupId, setSearchVisible]);
+  }, [setSearchVisible]);
 
   // Resets all search state — call when usecase changes or search is closed
   const resetSearch = useCallback(() => {
     setHasSearched(false);
-    setMatchingNodes([]);
+    setSearchHighlights(undefined);
     setCurrentMatchIndex(0);
-    clearSearchHighlight(projectGroupId);
-  }, [projectGroupId, clearSearchHighlight]);
+    clearSearchHighlight();
+  }, [clearSearchHighlight]);
 
   // Handle screenshot function registration - directly register with passed registry
   const handleScreenshotReady = (
@@ -145,105 +148,56 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     });
   };
 
-  // Re-runs the active search against the current node list
-  const refreshSearch = useCallback(() => {
-    if (!hasSearched || !currentSearchTerm.trim()) {
-      return;
-    }
-
-    const matches = sortMatchesByPosition(
-      searchNodes(nodes, currentSearchTerm),
-      nodes,
-    );
-    setMatchingNodes(matches);
-
-    // Clamp the current index to the new valid range
-    const clampedIndex =
-      matches.length > 0 ? Math.min(currentMatchIndex, matches.length - 1) : 0;
-    setCurrentMatchIndex(clampedIndex);
-
-    setSearchHighlight(
-      projectGroupId,
-      new Set(matches.map((n) => n.id)),
-      matches[clampedIndex]?.id ?? null,
-    );
-  }, [
-    hasSearched,
-    currentSearchTerm,
-    nodes,
-    currentMatchIndex,
-    projectGroupId,
-    setSearchHighlight,
-  ]);
-
-  // Always keep the ref pointing to the latest refreshSearch so the effect
-  // below can call it without listing it as a dependency.
-  const refreshSearchRef = useRef(refreshSearch);
-  refreshSearchRef.current = refreshSearch;
-
-  // Re-run search when nodes change (handles both node add and node remove).
-  // Only fires if a search is already active — preserves results, does not reset.
-  useEffect(() => {
-    refreshSearchRef.current();
-  }, [nodes]);
-
   // Search handlers
   const handleSearch = useCallback(
     (term: string) => {
-      if (!term.trim()) {
+      if (!term.trim() || !graphData) {
         resetSearch();
-        clearSelection(projectGroupId);
+        clearSelection();
         return;
       }
 
       setHasSearched(true);
-
-      const sortedMatches = sortMatchesByPosition(
-        searchNodes(nodes, term),
-        nodes,
-      );
-
-      setMatchingNodes(sortedMatches);
+      const result = searchGraphData(graphData, term);
+      setSearchHighlights(result);
       setCurrentMatchIndex(0);
-
-      // Highlight all matching nodes and mark the first one as active
-      const matchIds = new Set(sortedMatches.map((n) => n.id));
-      const activeId = sortedMatches[0]?.id ?? null;
-      setSearchHighlight(projectGroupId, matchIds, activeId);
+      setSearchHighlight(result.highlightedIds, result.activeId ?? null);
     },
-    [nodes, projectGroupId, setSearchHighlight, clearSelection, resetSearch],
+    [graphData, resetSearch, clearSelection, setSearchHighlight],
   );
 
   const handleSearchNext = useCallback(() => {
-    if (matchingNodes.length === 0) {
+    if (!searchHighlights || searchHighlights.highlightedIds.length === 0) {
       return;
     }
-    const nextIndex = (currentMatchIndex + 1) % matchingNodes.length;
+    const nextIndex =
+      (currentMatchIndex + 1) % searchHighlights.highlightedIds.length;
     setCurrentMatchIndex(nextIndex);
-    // Update the active node in the highlight store
-    const matchIds = new Set(matchingNodes.map((n) => n.id));
-    setSearchHighlight(projectGroupId, matchIds, matchingNodes[nextIndex].id);
-  }, [matchingNodes, currentMatchIndex, projectGroupId, setSearchHighlight]);
+    const nextId = searchHighlights.highlightedIds[nextIndex];
+    setSearchHighlights({...searchHighlights, activeId: nextId});
+    setSearchHighlight(searchHighlights.highlightedIds, nextId);
+  }, [searchHighlights, currentMatchIndex, setSearchHighlight]);
 
   const handleSearchPrevious = useCallback(() => {
-    if (matchingNodes.length === 0) {
+    if (!searchHighlights || searchHighlights.highlightedIds.length === 0) {
       return;
     }
     const prevIndex =
-      (currentMatchIndex - 1 + matchingNodes.length) % matchingNodes.length;
+      (currentMatchIndex - 1 + searchHighlights.highlightedIds.length) %
+      searchHighlights.highlightedIds.length;
     setCurrentMatchIndex(prevIndex);
-    // Update the active node in the highlight store
-    const matchIds = new Set(matchingNodes.map((n) => n.id));
-    setSearchHighlight(projectGroupId, matchIds, matchingNodes[prevIndex].id);
-  }, [matchingNodes, currentMatchIndex, projectGroupId, setSearchHighlight]);
+    const prevId = searchHighlights.highlightedIds[prevIndex];
+    setSearchHighlights({...searchHighlights, activeId: prevId});
+    setSearchHighlight(searchHighlights.highlightedIds, prevId);
+  }, [searchHighlights, currentMatchIndex, setSearchHighlight]);
 
   const handleSearchClose = useCallback(() => {
-    setSearchVisible(projectGroupId, false);
+    setSearchVisible(false);
     resetSearch();
-    clearSelection(projectGroupId);
+    clearSelection();
     // Blur the active element so the hidden input does not retain focus.
     (document.activeElement as HTMLElement)?.blur();
-  }, [projectGroupId, clearSelection, resetSearch, setSearchVisible]);
+  }, [clearSelection, resetSearch, setSearchVisible]);
 
   // Cleanup screenshot registration on unmount
   useEffect(() => {
@@ -257,110 +211,47 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     };
   }, [projectGroupId, screenshotRegistry]);
 
-  // Fetch graph data when selected usecases change
+  // Effect A — trigger load when selection changes
   useEffect(() => {
-    const fetchGraphData = async () => {
-      // Reset search state when usecase selection changes
-      resetSearch();
+    resetSearch();
+    clearLevelView();
+    if (selectedUsecases.length === 0) {
+      return;
+    }
+    const systemIds = getSystemIdsFromFormattedUsecases(
+      selectedUsecases,
+      usecaseData,
+    );
+    if (systemIds.length > 0) {
+      void loadGraphData(systemIds);
+    }
+  }, [
+    selectedUsecases,
+    usecaseData,
+    clearLevelView,
+    loadGraphData,
+    resetSearch,
+  ]);
 
-      // Clear error state
-      setError(null);
-
-      // If no usecases selected, clear the graph
-      if (selectedUsecases.length === 0) {
-        setNodes([]);
-        setEdges([]);
-        return;
+  // Effect B — build LevelView when graphData is ready
+  useEffect(() => {
+    if (graphDataStatus !== 'ready' || !graphData || levelView !== null) {
+      return;
+    }
+    const gen = ++layoutGenerationRef.current;
+    const levelId = selectedUsecases.join(',');
+    const unpositioned = buildLevelViewFromGraphData(graphData, levelId);
+    void layoutLevelView(unpositioned).then((lv) => {
+      if (layoutGenerationRef.current === gen) {
+        setLevelView(lv);
       }
-
-      // Extract systemIds from selected usecases
-      const systemIds = getSystemIdsFromFormattedUsecases(
-        selectedUsecases,
-        usecaseData,
-      );
-
-      if (systemIds.length === 0) {
-        logger.warn('No systemIds found for selected usecases', {
-          action: 'fetch_graph_data',
-          component: 'GraphDesigner',
-        });
-        setNodes([]);
-        setEdges([]);
-        return;
-      }
-
-      // Use projectGroupId as the projectId
-      const projectId = projectGroupId;
-
-      setIsLoading(true);
-
-      try {
-        logger.verbose('Fetching usecase components', {
-          action: 'fetch_graph_data',
-          component: 'GraphDesigner',
-        });
-
-        const result = await getUsecaseComponents(projectId, systemIds);
-
-        if (result.success && result.data) {
-          // Convert DTO to ReactFlow format
-          const graphSpec: GraphSpec = {
-            includeUsecases: systemIds.map((id, index) => ({
-              id: index,
-              type: 'Regular',
-            })),
-          };
-
-          const graphView = buildGraphViewFromUsecase(result.data, graphSpec);
-
-          const graphViewWithELK = await layoutWithELK(graphView);
-
-          setNodes(graphViewWithELK.nodes);
-          setEdges(graphViewWithELK.edges);
-
-          // If the search panel is open and a term is present, re-run the
-          // search against the new graph.
-          if (
-            isSearchVisibleRef.current &&
-            currentSearchTermRef.current.trim()
-          ) {
-            setHasSearched(true);
-          }
-
-          logger.verbose('Graph data loaded successfully', {
-            action: 'fetch_graph_data',
-            component: 'GraphDesigner',
-          });
-        } else {
-          const errorMsg =
-            result.message || 'Failed to fetch usecase components';
-          setError(errorMsg);
-          logger.error('Failed to fetch usecase components', {
-            action: 'fetch_graph_data',
-            component: 'GraphDesigner',
-            error: errorMsg,
-          });
-        }
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Unknown error occurred';
-        setError(errorMsg);
-        logger.error('Error fetching usecase components', {
-          action: 'fetch_graph_data',
-          component: 'GraphDesigner',
-          error: errorMsg,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGraphData();
-  }, [selectedUsecases, usecaseData, projectGroupId, resetSearch]);
+    });
+  }, [graphDataStatus, graphData, levelView, selectedUsecases, setLevelView]);
 
   // Side nav implementation
   const hasUnsavedChanges = false; // TODO: Implement actual unsaved changes detection
-  const hasSelection = nodes.length > 0; // Enable copy/paste when there are nodes
+  const hasSelection =
+    levelView !== null && (levelView.modules?.length ?? 0) > 0;
   const canUndoRedo = false; // TODO: Support undo/redo stack
 
   const sideNavItems = useMemo(
@@ -641,7 +532,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         }}
       >
         <UsecaseSelectionControl
-          projectGroupId={projectGroupId}
+          onSelectedUsecasesChange={setSelectedUsecases}
+          projectId={projectGroupId}
+          selectedUsecases={selectedUsecases}
           usecaseData={usecaseData}
         />
       </div>
@@ -663,18 +556,21 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           }`}
         >
           <SearchComponent
-            currentMatch={matchingNodes.length > 0 ? currentMatchIndex + 1 : 0}
+            currentMatch={matchCount > 0 ? currentMatchIndex + 1 : 0}
             focusTrigger={searchFocusTrigger}
+            history={history}
+            onAddToHistory={addToHistory}
             onClose={handleSearchClose}
             onNext={handleSearchNext}
             onPrevious={handleSearchPrevious}
             onSearch={handleSearch}
-            projectId={projectGroupId}
-            totalMatches={hasSearched ? matchingNodes.length : undefined}
+            onSearchTermChange={setSearchTerm}
+            searchTerm={currentSearchTerm}
+            totalMatches={hasSearched ? matchCount : undefined}
           />
         </div>
 
-        {isLoading ? (
+        {graphDataStatus === 'loading' ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <div
@@ -691,7 +587,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
               </div>
             </div>
           </div>
-        ) : error ? (
+        ) : graphDataStatus === 'error' ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <div
@@ -701,10 +597,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
                 Error loading graph
               </div>
               <div
-                className="text-sm"
+                className="mt-1 text-sm"
                 style={{color: 'var(--color-text-neutral-secondary)'}}
               >
-                {error}
+                {graphDataError ?? 'Unknown error'}
               </div>
             </div>
           </div>
@@ -725,32 +621,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
               </div>
             </div>
           </div>
-        ) : nodes.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <div
-                className="mb-2 text-lg font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
-                No graph data available
-              </div>
-              <div
-                className="text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
-                The selected usecases do not have any components to display
-              </div>
-            </div>
-          </div>
-        ) : (
-          <UsecaseVisualizerLegacy
-            edges={edges}
-            nodes={nodes}
-            onScreenshotReady={handleScreenshotReady}
-            projectId={projectGroupId}
-            userPreferences={preferences}
+        ) : levelView ? (
+          <UsecaseVisualizer
+            graph={levelView}
+            onScreenshotApiReady={handleScreenshotReady}
+            searchHighlights={searchHighlights}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );
