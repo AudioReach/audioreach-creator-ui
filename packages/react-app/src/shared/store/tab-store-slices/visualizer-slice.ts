@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {Edge, Node, Viewport} from '@xyflow/react';
+import type {Viewport} from '@xyflow/react';
 import type {StoreApi} from 'zustand';
 
+import type {LevelView} from '~features/usecase-visualizer';
 import {logger} from '~shared/lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -17,19 +18,29 @@ export interface GraphView {
   subsystemNavigationStack: string[];
 }
 
-/** Re-export for consumers that compose this slice. */
-export type RFNode = Node;
-export type RFEdge = Edge;
+export interface SearchHighlight {
+  activeNodeId: string | null;
+  matchNodeIds: string[];
+}
 
 export interface VisualizerSlice {
+  clearLevelView: () => void;
+  clearSearchHighlight: () => void;
   clearSelection: () => void;
   error: string | null;
   graphView: GraphView | null;
   isLoading: boolean;
-  selectedEdges: RFEdge[];
-  selectedNodes: RFNode[];
+  levelView: LevelView | null;
+  searchHighlight: SearchHighlight | null;
+  selectedEdgeIds: string[];
+  selectedNodeIds: string[];
   setGraphView: (graphView: GraphView | null) => void;
-  setSelection: (nodes: RFNode[], edges: RFEdge[]) => void;
+  setLevelView: (lv: LevelView) => void;
+  setSearchHighlight: (
+    matchNodeIds: string[],
+    activeNodeId: string | null,
+  ) => void;
+  setSelection: (nodeIds: string[], edgeIds: string[]) => void;
   setViewport: (viewport: Viewport) => void;
   viewport: Viewport;
 }
@@ -54,11 +65,21 @@ export function createVisualizerSlice<S extends VisualizerSlice>(
   set: StoreApi<S>['setState'],
 ): VisualizerSlice {
   return {
+    clearLevelView: () => {
+      logger.debug('visualizerSlice: clearLevelView');
+      set({levelView: null} as Partial<S>);
+    },
+
+    clearSearchHighlight: () => {
+      logger.debug('visualizerSlice: clearSearchHighlight');
+      set({searchHighlight: null} as Partial<S>);
+    },
+
     clearSelection: () => {
       logger.debug('visualizerSlice: clearSelection');
       set({
-        selectedEdges: [] as RFEdge[],
-        selectedNodes: [] as RFNode[],
+        selectedEdgeIds: [] as string[],
+        selectedNodeIds: [] as string[],
       } as Partial<S>);
     },
 
@@ -68,9 +89,13 @@ export function createVisualizerSlice<S extends VisualizerSlice>(
 
     isLoading: false,
 
-    selectedEdges: [],
+    levelView: null,
 
-    selectedNodes: [],
+    searchHighlight: null,
+
+    selectedEdgeIds: [],
+
+    selectedNodeIds: [],
 
     setGraphView: (graphView: GraphView | null) => {
       logger.debug('visualizerSlice: setGraphView', {
@@ -80,12 +105,39 @@ export function createVisualizerSlice<S extends VisualizerSlice>(
       set({graphView} as Partial<S>);
     },
 
-    setSelection: (nodes: RFNode[], edges: RFEdge[]) => {
+    setLevelView: (lv: LevelView) => {
+      logger.debug('visualizerSlice: setLevelView', {
+        action: 'setLevelView',
+        component: 'visualizerSlice',
+      });
+      set({levelView: lv} as Partial<S>);
+    },
+
+    setSearchHighlight: (
+      matchNodeIds: string[],
+      activeNodeId: string | null,
+    ) => {
+      logger.debug('visualizerSlice: setSearchHighlight', {
+        action: 'setSearchHighlight',
+        component: 'visualizerSlice',
+      });
+      set({
+        searchHighlight: {
+          activeNodeId,
+          matchNodeIds,
+        },
+      } as Partial<S>);
+    },
+
+    setSelection: (nodeIds: string[], edgeIds: string[]) => {
       logger.debug('visualizerSlice: setSelection', {
         action: 'setSelection',
         component: 'visualizerSlice',
       });
-      set({selectedEdges: edges, selectedNodes: nodes} as Partial<S>);
+      set({
+        selectedEdgeIds: edgeIds,
+        selectedNodeIds: nodeIds,
+      } as Partial<S>);
     },
 
     setViewport: (viewport: Viewport) => {
