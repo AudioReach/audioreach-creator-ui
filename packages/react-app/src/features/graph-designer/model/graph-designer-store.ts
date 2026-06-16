@@ -19,6 +19,10 @@ import {
   type PropertiesViewSlice,
 } from '~shared/store/tab-store-slices/properties-view-slice';
 import {
+  createSearchSlice,
+  type SearchSlice,
+} from '~shared/store/tab-store-slices/search-slice';
+import {
   createSubsystemSlice,
   type SubsystemSlice,
 } from '~shared/store/tab-store-slices/subsystem-slice';
@@ -55,7 +59,8 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   SubgraphListSlice &
   PropertiesViewSlice &
   PanelLayoutSlice &
-  PanelTabRegistrySlice;
+  PanelTabRegistrySlice &
+  SearchSlice;
 
 // ── Factory ─────────────────────────────────────────────────────────────────
 
@@ -68,7 +73,7 @@ export function createGraphDesignerStore(
 
   return createStore<GraphDesignerStore>((set, get) => ({
     ...createUsecaseSelectionSlice(set),
-    ...createGraphDataSlice(set, projectId),
+    ...createGraphDataSlice(set, get, projectId),
     ...createVisualizerSlice(set),
     ...createSubsystemSlice(set, get),
     ...createKeyConfigSlice(set),
@@ -78,6 +83,7 @@ export function createGraphDesignerStore(
     ...createPropertiesViewSlice(set),
     ...createPanelLayoutSlice(set),
     ...createPanelTabRegistrySlice(set),
+    ...createSearchSlice(set),
 
     // Seed usecase selection from global store on creation.
     selectedUsecases: initialSelectedUsecases,

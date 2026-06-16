@@ -9,6 +9,8 @@ import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
 
+import type {ModuleListSlice} from './module-list-slice';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -40,6 +42,7 @@ export interface ModuleInstance {
 
 export interface Connection {
   connectionId: string;
+  connectionType: 'control' | 'data';
   diffState?: DiffState;
   fromModuleId: string;
   fromPortId: string;
@@ -62,7 +65,17 @@ export interface Container {
   subgraphId: string;
 }
 
+export interface SubsystemPort {
+  direction: 'input' | 'output';
+  portId: string;
+  portName: string;
+  portType: 'control' | 'data';
+}
+
 export interface Subsystem {
+  controlPorts: SubsystemPort[];
+  dataPorts: SubsystemPort[];
+  id: number;
   subgraphs: string[];
   subsystemId: string;
   subsystemName: string;
@@ -80,6 +93,7 @@ export interface UsecaseGraphData {
 export interface GraphDataSlice {
   clearGraphData: () => void;
   graphData: UsecaseGraphData | null;
+  graphDataError: string | null;
   graphDataStatus: SliceStatus;
   isDirty: boolean;
   loadGraphData: (
@@ -117,10 +131,14 @@ function toDiffState(changeType: string): DiffState | undefined {
  * Creates the graph-data slice for composing into a tab store.
  *
  * @param set - Zustand set function bound to the parent store state.
- * @returns The initial state and actions for the graph-data slice.
+ * @param get - Zustand get function used to read moduleList for type resolution.
+ * @param projectId - Project identifier passed to the API.
  */
-export function createGraphDataSlice<S extends GraphDataSlice>(
+export function createGraphDataSlice<
+  S extends GraphDataSlice & ModuleListSlice,
+>(
   set: StoreApi<S>['setState'],
+  get: StoreApi<S>['getState'],
   projectId: string,
 ): GraphDataSlice {
   return {
@@ -131,12 +149,15 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
       });
       set({
         graphData: null,
+        graphDataError: null,
         graphDataStatus: 'uninitialized',
         isDirty: false,
       } as Partial<S>);
     },
 
     graphData: null,
+
+    graphDataError: null,
 
     graphDataStatus: 'uninitialized',
 
@@ -151,7 +172,10 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         component: 'graphDataSlice',
       });
 
-      set({graphDataStatus: 'loading'} as unknown as Partial<S>);
+      set({
+        graphDataError: null,
+        graphDataStatus: 'loading',
+      } as unknown as Partial<S>);
 
       try {
         const result = await getUsecaseComponents(projectId, usecases);
@@ -162,7 +186,10 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
             component: 'graphDataSlice',
             error: result.message,
           });
-          set({graphDataStatus: 'error'} as unknown as Partial<S>);
+          set({
+            graphDataError: result.message ?? 'API error',
+            graphDataStatus: 'error',
+          } as unknown as Partial<S>);
           return;
         }
 
@@ -179,6 +206,28 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
           numericIdToSystemId.set(ss.id, ss.systemId);
         }
 
+        // Build moduleId → moduleType lookup from already-loaded module definitions.
+        const defModuleTypeById = new Map(
+          get().moduleList.map((d) => [d.moduleId, d.moduleType]),
+        );
+
+        // parentId on a module refers to its parent subsystem's numeric id.
+        const subsystemIdToSubgraphs = new Map<string, string[]>();
+        for (const m of spfModules) {
+          if (m.parentId !== undefined) {
+            const ssId = numericIdToSystemId.get(m.parentId);
+            if (ssId) {
+              const sgId = String(m.subgraphId);
+              const list = subsystemIdToSubgraphs.get(ssId);
+              if (list) {
+                list.push(sgId);
+              } else {
+                subsystemIdToSubgraphs.set(ssId, [sgId]);
+              }
+            }
+          }
+        }
+
         // moduleInstances
         const moduleInstances: Record<string, ModuleInstance> = {};
         for (const m of spfModules) {
@@ -187,14 +236,14 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
             .map((p) => ({
               direction: 'input' as const,
               isStatic: p.portType === 'Static',
-              portId: String(p.id),
+              portId: p.systemId,
               portName: p.name,
               portType: 'data' as const,
             }));
           const controlPorts: Port[] = (m.controlPorts ?? []).map((p) => ({
             direction: 'input' as const,
             isStatic: p.portType === 'Static',
-            portId: String(p.id),
+            portId: p.systemId,
             portName: p.controlPortName,
             portType: 'control' as const,
           }));
@@ -203,7 +252,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
             .map((p) => ({
               direction: 'output' as const,
               isStatic: p.portType === 'Static',
-              portId: String(p.id),
+              portId: p.systemId,
               portName: p.name,
               portType: 'data' as const,
             }));
@@ -215,12 +264,12 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
             moduleId: String(m.moduleId),
             moduleInstanceId: m.systemId,
             moduleName: m.name,
-            moduleType: '',
+            moduleType: defModuleTypeById.get(String(m.moduleId)) ?? '',
             outputPorts,
             position: {x: 0, y: 0},
             subgraphId: String(m.subgraphId),
           };
-          const diffState = toDiffState(m.changeInfo.changeType);
+          const diffState = toDiffState(m.changeInfo?.changeType);
           if (diffState) {
             instance.diffState = diffState;
           }
@@ -259,7 +308,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
           if (!sg.containers.includes(cId)) {
             sg.containers.push(cId);
           }
-          const diffState = toDiffState(m.changeInfo.changeType);
+          const diffState = toDiffState(m.changeInfo?.changeType);
           if (diffState && !sg.diffState) {
             sg.diffState = diffState;
           }
@@ -269,17 +318,30 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
         const subsystems: Record<string, Subsystem> = {};
         for (const ss of subsystemDtos) {
           subsystems[ss.systemId] = {
-            subgraphs: [],
+            controlPorts: (ss.controlPorts ?? []).map((p) => ({
+              direction: 'input' as const,
+              portId: p.systemId,
+              portName: p.controlPortName,
+              portType: 'control' as const,
+            })),
+            dataPorts: (ss.dataPorts ?? []).map((p) => ({
+              direction: p.portIoType === 'Input' ? 'input' : 'output',
+              portId: p.systemId,
+              portName: p.name,
+              portType: 'data' as const,
+            })),
+            id: ss.id,
+            subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,
             subsystemName: ss.name,
           };
         }
 
-        // connections — data links + control links combined
-        const allLinks = [...dto.dataLinks, ...dto.controlLinks];
-        const connections: Connection[] = allLinks.map((link) => {
+        const connections: Connection[] = [];
+        for (const link of dto.dataLinks) {
           const conn: Connection = {
             connectionId: link.systemId,
+            connectionType: 'data',
             fromModuleId:
               numericIdToSystemId.get(link.sourceId) ?? String(link.sourceId),
             fromPortId: String(link.sourcePortId),
@@ -288,12 +350,30 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
               String(link.destinationId),
             toPortId: String(link.destinationPortId),
           };
-          const diffState = toDiffState(link.changeInfo.changeType);
+          const diffState = toDiffState(link.changeInfo?.changeType);
           if (diffState) {
             conn.diffState = diffState;
           }
-          return conn;
-        });
+          connections.push(conn);
+        }
+        for (const link of dto.controlLinks) {
+          const conn: Connection = {
+            connectionId: link.systemId,
+            connectionType: 'control',
+            fromModuleId:
+              numericIdToSystemId.get(link.sourceId) ?? String(link.sourceId),
+            fromPortId: String(link.sourcePortId),
+            toModuleId:
+              numericIdToSystemId.get(link.destinationId) ??
+              String(link.destinationId),
+            toPortId: String(link.destinationPortId),
+          };
+          const diffState = toDiffState(link.changeInfo?.changeType);
+          if (diffState) {
+            conn.diffState = diffState;
+          }
+          connections.push(conn);
+        }
 
         const graphData: UsecaseGraphData = {
           connections,
@@ -306,6 +386,7 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
 
         set({
           graphData,
+          graphDataError: null,
           graphDataStatus: 'ready',
         } as unknown as Partial<S>);
 
@@ -321,7 +402,10 @@ export function createGraphDataSlice<S extends GraphDataSlice>(
           component: 'graphDataSlice',
           error: errorMessage,
         });
-        set({graphDataStatus: 'error'} as unknown as Partial<S>);
+        set({
+          graphDataError: errorMessage,
+          graphDataStatus: 'error',
+        } as unknown as Partial<S>);
       }
     },
 

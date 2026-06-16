@@ -8,6 +8,8 @@ import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-contex
 export function useSubgraphList() {
   return useGraphDesignerStoreShallow((state) => ({
     loadSubgraphList: state.loadSubgraphList,
+    selectedSubgraphTypes: state.selectedSubgraphTypes,
+    setSelectedSubgraphTypes: state.setSelectedSubgraphTypes,
     setSubgraphListSearchQuery: state.setSubgraphListSearchQuery,
     subgraphList: state.subgraphList,
     subgraphListSearchQuery: state.subgraphListSearchQuery,

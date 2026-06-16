@@ -77,6 +77,14 @@ export function GetFlexLayoutConfig(): IJsonModel {
     type: 'tab',
   };
 
+  const keyConfiguratorTab: IJsonTabNode = {
+    component: 'key-configurator',
+    enableClose: false,
+    id: 'key-configurator-panel',
+    name: 'Key Configurator',
+    type: 'tab',
+  };
+
   // Tabset nodes
   const leftTabset: IJsonTabSetNode = {
     children: [moduleListTab],
@@ -101,7 +109,7 @@ export function GetFlexLayoutConfig(): IJsonModel {
   };
 
   const rightTabset: IJsonTabSetNode = {
-    children: [subgraphListTab],
+    children: [subgraphListTab, keyConfiguratorTab],
     type: 'tabset',
     weight: 20,
   };

@@ -11,6 +11,10 @@ export function useModuleList() {
     moduleList: state.moduleList,
     moduleListSearchQuery: state.moduleListSearchQuery,
     moduleListStatus: state.moduleListStatus,
+    selectedDspTypes: state.selectedDspTypes,
+    selectedModuleTypes: state.selectedModuleTypes,
     setModuleListSearchQuery: state.setModuleListSearchQuery,
+    setSelectedDspTypes: state.setSelectedDspTypes,
+    setSelectedModuleTypes: state.setSelectedModuleTypes,
   }));
 }

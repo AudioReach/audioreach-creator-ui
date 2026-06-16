@@ -24,6 +24,8 @@ export interface SubgraphDefinition {
 
 export interface SubgraphListSlice {
   loadSubgraphList: () => Promise<void>;
+  selectedSubgraphTypes: string[];
+  setSelectedSubgraphTypes: (types: string[]) => void;
   setSubgraphListSearchQuery: (query: string) => void;
   subgraphList: SubgraphDefinition[];
   subgraphListSearchQuery: string;
@@ -36,6 +38,14 @@ type GetState<T> = StoreApi<T>['getState'];
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Module-level filter cache: projectId → user-selected subgraph type filters.
+// Lives outside the slice so filter choices survive tab store recreation.
+const subgraphFilterCache = new Map<string, string[]>();
+
+export function evictSubgraphListFilterCache(projectId: string): void {
+  subgraphFilterCache.delete(projectId);
+}
 
 function toSubgraphDefinition(dto: SubgraphDto): SubgraphDefinition {
   return {
@@ -90,8 +100,15 @@ export function createSubgraphListSlice<S extends SubgraphListSlice>(
           return;
         }
 
+        const subgraphs = result.data.map(toSubgraphDefinition);
+        const allSubgraphTypes = [
+          ...new Set(subgraphs.map((s) => s.subgraphType)),
+        ].sort();
+
         setSlice({
-          subgraphList: result.data.map(toSubgraphDefinition),
+          selectedSubgraphTypes:
+            subgraphFilterCache.get(projectId) ?? allSubgraphTypes,
+          subgraphList: subgraphs,
           subgraphListStatus: 'ready',
         });
 
@@ -110,6 +127,13 @@ export function createSubgraphListSlice<S extends SubgraphListSlice>(
 
         setSlice({subgraphListStatus: 'error'});
       }
+    },
+
+    selectedSubgraphTypes: [],
+
+    setSelectedSubgraphTypes: (types: string[]) => {
+      subgraphFilterCache.set(projectId, types);
+      setSlice({selectedSubgraphTypes: types});
     },
 
     setSubgraphListSearchQuery: (query: string) => {

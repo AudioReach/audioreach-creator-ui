@@ -15,7 +15,5 @@ import type {SubgraphDto} from '../model/subgraph-definition.dto';
 export async function getAllSubgraphs(
   projectId: string,
 ): Promise<ApiResult<SubgraphDto[]>> {
-  return httpClient.get<SubgraphDto[]>(
-    `/projects/${projectId}/definitions/subgraphs/spf`,
-  );
+  return httpClient.get<SubgraphDto[]>(`/projects/${projectId}/subgraphs`);
 }

@@ -12,7 +12,7 @@ export async function getSpfModuleDefinition(
   moduleSystemId: string,
 ): Promise<ApiResult<SpfModuleDefinitionResponseDto>> {
   return httpClient.get<SpfModuleDefinitionResponseDto>(
-    `/projects/${projectId}/definitions/modules/spf/${moduleSystemId}`,
+    `/projects/${projectId}/spf-module-definitions/${moduleSystemId}`,
   );
 }
 
@@ -25,6 +25,6 @@ export async function getAllSpfModuleDefinitions(
   projectId: string,
 ): Promise<ApiResult<SpfModuleDefinitionResponseDto[]>> {
   return httpClient.get<SpfModuleDefinitionResponseDto[]>(
-    `/projects/${projectId}/definitions/modules/spf`,
+    `/projects/${projectId}/spf-module-definitions`,
   );
 }

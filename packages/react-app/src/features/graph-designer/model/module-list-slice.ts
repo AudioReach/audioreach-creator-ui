@@ -23,8 +23,11 @@ export interface Port {
 }
 
 export interface ModuleDefinition {
+  builtIn: boolean;
   category: string;
   description: string;
+  /** DSP processor type, sourced from dto.processorInfo.name */
+  dspType: string;
   inputPorts: Port[];
   moduleId: string;
   moduleName: string;
@@ -37,7 +40,11 @@ export interface ModuleListSlice {
   moduleList: ModuleDefinition[];
   moduleListSearchQuery: string;
   moduleListStatus: SliceStatus;
+  selectedDspTypes: string[];
+  selectedModuleTypes: string[];
   setModuleListSearchQuery: (query: string) => void;
+  setSelectedDspTypes: (types: string[]) => void;
+  setSelectedModuleTypes: (types: string[]) => void;
 }
 
 type SetState<T> = StoreApi<T>['setState'];
@@ -46,6 +53,18 @@ type GetState<T> = StoreApi<T>['getState'];
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Module-level filter cache: projectId → user-selected filter state.
+// Lives outside the slice so filter choices survive tab store recreation
+// (e.g. when a project is closed and reopened in the same app session).
+const filterCache = new Map<
+  string,
+  Partial<{dspTypes: string[]; moduleTypes: string[]}>
+>();
+
+export function evictModuleListFilterCache(projectId: string): void {
+  filterCache.delete(projectId);
+}
 
 function toModuleDefinition(
   dto: SpfModuleDefinitionResponseDto,
@@ -81,8 +100,10 @@ function toModuleDefinition(
   }
 
   return {
+    builtIn: dto.builtIn,
     category: info.moduleTypeInfo?.majorModuleType ?? '',
     description: dto.description,
+    dspType: dto.processorInfo?.name ?? '',
     inputPorts,
     moduleId: String(dto.moduleId),
     moduleName: dto.name,
@@ -112,6 +133,14 @@ export function createModuleListSlice<S extends ModuleListSlice>(
   projectId: string,
 ): ModuleListSlice {
   const setSlice = set as SetState<ModuleListSlice>;
+  const patchFilterCache = (
+    patch: Partial<{dspTypes: string[]; moduleTypes: string[]}>,
+  ) => {
+    filterCache.set(projectId, {
+      ...(filterCache.get(projectId) ?? {}),
+      ...patch,
+    });
+  };
   return {
     loadModuleList: async () => {
       logger.debug('moduleListSlice: loadModuleList — starting', {
@@ -134,9 +163,27 @@ export function createModuleListSlice<S extends ModuleListSlice>(
           return;
         }
 
+        const modules = result.data.map(toModuleDefinition);
+        const dspTypeSet = new Set<string>();
+        const categorySet = new Set<string>();
+        for (const m of modules) {
+          if (m.dspType) {
+            dspTypeSet.add(m.dspType);
+          }
+          if (m.category) {
+            categorySet.add(m.category);
+          }
+        }
+
+        const allDspTypes = [...dspTypeSet].sort();
+        const allModuleTypes = [...categorySet].sort();
+        const cached = filterCache.get(projectId);
+
         setSlice({
-          moduleList: result.data.map(toModuleDefinition),
+          moduleList: modules,
           moduleListStatus: 'ready',
+          selectedDspTypes: cached?.dspTypes ?? allDspTypes,
+          selectedModuleTypes: cached?.moduleTypes ?? allModuleTypes,
         });
 
         logger.debug('moduleListSlice: loadModuleList — ready', {
@@ -162,12 +209,26 @@ export function createModuleListSlice<S extends ModuleListSlice>(
 
     moduleListStatus: 'uninitialized',
 
+    selectedDspTypes: [],
+
+    selectedModuleTypes: [],
+
     setModuleListSearchQuery: (query: string) => {
       logger.debug('moduleListSlice: setModuleListSearchQuery', {
         action: 'set_module_list_search_query',
         component: 'moduleListSlice',
       });
       setSlice({moduleListSearchQuery: query});
+    },
+
+    setSelectedDspTypes: (types: string[]) => {
+      patchFilterCache({dspTypes: types});
+      setSlice({selectedDspTypes: types});
+    },
+
+    setSelectedModuleTypes: (types: string[]) => {
+      patchFilterCache({moduleTypes: types});
+      setSlice({selectedModuleTypes: types});
     },
   };
 }
