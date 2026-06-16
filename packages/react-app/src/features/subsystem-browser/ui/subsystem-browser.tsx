@@ -5,7 +5,7 @@
 
 import type {FC} from 'react';
 
-import {useSubsystemBrowserStore} from '../model/use-subsystem-browser-store';
+import {useSubsystemBrowser} from '~features/graph-designer';
 
 import SubSystemTreeView from './subsystem-tree-view';
 
@@ -15,7 +15,7 @@ export const SubsystemBrowser: FC = () => {
     // TODO: Implement actual navigation logic
   };
 
-  const subsystemData = useSubsystemBrowserStore((state) => state.data);
+  const {subsystemData} = useSubsystemBrowser();
 
   return (
     <div

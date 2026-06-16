@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ReactElement, useEffect, useMemo, useState} from 'react';
+import {type ReactElement, useEffect, useMemo} from 'react';
 
 import {Box, Boxes, Check, ListFilter, Search} from 'lucide-react';
 
@@ -13,155 +13,88 @@ import {Popover} from '@qualcomm-ui/react/popover';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {getAllSpfModuleDefinitions} from '~entities/module-definitions/api/module-definition-api';
-import type {SpfModuleDefinitionResponseDto} from '~entities/module-definitions/model/module-definition.dto';
-import {useModuleListStore} from '~features/module-list/model/module-list-store';
+import {useModuleList} from '~features/graph-designer';
 import {isValidProjectId} from '~shared/config/utils';
 import {logger} from '~shared/lib/logger';
-import {useProjectLayoutStore} from '~shared/store';
+import {useGlobalStore} from '~shared/store/global-store';
 import {searchItems} from '~shared/utils/search-utils';
 
-/**
- * Handle drag start event for modules
- */
-function handleDragStart(
-  module: SpfModuleDefinitionResponseDto,
-  event: React.DragEvent,
-): void {
-  const draggedModuleInfo = {
-    dspType: module.processorInfo.name,
-    moduleId: module.moduleId,
-  };
-
-  event.dataTransfer.setData(
-    'application/json',
-    JSON.stringify(draggedModuleInfo),
-  );
-  event.dataTransfer.effectAllowed = 'copy';
-  logger.info('Module drag started');
-}
-
 export function ModuleList(): ReactElement {
-  const [isLoading, setIsLoading] = useState(false);
+  // Get the active project ID from the global store
+  const projectId = useGlobalStore((s) => s.activeProjectId);
 
-  // Get the active project ID from the project layout store
-  const activeProjectGroup = useProjectLayoutStore((state) =>
-    state.getActiveProjectGroup(),
-  );
+  // Get module list state from tab store via hook
+  const {
+    loadModuleList,
+    moduleList,
+    moduleListSearchQuery,
+    moduleListStatus,
+    selectedDspTypes,
+    selectedModuleTypes,
+    setModuleListSearchQuery,
+    setSelectedDspTypes,
+    setSelectedModuleTypes,
+  } = useModuleList();
 
-  // Use projectKey as the project ID (this is the unique identifier for the project)
-  const projectId = activeProjectGroup?.projectKey;
-
-  // Load module list data from API
+  // Load module list when project changes
   useEffect(() => {
-    // Only fetch if we have a valid project ID
-    if (!isValidProjectId(projectId)) {
+    if (!isValidProjectId(projectId ?? undefined)) {
       logger.info('[ModuleList] No valid project ID, skipping fetch');
-      setIsLoading(false);
       return;
     }
+    if (moduleListStatus === 'uninitialized') {
+      void loadModuleList();
+    }
+  }, [projectId, moduleListStatus, loadModuleList]);
 
-    const loadModuleList = async () => {
-      setIsLoading(true);
-      logger.info(
-        `[ModuleList] Fetching module list for project: ${projectId}`,
-      );
-      const result = await getAllSpfModuleDefinitions(projectId);
+  const isLoading = moduleListStatus === 'loading';
 
-      if (result.success && result.data) {
-        logger.info(
-          `[ModuleList] Successfully fetched ${result.data.length} modules`,
-        );
-
-        // Get store action
-        const {setModuleList} = useModuleListStore.getState();
-
-        // Set all modules at once
-        setModuleList(result.data);
-
-        logger.info('[ModuleList] Module list loaded successfully');
-      } else {
-        logger.error(
-          `[ModuleList] ${result.message || 'Failed to load module list'}`,
-        );
-      }
-
-      setIsLoading(false);
-    };
-
-    void loadModuleList();
-  }, [projectId]);
-
-  const moduleList = useModuleListStore((state) => state.moduleList);
-  const query = useModuleListStore((state) => state.query);
-  const setSearchString = useModuleListStore((state) => state.setSearchString);
-  const isDragEnabled = useModuleListStore((state) => state.isDragEnabled);
-  const selectedDspTypes = useModuleListStore(
-    (state) => state.selectedDspTypes,
-  );
-  const selectedModuleTypes = useModuleListStore(
-    (state) => state.selectedModuleTypes,
-  );
-  const setSelectedDspTypes = useModuleListStore(
-    (state) => state.setSelectedDspTypes,
-  );
-  const setSelectedModuleTypes = useModuleListStore(
-    (state) => state.setSelectedModuleTypes,
-  );
-
-  // Extract unique DSP types from data (checkboxes)
+  // Extract unique DSP types from data
   const uniqueDspTypes = useMemo(() => {
     const types = new Set<string>();
     moduleList.forEach((module) => {
-      types.add(module.processorInfo.name);
+      if (module.dspType) {
+        types.add(module.dspType);
+      }
     });
     return Array.from(types).sort();
   }, [moduleList]);
 
-  // Extract unique Module types from data (checkboxes)
+  // Extract unique Module types from data
   const uniqueModuleTypes = useMemo(() => {
     const types = new Set<string>();
     moduleList.forEach((module) => {
-      types.add(module.moduleInfo.moduleTypeInfo.majorModuleType);
+      if (module.category) {
+        types.add(module.category);
+      }
     });
     return Array.from(types).sort();
   }, [moduleList]);
 
-  // Filter modules based on selected types in checkbox and search query
+  // Filter modules based on selected types and search query
   const filteredModules = useMemo(() => {
-    let result = moduleList;
-
-    // If nothing is selected in DSP types, show nothing
-    if (selectedDspTypes.length === 0) {
+    if (selectedDspTypes.length === 0 || selectedModuleTypes.length === 0) {
       return [];
     }
 
-    // If nothing is selected in Module types, show nothing
-    if (selectedModuleTypes.length === 0) {
-      return [];
-    }
-
-    // Apply DSP type filter
-    result = result.filter((module) =>
-      selectedDspTypes.includes(module.processorInfo.name),
+    let result = moduleList.filter(
+      (module) =>
+        selectedDspTypes.includes(module.dspType) &&
+        selectedModuleTypes.includes(module.category),
     );
 
-    // Apply Module type filter
-    result = result.filter((module) =>
-      selectedModuleTypes.includes(
-        module.moduleInfo.moduleTypeInfo.majorModuleType,
-      ),
-    );
-
-    // Apply search filter
-    if (query) {
-      result = searchItems(result, query);
+    if (moduleListSearchQuery) {
+      result = searchItems(result, moduleListSearchQuery);
     }
 
     return result;
-  }, [moduleList, query, selectedDspTypes, selectedModuleTypes]);
+  }, [
+    moduleList,
+    moduleListSearchQuery,
+    selectedDspTypes,
+    selectedModuleTypes,
+  ]);
 
-  // Handle DSP type checkbox toggle
   const handleDspTypeToggle = (dspType: string, checked: boolean) => {
     if (checked) {
       setSelectedDspTypes([...selectedDspTypes, dspType]);
@@ -170,7 +103,6 @@ export function ModuleList(): ReactElement {
     }
   };
 
-  // Handle Module type checkbox toggle
   const handleModuleTypeToggle = (moduleType: string, checked: boolean) => {
     if (checked) {
       setSelectedModuleTypes([...selectedModuleTypes, moduleType]);
@@ -181,59 +113,16 @@ export function ModuleList(): ReactElement {
     }
   };
 
-  // Clear Filters - Select all checkboxes (clears filters, shows all)
   const handleClearFilters = () => {
     setSelectedDspTypes(uniqueDspTypes);
     setSelectedModuleTypes(uniqueModuleTypes);
   };
 
-  // Unselect All - Uncheck all checkboxes (hides all)
   const handleUnselectAll = () => {
     setSelectedDspTypes([]);
     setSelectedModuleTypes([]);
   };
 
-  // Restore or initialize filters when project/data changes
-  useEffect(() => {
-    if (!projectId || moduleList.length === 0) {
-      return;
-    }
-
-    const store = useModuleListStore.getState();
-    const savedProjectFilters = store.projectFilters[projectId];
-
-    if (savedProjectFilters) {
-      setSelectedDspTypes(savedProjectFilters.dspFilter);
-      setSelectedModuleTypes(savedProjectFilters.moduleTypeFilter);
-    } else {
-      // No saved filters - select all (default state)
-      setSelectedDspTypes(uniqueDspTypes);
-      setSelectedModuleTypes(uniqueModuleTypes);
-    }
-  }, [
-    projectId,
-    moduleList.length,
-    uniqueDspTypes,
-    uniqueModuleTypes,
-    setSelectedDspTypes,
-    setSelectedModuleTypes,
-  ]);
-
-  // Auto-save filters when they change
-  useEffect(() => {
-    if (!projectId || moduleList.length === 0) {
-      return;
-    }
-
-    const store = useModuleListStore.getState();
-    store.projectFilters[projectId] = {
-      dspFilter: selectedDspTypes,
-      moduleTypeFilter: selectedModuleTypes,
-    };
-  }, [projectId, selectedDspTypes, selectedModuleTypes, moduleList.length]);
-
-  // Show filter only if there are meaningful choices to make
-  // Hide when there's only 1 DSP type AND 1 Module type (nothing to filter)
   const showFilterIcon =
     uniqueDspTypes.length > 1 || uniqueModuleTypes.length > 1;
 
@@ -242,11 +131,11 @@ export function ModuleList(): ReactElement {
       <div className="flex items-center gap-3">
         <TextInput
           aria-label="Search modules"
-          onValueChange={setSearchString}
+          onValueChange={setModuleListSearchQuery}
           placeholder="Search"
           size="sm"
           startIcon={Search}
-          value={query}
+          value={moduleListSearchQuery}
         />
         {showFilterIcon && (
           <Popover
@@ -376,13 +265,9 @@ export function ModuleList(): ReactElement {
           <ul className="flex flex-col gap-1">
             {filteredModules.map((module) => (
               <Tooltip
-                key={module.systemId}
+                key={module.moduleId}
                 trigger={
-                  <li
-                    className={`flex items-center gap-3 ${isDragEnabled ? 'cursor-grab' : 'cursor-default'}`}
-                    draggable={isDragEnabled}
-                    onDragStart={(e) => handleDragStart(module, e)}
-                  >
+                  <li className="flex cursor-default items-center gap-3">
                     {module.builtIn ? (
                       <Box className="h-4 w-4 shrink-0" />
                     ) : (
@@ -390,12 +275,10 @@ export function ModuleList(): ReactElement {
                     )}
                     <div className="flex flex-col gap-0">
                       <span className="text-[11px] font-semibold">
-                        {module.displayName || module.name}
+                        {module.moduleName}
                       </span>
                       <span className="text-neutral-secondary text-[10px]">
-                        {module.processorInfo?.name || 'Unknown'} •{' '}
-                        {module.moduleInfo?.moduleTypeInfo?.majorModuleType ||
-                          'Unknown'}
+                        {module.dspType} • {module.category}
                       </span>
                     </div>
                   </li>
@@ -408,12 +291,12 @@ export function ModuleList(): ReactElement {
 
           {filteredModules.length === 0 && (
             <div className="text-neutral-secondary flex items-center justify-center py-8 text-center text-[11px]">
-              {!isValidProjectId(projectId)
+              {!isValidProjectId(projectId ?? undefined)
                 ? 'Please open a valid project'
                 : moduleList.length === 0
                   ? 'No modules available'
-                  : query
-                    ? `No modules found matching "${query}"`
+                  : moduleListSearchQuery
+                    ? `No modules found matching "${moduleListSearchQuery}"`
                     : 'No modules match the selected filters'}
             </div>
           )}

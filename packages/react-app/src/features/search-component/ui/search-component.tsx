@@ -21,8 +21,6 @@ import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {useSearchComponentStore} from '../model/use-search-component-store';
-
 export interface SearchComponentProps {
   /** Current match index (1-based). Displayed as "N / total". */
   currentMatch?: number;
@@ -31,12 +29,19 @@ export interface SearchComponentProps {
    * Increment this counter to focus the search input.
    */
   focusTrigger?: number;
+  /** Search history entries to show in the dropdown (most-recent first). */
+  history?: string[];
+  /** Called when the user confirms a search term so it can be saved to history. */
+  onAddToHistory?: (term: string) => void;
   onClose: () => void;
   onNext: () => void;
   onPrevious: () => void;
   onSearch: (term: string) => void;
+  /** Called on every keystroke so the parent can persist the search term. */
+  onSearchTermChange?: (term: string) => void;
   placeholder?: string;
-  projectId: string;
+  /** Controlled search term value. */
+  searchTerm: string;
   totalMatches?: number;
 }
 
@@ -52,12 +57,15 @@ export interface SearchComponentProps {
 export const SearchComponent: FC<SearchComponentProps> = ({
   currentMatch,
   focusTrigger,
+  history = [],
+  onAddToHistory = () => {},
   onClose,
   onNext,
   onPrevious,
   onSearch,
+  onSearchTermChange = () => {},
   placeholder = 'Search components...',
-  projectId,
+  searchTerm,
   totalMatches,
 }) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -72,13 +80,6 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   // Always track the latest onSearch callback to avoid stale closures in effects.
   const onSearchRef = useRef(onSearch);
   onSearchRef.current = onSearch;
-
-  const addToHistory = useSearchComponentStore((s) => s.addToHistory);
-  const setSearchTerm = useSearchComponentStore((s) => s.setSearchTerm);
-
-  const {history, searchTerm} = useSearchComponentStore((state) =>
-    state.getProjectState(projectId),
-  );
 
   const searchTermRef = useRef(searchTerm);
   searchTermRef.current = searchTerm;
@@ -134,7 +135,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(projectId, value);
+    onSearchTermChange(value);
     onSearch(value);
     if (!value) {
       setIsHistoryOpen(false);
@@ -143,7 +144,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   };
 
   const handleHistorySelect = (term: string) => {
-    setSearchTerm(projectId, term);
+    onSearchTermChange(term);
     onSearch(term);
     setIsHistoryOpen(false);
     setFocusedHistoryIndex(-1);
@@ -154,7 +155,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       if (searchTerm.trim()) {
-        addToHistory(projectId, searchTerm);
+        onAddToHistory(searchTerm);
       }
       if (event.shiftKey) {
         onPrevious();
@@ -214,7 +215,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
 
   const handleNext = () => {
     if (searchTerm.trim()) {
-      addToHistory(projectId, searchTerm);
+      onAddToHistory(searchTerm);
     }
     onNext();
   };

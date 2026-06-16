@@ -45,12 +45,14 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
       return true;
     }
 
-    // convert a search term that may be decimal or hex ("0xFF" or "ff") into a number
+    // convert a search term that may be decimal or hex ("0xFF" or "ff") into a
+    // number
     const idNumber = ConvertStringToNumber(termToLower);
     return idNumber !== null && idNumber === node.id;
   };
 
-  // A treeNode is visible if it matches the search Input or has any matching descendants.
+  // A treeNode is visible if it matches the search Input or has any matching
+  // descendants.
   const hasMatchInSubtree = (
     treeNode: SubsystemBrowserTreeNode,
     searchInput: string,

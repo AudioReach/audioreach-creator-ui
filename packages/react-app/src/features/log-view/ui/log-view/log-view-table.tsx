@@ -27,16 +27,18 @@ import {Icon} from '@qualcomm-ui/react/icon';
 import {flexRender, Table, useReactTable} from '@qualcomm-ui/react/table';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {type LogEntry, LogType} from '../../model/log-view.types';
-import {useLogViewStore} from '../../model/use-log-view-store';
+import type {
+  LogEntry,
+  LogType,
+} from '~shared/store/project-store-slices/logs-slice';
+
+import {useLogView} from '../../hooks/use-log-view';
 
 // React Table column helper for type-safe column definitions
 const columnHelper = createColumnHelper<LogEntry>();
-
-// Returns appropriate colored icon based on log severity level
 const getLogIcon = (logType: LogType) => {
   switch (logType) {
-    case LogType.Info:
+    case 'info':
       return (
         <Icon
           icon={Info}
@@ -44,7 +46,7 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-support-info)'}}
         />
       );
-    case LogType.Warning:
+    case 'warn':
       return (
         <Icon
           icon={TriangleAlert}
@@ -52,7 +54,7 @@ const getLogIcon = (logType: LogType) => {
           style={{color: 'var(--color-icon-support-warning)'}}
         />
       );
-    case LogType.Error:
+    case 'error':
       return (
         <Icon
           icon={X}
@@ -71,12 +73,10 @@ const getLogIcon = (logType: LogType) => {
   }
 };
 
-// Renders message cell with expansion icon and overflow tooltip
 function MessageCell({logEntry}: {logEntry: LogEntry}) {
-  const {selectedRowLogId, selectRowLog, toggleLogExpansion} =
-    useLogViewStore();
+  const {selectedRowLogId, selectRowLog, toggleLogExpansion} = useLogView();
   const isSelected = selectedRowLogId === logEntry.id;
-  const isExpanded = logEntry.logMessageExpanded || false;
+  const isExpanded = logEntry.isExpanded || false;
   const spanRef = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
@@ -106,7 +106,7 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
   return (
     <div className="flex w-full max-w-full items-center gap-1">
       <div className="h-3 w-3 flex-shrink-0">
-        {logEntry.detailedMessage && (
+        {logEntry.detail !== undefined && (
           <Icon
             icon={MessageSquareText}
             onMouseDown={(e: React.MouseEvent) => {
@@ -150,45 +150,12 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
   );
 }
 
-// Main table component that displays filtered log entries with selection and expansion
-function LogViewTable() {
-  const {
-    clearLogRowSelection,
-    logs,
-    searchLogQuery,
-    selectedLogTypes,
-    selectedRowLogId,
-    selectRowLog,
-  } = useLogViewStore();
-
-  const filteredLogs = useMemo(() => {
-    let filtered = logs;
-
-    // Filter by log types - if no types selected, show no logs
-    if (selectedLogTypes.length > 0) {
-      filtered = filtered.filter((log) =>
-        selectedLogTypes.includes(log.logType),
-      );
-    } else {
-      // If no types selected, show no logs
-      filtered = [];
-    }
-
-    if (searchLogQuery.trim()) {
-      const query = searchLogQuery.toLowerCase();
-      filtered = filtered.filter(
-        (log) =>
-          log.message.toLowerCase().includes(query) ||
-          (log.detailedMessage &&
-            log.detailedMessage.toLowerCase().includes(query)),
-      );
-    }
-    return filtered;
-  }, [logs, selectedLogTypes, searchLogQuery]);
+function LogViewTable({filteredLogs}: {filteredLogs: LogEntry[]}) {
+  const {clearLogRowSelection, selectedRowLogId, selectRowLog} = useLogView();
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('logType', {
+      columnHelper.accessor('type', {
         cell: (info: CellContext<LogEntry, string>) => (
           <div className="flex items-center justify-center">
             {getLogIcon(info.getValue() as LogType)}
@@ -198,21 +165,18 @@ function LogViewTable() {
         minSize: 30,
         size: 30,
       }),
-      // Timestamp column - shows formatted time with 24-hour format
       columnHelper.accessor('timestamp', {
-        cell: (info: CellContext<LogEntry, Date | undefined>) => {
+        cell: (info: CellContext<LogEntry, number>) => {
           const logEntry = info.row.original;
           const timestamp = info.getValue();
           const isSelected = selectedRowLogId === logEntry.id;
-          // Format timestamp to HH:MM:SS.mmm format - timestamp is always present now
-          const date = new Date(timestamp!);
+          const date = new Date(timestamp);
           const timeString = `${date.toLocaleTimeString('en-US', {
             hour: '2-digit',
             hour12: false, // 24-hour format
             minute: '2-digit',
             second: '2-digit',
           })}.${date.getMilliseconds().toString().padStart(3, '0')}`;
-          // Apply bold styling when row is selected
           return (
             <span className={isSelected ? 'font-bold' : ''}>{timeString}</span>
           );
@@ -221,7 +185,6 @@ function LogViewTable() {
         minSize: 60,
         size: 60,
       }),
-      // Message column - displays log message with expand/collapse functionality
       columnHelper.accessor('message', {
         cell: (info: CellContext<LogEntry, string>) => (
           <MessageCell logEntry={info.row.original} />
@@ -276,8 +239,7 @@ function LogViewTable() {
             {table.getRowModel().rows.map((row: Row<LogEntry>) => {
               const logEntry = row.original;
               const isSelected = selectedRowLogId === logEntry.id;
-              const shouldShowDetails =
-                logEntry.logMessageExpanded && logEntry.detailedMessage;
+              const shouldShowDetails = logEntry.isExpanded;
               return (
                 <Fragment key={row.id}>
                   <Table.Row
@@ -325,7 +287,7 @@ function LogViewTable() {
                     <Table.Row>
                       <Table.Cell className="p-2" colSpan={3}>
                         <div className="max-h-96 overflow-auto whitespace-pre-wrap font-mono text-[10px]">
-                          {logEntry.detailedMessage}
+                          {logEntry.detail ?? logEntry.message}
                         </div>
                       </Table.Cell>
                     </Table.Row>

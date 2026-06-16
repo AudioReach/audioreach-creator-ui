@@ -9,7 +9,8 @@ import ValidationResultTable from './validation-result-table';
 import ValidationResultToolbar from './validation-result-toolbar';
 
 /**
- * Combines ValidationResultToolbar and ValidationResultTable with proper styling for FlexLayout integration
+ * Combines ValidationResultToolbar and ValidationResultTable with proper styling
+ * for FlexLayout integration
  */
 const ValidationResultPanel: FC = () => {
   return (

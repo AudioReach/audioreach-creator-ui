@@ -16,7 +16,11 @@ import type {SliceStatus} from '../global-store.types';
 export type SeverityType = 'critical' | 'error' | 'warning' | 'info';
 
 export interface ValidationResult {
+  canAutoFix?: boolean;
+  canShowControls?: boolean;
   connectionId?: string;
+  errorCode?: string;
+  errorDetails?: string;
   id: string;
   message: string;
   moduleInstanceId?: string;

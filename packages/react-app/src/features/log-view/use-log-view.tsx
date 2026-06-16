@@ -4,7 +4,12 @@
  */
 
 import {logger} from '~shared/lib/logger';
-import {PanelTabEntity, useProjectLayoutStore} from '~shared/store';
+import {
+  PanelTabEntity,
+  ProjectStoreContext,
+  projectStoreRegistry,
+  useProjectLayoutStore,
+} from '~shared/store';
 import {PanelId} from '~shared/store/project-layout.types';
 
 import LogViewPanel from './log-view-panel';
@@ -112,9 +117,21 @@ export function useLogView() {
       return false;
     }
 
+    const projectStore = projectStoreRegistry.get(activeProjectGroup.id);
+    if (!projectStore) {
+      logger.error(
+        `[LOG VIEW] No project store for project: ${activeProjectGroup.id}`,
+      );
+      return false;
+    }
+
     const logViewPanel = new PanelTabEntity(
       LOG_VIEW_PANEL_TITLE,
-      <LogViewPanel />,
+      (
+        <ProjectStoreContext.Provider value={projectStore}>
+          <LogViewPanel />
+        </ProjectStoreContext.Provider>
+      ),
       (_tabId: string, _tabName: string) => {
         return true;
       },

@@ -24,11 +24,19 @@ import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import {Portal} from '@qualcomm-ui/react-core/portal';
 
+import {useValidationResults} from '~features/graph-designer/hooks/use-validation-results';
 import {logger} from '~shared/lib/logger';
+import type {
+  SeverityType,
+  ValidationResult,
+} from '~shared/store/tab-store-slices/validation-result-slice';
 
-import {useValidationResultStore} from './model/use-validation-result-store';
-import {ALL_SEVERITIES, SeverityType} from './model/validation-result.types';
+import {filterValidationResults} from './lib/filter-validation-results';
+import {formatValidationResult} from './lib/format-validation-result';
 import {getSeverityIcon} from './utils/severity-icons';
+
+const ALL_SEVERITIES = 'all';
+const SEVERITY_TYPES: SeverityType[] = ['critical', 'error', 'warning'];
 
 const ValidationResultToolbar: React.FC = () => {
   // Extract necessary state and actions from the validation result store
@@ -43,15 +51,11 @@ const ValidationResultToolbar: React.FC = () => {
     setSelectedSeverities,
     validationResults,
     warningCount,
-  } = useValidationResultStore();
+  } = useValidationResults();
 
   // Calculate "All Types" checkbox state (checked, unchecked, or indeterminate)
   const allSeveritiesState = useMemo(() => {
-    const individualSeverities = [
-      SeverityType.Critical,
-      SeverityType.Error,
-      SeverityType.Warning,
-    ];
+    const individualSeverities: SeverityType[] = SEVERITY_TYPES;
     const selectedCount = individualSeverities.filter((severity) =>
       selectedSeverities.includes(severity),
     ).length;
@@ -68,70 +72,34 @@ const ValidationResultToolbar: React.FC = () => {
   // Handles multiple selection logic for severity filters
   const handleFilterToggle = (severity: string) => {
     logger.debug(`Filter toggle for severity: ${severity}`);
-    // Get fresh state from store
-    const currentState = useValidationResultStore.getState();
-    const currentSelectedSeverities = currentState.selectedSeverities;
     if (severity === ALL_SEVERITIES) {
-      // Toggle "All Types"
-      const individualSeverities = [
-        SeverityType.Critical,
-        SeverityType.Error,
-        SeverityType.Warning,
-      ];
-      const allToggled = individualSeverities.every((s) =>
-        currentSelectedSeverities.includes(s),
+      const allToggled = SEVERITY_TYPES.every((s) =>
+        selectedSeverities.includes(s),
       );
       logger.debug(`All severities toggled: ${allToggled}`);
       if (allToggled) {
         setSelectedSeverities([]); // Clear all = show no results
       } else {
-        setSelectedSeverities([...individualSeverities]); // Select all individual severities
+        setSelectedSeverities([...SEVERITY_TYPES]); // Select all individual severities
       }
       return;
     }
-    // handles toggling individual severity checkboxes (Critical, Error, Warning)
-    // Toggle individual severity using fresh state
-    if (currentSelectedSeverities.includes(severity)) {
-      // Remove this severity
-      const newSeverities = currentSelectedSeverities.filter(
-        (s) => s !== severity,
-      );
-      setSelectedSeverities(newSeverities);
+    if (selectedSeverities.includes(severity as SeverityType)) {
+      setSelectedSeverities(selectedSeverities.filter((s) => s !== severity));
     } else {
-      // Add this severity
-      const newSeverities = [...currentSelectedSeverities, severity];
-      setSelectedSeverities(newSeverities);
+      setSelectedSeverities([...selectedSeverities, severity as SeverityType]);
     }
   };
 
-  // Memoized filtering logic for performance optimization
-  // Filters validation results based on selected severities and search query
-  // Used by toolbar actions (copy, export) to operate on the same filtered dataset as the table
-  const filteredResults = useMemo(() => {
-    let filtered = validationResults;
-
-    // Apply severity filter (critical, error, warning, or all)
-    if (selectedSeverities.length > 0) {
-      filtered = filtered.filter((result) =>
-        selectedSeverities.includes(result.severity),
-      );
-    } else {
-      filtered = []; // Show no results if no severities selected
-    }
-
-    // Apply text search filter (case-insensitive, searches description, error details, and error code)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (result) =>
-          result.description.toLowerCase().includes(query) ||
-          result.errorDetails.toLowerCase().includes(query) ||
-          result.errorCode.toLowerCase().includes(query),
-      );
-    }
-
-    return filtered;
-  }, [validationResults, selectedSeverities, searchQuery]);
+  const filteredResults = useMemo(
+    () =>
+      filterValidationResults(
+        validationResults,
+        selectedSeverities,
+        searchQuery,
+      ),
+    [validationResults, selectedSeverities, searchQuery],
+  );
 
   /**
    * Copies the currently selected validation result to clipboard
@@ -147,8 +115,8 @@ const ValidationResultToolbar: React.FC = () => {
       return; // No result selected, nothing to copy
     }
 
-    // Format validation result with severity, error code, description, and error details
-    const fullText = `[${selectedResult.severity.toUpperCase()}] ${selectedResult.errorCode}: ${selectedResult.description}\n${selectedResult.errorDetails}`;
+    // Format validation result with severity, error code, message, and error details
+    const fullText = formatValidationResult(selectedResult);
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -169,12 +137,8 @@ const ValidationResultToolbar: React.FC = () => {
 
     // Format all filtered validation results with consistent structure
     const resultsText = filteredResults
-      .map((result) => {
-        const resultLine = `[${result.severity.toUpperCase()}] ${result.errorCode}: ${result.description}`;
-        // Add error details with extra newline for separation
-        return `${resultLine}\n${result.errorDetails}\n`;
-      })
-      .join('\n'); // Join all results with newlines
+      .map((result: ValidationResult) => `${formatValidationResult(result)}\n`)
+      .join('\n');
 
     try {
       // Import the API request types and electron API
@@ -239,18 +203,15 @@ const ValidationResultToolbar: React.FC = () => {
               <Portal>
                 <Menu.Positioner>
                   <Menu.Content>
-                    {[
-                      ALL_SEVERITIES,
-                      SeverityType.Critical,
-                      SeverityType.Error,
-                      SeverityType.Warning,
-                    ].map((severity) => (
+                    {[ALL_SEVERITIES, ...SEVERITY_TYPES].map((severity) => (
                       <Menu.CheckboxItem
                         key={severity}
                         checked={
                           severity === ALL_SEVERITIES
                             ? allSeveritiesState.checked
-                            : selectedSeverities.includes(severity)
+                            : selectedSeverities.includes(
+                                severity as SeverityType,
+                              )
                         }
                         closeOnSelect={false}
                         onCheckedChange={() => handleFilterToggle(severity)}
@@ -345,7 +306,9 @@ const ValidationResultToolbar: React.FC = () => {
       {/* Copy Selected Result Button - only visible when a result is selected AND exists in filtered results */}
       {selectedRowId &&
         filteredResults.length > 0 &&
-        filteredResults.some((result) => result.id === selectedRowId) && (
+        filteredResults.some(
+          (result: ValidationResult) => result.id === selectedRowId,
+        ) && (
           <Tooltip
             trigger={
               <IconButton

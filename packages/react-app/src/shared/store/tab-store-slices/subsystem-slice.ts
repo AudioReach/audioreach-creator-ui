@@ -83,9 +83,10 @@ function renameNodeInTree(
  * Creates the subsystem slice for composing into a tab store.
  * Used in GraphDesignerStore only.
  *
- * subsystemData and subsystemStatus are managed by loadGraphData (graph-data-slice),
- * which builds the subsystem tree from the same getUsecaseComponents response it
- * already fetches. loadSubsystems is kept for interface compatibility but is a no-op.
+ * subsystemData and subsystemStatus are managed by loadGraphData
+ * (graph-data-slice), which builds the subsystem tree from the same
+ * getUsecaseComponents response it already fetches. loadSubsystems is kept for
+ * interface compatibility but is a no-op.
  *
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.

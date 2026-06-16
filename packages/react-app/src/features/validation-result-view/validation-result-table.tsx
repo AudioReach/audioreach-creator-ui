@@ -12,6 +12,8 @@ import {
   useState,
 } from 'react';
 
+import {ExternalLink, Wand2} from 'lucide-react';
+
 import {
   type Cell,
   type CellContext,
@@ -21,60 +23,22 @@ import {
   type HeaderGroup,
   type Row,
 } from '@qualcomm-ui/core/table';
-import {Button} from '@qualcomm-ui/react/button';
+import {IconButton} from '@qualcomm-ui/react/button';
 import {flexRender, Table, useReactTable} from '@qualcomm-ui/react/table';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {useValidationResultStore} from './model/use-validation-result-store';
-import type {ValidationResult} from './model/validation-result.types';
+import {useValidationResults} from '~features/graph-designer/hooks/use-validation-results';
+import type {ValidationResult} from '~shared/store/tab-store-slices/validation-result-slice';
+
+import {filterValidationResults} from './lib/filter-validation-results';
 import {getSeverityIcon} from './utils/severity-icons';
 
 // React Table column helper for type-safe column definitions
 const columnHelper = createColumnHelper<ValidationResult>();
 
 /**
- * ActionButtonCell component renders action buttons (Auto Fix and Goto Error)
- * Handles conditional enabling based on result properties and callback availability
- */
-function ActionButtonCell({
-  result,
-  type,
-}: {
-  result: ValidationResult;
-  type: 'autoFix' | 'gotoError';
-}) {
-  const handleClick = () => {
-    if (type === 'autoFix' && result.autoFixCallback && result.canAutoFix) {
-      result.autoFixCallback(result);
-    } else if (
-      type === 'gotoError' &&
-      result.showControlsCallback &&
-      result.canShowControls
-    ) {
-      result.showControlsCallback(result);
-    }
-  };
-  // Decide if the button should be ENABLED or DISABLED
-  const isEnabled =
-    type === 'autoFix'
-      ? result.canAutoFix && !!result.autoFixCallback
-      : result.canShowControls && !!result.showControlsCallback;
-
-  return (
-    <Button
-      density="compact"
-      disabled={!isEnabled}
-      onClick={handleClick}
-      size="sm"
-    >
-      {type === 'autoFix' ? 'Auto Fix' : 'Goto Error'}
-    </Button>
-  );
-}
-
-/**
- * TextCell component renders text content with overflow handling and conditional tooltip
- * Handles text truncation and shows tooltip only when text overflows
+ * TextCell component renders text content with overflow handling and conditional
+ * tooltip Handles text truncation and shows tooltip only when text overflows
  * Uses Qualcomm UI Tooltip component with ResizeObserver for dynamic detection
  */
 function TextCell({
@@ -147,7 +111,8 @@ function TextCell({
 }
 
 /**
- *ValidationResultTable component that renders a filterable, searchable table of validation results
+ *ValidationResultTable component that renders a filterable, searchable table of
+ *validation results
  * Features include:
  * - Severity-based filtering (critical, error, warning)
  * - Text search across description, error details, and error code
@@ -163,40 +128,20 @@ function ValidationResultTable() {
     selectedSeverities,
     selectRow,
     validationResults,
-  } = useValidationResultStore();
+  } = useValidationResults();
 
-  // Memoized filtering logic to optimize performance
-  // Filters validation results based on selected severities and search query
-  const filteredResults = useMemo(() => {
-    let filtered = validationResults;
+  const filteredResults = useMemo(
+    () =>
+      filterValidationResults(
+        validationResults,
+        selectedSeverities,
+        searchQuery,
+      ),
+    [validationResults, selectedSeverities, searchQuery],
+  );
 
-    // Apply severity filter (critical, error, warning, or all)
-    if (selectedSeverities.length > 0) {
-      filtered = filtered.filter((result) =>
-        selectedSeverities.includes(result.severity),
-      );
-    } else {
-      filtered = []; // Show no results if no severities selected
-    }
-
-    // Apply text search filter (searches description, error details, and error code)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (result) =>
-          result.description.toLowerCase().includes(query) ||
-          result.errorDetails.toLowerCase().includes(query) ||
-          result.errorCode.toLowerCase().includes(query),
-      );
-    }
-    return filtered;
-  }, [validationResults, selectedSeverities, searchQuery]);
-
-  // Column definitions for the validation result table
-  // Memoized to prevent unnecessary re-renders when selectedRowId changes
   const columns = useMemo(
     () => [
-      // Severity column - displays color-coded icons for validation severity
       columnHelper.accessor('severity', {
         cell: (info: CellContext<ValidationResult, string>) => (
           <div className="flex items-center justify-center">
@@ -208,49 +153,39 @@ function ValidationResultTable() {
         minSize: 30,
         size: 30,
       }),
-      // Error Code column
       columnHelper.accessor('errorCode', {
-        cell: (info: CellContext<ValidationResult, string>) => {
+        cell: (info: CellContext<ValidationResult, string | undefined>) => {
           const result = info.row.original;
           const isSelected = selectedRowId === result.id;
-
           return (
-            <TextCell
-              className="font-mono text-xs"
-              isSelected={isSelected}
-              text={info.getValue()}
-            />
+            <TextCell isSelected={isSelected} text={info.getValue() ?? ''} />
           );
         },
-        header: 'Code',
-        maxSize: 40,
-        minSize: 30,
-        size: 30,
+        header: 'Error Code',
+        maxSize: 200,
+        minSize: 80,
+        size: 120,
       }),
-      // Description column
-      columnHelper.accessor('description', {
+      columnHelper.accessor('message', {
         cell: (info: CellContext<ValidationResult, string>) => {
           const result = info.row.original;
           const isSelected = selectedRowId === result.id;
-
           return <TextCell isSelected={isSelected} text={info.getValue()} />;
         },
-        header: 'Description',
+        header: 'Message',
         maxSize: 500,
         minSize: 150,
         size: 300,
       }),
-      // Error Details column
       columnHelper.accessor('errorDetails', {
-        cell: (info: CellContext<ValidationResult, string>) => {
+        cell: (info: CellContext<ValidationResult, string | undefined>) => {
           const result = info.row.original;
           const isSelected = selectedRowId === result.id;
-
           return (
             <TextCell
               className="text-xs"
               isSelected={isSelected}
-              text={info.getValue()}
+              text={info.getValue() ?? ''}
             />
           );
         },
@@ -259,11 +194,17 @@ function ValidationResultTable() {
         minSize: 150,
         size: 380,
       }),
-      // Auto Fix button column
       columnHelper.accessor('canAutoFix', {
         cell: (info: CellContext<ValidationResult, boolean | undefined>) => (
           <div className="flex items-center justify-center">
-            <ActionButtonCell result={info.row.original} type="autoFix" />
+            <IconButton
+              aria-label="Auto fix"
+              disabled={!info.getValue()}
+              emphasis="neutral"
+              icon={Wand2}
+              size="sm"
+              variant="ghost"
+            />
           </div>
         ),
         header: 'Auto Fix',
@@ -271,11 +212,17 @@ function ValidationResultTable() {
         minSize: 50,
         size: 60,
       }),
-      // Show Controls button column
       columnHelper.accessor('canShowControls', {
         cell: (info: CellContext<ValidationResult, boolean | undefined>) => (
           <div className="flex items-center justify-center">
-            <ActionButtonCell result={info.row.original} type="gotoError" />
+            <IconButton
+              aria-label="Show controls"
+              disabled={!info.getValue()}
+              emphasis="neutral"
+              icon={ExternalLink}
+              size="sm"
+              variant="ghost"
+            />
           </div>
         ),
         header: 'Show Controls',

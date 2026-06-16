@@ -40,7 +40,8 @@ function collectAncestorIdsForMatches(
     const nameMatches = node.name.toLowerCase().includes(term);
     let idMatches: boolean = false;
     if (!nameMatches) {
-      // convert a search term that may be decimal or hex ("0xFF" or "ff") into a number
+      // convert a search term that may be decimal or hex ("0xFF" or "ff") into a
+      // number
       const idNumber = ConvertStringToNumber(term);
       idMatches = idNumber !== null && idNumber === node.id;
     }
