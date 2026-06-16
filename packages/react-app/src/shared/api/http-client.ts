@@ -4,7 +4,7 @@
  */
 
 import {logger} from '~shared/lib/logger';
-import {useBackendConnectionStore} from '~shared/store/use-backend-connection-store';
+import {useGlobalStore} from '~shared/store/global-store';
 
 import type {ApiResult} from './api-response.types';
 import {processApiResponse} from './utils';
@@ -182,18 +182,6 @@ export class HttpClient {
     }
 
     // Ensure backend is registered before making any request
-    // Skip this check for the registration endpoint itself to avoid circular dependency
-    // const isRegistrationEndpoint = normalizedEndpoint.includes("/auth/register")
-    // if (!isRegistrationEndpoint) {
-    //   const registered = await ensureRegistered()
-    //   if (!registered) {
-    //     logger.error("[http-client] Backend unavailable or registration failed")
-    //     return {
-    //       message: "Backend unavailable or registration failed",
-    //       success: false,
-    //     }
-    //   }
-    // }
     for (let attempt = 0; attempt <= retries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -226,8 +214,8 @@ export class HttpClient {
         // Update connection state based on response
         if (result.success) {
           // Successful response - backend is available
-          const store = useBackendConnectionStore.getState();
-          if (!store.isBackendAvailable) {
+          const store = useGlobalStore.getState();
+          if (!store.isConnected) {
             store.markAvailable();
           }
           if (store.failCount > 0) {
@@ -236,7 +224,7 @@ export class HttpClient {
         } else if (isServerError) {
           // Server error (5xx) - mark backend as unavailable
           // This will also reset registration automatically
-          const store = useBackendConnectionStore.getState();
+          const store = useGlobalStore.getState();
           store.markUnavailable(result.message || 'Server error');
           store.incrementFail(result.message || 'Server error');
         }
@@ -271,7 +259,7 @@ export class HttpClient {
         const message = isAbort
           ? 'Request timed out'
           : `Network error: ${String(error)}`;
-        const store = useBackendConnectionStore.getState();
+        const store = useGlobalStore.getState();
         store.markUnavailable(message);
         store.incrementFail(message);
 
@@ -281,7 +269,7 @@ export class HttpClient {
 
     // All retries exhausted - mark backend as unavailable
     const message = 'Request failed after maximum retries';
-    const store = useBackendConnectionStore.getState();
+    const store = useGlobalStore.getState();
     store.markUnavailable(message);
     store.incrementFail(message);
 

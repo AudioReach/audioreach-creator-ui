@@ -5,7 +5,7 @@
 
 import type {ApiResult} from '~shared/api/api-response.types';
 import {logger} from '~shared/lib/logger';
-import {useBackendConnectionStore} from '~shared/store/use-backend-connection-store';
+import {useGlobalStore} from '~shared/store/global-store';
 
 import {httpClient} from './http-client';
 
@@ -30,13 +30,13 @@ let registrationPromise: Promise<boolean> | null = null;
 /**
  * Performs a one-time registration handshake with the backend.
  * Returns true when the client is registered and backend is available.
- * This function is safe to call multiple times; it will no-op when already registered.
- * Uses promise caching to prevent concurrent registration attempts.
+ * This function is safe to call multiple times; it will no-op when already
+ * registered. Uses promise caching to prevent concurrent registration attempts.
  */
 export async function ensureRegistered(): Promise<boolean> {
   // Check if already registered (fast path)
-  const store = useBackendConnectionStore.getState();
-  if (store.isRegistered) {
+  const store = useGlobalStore.getState();
+  if (store.registrationStatus === 'registered') {
     return true;
   }
 
@@ -49,8 +49,8 @@ export async function ensureRegistered(): Promise<boolean> {
   registrationPromise = (async () => {
     try {
       // Double-check registration status (another call might have completed)
-      const currentStore = useBackendConnectionStore.getState();
-      if (currentStore.isRegistered) {
+      const currentStore = useGlobalStore.getState();
+      if (currentStore.registrationStatus === 'registered') {
         return true;
       }
 
@@ -72,7 +72,7 @@ export async function ensureRegistered(): Promise<boolean> {
         }),
       });
 
-      useBackendConnectionStore.getState().setLastCheckAt(Date.now());
+      useGlobalStore.getState().setLastHealthCheckAt(Date.now());
 
       if (result.success) {
         // Extract client ID from backend response
@@ -83,14 +83,12 @@ export async function ensureRegistered(): Promise<boolean> {
             action: 'register_no_client_id',
             component: 'RegisterClient',
           });
-          useBackendConnectionStore
+          useGlobalStore
             .getState()
             .incrementFail('No client ID received from backend');
-          useBackendConnectionStore
-            .getState()
-            .markUnavailable('No client ID received');
-          // TODO: Not returing false for the demo purpose. Backemd does not have the registration logic implemented yet.
-          // return false
+          useGlobalStore.getState().markUnavailable('No client ID received');
+          // TODO: Not returning false for the demo purpose. Backend does not have
+          // the registration logic implemented yet. return false
         } else {
           // Initialize logger with backend client ID (enables backend logging)
           logger.setClientId(clientId);
@@ -100,16 +98,15 @@ export async function ensureRegistered(): Promise<boolean> {
           action: 'register_success',
           component: 'RegisterClient',
         });
-        useBackendConnectionStore.getState().setRegistered(true);
-        useBackendConnectionStore.getState().markAvailable();
-        useBackendConnectionStore.getState().resetFailures();
+        useGlobalStore.getState().setRegistrationStatus('registered');
+        useGlobalStore.getState().markAvailable();
+        useGlobalStore.getState().resetFailures();
         logger.verbose('Store updated after successful registration', {
           action: 'register_success',
           component: 'RegisterClient',
           tag: JSON.stringify({
-            isBackendAvailable:
-              useBackendConnectionStore.getState().isBackendAvailable,
-            isRegistered: useBackendConnectionStore.getState().isRegistered,
+            isConnected: useGlobalStore.getState().isConnected,
+            registrationStatus: useGlobalStore.getState().registrationStatus,
           }),
         });
         return true;
@@ -121,10 +118,10 @@ export async function ensureRegistered(): Promise<boolean> {
         component: 'RegisterClient',
         error: result.message,
       });
-      useBackendConnectionStore
+      useGlobalStore
         .getState()
         .incrementFail(result.message || 'Registration failed');
-      useBackendConnectionStore.getState().markUnavailable(result.message);
+      useGlobalStore.getState().markUnavailable(result.message);
       return false;
     } catch (e) {
       // Network/timeout error propagated by httpClient
@@ -134,9 +131,9 @@ export async function ensureRegistered(): Promise<boolean> {
         component: 'RegisterClient',
         error: message,
       });
-      useBackendConnectionStore.getState().setLastCheckAt(Date.now());
-      useBackendConnectionStore.getState().incrementFail(message);
-      useBackendConnectionStore.getState().markUnavailable(message);
+      useGlobalStore.getState().setLastHealthCheckAt(Date.now());
+      useGlobalStore.getState().incrementFail(message);
+      useGlobalStore.getState().markUnavailable(message);
       return false;
     } finally {
       // Clear the promise when done (success or failure)
@@ -152,8 +149,7 @@ export async function ensureRegistered(): Promise<boolean> {
  * Also clears any cached registration promise to allow fresh retry.
  */
 export function resetConnectionFailures(): void {
-  const s = useBackendConnectionStore.getState();
-  s.resetFailures();
+  useGlobalStore.getState().resetFailures();
   // Clear any cached registration promise to allow fresh retry
   registrationPromise = null;
 }
@@ -162,5 +158,5 @@ export function resetConnectionFailures(): void {
  * Convenience accessor for current backend availability.
  */
 export function isBackendAvailable(): boolean {
-  return useBackendConnectionStore.getState().isBackendAvailable;
+  return useGlobalStore.getState().isConnected;
 }
