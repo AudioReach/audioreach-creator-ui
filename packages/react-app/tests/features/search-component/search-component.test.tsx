@@ -23,7 +23,6 @@ import {createContext, useContext} from 'react';
 
 import {fireEvent, render, screen} from '@testing-library/react';
 
-import {useSearchComponentStore} from '~features/search-component/model/use-search-component-store';
 import {SearchComponent} from '~features/search-component/ui/search-component';
 
 // ---------------------------------------------------------------------------
@@ -97,23 +96,22 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const PROJECT_ID = 'test-project';
-
 /** Default props that satisfy all required SearchComponent props */
 const defaultProps = {
   currentMatch: 1,
   focusTrigger: 1,
+  history: [] as string[],
+  onAddToHistory: jest.fn(),
   onClose: jest.fn(),
   onNext: jest.fn(),
   onPrevious: jest.fn(),
   onSearch: jest.fn(),
-  projectId: PROJECT_ID,
+  onSearchTermChange: jest.fn(),
+  searchTerm: '',
   totalMatches: 5,
 };
 
-/** Reset Zustand store and all mocks before each test */
 beforeEach(() => {
-  useSearchComponentStore.setState({projects: {}});
   jest.clearAllMocks();
 });
 
@@ -269,13 +267,19 @@ describe('Search input & clear', () => {
     expect(defaultProps.onSearch).toHaveBeenCalledWith('AudioDecoder');
   });
 
-  it('pressing Enter calls onNext', () => {
-    // Pre-populate store so searchTerm is non-empty (Enter only fires onNext)
-    useSearchComponentStore
-      .getState()
-      .setSearchTerm(PROJECT_ID, 'AudioDecoder');
-
+  it('typing in the input calls onSearchTermChange with the new value', () => {
     render(<SearchComponent {...defaultProps} />);
+
+    const input = screen.getByTestId('search-input');
+    fireEvent.change(input, {target: {value: 'AudioDecoder'}});
+
+    expect(defaultProps.onSearchTermChange).toHaveBeenCalledWith(
+      'AudioDecoder',
+    );
+  });
+
+  it('pressing Enter calls onNext', () => {
+    render(<SearchComponent {...defaultProps} searchTerm="AudioDecoder" />);
 
     const input = screen.getByTestId('search-input');
     fireEvent.keyDown(input, {code: 'Enter', key: 'Enter'});
@@ -283,13 +287,17 @@ describe('Search input & clear', () => {
     expect(defaultProps.onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('pressing Shift+Enter calls onPrevious', () => {
-    // Pre-populate store so searchTerm is non-empty
-    useSearchComponentStore
-      .getState()
-      .setSearchTerm(PROJECT_ID, 'AudioDecoder');
+  it('pressing Enter adds the current term to history', () => {
+    render(<SearchComponent {...defaultProps} searchTerm="AudioDecoder" />);
 
-    render(<SearchComponent {...defaultProps} />);
+    const input = screen.getByTestId('search-input');
+    fireEvent.keyDown(input, {code: 'Enter', key: 'Enter'});
+
+    expect(defaultProps.onAddToHistory).toHaveBeenCalledWith('AudioDecoder');
+  });
+
+  it('pressing Shift+Enter calls onPrevious', () => {
+    render(<SearchComponent {...defaultProps} searchTerm="AudioDecoder" />);
 
     const input = screen.getByTestId('search-input');
     fireEvent.keyDown(input, {code: 'Enter', key: 'Enter', shiftKey: true});
@@ -299,11 +307,7 @@ describe('Search input & clear', () => {
   });
 
   it('clear button empties the search input and calls onSearch with empty string', () => {
-    useSearchComponentStore
-      .getState()
-      .setSearchTerm(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} searchTerm="AudioDecoder" />);
 
     const clearBtn = screen.getByTestId('clear-trigger');
     fireEvent.click(clearBtn);
@@ -311,18 +315,10 @@ describe('Search input & clear', () => {
     expect(defaultProps.onSearch).toHaveBeenCalledWith('');
   });
 
-  it('clear button resets the input value to empty', () => {
-    useSearchComponentStore
-      .getState()
-      .setSearchTerm(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+  it('clear button renders with the current search term as value', () => {
+    render(<SearchComponent {...defaultProps} searchTerm="AudioDecoder" />);
 
     expect(screen.getByTestId('search-input')).toHaveValue('AudioDecoder');
-
-    fireEvent.click(screen.getByTestId('clear-trigger'));
-
-    expect(screen.getByTestId('search-input')).toHaveValue('');
   });
 });
 
@@ -338,9 +334,7 @@ describe('History dropdown', () => {
   });
 
   it('clicking the history toggle button shows the dropdown', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
 
@@ -356,10 +350,12 @@ describe('History dropdown', () => {
   });
 
   it('clicking a history item populates the input and triggers onSearch', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'VideoEncoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(
+      <SearchComponent
+        {...defaultProps}
+        history={['VideoEncoder', 'AudioDecoder']}
+      />,
+    );
 
     fireEvent.click(screen.getByLabelText('Show search history'));
     fireEvent.click(screen.getByText('VideoEncoder'));
@@ -368,25 +364,23 @@ describe('History dropdown', () => {
   });
 
   it('selecting a history item closes the dropdown', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
     expect(screen.getByText('AudioDecoder')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('AudioDecoder'));
 
-    // Dropdown is closed — "No search history" placeholder is gone
     expect(screen.queryByText('No search history')).not.toBeInTheDocument();
   });
 
   it('multiple history entries are displayed in most-recent-first order', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'first');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'second');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'third');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(
+      <SearchComponent
+        {...defaultProps}
+        history={['third', 'second', 'first']}
+      />,
+    );
 
     fireEvent.click(screen.getByLabelText('Show search history'));
 
@@ -403,35 +397,34 @@ describe('History dropdown', () => {
 
 describe('History dropdown — keyboard navigation', () => {
   it('ArrowDown from input moves focus to the first history item', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'VideoEncoder');
+    render(
+      <SearchComponent
+        {...defaultProps}
+        history={['VideoEncoder', 'AudioDecoder']}
+      />,
+    );
 
-    render(<SearchComponent {...defaultProps} />);
-
-    // Open the dropdown
     fireEvent.click(screen.getByLabelText('Show search history'));
 
-    // Press ArrowDown on the input
     const input = screen.getByTestId('search-input');
     fireEvent.keyDown(input, {code: 'ArrowDown', key: 'ArrowDown'});
 
-    // The most-recent item (VideoEncoder) is index 0 in the rendered list
     const items = screen.getAllByRole('option');
     expect(document.activeElement).toBe(items[0]);
   });
 
   it('ArrowDown from a history item moves focus to the next item', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'first');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'second');
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'third');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(
+      <SearchComponent
+        {...defaultProps}
+        history={['third', 'second', 'first']}
+      />,
+    );
 
     fireEvent.click(screen.getByLabelText('Show search history'));
 
     const items = screen.getAllByRole('option');
 
-    // Focus the first item then press ArrowDown
     items[0].focus();
     fireEvent.keyDown(items[0], {code: 'ArrowDown', key: 'ArrowDown'});
 
@@ -439,9 +432,7 @@ describe('History dropdown — keyboard navigation', () => {
   });
 
   it('ArrowUp from the first history item returns focus to the input', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
 
@@ -453,9 +444,7 @@ describe('History dropdown — keyboard navigation', () => {
   });
 
   it('Enter on a focused history item selects it and calls onSearch', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
 
@@ -464,14 +453,11 @@ describe('History dropdown — keyboard navigation', () => {
     fireEvent.keyDown(items[0], {code: 'Enter', key: 'Enter'});
 
     expect(defaultProps.onSearch).toHaveBeenCalledWith('AudioDecoder');
-    // Dropdown should be closed
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('Escape on a focused history item closes the dropdown', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
     expect(screen.getByRole('listbox')).toBeInTheDocument();
@@ -484,9 +470,7 @@ describe('History dropdown — keyboard navigation', () => {
   });
 
   it('Tab from input when history is open closes the dropdown', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
     expect(screen.getByRole('listbox')).toBeInTheDocument();
@@ -498,9 +482,7 @@ describe('History dropdown — keyboard navigation', () => {
   });
 
   it('Escape from input when history is open closes the dropdown (not the panel)', () => {
-    useSearchComponentStore.getState().addToHistory(PROJECT_ID, 'AudioDecoder');
-
-    render(<SearchComponent {...defaultProps} />);
+    render(<SearchComponent {...defaultProps} history={['AudioDecoder']} />);
 
     fireEvent.click(screen.getByLabelText('Show search history'));
     expect(screen.getByRole('listbox')).toBeInTheDocument();
@@ -508,7 +490,6 @@ describe('History dropdown — keyboard navigation', () => {
     const input = screen.getByTestId('search-input');
     fireEvent.keyDown(input, {code: 'Escape', key: 'Escape'});
 
-    // Dropdown closed but onClose NOT called
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     expect(defaultProps.onClose).not.toHaveBeenCalled();
   });

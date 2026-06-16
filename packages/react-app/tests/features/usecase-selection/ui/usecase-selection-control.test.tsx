@@ -21,19 +21,11 @@ jest.mock('~shared/controls/global-toaster', () => ({
   showToast: (...args: any[]) => mockShowToast(...args),
 }));
 
-jest.mock('~shared/store/use-usecase-store', () => ({
-  useUsecaseStore: jest.fn((selector: any) =>
-    selector({
-      selectedUsecases: {'project-1': mockSelectedUsecases},
-      setSelectedUsecases: mockSetSelectedUsecases,
-    }),
-  ),
-}));
-
 jest.mock('@qualcomm-ui/react/text-input', () => ({
-  TextInput: ({inputProps, placeholder}: any) => (
+  TextInput: ({inputProps, onValueChange, placeholder}: any) => (
     <input
       data-testid="search-input"
+      onChange={(e) => onValueChange?.(e.target.value)}
       onFocus={inputProps?.onFocus}
       placeholder={placeholder}
     />
@@ -50,8 +42,9 @@ jest.mock('@qualcomm-ui/react/button', () => ({
 }));
 
 jest.mock('@qualcomm-ui/react/checkbox', () => ({
-  Checkbox: ({checked, onCheckedChange}: any) => (
+  Checkbox: ({'aria-label': ariaLabel, checked, onCheckedChange}: any) => (
     <input
+      aria-label={ariaLabel}
       checked={checked ?? false}
       onChange={(e) => onCheckedChange(e.target.checked)}
       type="checkbox"
@@ -174,6 +167,17 @@ async function clickDialogDelete(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByText('Delete'));
 }
 
+function renderControl(selectedUsecases = mockSelectedUsecases) {
+  return render(
+    <UsecaseSelectionControl
+      onSelectedUsecasesChange={mockSetSelectedUsecases}
+      projectId={PROJECT_ID}
+      selectedUsecases={selectedUsecases}
+      usecaseData={mockUsecaseData}
+    />,
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('UsecaseSelectionControl — handleDeleteSelected', () => {
@@ -192,12 +196,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   it('calls deleteUsecases with correct projectGroupId and systemIds', async () => {
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     await clickDialogDelete(user);
@@ -213,12 +212,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   it('removes deleted item from list and clears store selection on success', async () => {
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
@@ -227,7 +221,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
 
     await waitFor(() => {
       expect(screen.queryAllByText('Speaker_Mic')).toHaveLength(0);
-      expect(mockSetSelectedUsecases).toHaveBeenCalledWith(PROJECT_ID, []);
+      expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
     });
   });
 
@@ -237,12 +231,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   it('closes dropdown after successful deletion', async () => {
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     expect(screen.getByText('Done')).toBeInTheDocument();
@@ -261,12 +250,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
     mockDeleteUsecases.mockResolvedValue({success: false});
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     await clickDialogDelete(user);
@@ -287,12 +271,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
     mockSelectedUsecases = ['Speaker_Mic', 'HFP_Rx_Playback'];
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     await clickDialogDelete(user);
@@ -318,12 +297,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
 
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     await clickDialogDelete(user);
@@ -353,12 +327,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
     mockDeleteUsecases.mockResolvedValue({success: false});
     const user = userEvent.setup();
 
-    render(
-      <UsecaseSelectionControl
-        projectGroupId={PROJECT_ID}
-        usecaseData={mockUsecaseData}
-      />,
-    );
+    renderControl();
 
     await openDropdown(user);
     expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
@@ -369,5 +338,105 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
       expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
       expect(mockSetSelectedUsecases).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('UsecaseSelectionControl — usecase selection', () => {
+  beforeEach(() => {
+    mockDeleteUsecases.mockResolvedValue({success: true});
+    mockSelectedUsecases = [];
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('calls onSelectedUsecasesChange with usecase added when checked', async () => {
+    const user = userEvent.setup();
+    renderControl([]);
+
+    await openDropdown(user);
+    await user.click(
+      screen.getByRole('checkbox', {name: 'Select Speaker_Mic'}),
+    );
+
+    expect(mockSetSelectedUsecases).toHaveBeenCalledWith(['Speaker_Mic']);
+  });
+
+  it('calls onSelectedUsecasesChange with usecase removed when unchecked', async () => {
+    const user = userEvent.setup();
+    renderControl(['Speaker_Mic']);
+
+    await openDropdown(user);
+    await user.click(
+      screen.getByRole('checkbox', {name: 'Select Speaker_Mic'}),
+    );
+
+    expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
+  });
+
+  it('calls onSelectedUsecasesChange with all usecases when Select All checked', async () => {
+    const user = userEvent.setup();
+    renderControl([]);
+
+    await openDropdown(user);
+    await user.click(
+      screen.getByRole('checkbox', {name: 'Select all usecases'}),
+    );
+
+    expect(mockSetSelectedUsecases).toHaveBeenCalledWith([
+      'Speaker_Mic',
+      'HFP_Rx_Playback',
+    ]);
+  });
+
+  it('calls onSelectedUsecasesChange with empty array when Select All unchecked', async () => {
+    const user = userEvent.setup();
+    renderControl(['Speaker_Mic', 'HFP_Rx_Playback']);
+
+    await openDropdown(user);
+    await user.click(
+      screen.getByRole('checkbox', {name: 'Select all usecases'}),
+    );
+
+    expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
+  });
+});
+
+describe('UsecaseSelectionControl — search filtering', () => {
+  beforeEach(() => {
+    mockSelectedUsecases = [];
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows only matching usecases when search term is typed', async () => {
+    const user = userEvent.setup();
+    renderControl([]);
+
+    await openDropdown(user);
+    expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('HFP_Rx_Playback').length).toBeGreaterThan(0);
+
+    await user.type(screen.getByTestId('search-input'), 'Speaker');
+
+    expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('HFP_Rx_Playback')).toHaveLength(0);
+  });
+
+  it('restores all usecases when search is cleared', async () => {
+    const user = userEvent.setup();
+    renderControl([]);
+
+    await openDropdown(user);
+    await user.type(screen.getByTestId('search-input'), 'Speaker');
+    expect(screen.queryAllByText('HFP_Rx_Playback')).toHaveLength(0);
+
+    await user.clear(screen.getByTestId('search-input'));
+
+    expect(screen.getAllByText('Speaker_Mic').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('HFP_Rx_Playback').length).toBeGreaterThan(0);
   });
 });

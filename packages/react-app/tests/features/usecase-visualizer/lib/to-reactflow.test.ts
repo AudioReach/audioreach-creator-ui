@@ -120,7 +120,7 @@ describe('toReactFlowNodes', () => {
     (_kind, src, payload, expectedType) => {
       const nodes = toReactFlowNodes({levelId: 'L', ...payload});
       expect(nodes).toHaveLength(1);
-      const rf = nodes[0]!;
+      const rf = nodes[0];
       expect(rf.id).toBe(src.id);
       expect(rf.type).toBe(expectedType);
       expect(rf.position).toEqual({x: src.x, y: src.y});
@@ -145,7 +145,7 @@ describe('toReactFlowEdges — DataLink', () => {
   it('produces a data-link edge with Data: handle ids', () => {
     const edges = toReactFlowEdges({dataLinks: [data], levelId: 'L'});
     expect(edges).toHaveLength(1);
-    const e = edges[0]!;
+    const e = edges[0];
     expect(e.type).toBe('data-link');
     expect(e.id).toBe('d1');
     expect(e.source).toBe('m1');
@@ -168,7 +168,7 @@ describe('toReactFlowEdges — ControlLink', () => {
   it('produces a control-link edge with -source / -target handle suffixes', () => {
     const edges = toReactFlowEdges({controlLinks: [ctl], levelId: 'L'});
     expect(edges).toHaveLength(1);
-    const e = edges[0]!;
+    const e = edges[0];
     expect(e.type).toBe('control-link');
     expect(e.sourceHandle).toBe('Control:5-source');
     expect(e.targetHandle).toBe('Control:6-target');
@@ -187,7 +187,7 @@ describe('toReactFlowEdges — proxy edges', () => {
     };
     const edges = toReactFlowEdges({levelId: 'L', proxyDataLinks: [pd]});
     expect(edges).toHaveLength(1);
-    const e = edges[0]!;
+    const e = edges[0];
     expect(e.type).toBe('proxy-data-link');
     expect(e.sourceHandle).toBe('Data:1');
     expect(e.targetHandle).toBe('Data:2');
@@ -207,7 +207,7 @@ describe('toReactFlowEdges — proxy edges', () => {
     };
     const edges = toReactFlowEdges({levelId: 'L', proxyControlLinks: [pc]});
     expect(edges).toHaveLength(1);
-    const e = edges[0]!;
+    const e = edges[0];
     expect(e.type).toBe('proxy-control-link');
     expect(e.sourceHandle).toBe('Control:7-source');
     expect(e.targetHandle).toBe('Control:8-target');
