@@ -19,21 +19,17 @@ const KNOWN_PREFIXES = ['cnt', 'mod', 'sg', 'ss'] as const;
 export type SearchPrefix = (typeof KNOWN_PREFIXES)[number];
 
 export interface ParsedSearchTerm {
-  /**
-   * Prefix scope, or null for default (all nodes) search.
-   * Set to `'invalid'` when the input contains ":" but the prefix is not
-   * a recognised SearchPrefix — the search should return no results.
-   */
+  /** null = all-nodes search; 'invalid' = unrecognised prefix (return no results). */
   prefix: SearchPrefix | 'invalid' | null;
   /** The actual value to search for (after stripping the prefix) */
   value: string;
 }
 
-function matchesName(name: string | undefined, term: string): boolean {
+function matchesName(name: string | undefined, termLower: string): boolean {
   if (!name) {
     return false;
   }
-  return name.toLowerCase().includes(term.toLowerCase());
+  return name.toLowerCase().includes(termLower);
 }
 
 export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
@@ -56,52 +52,52 @@ export function parseSearchTerm(rawSearchTerm: string): ParsedSearchTerm {
 
 function matchesSubgraph(
   node: Subgraph,
-  value: string,
+  valueLower: string,
   numericValue: number | null,
 ): boolean {
   if (numericValue !== null) {
     return Number(node.subgraphId) === numericValue;
   }
-  return matchesName(node.subgraphName, value);
+  return matchesName(node.subgraphName, valueLower);
 }
 
 function matchesSubsystem(
   node: Subsystem,
-  value: string,
+  valueLower: string,
   numericValue: number | null,
 ): boolean {
   if (numericValue !== null) {
-    return node.id === numericValue;
+    return Number(node.subsystemId) === numericValue;
   }
   return (
-    matchesName(node.subsystemName, value) ||
-    matchesName(node.subsystemId, value)
+    matchesName(node.subsystemName, valueLower) ||
+    matchesName(node.subsystemId, valueLower)
   );
 }
 
 function matchesContainer(
   node: Container,
-  value: string,
+  valueLower: string,
   numericValue: number | null,
 ): boolean {
   if (numericValue !== null) {
     return Number(node.containerId) === numericValue;
   }
-  return matchesName(node.containerName, value);
+  return matchesName(node.containerName, valueLower);
 }
 
 function matchesModule(
   node: ModuleInstance,
-  value: string,
+  valueLower: string,
   numericValue: number | null,
 ): boolean {
   if (numericValue !== null) {
     return Number(node.moduleId) === numericValue;
   }
   return (
-    matchesName(node.displayName, value) ||
-    matchesName(node.moduleName, value) ||
-    matchesName(node.moduleType, value)
+    matchesName(node.displayName, valueLower) ||
+    matchesName(node.moduleName, valueLower) ||
+    matchesName(node.moduleType, valueLower)
   );
 }
 
@@ -136,69 +132,63 @@ export function searchGraphData(
   }
 
   const numericValue = ConvertStringToNumber(valueTrimmed);
+  const valueLower = valueTrimmed.toLowerCase();
 
-  const allSubgraphs = Object.values(graphData.subgraphs);
-  const allSubsystems = Object.values(graphData.subsystems);
+  // sg and ss are hierarchy roots — no ancestor walk needed.
+  if (prefix === 'sg') {
+    const ids = Object.values(graphData.subgraphs)
+      .filter((n) => matchesSubgraph(n, valueLower, numericValue))
+      .map((n) => subgraphNodeId(n.subgraphId));
+    return ids.length === 0
+      ? emptyHighlights()
+      : {activeId: ids[0], containsMatchNodeIds: [], highlightedIds: ids};
+  }
+  if (prefix === 'ss') {
+    const ids = Object.values(graphData.subsystems)
+      .filter((n) => matchesSubsystem(n, valueLower, numericValue))
+      .map((n) => n.subsystemId);
+    return ids.length === 0
+      ? emptyHighlights()
+      : {activeId: ids[0], containsMatchNodeIds: [], highlightedIds: ids};
+  }
+
   const allContainers = Object.values(graphData.containers);
   const allModules = Object.values(graphData.moduleInstances);
 
-  let matchedIds: string[];
+  const cntIds = allContainers
+    .filter((n) => matchesContainer(n, valueLower, numericValue))
+    .map((n) => containerNodeId(n.containerId, n.subgraphId));
+  const modIds = allModules
+    .filter((n) => matchesModule(n, valueLower, numericValue))
+    .map((n) => n.moduleInstanceId);
 
+  let matchedIds: string[];
   switch (prefix) {
-    case 'sg':
-      matchedIds = allSubgraphs
-        .filter((n) => matchesSubgraph(n, valueTrimmed, numericValue))
-        .map((n) => subgraphNodeId(n.subgraphId));
-      break;
-    case 'ss':
-      matchedIds = allSubsystems
-        .filter((n) => matchesSubsystem(n, valueTrimmed, numericValue))
-        .map((n) => n.subsystemId);
-      break;
     case 'cnt':
-      matchedIds = allContainers
-        .filter((n) => matchesContainer(n, valueTrimmed, numericValue))
-        .map((n) => containerNodeId(n.containerId, n.subgraphId));
+      matchedIds = cntIds;
       break;
     case 'mod':
-      matchedIds = allModules
-        .filter((n) => matchesModule(n, valueTrimmed, numericValue))
-        .map((n) => n.moduleInstanceId);
+      matchedIds = modIds;
       break;
-    default:
-      matchedIds = [
-        ...allSubgraphs
-          .filter((n) => matchesSubgraph(n, valueTrimmed, numericValue))
-          .map((n) => subgraphNodeId(n.subgraphId)),
-        ...allSubsystems
-          .filter((n) => matchesSubsystem(n, valueTrimmed, numericValue))
-          .map((n) => n.subsystemId),
-        ...allContainers
-          .filter((n) => matchesContainer(n, valueTrimmed, numericValue))
-          .map((n) => containerNodeId(n.containerId, n.subgraphId)),
-        ...allModules
-          .filter((n) => matchesModule(n, valueTrimmed, numericValue))
-          .map((n) => n.moduleInstanceId),
-      ];
+    default: {
+      const sgIds = Object.values(graphData.subgraphs)
+        .filter((n) => matchesSubgraph(n, valueLower, numericValue))
+        .map((n) => subgraphNodeId(n.subgraphId));
+      const ssIds = Object.values(graphData.subsystems)
+        .filter((n) => matchesSubsystem(n, valueLower, numericValue))
+        .map((n) => n.subsystemId);
+      matchedIds = [...sgIds, ...ssIds, ...cntIds, ...modIds];
+    }
   }
 
   if (matchedIds.length === 0) {
     return emptyHighlights();
   }
 
-  // sg and ss nodes are hierarchy roots — no ancestor walk needed.
-  if (prefix === 'sg' || prefix === 'ss') {
-    return {
-      activeId: matchedIds[0],
-      containsMatchNodeIds: [],
-      highlightedIds: matchedIds,
-    };
-  }
-
   // Build parent map: LevelView node ID → parent LevelView node ID.
   // Hierarchy: moduleInstance → container → subgraph.
-  // Subgraph → subsystem link is absent from UsecaseGraphData (Subsystem.subgraphs
-  // is not populated by the API builder), so that edge is omitted.
+  // Ancestry stops at the subgraph level — ss: searches are handled as early
+  // returns above, so subsystems never appear as ancestors in this map.
   const parentMap = new Map<string, string>();
   for (const m of allModules) {
     parentMap.set(

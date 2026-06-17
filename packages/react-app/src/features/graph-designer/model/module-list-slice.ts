@@ -62,6 +62,7 @@ const filterCache = new Map<
   Partial<{dspTypes: string[]; moduleTypes: string[]}>
 >();
 
+/** @internal Called only from the graph-designer tab store factory in index.ts. */
 export function evictModuleListFilterCache(projectId: string): void {
   filterCache.delete(projectId);
 }

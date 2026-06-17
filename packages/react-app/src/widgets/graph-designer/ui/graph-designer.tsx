@@ -5,10 +5,6 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
-// Side-effect import: registers the graph-designer tab store factory with
-// tabStoreRegistry so createTabStore('graph-designer') works when a project opens.
-import '~features/graph-designer';
-
 import {
   Clipboard,
   Copy,

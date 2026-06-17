@@ -113,7 +113,7 @@ const UsecaseSelectionControl: React.FC<UsecaseSelectionControlProps> = ({
 
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
-      const allUsecaseStrings = usecaseData.flatMap((category) =>
+      const allUsecaseStrings = localUsecaseData.flatMap((category) =>
         category.usecases.map((uc: Usecase) => formatUsecaseDisplay(uc)),
       );
       onSelectedUsecasesChange(allUsecaseStrings);

@@ -45,12 +45,12 @@ const graph: UsecaseGraphData = {
     },
   },
   subsystems: {
-    'sys-ss-1': {
+    '1': {
       controlPorts: [],
       dataPorts: [],
       id: 1,
       subgraphs: [],
-      subsystemId: 'sys-ss-1',
+      subsystemId: '1',
       subsystemName: 'AudioSubsystem',
     },
   },
@@ -202,22 +202,17 @@ describe('searchGraphData — sg: prefix', () => {
 describe('searchGraphData — ss: prefix', () => {
   it('finds subsystem by label (partial match)', () => {
     const result = searchGraphData(graph, 'ss:AudioSubsystem');
-    expect(result.highlightedIds).toContain('sys-ss-1');
+    expect(result.highlightedIds).toContain('1');
   });
 
   it('finds subsystem by label (case-insensitive partial match)', () => {
     const result = searchGraphData(graph, 'ss:audio');
-    expect(result.highlightedIds).toContain('sys-ss-1');
+    expect(result.highlightedIds).toContain('1');
   });
 
-  it('finds subsystem by subsystemId string', () => {
-    const result = searchGraphData(graph, 'ss:sys-ss-1');
-    expect(result.highlightedIds).toContain('sys-ss-1');
-  });
-
-  it('finds subsystem by numeric id', () => {
+  it('finds subsystem by numeric subsystemId', () => {
     const result = searchGraphData(graph, 'ss:1');
-    expect(result.highlightedIds).toContain('sys-ss-1');
+    expect(result.highlightedIds).toContain('1');
   });
 
   it('does not return non-subsystem nodes for ss: prefix', () => {
@@ -231,7 +226,7 @@ describe('searchGraphData — ss: prefix', () => {
 
   it('sets activeId to the matching subsystem id', () => {
     const result = searchGraphData(graph, 'ss:AudioSubsystem');
-    expect(result.activeId).toBe('sys-ss-1');
+    expect(result.activeId).toBe('1');
   });
 });
 
@@ -277,7 +272,7 @@ describe('searchGraphData — default search (no prefix)', () => {
 
   it('finds subsystem by label', () => {
     const result = searchGraphData(graph, 'AudioSubsystem');
-    expect(result.highlightedIds).toContain('sys-ss-1');
+    expect(result.highlightedIds).toContain('1');
   });
 
   it('finds container by label', () => {
@@ -355,11 +350,12 @@ const deepGraph: UsecaseGraphData = {
     },
   },
   subsystems: {
-    'ss-main': {
+    '1': {
       controlPorts: [],
       dataPorts: [],
+      id: 1,
       subgraphs: [],
-      subsystemId: 'ss-main',
+      subsystemId: '1',
       subsystemName: 'MainSubsystem',
     },
   },

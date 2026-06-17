@@ -75,8 +75,10 @@ export interface SubsystemPort {
 export interface Subsystem {
   controlPorts: SubsystemPort[];
   dataPorts: SubsystemPort[];
+  /** Numeric primary key from the DTO. */
   id: number;
   subgraphs: string[];
+  /** Always a stringified integer from the backend (e.g. `'42'`). */
   subsystemId: string;
   subsystemName: string;
 }
@@ -130,6 +132,8 @@ function toDiffState(changeType: string): DiffState | undefined {
 /**
  * Creates the graph-data slice for composing into a tab store.
  *
+ * @remarks The store type `S` must also compose `ModuleListSlice` — `loadGraphData`
+ * reads `get().moduleList` to resolve module types from loaded definitions.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function used to read moduleList for type resolution.
  * @param projectId - Project identifier passed to the API.

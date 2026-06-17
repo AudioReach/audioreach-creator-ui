@@ -43,6 +43,7 @@ type GetState<T> = StoreApi<T>['getState'];
 // Lives outside the slice so filter choices survive tab store recreation.
 const subgraphFilterCache = new Map<string, string[]>();
 
+/** @internal Called only from the graph-designer tab store factory in index.ts. */
 export function evictSubgraphListFilterCache(projectId: string): void {
   subgraphFilterCache.delete(projectId);
 }
