@@ -65,9 +65,13 @@ jobs:
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
-        if: always()
+        if: >-
+          always() &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.fork == false)
         with:
           name: test-results-node-${{ matrix.node-version }}
           path: |
             packages/**/test-results/**/*
             packages/**/coverage/**/*
+          retention-days: 5
