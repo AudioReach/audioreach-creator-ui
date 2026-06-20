@@ -38,7 +38,7 @@ export interface RequestOverrides {
   timeoutMs?: number;
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 interface RequestOptions extends RequestOverrides {
   body?: unknown;
@@ -60,6 +60,17 @@ function backoffDelay(
   const raw = baseMs * Math.pow(2, exp);
   const jitter = Math.floor(Math.random() * jitterMs);
   return raw + jitter;
+}
+
+/** Compose headers — omits Content-Type for FormData (browser sets boundary). */
+function composeHeaders(
+  body: unknown,
+  overrideHeaders?: Record<string, string>,
+): Record<string, string> {
+  if (body instanceof FormData) {
+    return {...(overrideHeaders ?? {})};
+  }
+  return {'Content-Type': 'application/json', ...(overrideHeaders ?? {})};
 }
 
 /**
@@ -124,11 +135,25 @@ export class HttpClient {
     return this.request<T>(endpoint, {
       apiVersion: overrides?.apiVersion,
       body,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(overrides?.headers ?? {}),
-      },
+      headers: composeHeaders(body, overrides?.headers),
       method: 'PATCH',
+      retries: overrides?.retries,
+      retryBaseDelayMs: overrides?.retryBaseDelayMs,
+      retryJitterMs: overrides?.retryJitterMs,
+      timeoutMs: overrides?.timeoutMs,
+    });
+  }
+
+  async put<T>(
+    endpoint: string,
+    body?: unknown,
+    overrides?: RequestOverrides,
+  ): Promise<ApiResult<T>> {
+    return this.request<T>(endpoint, {
+      apiVersion: overrides?.apiVersion,
+      body,
+      headers: composeHeaders(body, overrides?.headers),
+      method: 'PUT',
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
@@ -141,19 +166,10 @@ export class HttpClient {
     body?: unknown,
     overrides?: RequestOverrides,
   ): Promise<ApiResult<T>> {
-    // Don't set Content-Type for FormData - browser will set it with boundary
-    const isFormData = body instanceof FormData;
-    const headers = isFormData
-      ? {...(overrides?.headers ?? {})}
-      : {
-          'Content-Type': 'application/json',
-          ...(overrides?.headers ?? {}),
-        };
-
     return this.request<T>(endpoint, {
       apiVersion: overrides?.apiVersion,
       body,
-      headers,
+      headers: composeHeaders(body, overrides?.headers),
       method: 'POST',
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
