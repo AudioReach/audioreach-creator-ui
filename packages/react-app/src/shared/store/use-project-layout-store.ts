@@ -1296,27 +1296,39 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       });
     }
 
-    set((state) => ({
-      projectGroups: state.projectGroups.map((projectGroup) => {
+    set((state) => {
+      let newActiveTab = state.activeTab;
+
+      const updatedProjectGroups = state.projectGroups.map((projectGroup) => {
         if (projectGroup.id !== projectGroupId) {
           return projectGroup;
         }
 
         const updatedProjectTabs = projectGroup.projectTabs.filter((tab) => {
           if (tab.id === tabId) {
-            removed = true; // Tab found and removed
+            removed = true;
             return false;
           }
           return true;
         });
 
-        // If we removed the active tab, set a new active tab
+        // If we removed the active tab, resolve the fallback
         let newActiveTabId = projectGroup.activeTabId;
         if (projectGroup.activeTabId === tabId) {
-          newActiveTabId =
+          const fallback =
             updatedProjectTabs.length > 0
-              ? updatedProjectTabs[0].id
-              : projectGroup.mainTab.id;
+              ? updatedProjectTabs[0]
+              : projectGroup.mainTab;
+          newActiveTabId = fallback.id;
+          // Keep state.activeTab consistent so the side-nav updates immediately.
+          // Scope to the group being modified — avoids a false match if another
+          // group happens to contain a tab with the same ID.
+          if (
+            state.activeTab?.id === tabId &&
+            state.activeTabGroup?.id === projectGroupId
+          ) {
+            newActiveTab = fallback;
+          }
         }
 
         return {
@@ -1324,8 +1336,13 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
           activeTabId: newActiveTabId,
           projectTabs: updatedProjectTabs,
         };
-      }),
-    }));
+      });
+
+      return {
+        activeTab: newActiveTab,
+        projectGroups: updatedProjectGroups,
+      };
+    });
 
     return removed;
   },
