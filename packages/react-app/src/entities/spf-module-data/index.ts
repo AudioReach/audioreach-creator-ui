@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+export * from './api/spf-module-api';
 export type * from './model/spf-module-cal-data.dto';
 export type * from './model/spf-module-common.dto';
 export type * from './model/spf-module-tag-data.dto';
+export type * from './model/spf-module.dto';
