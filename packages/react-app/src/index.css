@@ -21,6 +21,9 @@
   min-height: 0 !important;
 }
 
+@keyframes dirty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.dirty-pulse { animation: dirty-pulse 1.4s ease-in-out infinite; }
+
 :root {
   font-family: 'Roboto Flex', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;

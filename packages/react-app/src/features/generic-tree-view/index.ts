@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export {GenericTreeView} from './ui/GenericTreeView';
+export {GenericTreeView} from './ui/generic-tree-view';
 export type {
   ClipboardPayload,
   GenericTreeViewHandle,
