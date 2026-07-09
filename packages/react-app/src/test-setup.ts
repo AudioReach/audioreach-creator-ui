@@ -15,15 +15,32 @@ import {
   useState,
 } from 'react';
 
-import type * as VisualizerStoreContext from '~features/usecase-visualizer/model/visualizer-store-context';
+// jsdom does not implement scrollIntoView — add a no-op stub so components
+// that call it (e.g. ParameterDetailPane auto-scroll) do not throw in tests.
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
 
 // Suppress console warnings in tests (optional)
 const originalError = console.error;
+// Known QUI library behaviour: custom component props (startIcon, onFocusChange,
+// etc.) are forwarded to underlying DOM elements. React 19 passes 'Warning: %s'
+// as args[0] and the interpolated message as args[1]; match both positions.
+const QUI_PROP_LEAK_PATTERNS = [
+  /React does not recognize the `\w+` prop on a DOM element/,
+  /Unknown event handler property `\w+`\. It will be ignored/,
+  /Received `\w+` for a non-boolean attribute `\w+`/,
+];
+function isQuiPropLeak(args: unknown[]): boolean {
+  return args.some(
+    (a) =>
+      typeof a === 'string' && QUI_PROP_LEAK_PATTERNS.some((re) => re.test(a)),
+  );
+}
 beforeAll(() => {
   console.error = (...args) => {
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render is deprecated')
+      (args[0].includes('Warning: ReactDOM.render is deprecated') ||
+        isQuiPropLeak(args))
     ) {
       return;
     }
@@ -54,16 +71,18 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
       onBlur,
       onClear,
       onFocus,
+      onFocusChange: _onFocusChange,
       onValueChange,
       placeholder,
       readOnly,
       size,
+      startIcon: _startIcon,
       style,
       value,
       ...restProps
     } = props;
 
-    // Filter out non-DOM props
+    // Filter out non-DOM props — restProps should now be empty for standard QUI usage
     const cleanProps = restProps;
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,7 +167,17 @@ jest.mock('@qualcomm-ui/react/button', () => ({
   Button: jest
     .fn()
     .mockImplementation(
-      ({children, className, disabled, onClick, type = 'button', ...props}) => {
+      ({
+        children,
+        className,
+        disabled,
+        endIcon: _endIcon,
+        iconPosition: _iconPosition,
+        onClick,
+        startIcon: _startIcon,
+        type = 'button',
+        ...props
+      }) => {
         return createElement(
           'button',
           {
@@ -682,7 +711,7 @@ jest.mock('~shared/providers/theme-provider', () => ({
 jest.mock('~features/usecase-visualizer/model/visualizer-store-context', () => {
   const actual = jest.requireActual(
     '~features/usecase-visualizer/model/visualizer-store-context',
-  ) as typeof VisualizerStoreContext;
+  );
   const defaultState = {
     containsMatchNodeIds: [] as string[],
     eventHandlers: undefined,
@@ -706,27 +735,296 @@ jest.mock('~features/usecase-visualizer/model/visualizer-store-context', () => {
   };
 });
 
-jest.mock('@qualcomm-ui/react/tooltip', () => ({
-  Tooltip: jest
+jest.mock('@qualcomm-ui/react/tooltip', () => {
+  // Tooltip is used two ways in this codebase:
+  //   1. Old API: <Tooltip trigger={...}>...</Tooltip>  (flat component)
+  //   2. New API: <Tooltip.Root>, <Tooltip.Trigger>, etc. (namespace)
+  // The mock must support both: a callable function with namespace properties.
+  const TooltipFn = jest
     .fn()
-    .mockImplementation(
-      ({
-        arrowProps: _arrowProps,
-        arrowTipProps: _arrowTipProps,
-        children,
-        contentProps: _contentProps,
-        hideArrow: _hideArrow,
-        portalProps: _portalProps,
-        positionerProps: _positionerProps,
+    .mockImplementation(({children, trigger, ...props}) =>
+      createElement(
+        'div',
+        {'data-testid': 'q-tooltip', ...props},
         trigger,
-        ...props
-      }) => {
-        return createElement(
-          'div',
-          {'data-testid': 'q-tooltip', ...props},
-          trigger,
-          children,
-        );
+        children,
+      ),
+    );
+  const namespace = {
+    Arrow: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('span', {'data-testid': 'tooltip-arrow'}, children),
+      ),
+    ArrowTip: jest
+      .fn()
+      .mockImplementation(() =>
+        createElement('span', {'data-testid': 'tooltip-arrow-tip'}),
+      ),
+    Content: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('div', {'data-testid': 'tooltip-content'}, children),
+      ),
+    Positioner: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('div', {'data-testid': 'tooltip-positioner'}, children),
+      ),
+    Root: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('div', {'data-testid': 'q-tooltip'}, children),
+      ),
+    Trigger: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('span', {'data-testid': 'tooltip-trigger'}, children),
+      ),
+  };
+  Object.assign(TooltipFn, namespace);
+  return {Tooltip: TooltipFn};
+});
+
+jest.mock('@qualcomm-ui/core/tree', () => ({
+  createTreeCollection: jest.fn().mockReturnValue({items: []}),
+}));
+
+jest.mock('@qualcomm-ui/react/tree', () => {
+  const pass = ({children}: {children?: React.ReactNode}) =>
+    createElement('div', {}, children);
+  return {
+    Tree: {
+      Branch: pass,
+      BranchContent: pass,
+      BranchIndentGuide: () => createElement('span'),
+      BranchNode: pass,
+      BranchTrigger: () =>
+        createElement('button', {'data-testid': 'branch-trigger'}),
+      Label: jest
+        .fn()
+        .mockImplementation(({children, onClick}) =>
+          createElement(
+            'div',
+            {'data-testid': 'tree-label', onClick},
+            children,
+          ),
+        ),
+      LeafNode: pass,
+      NodeIndicator: () => createElement('span'),
+      NodeProvider: jest
+        .fn()
+        .mockImplementation(({children}) => createElement('div', {}, children)),
+      NodeText: jest
+        .fn()
+        .mockImplementation(({children, className}) =>
+          createElement(
+            'span',
+            {className, 'data-testid': 'node-text'},
+            children,
+          ),
+        ),
+      Root: jest
+        .fn()
+        .mockImplementation(({children}) =>
+          createElement('div', {'data-testid': 'tree-root'}, children),
+        ),
+    },
+  };
+});
+
+jest.mock('@qualcomm-ui/core/select', () => ({
+  selectCollection: jest.fn().mockReturnValue({items: []}),
+}));
+
+jest.mock('@qualcomm-ui/react/select', () => ({
+  Select: jest.fn().mockImplementation(({onValueChange, value}) =>
+    createElement('select', {
+      'data-testid': 'q-select',
+      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+        onValueChange?.([e.target.value]);
       },
+      value: value?.[0] ?? '',
+    }),
+  ),
+}));
+
+jest.mock('@qualcomm-ui/react/switch', () => ({
+  Switch: jest
+    .fn()
+    .mockImplementation(({checked, disabled, label, onCheckedChange}) =>
+      createElement(
+        'label',
+        {'data-testid': 'q-switch'},
+        createElement('input', {
+          checked: checked ?? false,
+          disabled,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+            onCheckedChange?.(e.target.checked);
+          },
+          type: 'checkbox',
+        }),
+        label && createElement('span', {}, label),
+      ),
     ),
+}));
+
+jest.mock('@qualcomm-ui/react/text-area', () => ({
+  TextArea: jest.fn().mockImplementation(({defaultValue, readOnly}) =>
+    createElement('textarea', {
+      'data-testid': 'q-text-area',
+      defaultValue,
+      readOnly,
+    }),
+  ),
+}));
+
+jest.mock('@qualcomm-ui/react/accordion', () => {
+  const pass = ({children}: {children?: React.ReactNode}) =>
+    createElement('div', {}, children);
+  return {
+    Accordion: {
+      ItemContent: pass,
+      ItemIndicator: () =>
+        createElement('span', {'data-testid': 'accordion-indicator'}),
+      ItemRoot: jest
+        .fn()
+        .mockImplementation(({children, value}) =>
+          createElement(
+            'div',
+            {'data-accordion-value': value, 'data-testid': 'accordion-item'},
+            children,
+          ),
+        ),
+      ItemTrigger: jest
+        .fn()
+        .mockImplementation(({children, onClick}) =>
+          createElement(
+            'button',
+            {'data-testid': 'accordion-trigger', onClick},
+            children,
+          ),
+        ),
+      Root: jest
+        .fn()
+        .mockImplementation(
+          ({children, onValueChange: _onValueChange, value}) =>
+            createElement(
+              'div',
+              {
+                'data-testid': 'accordion-root',
+                'data-value': JSON.stringify(value),
+              },
+              children,
+            ),
+        ),
+    },
+  };
+});
+
+jest.mock('@qualcomm-ui/react/badge', () => ({
+  Badge: jest.fn().mockImplementation(({children, emphasis, size, variant}) =>
+    createElement(
+      'span',
+      {
+        'data-emphasis': emphasis,
+        'data-size': size,
+        'data-testid': 'q-badge',
+        'data-variant': variant,
+      },
+      children,
+    ),
+  ),
+  StatusBadge: jest.fn().mockImplementation(({className, emphasis, size}) =>
+    createElement('span', {
+      className,
+      'data-emphasis': emphasis,
+      'data-size': size,
+      'data-testid': 'q-status-badge',
+    }),
+  ),
+}));
+
+jest.mock('@qualcomm-ui/react/segmented-control', () => ({
+  SegmentedControl: {
+    Item: jest
+      .fn()
+      .mockImplementation(({text, value}) =>
+        createElement(
+          'button',
+          {'data-testid': 'seg-item', 'data-value': value},
+          text,
+        ),
+      ),
+    Root: jest
+      .fn()
+      .mockImplementation(
+        ({
+          children,
+          multiple: _multiple,
+          onValueChange: _onValueChange,
+          value: _value,
+        }) =>
+          createElement('div', {'data-testid': 'segmented-control'}, children),
+      ),
+  },
+}));
+
+jest.mock('@qualcomm-ui/core/table', () => ({
+  createColumnHelper: jest.fn().mockReturnValue({
+    accessor: jest.fn().mockImplementation((key, opts) => ({
+      accessorKey: key,
+      ...opts,
+    })),
+  }),
+  getCoreRowModel: jest.fn().mockReturnValue(() => ({})),
+}));
+
+jest.mock('@qualcomm-ui/react/table', () => ({
+  flexRender: jest.fn().mockImplementation((fn, ctx) => {
+    if (typeof fn === 'function') {
+      return fn(ctx);
+    }
+    return fn;
+  }),
+  Table: {
+    Body: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('tbody', {'data-testid': 'table-body'}, children),
+      ),
+    Cell: jest
+      .fn()
+      .mockImplementation(({children, style}) =>
+        createElement('td', {style}, children),
+      ),
+    Header: jest
+      .fn()
+      .mockImplementation(({children}) => createElement('thead', {}, children)),
+    HeaderCell: jest
+      .fn()
+      .mockImplementation(({children, style}) =>
+        createElement('th', {style}, children),
+      ),
+    Root: jest
+      .fn()
+      .mockImplementation(({children}) =>
+        createElement('div', {'data-testid': 'q-table'}, children),
+      ),
+    Row: jest
+      .fn()
+      .mockImplementation(({children}) => createElement('tr', {}, children)),
+    ScrollContainer: jest
+      .fn()
+      .mockImplementation(({children, className}) =>
+        createElement('div', {className}, children),
+      ),
+    Table: jest
+      .fn()
+      .mockImplementation(({children}) => createElement('table', {}, children)),
+  },
+  useReactTable: jest.fn().mockReturnValue({
+    getHeaderGroups: jest.fn().mockReturnValue([]),
+    getRowModel: jest.fn().mockReturnValue({rows: []}),
+  }),
 }));
