@@ -826,8 +826,9 @@ Get clicked (widget action bar)
     active tab); no confirmation dialog — clicking Get is the user's
     consent to replace local state on success
   ← on success: store writes new dto; widget passes updated `data` prop
-                to feature; feature detects reference change and re-seeds
-                (same path as new data prop arriving — see below)
+                to feature; feature detects reference change and does a
+                full re-seed (same path as any other full-snapshot data
+                change — see below)
   ← on failure: store leaves entry.dto untouched; feature's `data` prop
                 is unchanged; feature preserves unsaved edits, dirty
                 markers, and validation errors; widget surfaces the error
@@ -837,20 +838,80 @@ Set (widget action bar button, or auto-commit on blur)
       • pull:  widget calls handle.getEditedTreeViewItems() → TreeViewItem[]
       • push:  feature calls autoCommit.onCommit(dirtyItems) on blur
               of a leaf input control (invalid state suppresses the push)
-  → widget dispatches the payload via its adapter
-  ← on success: adapter returns TreeViewData; widget writes to store;
-                feature receives new `data` prop and re-seeds (below)
+  → widget dispatches the payload via its adapter — only the dirty items
+    are sent; the backend may process a subset of them (partial success)
+  ← on success: adapter returns TreeViewData for the items it processed
+                (possibly a subset of the payload); widget merges that
+                response into the existing stored DTO — same
+                replace-by-id/preserve-the-rest merge as
+                `setModuleEnable` (§21.6) — then hands the merged
+                snapshot to the feature as a new `data` prop; feature
+                reconciles per-path rather than re-seeding (§9.7)
   ← on failure: widget does not update the store; no new `data` prop
                 flows to the feature; unsaved edits are preserved
                 automatically; widget surfaces the error
 
-New data prop arrives (after successful Get, successful Set, or explicit
+New full-snapshot data prop arrives (after successful Get or explicit
 re-fetch by caller)
   → prevDataRef detects reference change
   → re-seed elementValues, committedValues, arrayCounts from new DTO
   → clear dirtyPaths, setPaths, invalidPaths; increment resetKey
   → UI preferences (selection, expansion, view mode) are NOT reset
+
+New data prop arrives after a successful Set
+  → prevDataRef detects reference change
+  → feature does NOT perform the full re-seed above; it runs the
+    per-path reconciliation described in §9.7 instead
+
+Mount / session restore (`initialUiState` present)
+  → prevDataRef is seeded to the initial `data` prop at declaration, so
+    this is not treated as a "new data prop arrived" event
+  → no re-seed and no reconciliation; `initialUiState` alone determines
+    the restored elementValues/committedValues/dirtyPaths/setPaths
 ```
+
+### 9.7 Set reconciliation
+
+Unlike Get, a successful Set must not clear dirty state for paths the
+Set didn't touch — the backend may have processed only a subset of what
+was sent, and other parameters may have been edited concurrently in a
+different tab/module. The feature reconciles per-path instead of
+re-seeding wholesale:
+
+```
+Given:
+  preSetDirtyPaths: Set<string>   — dirtyPaths immediately before the Set
+  sentValues: Map<string, string> — value sent for each key in preSetDirtyPaths
+  mergedSnapshot                  — the widget-merged TreeViewData handed
+                                     back to the feature as the new `data` prop
+
+For each path in preSetDirtyPaths:
+  snapshotValue = value at that path in mergedSnapshot
+  if snapshotValue === sentValues.get(path):
+    → move path from dirtyPaths to setPaths (backend confirmed the write)
+  else:
+    → leave path in dirtyPaths (backend didn't process it, or the value
+      differs — treat as still-unsaved, not an error; the widget surfaces
+      write failures separately per FR‑GS‑03)
+
+Paths not in preSetDirtyPaths are unaffected — this is not a full re-seed.
+```
+
+Notes:
+
+- Array instance counts (FR‑DA‑05) are recomputed all-or-nothing from the
+  merged snapshot on every Set, regardless of per-path outcome. There is
+  no partial/per-instance array-count reconciliation.
+- `elementValues`/`committedValues` for reconciled paths are refreshed
+  from `mergedSnapshot` so the displayed value matches what the backend
+  actually stored (relevant if the backend normalizes the value).
+- The feature needs a way to distinguish "a new `data` prop after a Get"
+  from "a new `data` prop after a Set," since both currently arrive as
+  the same "reference changed" signal to `prevDataRef`. This is an open
+  API-shape question for the implementing commit (see
+  `docs/plans/generic-tree-view/gtv-implementation.md`) — e.g. a
+  `source: 'get' | 'set'` field on the data payload, or a separate
+  `lastCommitResult` prop the widget sets alongside `data`.
 
 ---
 
@@ -1686,8 +1747,8 @@ interface ModuleDataEntry {
 | Query CKVs + Tags | `POST /projects/{pid}/spf-modules/query?include=ckvs,tags`          |
 | Get cal-data      | `GET /projects/{pid}/spf-modules/{moduleId}/cal-data/{ckvSystemId}` |
 | Set cal-data      | `PUT /projects/{pid}/spf-modules/{moduleId}/cal-data/{ckvSystemId}` |
-| Get tag-data      | `GET /projects/{pid}/spf-modules/{moduleId}/tag-data/{tkvSystemId}` |
-| Set tag-data      | `PUT /projects/{pid}/spf-modules/{moduleId}/tag-data/{tkvSystemId}` |
+| Get tag-data      | `GET /projects/{pid}/spf-modules/{moduleId}/tag-data/{tagSystemId}/{tkvSystemId}` |
+| Set tag-data      | `PUT /projects/{pid}/spf-modules/{moduleId}/tag-data/{tagSystemId}/{tkvSystemId}` |
 
 ### 16.4 Store lifecycle
 
@@ -1919,7 +1980,7 @@ the option names.
 | R4  | `isNeuralNet` / `isOffloaded` visual treatment | `Neural Net` (`emphasis="brand"`) and `Offloaded` (`emphasis="neutral"`) Badges in accordion header when `showBadges` is on.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | R5  | Subgraph entity properties                     | `TreeViewItem` resolves the structural incompatibility — `PropertyDto.elements` uses the same `AnyElementDto[]` union. A future `widgets/subgraph-data-tab` renders `GenericTreeView` with `readOnly={true}` + `hideToolbar={true}` today (GET-only API).                                                                                                                                                                                                                                                                                                                                 |
 | R6  | CKV context display                            | The Cal Index selector in `ModuleDataTab` displays the CKV context (device variant / use-case) as the index label. No additional display in `GenericTreeView` itself is needed.                                                                                                                                                                                                                                                                                                                                                                                                           |
-| R7  | Tag data API endpoints                         | `POST /spf-modules/query?include=ckvs,tags` returns `TagInfoDto[]` (each containing `TkvDto[]`). Tag-data fetch/write uses `GET/PUT .../tag-data/{tkvSystemId}`. `TagDataDto` has the same `parameters: ParameterDetailDto[]` structure as `CalDataDto`.                                                                                                                                                                                                                                                                                                                                  |
+| R7  | Tag data API endpoints                         | `POST /spf-modules/query?include=ckvs,tags` returns `TagInfoDto[]` (each containing `TkvDto[]`). Tag-data fetch/write uses `GET/PUT .../tag-data/{tagSystemId}/{tkvSystemId}`. `TagDataDto` has the same `parameters: ParameterDetailDto[]` structure as `CalDataDto`.                                                                                                                                                                                                                                                                                                                                  |
 | R8  | CKV propagation across views                   | Resolved by the subgraph header + derived-selector model (§21). Every module in a subgraph derives its active CKV from `SubgraphHeaderSelectionSlice.headerSelectionsBySubgraphId[subgraphId]` via `selectActiveCkvForModule`. The canvas enable-switch overlay and the module data tab both read through this selector, so they stay in sync without cross-component wiring. There is no project-scoped active-CKV concept — CKV remains subgraph-scoped, matching the WPF app.                                                                                                          |
 | R9  | `group` / `subgroup` rendering                 | Resolved — groups become top-level `TreeViewItem`s; subgroups become collapsible `StructDto` wrappers inside their group; elements without a `group` annotation are omitted from the grouped view. The projection is computed by `buildGroupedTreeViewData` in the adapter layer (§7.5). `GenericTreeView` renders the grouped tree identically to any other tree — no feature prop needed. Both the grouped and standard parameter views operate on the same `CalDataEntry.dto`; edits in either view flow through the same store write and re-seed pathway, so both views stay in sync. |
 
