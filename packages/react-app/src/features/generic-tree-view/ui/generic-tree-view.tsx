@@ -204,6 +204,12 @@ function GenericTreeViewInner(
   const [showBadges, setShowBadges] = useState(
     () => initialUiState?.showBadges ?? false,
   );
+  const [showModifiedOnly, setShowModifiedOnly] = useState(
+    () => initialUiState?.showModifiedOnly ?? false,
+  );
+  const [showErrorsOnly, setShowErrorsOnly] = useState(
+    () => initialUiState?.showErrorsOnly ?? false,
+  );
 
   const [panelSplitPct, setPanelSplitPct] = useState(
     () => initialUiState?.panelSplitPct ?? 30,
@@ -348,6 +354,34 @@ function GenericTreeViewInner(
   );
 
   const setItemIds = useMemo(() => itemIdsFromPaths(setPaths), [setPaths]);
+
+  const invalidItemIds = useMemo(
+    () => itemIdsFromPaths(invalidPaths),
+    [invalidPaths],
+  );
+
+  const visibleItems = useMemo(
+    () =>
+      data.items.filter((item) => {
+        if (item.isHidden) {
+          return false;
+        }
+        if (showModifiedOnly && !dirtyItemIds.has(item.id)) {
+          return false;
+        }
+        if (showErrorsOnly && !invalidItemIds.has(item.id)) {
+          return false;
+        }
+        return true;
+      }),
+    [
+      data.items,
+      showModifiedOnly,
+      showErrorsOnly,
+      dirtyItemIds,
+      invalidItemIds,
+    ],
+  );
 
   const buildDirtyItems = useCallback((): TreeViewItem[] => {
     if (dirtyPaths.size === 0) {
@@ -510,11 +544,11 @@ function GenericTreeViewInner(
   );
 
   const selectedItems = useMemo(() => {
-    const itemsById = new Map(data.items.map((p) => [p.id, p]));
+    const itemsById = new Map(visibleItems.map((p) => [p.id, p]));
     return selectedIds
       .map((id) => itemsById.get(id))
       .filter((item): item is TreeViewItem => item !== undefined);
-  }, [selectedIds, data]);
+  }, [selectedIds, visibleItems]);
 
   useImperativeHandle(
     ref,
@@ -583,6 +617,22 @@ function GenericTreeViewInner(
     [onUiStateChange],
   );
 
+  const handleShowModifiedOnlyChange = useCallback(
+    (show: boolean) => {
+      setShowModifiedOnly(show);
+      onUiStateChange?.({showModifiedOnly: show});
+    },
+    [onUiStateChange],
+  );
+
+  const handleShowErrorsOnlyChange = useCallback(
+    (show: boolean) => {
+      setShowErrorsOnly(show);
+      onUiStateChange?.({showErrorsOnly: show});
+    },
+    [onUiStateChange],
+  );
+
   return (
     <div
       className={['relative flex h-full w-full flex-col', className]
@@ -602,18 +652,24 @@ function GenericTreeViewInner(
       >
         {!hideToolbar && (
           <Toolbar
+            dirtyPaths={dirtyPaths}
+            invalidPaths={invalidPaths}
             isExpanding={isExpanding}
             onCollapseAll={handleCollapseAll}
             onExpandAll={handleExpandAll}
             onPolicyFilterChange={handlePolicyFilterChange}
             onSearchChange={handleSearchChange}
             onShowBadgesChange={handleShowBadgesChange}
+            onShowErrorsOnlyChange={handleShowErrorsOnlyChange}
+            onShowModifiedOnlyChange={handleShowModifiedOnlyChange}
             onShowPidsChange={handleShowPidsChange}
             onShowRangesChange={handleShowRangesChange}
             onViewModeChange={handleViewModeChange}
             policyFilter={policyFilter}
             searchText={searchInput}
             showBadges={showBadges}
+            showErrorsOnly={showErrorsOnly}
+            showModifiedOnly={showModifiedOnly}
             showPids={showPids}
             showRanges={showRanges}
             viewMode={viewMode}
@@ -629,7 +685,7 @@ function GenericTreeViewInner(
               <div className="h-full" style={{width: `${panelSplitPct}%`}}>
                 <ParameterListPanel
                   dirtyItemIds={dirtyItemIds}
-                  items={data.items}
+                  items={visibleItems}
                   matchSets={matchSets}
                   moduleName={title}
                   onSelectionChange={handleSelectionChange}
@@ -689,7 +745,7 @@ function GenericTreeViewInner(
                 expandAll={legacyExpandAll}
                 expandedKeys={legacyExpandedKeys}
                 invalidPaths={invalidPaths}
-                items={data.items}
+                items={visibleItems}
                 matchSets={matchSets}
                 moduleName={title}
                 onAutoCommit={tryAutoCommit}

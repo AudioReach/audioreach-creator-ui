@@ -19,36 +19,48 @@ import {Switch} from '@qualcomm-ui/react/switch';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
 interface ToolbarProps {
+  dirtyPaths: Set<string>;
+  invalidPaths: Set<string>;
   isExpanding?: boolean;
   onCollapseAll: () => void;
   onExpandAll: () => void;
   onPolicyFilterChange: (filter: Set<'BASIC' | 'ADVANCED'>) => void;
   onSearchChange: (text: string) => void;
   onShowBadgesChange: (show: boolean) => void;
+  onShowErrorsOnlyChange: (show: boolean) => void;
+  onShowModifiedOnlyChange: (show: boolean) => void;
   onShowPidsChange: (show: boolean) => void;
   onShowRangesChange: (show: boolean) => void;
   onViewModeChange: (mode: 'legacy' | 'modern') => void;
   policyFilter: Set<'BASIC' | 'ADVANCED'>;
   searchText: string;
   showBadges: boolean;
+  showErrorsOnly: boolean;
+  showModifiedOnly: boolean;
   showPids: boolean;
   showRanges: boolean;
   viewMode: 'legacy' | 'modern';
 }
 
 export function Toolbar({
+  dirtyPaths,
+  invalidPaths,
   isExpanding = false,
   onCollapseAll,
   onExpandAll,
   onPolicyFilterChange,
   onSearchChange,
   onShowBadgesChange,
+  onShowErrorsOnlyChange,
+  onShowModifiedOnlyChange,
   onShowPidsChange,
   onShowRangesChange,
   onViewModeChange,
   policyFilter,
   searchText,
   showBadges,
+  showErrorsOnly,
+  showModifiedOnly,
   showPids,
   showRanges,
   viewMode,
@@ -149,6 +161,23 @@ export function Toolbar({
             size="sm"
           />
         ))}
+
+      {viewMode === 'modern' && dirtyPaths.size > 0 && (
+        <Switch
+          checked={showModifiedOnly}
+          label="Modified Only"
+          onCheckedChange={onShowModifiedOnlyChange}
+          size="sm"
+        />
+      )}
+      {viewMode === 'modern' && invalidPaths.size > 0 && (
+        <Switch
+          checked={showErrorsOnly}
+          label="Errors Only"
+          onCheckedChange={onShowErrorsOnlyChange}
+          size="sm"
+        />
+      )}
 
       <div className="flex-1" />
     </div>

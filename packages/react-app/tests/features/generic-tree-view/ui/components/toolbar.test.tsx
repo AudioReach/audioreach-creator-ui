@@ -15,18 +15,24 @@ function makeProps(
   overrides: Partial<Parameters<typeof Toolbar>[0]> = {},
 ): Parameters<typeof Toolbar>[0] {
   return {
+    dirtyPaths: new Set<string>(),
+    invalidPaths: new Set<string>(),
     isExpanding: false,
     onCollapseAll: jest.fn(),
     onExpandAll: jest.fn(),
     onPolicyFilterChange: jest.fn(),
     onSearchChange: jest.fn(),
     onShowBadgesChange: jest.fn(),
+    onShowErrorsOnlyChange: jest.fn(),
+    onShowModifiedOnlyChange: jest.fn(),
     onShowPidsChange: jest.fn(),
     onShowRangesChange: jest.fn(),
     onViewModeChange: jest.fn(),
     policyFilter: new Set<'BASIC' | 'ADVANCED'>(['BASIC']),
     searchText: '',
     showBadges: false,
+    showErrorsOnly: false,
+    showModifiedOnly: false,
     showPids: false,
     showRanges: false,
     viewMode: 'modern',
@@ -146,5 +152,81 @@ describe('Toolbar', () => {
     expect(pidsCheckbox).not.toBeNull();
     fireEvent.click(pidsCheckbox!);
     expect(onShowPidsChange).toHaveBeenCalledWith(true);
+  });
+
+  // ── Modified Only / Errors Only filters ──────────────────────────────────
+
+  it('does not render Modified Only switch when dirtyPaths is empty', () => {
+    render(<Toolbar {...makeProps({dirtyPaths: new Set()})} />);
+    expect(screen.queryByText('Modified Only')).not.toBeInTheDocument();
+  });
+
+  it('renders Modified Only switch when dirtyPaths is non-empty', () => {
+    render(<Toolbar {...makeProps({dirtyPaths: new Set(['100/gain'])})} />);
+    expect(screen.getByText('Modified Only')).toBeInTheDocument();
+  });
+
+  it('does not render Errors Only switch when invalidPaths is empty', () => {
+    render(<Toolbar {...makeProps({invalidPaths: new Set()})} />);
+    expect(screen.queryByText('Errors Only')).not.toBeInTheDocument();
+  });
+
+  it('renders Errors Only switch when invalidPaths is non-empty', () => {
+    render(<Toolbar {...makeProps({invalidPaths: new Set(['100/gain'])})} />);
+    expect(screen.getByText('Errors Only')).toBeInTheDocument();
+  });
+
+  it('does not render Modified Only or Errors Only switches in legacy view', () => {
+    render(
+      <Toolbar
+        {...makeProps({
+          dirtyPaths: new Set(['100/gain']),
+          invalidPaths: new Set(['100/gain']),
+          viewMode: 'legacy',
+        })}
+      />,
+    );
+    expect(screen.queryByText('Modified Only')).not.toBeInTheDocument();
+    expect(screen.queryByText('Errors Only')).not.toBeInTheDocument();
+  });
+
+  it('calls onShowModifiedOnlyChange when Modified Only switch is toggled', () => {
+    const onShowModifiedOnlyChange = jest.fn();
+    render(
+      <Toolbar
+        {...makeProps({
+          dirtyPaths: new Set(['100/gain']),
+          onShowModifiedOnlyChange,
+          showModifiedOnly: false,
+        })}
+      />,
+    );
+    const checkbox = screen
+      .getByText('Modified Only')
+      .closest('[data-testid="q-switch"]')
+      ?.querySelector('input[type="checkbox"]');
+    expect(checkbox).not.toBeNull();
+    fireEvent.click(checkbox!);
+    expect(onShowModifiedOnlyChange).toHaveBeenCalledWith(true);
+  });
+
+  it('calls onShowErrorsOnlyChange when Errors Only switch is toggled', () => {
+    const onShowErrorsOnlyChange = jest.fn();
+    render(
+      <Toolbar
+        {...makeProps({
+          invalidPaths: new Set(['100/gain']),
+          onShowErrorsOnlyChange,
+          showErrorsOnly: false,
+        })}
+      />,
+    );
+    const checkbox = screen
+      .getByText('Errors Only')
+      .closest('[data-testid="q-switch"]')
+      ?.querySelector('input[type="checkbox"]');
+    expect(checkbox).not.toBeNull();
+    fireEvent.click(checkbox!);
+    expect(onShowErrorsOnlyChange).toHaveBeenCalledWith(true);
   });
 });

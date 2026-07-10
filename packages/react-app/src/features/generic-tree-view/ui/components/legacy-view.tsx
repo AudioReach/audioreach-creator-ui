@@ -62,10 +62,9 @@ export function LegacyView({
   setPaths,
   showRanges,
 }: LegacyViewProps) {
-  const visibleItems = items.filter((p) => !p.isHidden);
   const filteredItems = matchSets
-    ? visibleItems.filter((p) => matchSets.paramIds.has(p.id))
-    : visibleItems;
+    ? items.filter((p) => matchSets.paramIds.has(p.id))
+    : items;
 
   const rootNode: LegacyNode = useMemo(
     () => ({
@@ -183,7 +182,7 @@ export function LegacyView({
         dirtyCount={dirtyCount}
         paramCount={filteredItems.length}
         setCount={setCount}
-        totalParamCount={visibleItems.length}
+        totalParamCount={items.length}
       />
     </div>
   );

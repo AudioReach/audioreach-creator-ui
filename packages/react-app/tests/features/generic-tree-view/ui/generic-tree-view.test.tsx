@@ -771,6 +771,195 @@ describe('invalidPaths range validation', () => {
   });
 });
 
+describe('Modified Only / Errors Only filters', () => {
+  function makeItemWithRangedGain(id: string, value = '50'): TreeViewItem {
+    return makeItem(id, {
+      elements: [
+        {
+          isReadOnly: false,
+          max: 100,
+          min: 0,
+          name: 'gain',
+          type: 'CONFIG_ELEMENT',
+          value,
+        },
+      ],
+    });
+  }
+
+  function toggleSwitch(label: string): void {
+    const checkbox = screen
+      .getByText(label)
+      .closest('[data-testid="q-switch"]')
+      ?.querySelector('input[type="checkbox"]');
+    if (!checkbox) {
+      throw new Error(`No checkbox found for switch "${label}"`);
+    }
+    fireEvent.click(checkbox);
+  }
+
+  // The parameter list panel and detail pane can both render a selected
+  // item's name; scope assertions to the list panel's tree via node-text.
+  function listedParamNames(): string[] {
+    return screen
+      .getAllByTestId('node-text')
+      .map((el) => el.textContent)
+      .filter(
+        (text): text is string => text !== null && text.startsWith('Param '),
+      );
+  }
+
+  it('Modified Only switch is absent when no dirty paths exist', () => {
+    render(
+      <GenericTreeView
+        data={makeData([makeItem('100'), makeItem('101')])}
+        title="Test"
+      />,
+    );
+    expect(screen.queryByText('Modified Only')).not.toBeInTheDocument();
+  });
+
+  it('Modified Only switch appears after an edit and hides clean parameters', () => {
+    render(
+      <GenericTreeView
+        data={makeData([makeItem('100'), makeItem('101')])}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(screen.getByText('Modified Only')).toBeInTheDocument();
+    expect(listedParamNames()).toEqual(['Param 100', 'Param 101']);
+
+    toggleSwitch('Modified Only');
+
+    expect(listedParamNames()).toEqual(['Param 100']);
+  });
+
+  it('Modified Only switch disappears when the last dirty path is cleared', () => {
+    render(
+      <GenericTreeView
+        data={makeData([makeItemWithRangedGain('100', '10')])}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.getByText('Modified Only')).toBeInTheDocument();
+
+    fireInputChange('100/gain', '10');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(screen.queryByText('Modified Only')).not.toBeInTheDocument();
+  });
+
+  it('Errors Only switch is absent when no invalid paths exist', () => {
+    render(
+      <GenericTreeView
+        data={makeData([makeItemWithRangedGain('100')])}
+        title="Test"
+      />,
+    );
+    expect(screen.queryByText('Errors Only')).not.toBeInTheDocument();
+  });
+
+  it('Errors Only switch appears on out-of-range input and filters correctly', () => {
+    render(
+      <GenericTreeView
+        data={makeData([
+          makeItemWithRangedGain('100'),
+          makeItemWithRangedGain('101'),
+        ])}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '200');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(screen.getByText('Errors Only')).toBeInTheDocument();
+
+    toggleSwitch('Errors Only');
+
+    expect(listedParamNames()).toEqual(['Param 100']);
+  });
+
+  it('Errors Only switch disappears when the last invalid path is cleared', () => {
+    render(
+      <GenericTreeView
+        data={makeData([makeItemWithRangedGain('100')])}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '200');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.getByText('Errors Only')).toBeInTheDocument();
+
+    fireInputChange('100/gain', '75');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(screen.queryByText('Errors Only')).not.toBeInTheDocument();
+  });
+
+  it('shows only parameters satisfying both filters when both are active', () => {
+    render(
+      <GenericTreeView
+        data={makeData([
+          makeItemWithRangedGain('100', '10'),
+          makeItemWithRangedGain('101', '10'),
+          makeItemWithRangedGain('102', '10'),
+        ])}
+        initialUiState={makeUiState({
+          committedValues: {
+            '100/gain': '10',
+            '101/gain': '10',
+            '102/gain': '10',
+          },
+          elementValues: {
+            '100/gain': '10',
+            '101/gain': '10',
+            '102/gain': '10',
+          },
+          expandedIds: ['100', '101', '102'],
+          selectedIds: ['100', '101', '102'],
+        })}
+        title="Test"
+      />,
+    );
+
+    // 100: dirty only. 101: dirty and invalid. 102: untouched.
+    fireInputChange('100/gain', '20');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    fireInputChange('101/gain', '200');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    toggleSwitch('Modified Only');
+    toggleSwitch('Errors Only');
+
+    expect(listedParamNames()).toEqual(['Param 101']);
+  });
+});
+
 describe('empty selectedIds/expandedIds respected', () => {
   it('empty selectedIds in initialUiState suppresses auto-selection of first item', () => {
     // handleExpandAll emits {expandedIds: selectedIds}. With the bug

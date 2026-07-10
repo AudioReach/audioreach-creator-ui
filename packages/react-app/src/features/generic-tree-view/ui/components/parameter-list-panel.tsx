@@ -58,10 +58,9 @@ export function ParameterListPanel({
   setItemIds,
   showPids,
 }: ParameterListPanelProps) {
-  const visibleItems = items.filter((p) => !p.isHidden);
   const filteredItems = matchSets
-    ? visibleItems.filter((p) => matchSets.paramIds.has(p.id))
-    : visibleItems;
+    ? items.filter((p) => matchSets.paramIds.has(p.id))
+    : items;
 
   const dirtyCount = dirtyItemIds.size;
   const setCount = setItemIds.size;
@@ -97,8 +96,7 @@ export function ParameterListPanel({
           key={moduleName}
           collection={collection}
           onSelectedValueChange={(details) => {
-            const expandNew =
-              details.selectedValue.length < visibleItems.length;
+            const expandNew = details.selectedValue.length < items.length;
             onSelectionChange(details.selectedValue, expandNew);
           }}
           selectedValue={selectedIds}
@@ -175,9 +173,9 @@ export function ParameterListPanel({
 
       <StatusStrip
         dirtyCount={dirtyCount}
-        paramCount={matchSets ? matchSets.paramIds.size : visibleItems.length}
+        paramCount={matchSets ? matchSets.paramIds.size : items.length}
         setCount={setCount}
-        totalParamCount={matchSets ? visibleItems.length : undefined}
+        totalParamCount={matchSets ? items.length : undefined}
       />
     </div>
   );
