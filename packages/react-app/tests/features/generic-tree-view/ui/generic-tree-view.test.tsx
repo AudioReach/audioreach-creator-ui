@@ -343,6 +343,240 @@ describe('re-seed on data prop change', () => {
   });
 });
 
+// ── reconcile dirty/set state on Set success ──────────────────────────────────
+
+describe('reconcile dirty/set state on Set success', () => {
+  function makeItemWithGain(id: string, value: string): TreeViewItem {
+    return makeItem(id, {
+      elements: [
+        {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value},
+      ],
+    });
+  }
+
+  function makeItemWithTwoElements(
+    id: string,
+    gain: string,
+    volume: string,
+  ): TreeViewItem {
+    return makeItem(id, {
+      elements: [
+        {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value: gain},
+        {
+          isReadOnly: false,
+          name: 'volume',
+          type: 'CONFIG_ELEMENT',
+          value: volume,
+        },
+      ],
+    });
+  }
+
+  it('moves a path from dirtyPaths to setPaths when the merged snapshot value matches what was sent, leaving unrelated dirty paths untouched', () => {
+    const onUiStateChange = jest.fn();
+    const data1 = makeData([makeItemWithTwoElements('100', '10', '20')]);
+    const {rerender} = render(
+      <GenericTreeView
+        data={data1}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    fireInputChange('100/volume', '77');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    onUiStateChange.mockClear();
+
+    // Simulate a Set that only confirmed 100/gain; 100/volume arrives
+    // unchanged in the merged snapshot (backend didn't process it in this
+    // batch).
+    const setSnapshot: TreeViewData = {
+      items: [makeItemWithTwoElements('100', '99', '20')],
+      source: 'set',
+      systemId: data1.systemId,
+    };
+    act(() => {
+      rerender(
+        <GenericTreeView
+          data={setSnapshot}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+    });
+
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dirtyPaths: ['100/volume'],
+        setPaths: ['100/gain'],
+      }),
+    );
+  });
+
+  it('leaves a path in dirtyPaths when the backend did not process it (merged value differs from what was sent)', () => {
+    const onUiStateChange = jest.fn();
+    const data1 = makeData([makeItemWithGain('100', '10')]);
+    const {rerender} = render(
+      <GenericTreeView
+        data={data1}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    onUiStateChange.mockClear();
+
+    // Merged snapshot still shows the pre-edit value — backend never wrote it.
+    const setSnapshot: TreeViewData = {
+      items: [makeItemWithGain('100', '10')],
+      source: 'set',
+      systemId: data1.systemId,
+    };
+    act(() => {
+      rerender(
+        <GenericTreeView
+          data={setSnapshot}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+    });
+
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dirtyPaths: ['100/gain'],
+        setPaths: [],
+      }),
+    );
+  });
+
+  it('Get success still fully re-seeds — reconciliation must not apply on the Get path', () => {
+    const onUiStateChange = jest.fn();
+    const data1 = makeData([makeItemWithGain('100', '10')]);
+    const {rerender} = render(
+      <GenericTreeView
+        data={data1}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    onUiStateChange.mockClear();
+
+    // A Get (source omitted) with a value that would NOT reconcile if treated
+    // as a Set — the full re-seed must still clear dirtyPaths regardless.
+    const getSnapshot = makeData([makeItemWithGain('100', '10')], 'sys-2');
+    act(() => {
+      rerender(
+        <GenericTreeView
+          data={getSnapshot}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+    });
+
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({dirtyPaths: [], setPaths: []}),
+    );
+  });
+
+  it('mounting with initialUiState and a source: "set" data prop does not trigger reconciliation', () => {
+    const onUiStateChange = jest.fn();
+    const data = makeData([makeItemWithGain('100', '10')]);
+    const setData: TreeViewData = {...data, source: 'set'};
+    render(
+      <GenericTreeView
+        data={setData}
+        initialUiState={makeUiState({
+          committedValues: {'100/gain': '10'},
+          dirtyPaths: ['100/gain'],
+          elementValues: {'100/gain': '99'},
+        })}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+
+    expect(onUiStateChange).not.toHaveBeenCalled();
+  });
+
+  it('recomputes array counts wholesale from the merged snapshot on Set', () => {
+    const onUiStateChange = jest.fn();
+    const instance: AnyElementDto = {
+      isReadOnly: false,
+      name: 'val',
+      type: 'CONFIG_ELEMENT',
+      value: '0',
+    };
+    const item1 = makeItem('100', {
+      elements: [
+        {
+          isReadOnly: false,
+          name: 'items',
+          type: 'ELEMENT_TEMPLATE_ARRAY',
+          value: [instance, instance],
+        },
+      ],
+    });
+    const data1 = makeData([item1]);
+    const {rerender} = render(
+      <GenericTreeView
+        data={data1}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+    onUiStateChange.mockClear();
+
+    // Merged snapshot now has 3 instances (e.g. another session added one).
+    const item2 = makeItem('100', {
+      elements: [
+        {
+          isReadOnly: false,
+          name: 'items',
+          type: 'ELEMENT_TEMPLATE_ARRAY',
+          value: [instance, instance, instance],
+        },
+      ],
+    });
+    const setSnapshot: TreeViewData = {
+      items: [item2],
+      source: 'set',
+      systemId: data1.systemId,
+    };
+    act(() => {
+      rerender(
+        <GenericTreeView
+          data={setSnapshot}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+    });
+
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        arrayCounts: expect.objectContaining({'100/items': 3}),
+      }),
+    );
+  });
+});
+
 // ── hideToolbar ───────────────────────────────────────────────────────────────
 
 describe('hideToolbar', () => {

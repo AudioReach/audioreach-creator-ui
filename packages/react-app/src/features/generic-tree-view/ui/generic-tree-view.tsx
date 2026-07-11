@@ -104,11 +104,75 @@ function GenericTreeViewInner(
   );
 
   const prevDataRef = useRef<TreeViewData | null>(data);
+  // Snapshot of dirty/set state as of the latest render, read inside the
+  // effect below instead of via closure. dirtyPaths/setPaths/elementValues/
+  // committedValues change on every edit; a ref lets the effect read their
+  // current values (comparing what was sent vs. the merged snapshot, per
+  // design.md §9.7) without listing them as deps, which would re-run the
+  // effect on every edit instead of only on `data` changes.
+  const latestUiStateRef = useRef<{
+    committedValues: Map<string, string>;
+    dirtyPaths: Set<string>;
+    elementValues: Map<string, string>;
+    setPaths: Set<string>;
+  }>({committedValues, dirtyPaths, elementValues, setPaths});
+  latestUiStateRef.current = {
+    committedValues,
+    dirtyPaths,
+    elementValues,
+    setPaths,
+  };
+
   useEffect(() => {
     if (prevDataRef.current === data) {
       return;
     }
     prevDataRef.current = data;
+
+    if (data.source === 'set') {
+      logger.debug(`GenericTreeView: Set reconciliation (${data.systemId})`, {
+        action: 'set-reconcile',
+        component: 'GenericTreeView',
+      });
+      const {arrayCounts: ac, elementValues: mergedValues} = seedFromData(data);
+      const {
+        committedValues: prevCommittedValues,
+        dirtyPaths: preSetDirtyPaths,
+        elementValues: sentValues,
+        setPaths: prevSetPaths,
+      } = latestUiStateRef.current;
+
+      const nextDirtyPaths = new Set(preSetDirtyPaths);
+      const nextSetPaths = new Set(prevSetPaths);
+      const nextElementValues = new Map(sentValues);
+      const nextCommittedValues = new Map(prevCommittedValues);
+      for (const path of preSetDirtyPaths) {
+        const sentValue = sentValues.get(path);
+        const mergedValue = mergedValues.get(path);
+        if (mergedValue !== undefined && mergedValue === sentValue) {
+          nextDirtyPaths.delete(path);
+          nextSetPaths.add(path);
+          nextElementValues.set(path, mergedValue);
+          nextCommittedValues.set(path, mergedValue);
+        }
+      }
+
+      setElementValues(nextElementValues);
+      setCommittedValues(nextCommittedValues);
+      setArrayCounts(ac);
+      setDirtyPaths(nextDirtyPaths);
+      setSetPaths(nextSetPaths);
+      setResetKey((k) => k + 1);
+      onUiStateChange?.({
+        arrayCounts: Object.fromEntries(ac),
+        committedValues: Object.fromEntries(nextCommittedValues),
+        dirtyPaths: [...nextDirtyPaths],
+        elementValues: Object.fromEntries(nextElementValues),
+        setPaths: [...nextSetPaths],
+      });
+      return;
+    }
+
     logger.debug(`GenericTreeView: data re-seed (${data.systemId})`, {
       action: 'data-re-seed',
       component: 'GenericTreeView',
@@ -426,11 +490,12 @@ function GenericTreeViewInner(
     expandedIds: string[];
     selectedIds: string[];
   } | null>(null);
-
-  const currentSelectionRef = useRef({expandedIds, selectedIds});
-  useEffect(() => {
-    currentSelectionRef.current = {expandedIds, selectedIds};
-  });
+  // Latest selectedIds/expandedIds, read inside the effect below instead of
+  // via closure — the effect must not re-run when selection/expansion change
+  // as a result of its own setSelectedIds/setExpandedIds calls, only when
+  // searchText or matchSets change.
+  const latestSelectionRef = useRef({expandedIds, selectedIds});
+  latestSelectionRef.current = {expandedIds, selectedIds};
 
   useEffect(() => {
     if (!searchText) {
@@ -442,9 +507,11 @@ function GenericTreeViewInner(
       return;
     }
     if (!preSearchRef.current) {
+      const {expandedIds: prevExpandedIds, selectedIds: prevSelectedIds} =
+        latestSelectionRef.current;
       preSearchRef.current = {
-        expandedIds: [...currentSelectionRef.current.expandedIds],
-        selectedIds: [...currentSelectionRef.current.selectedIds],
+        expandedIds: [...prevExpandedIds],
+        selectedIds: [...prevSelectedIds],
       };
     }
     if (!matchSets) {
@@ -455,7 +522,7 @@ function GenericTreeViewInner(
       .map((p) => p.id);
     setSelectedIds(matchedIds);
     setExpandedIds(matchedIds);
-  }, [searchText, matchSets, data.items]);
+  }, [data, searchText, matchSets]);
 
   const handleCollapseAll = useCallback(() => {
     if (viewMode === 'modern') {

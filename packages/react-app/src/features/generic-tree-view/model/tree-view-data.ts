@@ -12,6 +12,12 @@ import type {
 export interface TreeViewData {
   changeInfo?: ChangeInfoDto;
   items: TreeViewItem[];
+  /**
+   * How this snapshot was produced. `'set'` tells the feature to reconcile
+   * dirty/set state per-path instead of doing a full re-seed; omitted or
+   * `'get'` means a full re-seed (the default, safe for existing callers).
+   */
+  source?: 'get' | 'set';
   systemId: string;
 }
 
