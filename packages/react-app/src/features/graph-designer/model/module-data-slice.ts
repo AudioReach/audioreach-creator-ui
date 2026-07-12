@@ -84,7 +84,7 @@ export interface ModuleDataSlice {
     tkvSystemId: string,
   ) => Promise<boolean>;
   moduleDataByModuleId: Record<string, ModuleDataEntry>;
-  moduleOpenTabs: Record<string, string>;
+  moduleOpenTabs: Record<string, string | null>;
   queryModuleData: (moduleId: string, moduleName: string) => Promise<boolean>;
   setCalUiState: (
     moduleId: string,
@@ -94,7 +94,7 @@ export interface ModuleDataSlice {
     moduleId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
-  setModuleOpenTab: (moduleId: string, tabId: string) => void;
+  setModuleOpenTab: (moduleId: string, tabId: string | null) => void;
   setTagUiState: (
     moduleId: string,
     patch: Partial<GenericTreeViewUiState>,
@@ -475,7 +475,7 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
       });
     },
 
-    setModuleOpenTab: (moduleId: string, tabId: string): void => {
+    setModuleOpenTab: (moduleId: string, tabId: string | null): void => {
       logger.debug('moduleDataSlice: setModuleOpenTab', {
         action: 'setModuleOpenTab',
         component: 'moduleDataSlice',

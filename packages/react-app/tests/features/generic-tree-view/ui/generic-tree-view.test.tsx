@@ -223,6 +223,36 @@ describe('onUiStateChange emission', () => {
         title="Test"
       />,
     );
+    expect(onUiStateChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({elementValues: expect.anything()}),
+    );
+  });
+
+  it('syncs the auto-selected first param to the store on initial mount', () => {
+    const onUiStateChange = jest.fn();
+    render(
+      <GenericTreeView
+        data={makeData([makeItem('100'), makeItem('200')])}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+    expect(onUiStateChange).toHaveBeenCalledWith({
+      expandedIds: ['100'],
+      selectedIds: ['100'],
+    });
+  });
+
+  it('does not re-sync selectedIds when initialUiState was provided', () => {
+    const onUiStateChange = jest.fn();
+    render(
+      <GenericTreeView
+        data={makeData([makeItem('100')])}
+        initialUiState={makeUiState({selectedIds: []})}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
     expect(onUiStateChange).not.toHaveBeenCalled();
   });
 

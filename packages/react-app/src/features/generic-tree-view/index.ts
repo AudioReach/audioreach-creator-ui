@@ -4,6 +4,7 @@
  */
 
 export {GenericTreeView} from './ui/generic-tree-view';
+export {buildDirtyItems} from './lib/build-dirty-items';
 export type {
   ClipboardPayload,
   GenericTreeViewHandle,

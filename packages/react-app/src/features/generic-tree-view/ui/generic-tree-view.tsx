@@ -16,13 +16,13 @@ import {
 
 import {logger} from '~shared/lib/logger';
 
+import {buildDirtyItems as buildDirtyItemsFrom} from '../lib/build-dirty-items';
 import {buildLengthFormulaMap} from '../lib/build-length-formula-map';
 import {buildMatchSets} from '../lib/build-match-sets';
 import {findElementByKey} from '../lib/find-element-by-key';
 import {isPolicyVisible} from '../lib/is-policy-visible';
 import {itemIdsFromPaths} from '../lib/item-ids-from-paths';
 import {parseHexOrDec} from '../lib/parse-hex-or-dec';
-import {patchElements} from '../lib/patch-elements';
 import {seedFromData} from '../lib/seed-from-data';
 import type {TreeViewData, TreeViewItem} from '../model/tree-view-data';
 import type {GenericTreeViewHandle, GenericTreeViewProps} from '../model/types';
@@ -214,6 +214,23 @@ function GenericTreeViewInner(
   );
   const [legacyExpandAll, setLegacyExpandAll] = useState(false);
   const [modernExpandAll, setModernExpandAll] = useState(false);
+
+  // Without initialUiState, selectedIds/expandedIds above auto-select the
+  // first param locally, but that choice never reaches the store — a later
+  // unrelated patch (e.g. {viewMode}) then merges onto a still-undefined
+  // uiState and freezes selectedIds at the createDefaultTreeViewUiState()
+  // fallback of []. Sync the auto-selection out once so the store always
+  // reflects what's actually selected on screen.
+  const hasSyncedAutoSelectionRef = useRef(false);
+  useEffect(() => {
+    if (hasSyncedAutoSelectionRef.current) {
+      return;
+    }
+    hasSyncedAutoSelectionRef.current = true;
+    if (initialUiState === undefined) {
+      onUiStateChange?.({expandedIds, selectedIds});
+    }
+  }, [expandedIds, selectedIds, initialUiState, onUiStateChange]);
 
   const [searchInput, setSearchInput] = useState(
     () => initialUiState?.searchText ?? '',
@@ -447,25 +464,11 @@ function GenericTreeViewInner(
     ],
   );
 
-  const buildDirtyItems = useCallback((): TreeViewItem[] => {
-    if (dirtyPaths.size === 0) {
-      return [];
-    }
-    return data.items
-      .filter((item) =>
-        [...dirtyPaths].some((k) => k.startsWith(`${item.id}/`)),
-      )
-      .map((item) => ({
-        ...item,
-        elements: patchElements(
-          item.elements,
-          item.id,
-          [],
-          elementValues,
-          arrayCounts,
-        ),
-      }));
-  }, [dirtyPaths, data.items, elementValues, arrayCounts]);
+  const buildDirtyItems = useCallback(
+    (): TreeViewItem[] =>
+      buildDirtyItemsFrom(data.items, dirtyPaths, elementValues, arrayCounts),
+    [dirtyPaths, data.items, elementValues, arrayCounts],
+  );
 
   const tryAutoCommit = useCallback(() => {
     if (!autoCommit || readOnly) {
