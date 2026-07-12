@@ -837,17 +837,68 @@ jest.mock('@qualcomm-ui/core/select', () => ({
   selectCollection: jest.fn().mockReturnValue({items: []}),
 }));
 
-jest.mock('@qualcomm-ui/react/select', () => ({
-  Select: jest.fn().mockImplementation(({onValueChange, value}) =>
-    createElement('select', {
+jest.mock('@qualcomm-ui/react/select', () => {
+  // Select is used two ways in this codebase:
+  //   1. Simple API: <Select onValueChange={...} value={...} />
+  //   2. Composite API: <Select.Root>, <Select.Label>, etc. (namespace)
+  // The mock must support both: a callable function with namespace properties.
+  const pass = ({children}: {children?: React.ReactNode}) =>
+    createElement('div', {}, children);
+  const SelectFn = jest.fn().mockImplementation(({onValueChange, value}) =>
+    createElement('input', {
       'data-testid': 'q-select',
-      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         onValueChange?.([e.target.value]);
       },
       value: value?.[0] ?? '',
     }),
-  ),
-}));
+  );
+  const namespace = {
+    ClearTrigger: pass,
+    Content: pass,
+    Control: pass,
+    ErrorIndicator: pass,
+    ErrorText: pass,
+    HiddenSelect: () => null,
+    Hint: pass,
+    Icon: pass,
+    Indicator: pass,
+    Item: pass,
+    ItemIndicator: pass,
+    Items: pass,
+    ItemText: pass,
+    Label: pass,
+    Positioner: pass,
+    Root: jest
+      .fn()
+      .mockImplementation(
+        ({
+          children,
+          onValueChange,
+          value,
+        }: {
+          children?: React.ReactNode;
+          onValueChange?: (value: string[]) => void;
+          value?: string[];
+        }) =>
+          createElement(
+            'div',
+            {},
+            createElement('input', {
+              'data-testid': 'q-select',
+              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                onValueChange?.([e.target.value]);
+              },
+              value: value?.[0] ?? '',
+            }),
+            children,
+          ),
+      ),
+    ValueText: pass,
+  };
+  Object.assign(SelectFn, namespace);
+  return {Select: SelectFn};
+});
 
 jest.mock('@qualcomm-ui/react/switch', () => ({
   Switch: jest
