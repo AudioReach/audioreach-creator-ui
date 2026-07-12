@@ -21,6 +21,7 @@ import type {
   EdgeKind,
   LevelView,
   ModuleNode,
+  NodeKind,
   Port,
   ProxyControlLink,
   ProxyDataLink,
@@ -165,7 +166,11 @@ export interface VisualizerContextMenuConfig {
 
 export interface VisualizerEventHandlers {
   // group: readonly
-  onNodeDoubleClick?: (nodeId: string) => void;
+  onNodeDoubleClick?: (
+    nodeId: string,
+    nodeKind: NodeKind,
+    label: string,
+  ) => void;
   onNodeDragEnd?: (payload: NodeDragEndPayload) => void;
   onSelectionChange?: (payload: SelectionChangePayload) => void;
   onSubgraphCollapse?: (subgraphId: number) => void;

@@ -582,7 +582,13 @@ function VisualizerCanvas({
       if (node.data.nodeKind === NODE_KIND.SUBSYSTEM) {
         store.getState().setViewportCache(graph.levelId, getViewport());
       }
-      store.getState().eventHandlers?.onNodeDoubleClick?.(node.id);
+      store
+        .getState()
+        .eventHandlers?.onNodeDoubleClick?.(
+          node.id,
+          (node.data as unknown as AnyNode).nodeKind,
+          (node.data as unknown as AnyNode).label,
+        );
     },
     [graph.levelId, getViewport, store],
   );

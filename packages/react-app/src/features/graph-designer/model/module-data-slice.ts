@@ -22,6 +22,7 @@ import {
 } from '~entities/spf-module-data';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
+import {createDefaultTreeViewUiState} from '~shared/lib/tree-view-ui-state';
 import type {SliceStatus} from '~shared/store/global-store.types';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
 
@@ -445,9 +446,10 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
         calData: {
           ...entry.calData,
           uiState: {
+            ...createDefaultTreeViewUiState(),
             ...entry.calData.uiState,
             ...patch,
-          } as GenericTreeViewUiState,
+          },
         },
       });
     },
@@ -468,9 +470,10 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
         calData: {
           ...entry.calData,
           groupedUiState: {
+            ...createDefaultTreeViewUiState(),
             ...entry.calData.groupedUiState,
             ...patch,
-          } as GenericTreeViewUiState,
+          },
         },
       });
     },
@@ -504,9 +507,10 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
         tagData: {
           ...entry.tagData,
           uiState: {
+            ...createDefaultTreeViewUiState(),
             ...entry.tagData.uiState,
             ...patch,
-          } as GenericTreeViewUiState,
+          },
         },
       });
     },

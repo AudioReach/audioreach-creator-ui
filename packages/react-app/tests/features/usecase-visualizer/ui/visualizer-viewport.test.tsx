@@ -169,7 +169,11 @@ describe('double-click subsystem saves viewport before consumer callback', () =>
     // Viewport must be saved before consumer callback fires.
     expect(callOrder).toEqual(['getViewport', 'onNodeDoubleClick']);
     expect(mockGetViewport).toHaveBeenCalledTimes(1);
-    expect(onNodeDoubleClick).toHaveBeenCalledWith('ss-1');
+    expect(onNodeDoubleClick).toHaveBeenCalledWith(
+      'ss-1',
+      'subsystem',
+      undefined,
+    );
   });
 
   it('does not call getViewport for non-subsystem nodes', () => {
@@ -188,7 +192,7 @@ describe('double-click subsystem saves viewport before consumer callback', () =>
     });
 
     expect(mockGetViewport).not.toHaveBeenCalled();
-    expect(onNodeDoubleClick).toHaveBeenCalledWith('m-1');
+    expect(onNodeDoubleClick).toHaveBeenCalledWith('m-1', 'module', undefined);
   });
 });
 

@@ -38,6 +38,7 @@ export function UnsavedChangesDialog(props: UnsavedChangesDialogProps) {
         }
       }}
       open={open}
+      placement="center"
     >
       <Dialog.FloatingPortal>
         <Dialog.Body>

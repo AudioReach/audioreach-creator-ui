@@ -12,14 +12,11 @@ import {
 } from 'react';
 
 import {selectCollection} from '@qualcomm-ui/core/select';
-import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 
 import type {KeyValueInfo, TagInfoDto} from '~entities/spf-module-data';
-import {
-  GenericTreeView,
-  type GenericTreeViewHandle,
-} from '~features/generic-tree-view';
+import type {GenericTreeViewHandle} from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
+import {isUiStateDirty} from '~shared/lib/tree-view-ui-state';
 
 import {keyValueCollectionToLabel} from '../lib/key-value-label';
 import {compareByKeyValueSystemIds} from '../lib/sort-by-key-value';
@@ -31,6 +28,7 @@ import {useIndexSwitchDialog} from '../use-index-switch-dialog';
 
 import {IndexSelect} from './index-select';
 import {IndexSwitchDialog} from './index-switch-dialog';
+import {ModuleDataPanelBody} from './module-data-panel-body';
 
 interface TagDataPanelProps {
   moduleId: string;
@@ -129,7 +127,7 @@ function TagDataPanelInner(
     [tagData?.dto, tagData?.lastMutation],
   );
 
-  const isDirty = (tagData?.uiState?.dirtyPaths.length ?? 0) > 0;
+  const isDirty = isUiStateDirty(tagData?.uiState);
 
   const {cancel, discardAndSwitch, handleIndexChange, open, setAndSwitch} =
     useIndexSwitchDialog<TkvOption>({
@@ -163,30 +161,15 @@ function TagDataPanelInner(
           value={tagData?.selectedTagIndex}
         />
       )}
-      <div className="min-h-0 flex-1">
-        {tagData?.status === 'error' ? (
-          <div
-            className="flex h-full items-center justify-center text-sm"
-            style={{color: 'var(--color-border-support-danger)'}}
-          >
-            {tagData.error}
-          </div>
-        ) : treeViewData ? (
-          <GenericTreeView
-            ref={treeViewRef}
-            data={treeViewData}
-            hideToolbar={false}
-            initialUiState={tagData?.uiState}
-            onUiStateChange={(patch) => setTagUiState(moduleId, patch)}
-            readOnly={false}
-            title={entry?.moduleName ?? ''}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <ProgressRing />
-          </div>
-        )}
-      </div>
+      <ModuleDataPanelBody
+        ref={treeViewRef}
+        data={treeViewData}
+        error={tagData?.error}
+        initialUiState={tagData?.uiState}
+        onUiStateChange={(patch) => setTagUiState(moduleId, patch)}
+        status={tagData?.status}
+        title={entry?.moduleName ?? ''}
+      />
       <IndexSwitchDialog
         onCancel={cancel}
         onDiscardAndSwitch={discardAndSwitch}

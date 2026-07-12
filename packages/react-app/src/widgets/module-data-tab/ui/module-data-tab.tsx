@@ -16,6 +16,7 @@ import {
 } from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
 import {logger} from '~shared/lib/logger';
+import {hasInvalidPaths, isUiStateDirty} from '~shared/lib/tree-view-ui-state';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
 
 import {
@@ -63,14 +64,6 @@ interface ModuleDataTabProps {
 }
 
 type SubTab = 'cal-data' | 'tag-data';
-
-function isUiStateDirty(uiState?: GenericTreeViewUiState): boolean {
-  return (uiState?.dirtyPaths.length ?? 0) > 0;
-}
-
-function hasInvalidPaths(uiState?: GenericTreeViewUiState): boolean {
-  return (uiState?.invalidPaths.length ?? 0) > 0;
-}
 
 function ModuleDataTabInner(
   props: ModuleDataTabProps,
@@ -285,6 +278,7 @@ function ModuleDataTabInner(
       <div className="min-h-0 flex-1">
         <Tabs.Root
           activationMode="automatic"
+          className="flex h-full"
           lazyMount
           onValueChange={(value) => setActiveTab(value as SubTab)}
           orientation="vertical"

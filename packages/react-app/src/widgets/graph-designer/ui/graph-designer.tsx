@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  createRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   Clipboard,
@@ -20,9 +27,13 @@ import {
   Wand2,
 } from 'lucide-react';
 
-import type {LevelView} from '~entities/graph';
+import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {getSystemIdsFromFormattedUsecases} from '~entities/usecases';
-import {useGraphDesignerStoreShallow} from '~features/graph-designer/model/graph-designer-store-context';
+import {
+  GraphDesignerStoreContext,
+  useGraphDesignerStore,
+  useGraphDesignerStoreShallow,
+} from '~features/graph-designer';
 import {SearchComponent} from '~features/search-component';
 import {
   type UsecaseCategory,
@@ -37,6 +48,12 @@ import {
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
+import {useProjectLayoutStore} from '~shared/store';
+import {
+  ModuleDataTab,
+  type ModuleDataTabHandle,
+} from '~widgets/module-data-tab';
+import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 
 import {applyCollapses} from '../lib/apply-collapses';
 import {applyPositionOverrides} from '../lib/apply-position-overrides';
@@ -83,6 +100,15 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const levelView = useGraphDesignerStoreShallow((s) => s.levelView);
   const setLevelView = useGraphDesignerStoreShallow((s) => s.setLevelView);
   const clearLevelView = useGraphDesignerStoreShallow((s) => s.clearLevelView);
+
+  // Store API for imperative action calls and provider value for new tabs.
+  const store = useGraphDesignerStore();
+
+  // Keyed by moduleId so the tab-close callback can reach the specific
+  // ModuleDataTab instance's confirmClose() handle.
+  const moduleDataTabRefs = useRef(
+    new Map<string, React.RefObject<ModuleDataTabHandle | null>>(),
+  );
 
   // Collapse, position-override, and viewport state (consumer-owned).
   const [collapseByLevel, setCollapseByLevel] = useState<
@@ -316,8 +342,51 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const hasSelection = (graph.modules?.length ?? 0) > 0;
   const canUndoRedo = false; // TODO: Support undo/redo stack
 
+  const handleModuleDoubleClick = useCallback(
+    async (nodeId: string, nodeKind: NodeKind, label: string) => {
+      if (nodeKind !== NODE_KIND.MODULE) {
+        return;
+      }
+      const layout = useProjectLayoutStore.getState();
+      const existingTabId = store.getState().moduleOpenTabs[nodeId];
+      if (existingTabId) {
+        layout.setActiveProjectTab(projectGroupId, existingTabId);
+        return;
+      }
+      // TODO: hardcodes selection to the first available CKV/TKV until the
+      // subgraph-header CKV/TKV inheritance selector lands.
+      const ok = await store.getState().queryModuleData(nodeId, label);
+      if (!ok) {
+        return;
+      }
+      const existingAfterFetch = store.getState().moduleOpenTabs[nodeId];
+      if (existingAfterFetch) {
+        layout.setActiveProjectTab(projectGroupId, existingAfterFetch);
+        return;
+      }
+      const moduleDataTabRef = createRef<ModuleDataTabHandle>();
+      moduleDataTabRefs.current.set(nodeId, moduleDataTabRef);
+      const tab = tabLayoutService.createProjectTab(
+        label,
+        <GraphDesignerStoreContext.Provider value={store}>
+          <ModuleDataTab ref={moduleDataTabRef} moduleId={nodeId} />
+        </GraphDesignerStoreContext.Provider>,
+        () => moduleDataTabRef.current?.confirmClose() ?? true,
+        () => {
+          moduleDataTabRefs.current.delete(nodeId);
+          store.getState().setModuleOpenTab(nodeId, null);
+          store.getState().clearModuleData(nodeId);
+        },
+      );
+      store.getState().setModuleOpenTab(nodeId, tab.id);
+      layout.setActiveProjectTab(projectGroupId, tab.id);
+    },
+    [projectGroupId, store],
+  );
+
   const eventHandlers = useMemo(
     () => ({
+      onNodeDoubleClick: handleModuleDoubleClick,
       onNodeDragEnd: ({
         nodeId,
         position,
@@ -352,7 +421,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         setViewportByLevel((p) => ({...p, [levelId]: viewport}));
       },
     }),
-    [levelId],
+    [handleModuleDoubleClick, levelId],
   );
 
   const sideNavItems = useMemo(

@@ -92,6 +92,7 @@ export function Toolbar({
         }
         size="sm"
         value={Array.from(policyFilter)}
+        variant="primary"
       >
         <SegmentedControl.Item text="Basic" value="BASIC" />
         <SegmentedControl.Item text="Advanced" value="ADVANCED" />

@@ -5,19 +5,21 @@
 
 import {StatusBadge} from '@qualcomm-ui/react/badge';
 
+import {
+  hasInvalidPaths,
+  hasSetPaths,
+  isUiStateDirty,
+} from '~shared/lib/tree-view-ui-state';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
 
 export function tabBadge(uiState?: GenericTreeViewUiState) {
-  if (!uiState) {
-    return undefined;
-  }
-  if (uiState.invalidPaths.length > 0) {
+  if (hasInvalidPaths(uiState)) {
     return <StatusBadge emphasis="danger" size="xs" />;
   }
-  if (uiState.dirtyPaths.length > 0) {
+  if (isUiStateDirty(uiState)) {
     return <StatusBadge className="dirty-pulse" emphasis="warning" size="xs" />;
   }
-  if (uiState.setPaths.length > 0) {
+  if (hasSetPaths(uiState)) {
     return <StatusBadge emphasis="success" size="xs" />;
   }
   return undefined;

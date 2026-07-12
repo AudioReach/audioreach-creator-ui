@@ -12,14 +12,11 @@ import {
 } from 'react';
 
 import {selectCollection} from '@qualcomm-ui/core/select';
-import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 
 import type {CkvDto} from '~entities/spf-module-data';
-import {
-  GenericTreeView,
-  type GenericTreeViewHandle,
-} from '~features/generic-tree-view';
+import type {GenericTreeViewHandle} from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
+import {isUiStateDirty} from '~shared/lib/tree-view-ui-state';
 
 import {
   calDataDtoToTreeViewData,
@@ -31,6 +28,7 @@ import {useIndexSwitchDialog} from '../use-index-switch-dialog';
 
 import {IndexSelect} from './index-select';
 import {IndexSwitchDialog} from './index-switch-dialog';
+import {ModuleDataPanelBody} from './module-data-panel-body';
 
 interface CalDataPanelProps {
   moduleId: string;
@@ -105,7 +103,7 @@ function CalDataPanelInner(
     [calData?.dto, calData?.lastMutation],
   );
 
-  const isDirty = (calData?.uiState?.dirtyPaths.length ?? 0) > 0;
+  const isDirty = isUiStateDirty(calData?.uiState);
 
   const {cancel, discardAndSwitch, handleIndexChange, open, setAndSwitch} =
     useIndexSwitchDialog<string>({
@@ -138,30 +136,15 @@ function CalDataPanelInner(
           value={calData?.selectedCalIndex}
         />
       )}
-      <div className="min-h-0 flex-1">
-        {calData?.status === 'error' ? (
-          <div
-            className="flex h-full items-center justify-center text-sm"
-            style={{color: 'var(--color-border-support-danger)'}}
-          >
-            {calData.error}
-          </div>
-        ) : treeViewData ? (
-          <GenericTreeView
-            ref={treeViewRef}
-            data={treeViewData}
-            hideToolbar={false}
-            initialUiState={calData?.uiState}
-            onUiStateChange={(patch) => setCalUiState(moduleId, patch)}
-            readOnly={false}
-            title={entry?.moduleName ?? ''}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <ProgressRing />
-          </div>
-        )}
-      </div>
+      <ModuleDataPanelBody
+        ref={treeViewRef}
+        data={treeViewData}
+        error={calData?.error}
+        initialUiState={calData?.uiState}
+        onUiStateChange={(patch) => setCalUiState(moduleId, patch)}
+        status={calData?.status}
+        title={entry?.moduleName ?? ''}
+      />
       <IndexSwitchDialog
         onCancel={cancel}
         onDiscardAndSwitch={discardAndSwitch}
