@@ -76,6 +76,7 @@ import {
 } from '../lib/graph-search';
 import {buildLevelViewFromGraphData} from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
+import {renderNodeContent} from '../lib/render-node-content';
 import {collapseSetForLevel} from '../lib/subgraph-collapse';
 
 import {DisplayOptionsPopover} from './display-options-popover';
@@ -132,6 +133,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const levelView = useGraphDesignerStoreShallow((s) => s.levelView);
   const setLevelView = useGraphDesignerStoreShallow((s) => s.setLevelView);
   const clearLevelView = useGraphDesignerStoreShallow((s) => s.clearLevelView);
+  const moduleListStatus = useGraphDesignerStoreShallow(
+    (s) => s.moduleListStatus,
+  );
+  const loadModuleList = useGraphDesignerStoreShallow((s) => s.loadModuleList);
 
   // Store API for imperative action calls and provider value for new tabs.
   const store = useGraphDesignerStore();
@@ -375,6 +380,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     };
   }, [projectId, screenshotRegistry]);
 
+  // Effect — load module definitions once, needed to resolve enable overlays
+  useEffect(() => {
+    if (moduleListStatus === 'uninitialized') {
+      void loadModuleList();
+    }
+  }, [moduleListStatus, loadModuleList]);
+
   // Effect A — trigger load when selection changes
   useEffect(() => {
     resetSearch();
@@ -533,6 +545,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     ),
     [preferences, projectId, updatePreference],
   );
+
+  const visualizerRendering = useMemo(() => ({renderNodeContent}), []);
 
   const sideNavItems = useMemo(
     () => [
@@ -902,6 +916,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             graph={graph}
             initialViewport={viewportByLevel[levelId]}
             onScreenshotApiReady={handleScreenshotReady}
+            rendering={visualizerRendering}
             searchHighlights={searchHighlights}
           />
         ) : null}
