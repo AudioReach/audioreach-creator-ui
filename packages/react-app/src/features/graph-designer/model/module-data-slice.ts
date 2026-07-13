@@ -381,10 +381,17 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
+      const entry = get().moduleDataByModuleId[moduleId];
       patchEntry(moduleId, {
-        calData: DEFAULT_CAL_DATA,
+        calData: mergePatch(DEFAULT_CAL_DATA, entry?.calData, {
+          error: undefined,
+          status: 'loading',
+        }),
         moduleName,
-        tagData: DEFAULT_TAG_DATA,
+        tagData: mergePatch(DEFAULT_TAG_DATA, entry?.tagData, {
+          error: undefined,
+          status: 'loading',
+        }),
       });
 
       try {
@@ -397,13 +404,14 @@ export function createModuleDataSlice<
             component: 'moduleDataSlice',
             error: errorMsg,
           });
+          const latest = get().moduleDataByModuleId[moduleId];
           patchEntry(moduleId, {
-            calData: mergePatch(DEFAULT_CAL_DATA, undefined, {
+            calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
               error: errorMsg,
               status: 'error',
             }),
             moduleName,
-            tagData: mergePatch(DEFAULT_TAG_DATA, undefined, {
+            tagData: mergePatch(DEFAULT_TAG_DATA, latest?.tagData, {
               error: errorMsg,
               status: 'error',
             }),
@@ -417,10 +425,22 @@ export function createModuleDataSlice<
             action: 'queryModuleData',
             component: 'moduleDataSlice',
           });
+          const latest = get().moduleDataByModuleId[moduleId];
           patchEntry(moduleId, {
-            calData: mergePatch(DEFAULT_CAL_DATA, undefined, {status: 'ready'}),
+            calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
+              availableCalIndices: [],
+              dto: undefined,
+              selectedCalIndex: undefined,
+              status: 'ready',
+            }),
             moduleName,
-            tagData: mergePatch(DEFAULT_TAG_DATA, undefined, {status: 'ready'}),
+            tagData: mergePatch(DEFAULT_TAG_DATA, latest?.tagData, {
+              availableTagIndices: [],
+              dto: undefined,
+              selectedTagIndex: undefined,
+              selectedTagSystemId: undefined,
+              status: 'ready',
+            }),
           });
           showToast(
             `No calibration or tag data available for ${moduleName}`,
@@ -433,25 +453,34 @@ export function createModuleDataSlice<
         const availableCalIndices = module.ckvs ?? [];
         const availableTagIndices = module.tags ?? [];
 
+        const latest = get().moduleDataByModuleId[moduleId];
         patchEntry(moduleId, {
-          calData: mergePatch(DEFAULT_CAL_DATA, undefined, {
+          calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
             availableCalIndices,
             status: 'ready',
           }),
           moduleName,
-          tagData: mergePatch(DEFAULT_TAG_DATA, undefined, {
+          tagData: mergePatch(DEFAULT_TAG_DATA, latest?.tagData, {
             availableTagIndices,
             status: 'ready',
           }),
         });
 
-        const [firstCkv] = availableCalIndices;
+        const moduleInstance = get().graphData?.moduleInstances[moduleId];
+        const headerSelection = moduleInstance
+          ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphId]
+          : undefined;
+        const activeCkv = resolveActiveCkv(
+          moduleInstance?.ckvs ?? [],
+          headerSelection?.keyValues ?? {},
+        );
+
         const [firstTag] = availableTagIndices;
         const [firstTkv] = firstTag?.tkvs ?? [];
 
         await Promise.all([
-          firstCkv
-            ? get().fetchCalData(moduleId, firstCkv.systemId)
+          activeCkv.isResolved
+            ? get().fetchCalData(moduleId, activeCkv.ckvSystemId)
             : Promise.resolve(),
           firstTag && firstTkv
             ? get().fetchTagData(moduleId, firstTag.systemId, firstTkv.systemId)
@@ -467,13 +496,14 @@ export function createModuleDataSlice<
           component: 'moduleDataSlice',
           error: errorMsg,
         });
+        const latest = get().moduleDataByModuleId[moduleId];
         patchEntry(moduleId, {
-          calData: mergePatch(DEFAULT_CAL_DATA, undefined, {
+          calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
             error: errorMsg,
             status: 'error',
           }),
           moduleName,
-          tagData: mergePatch(DEFAULT_TAG_DATA, undefined, {
+          tagData: mergePatch(DEFAULT_TAG_DATA, latest?.tagData, {
             error: errorMsg,
             status: 'error',
           }),

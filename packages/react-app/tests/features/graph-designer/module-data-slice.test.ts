@@ -259,10 +259,10 @@ beforeEach(() => {
 });
 
 describe('createModuleDataSlice — queryModuleData', () => {
-  it('populates cal and tag indices and fetches the first of each on success', async () => {
+  it('resolves the active CKV from the header selection, not simply the first available one, and still fetches the first tag/tkv', async () => {
     const module: SpfModuleDto = {
       changeInfo: {changeType: 'NONE'},
-      ckvs: [makeCkvDto('ckv-1')],
+      ckvs: [makeCkvDto('ckv-1'), makeCkvDto('ckv-2')],
       id: 1,
       systemId: MODULE_ID,
       tags: [makeTagInfoDto('tag-1', ['tkv-1'])],
@@ -283,19 +283,28 @@ describe('createModuleDataSlice — queryModuleData', () => {
       success: true,
     });
 
-    const store = makeStore();
+    const store = makeWidenedStore({
+      headerSelectionsBySubgraphId: {
+        'sg-1': {keyValues: {'key-1': 'v2'}, subgraphId: 'sg-1'},
+      },
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({
+          ckvs: [makeCkv('ckv-2', [['key-1', 'v2']])],
+        }),
+      },
+    });
     const result = await store
       .getState()
       .queryModuleData(MODULE_ID, MODULE_NAME);
 
     expect(result).toBe(true);
     const entry = store.getState().moduleDataByModuleId[MODULE_ID];
-    expect(entry.calData?.availableCalIndices).toHaveLength(1);
+    expect(entry.calData?.availableCalIndices).toHaveLength(2);
     expect(entry.tagData?.availableTagIndices).toHaveLength(1);
     expect(mockGetCalData).toHaveBeenCalledWith(
       PROJECT_ID,
       MODULE_ID,
-      'ckv-1',
+      'ckv-2',
       undefined,
     );
     expect(mockGetTagData).toHaveBeenCalledWith(
@@ -304,6 +313,157 @@ describe('createModuleDataSlice — queryModuleData', () => {
       'tag-1',
       'tkv-1',
     );
+  });
+
+  it('does not fetch cal data and leaves selectedCalIndex unset when the CKV is unresolved, but still fetches the first tag/tkv', async () => {
+    const module: SpfModuleDto = {
+      changeInfo: {changeType: 'NONE'},
+      ckvs: [makeCkvDto('ckv-1')],
+      id: 1,
+      systemId: MODULE_ID,
+      tags: [makeTagInfoDto('tag-1', ['tkv-1'])],
+    };
+    mockQueryModuleIndices.mockResolvedValueOnce({
+      data: [module],
+      message: undefined,
+      success: true,
+    });
+    mockGetTagData.mockResolvedValueOnce({
+      data: makeTagDataDto(),
+      message: undefined,
+      success: true,
+    });
+
+    const store = makeWidenedStore({
+      headerSelectionsBySubgraphId: {
+        'sg-1': {keyValues: {'key-1': 'NA'}, subgraphId: 'sg-1'},
+      },
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({
+          ckvs: [makeCkv('ckv-1', [['key-1', 'v1']])],
+        }),
+      },
+    });
+    const result = await store
+      .getState()
+      .queryModuleData(MODULE_ID, MODULE_NAME);
+
+    expect(result).toBe(true);
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.selectedCalIndex).toBeUndefined();
+    expect(mockGetTagData).toHaveBeenCalledWith(
+      PROJECT_ID,
+      MODULE_ID,
+      'tag-1',
+      'tkv-1',
+    );
+  });
+
+  it('re-resolves the CKV from the current header state on reopen, not a stale cached value', async () => {
+    const module: SpfModuleDto = {
+      changeInfo: {changeType: 'NONE'},
+      ckvs: [makeCkvDto('ckv-1'), makeCkvDto('ckv-2')],
+      id: 1,
+      systemId: MODULE_ID,
+      tags: [],
+    };
+    mockQueryModuleIndices.mockResolvedValue({
+      data: [module],
+      message: undefined,
+      success: true,
+    });
+    mockGetCalData.mockResolvedValue({
+      data: makeCalDataDto(),
+      message: undefined,
+      success: true,
+    });
+
+    const store = makeWidenedStore({
+      headerSelectionsBySubgraphId: {
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+      },
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({
+          ckvs: [
+            makeCkv('ckv-1', [['key-1', 'v1']]),
+            makeCkv('ckv-2', [['key-1', 'v2']]),
+          ],
+        }),
+      },
+    });
+
+    await store.getState().queryModuleData(MODULE_ID, MODULE_NAME);
+    expect(mockGetCalData).toHaveBeenLastCalledWith(
+      PROJECT_ID,
+      MODULE_ID,
+      'ckv-1',
+      undefined,
+    );
+
+    store.getState().clearModuleData(MODULE_ID);
+    store.getState().setHeaderKeyValue('sg-1', 'key-1', 'v2');
+
+    await store.getState().queryModuleData(MODULE_ID, MODULE_NAME);
+    expect(mockGetCalData).toHaveBeenLastCalledWith(
+      PROJECT_ID,
+      MODULE_ID,
+      'ckv-2',
+      undefined,
+    );
+  });
+
+  it('does not clear the cached dto/selectedCalIndex while reopening, so the canvas overlay does not flash to not-ready', async () => {
+    const module: SpfModuleDto = {
+      changeInfo: {changeType: 'NONE'},
+      ckvs: [makeCkvDto('ckv-1')],
+      id: 1,
+      systemId: MODULE_ID,
+      tags: [],
+    };
+    mockQueryModuleIndices.mockResolvedValue({
+      data: [module],
+      message: undefined,
+      success: true,
+    });
+    mockGetCalData.mockResolvedValue({
+      data: makeCalDataDto(),
+      message: undefined,
+      success: true,
+    });
+
+    const store = makeWidenedStore({
+      headerSelectionsBySubgraphId: {
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+      },
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({
+          ckvs: [makeCkv('ckv-1', [['key-1', 'v1']])],
+        }),
+      },
+    });
+    const existingDto = makeCalDataDto();
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: existingDto,
+            loadedScope: 'partial',
+            selectedCalIndex: 'ckv-1',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    const promise = store.getState().queryModuleData(MODULE_ID, MODULE_NAME);
+    const midFlightEntry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(midFlightEntry.calData?.dto).toBe(existingDto);
+    expect(midFlightEntry.calData?.selectedCalIndex).toBe('ckv-1');
+
+    await promise;
   });
 
   it('toasts and returns false when the API call fails', async () => {

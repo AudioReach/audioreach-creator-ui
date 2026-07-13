@@ -461,8 +461,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       }
       pendingModuleOpensRef.current.add(nodeId);
       try {
-        // TODO: hardcodes selection to the first available CKV/TKV until the
-        // subgraph-header CKV/TKV inheritance selector lands.
         const ok = await store.getState().queryModuleData(nodeId, label);
         if (!ok) {
           return;
