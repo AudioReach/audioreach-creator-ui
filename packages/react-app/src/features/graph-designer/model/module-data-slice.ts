@@ -9,8 +9,10 @@ import {
   type CalDataDto,
   type ChangeInfoDto,
   type CkvDto,
+  type ConfigElementDto,
   getCalData,
   getTagData,
+  type NameValuePairDto,
   type ParameterDetailDto,
   putCalData,
   putTagData,
@@ -26,7 +28,13 @@ import {createDefaultTreeViewUiState} from '~shared/lib/tree-view-ui-state';
 import type {SliceStatus} from '~shared/store/global-store.types';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
 
+import {resolveEnableParamSystemId} from '../lib/module-enable.constants';
+import {resolveActiveCkv} from '../lib/resolve-active-ckv';
 import {toUserFriendlyError} from '../lib/to-user-friendly-error';
+
+import type {GraphDataSlice} from './graph-data-slice';
+import type {ModuleListSlice} from './module-list-slice';
+import type {SubgraphHeaderSelectionSlice} from './subgraph-header-selection-slice';
 
 export interface ModuleDataEntry {
   calData?: {
@@ -99,6 +107,7 @@ export interface ModuleDataSlice {
     moduleId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
+  setModuleEnable: (moduleInstanceId: string, value: boolean) => Promise<void>;
   setModuleOpenTab: (moduleId: string, tabId: string | null) => void;
   setTagUiState: (
     moduleId: string,
@@ -131,14 +140,37 @@ function mergePatch<T>(defaults: T, base: T | undefined, patch: Partial<T>): T {
   return {...defaults, ...base, ...patch};
 }
 
+function enableValueToConfigElement(
+  element: ConfigElementDto,
+  value: boolean,
+): ConfigElementDto {
+  const targetName = value ? 'enable' : 'disable';
+  const allowedValue = element.allowedValues?.find(
+    (candidate): candidate is NameValuePairDto =>
+      candidate.type === 'NAME_VALUE_PAIR' &&
+      candidate.name.toLowerCase() === targetName,
+  );
+  return allowedValue ? {...element, value: allowedValue.value} : element;
+}
+
 /**
  * Creates the module-data slice for composing into the GraphDesignerStore.
  *
+ * @remarks The store type `S` must also compose `GraphDataSlice`,
+ * `ModuleListSlice`, and `SubgraphHeaderSelectionSlice` — `setModuleEnable`
+ * reads a module instance's CKVs and its subgraph's header selection to
+ * resolve the active CKV, and reads `moduleDefinitionsById` to resolve the
+ * enable parameter's systemId, before writing the enable parameter.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.
  * @param projectId - Project identifier bound at construction time.
  */
-export function createModuleDataSlice<S extends ModuleDataSlice>(
+export function createModuleDataSlice<
+  S extends ModuleDataSlice &
+    GraphDataSlice &
+    ModuleListSlice &
+    SubgraphHeaderSelectionSlice,
+>(
   set: StoreApi<S>['setState'],
   get: StoreApi<S>['getState'],
   projectId: string,
@@ -497,6 +529,116 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
           },
         },
       });
+    },
+
+    setModuleEnable: async (
+      moduleInstanceId: string,
+      value: boolean,
+    ): Promise<void> => {
+      logger.debug('moduleDataSlice: setModuleEnable', {
+        action: 'setModuleEnable',
+        component: 'moduleDataSlice',
+      });
+
+      const moduleInstance = get().graphData?.moduleInstances[moduleInstanceId];
+      const headerSelection = moduleInstance
+        ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphId]
+        : undefined;
+      const activeCkv = resolveActiveCkv(
+        moduleInstance?.ckvs ?? [],
+        headerSelection?.keyValues ?? {},
+      );
+      if (!activeCkv.isResolved) {
+        return;
+      }
+
+      const entry = get().moduleDataByModuleId[moduleInstanceId];
+      if (entry?.calData?.selectedCalIndex !== activeCkv.ckvSystemId) {
+        return;
+      }
+      if (entry.calData.isSaving) {
+        return;
+      }
+
+      const moduleDefinition = moduleInstance
+        ? get().moduleDefinitionsById[moduleInstance.moduleId]
+        : undefined;
+      const enableSystemId = resolveEnableParamSystemId(moduleDefinition);
+
+      const dto = entry.calData.dto;
+      const enableParameter = dto?.parameters.find(
+        (param) => param.systemId === enableSystemId,
+      );
+      const enableElement = enableParameter?.elements[0];
+      if (
+        !enableSystemId ||
+        !dto ||
+        !enableParameter ||
+        enableElement?.type !== 'CONFIG_ELEMENT'
+      ) {
+        return;
+      }
+
+      const payload: UpdateSpfModuleCalDataRequest = {
+        data: [
+          {
+            ...enableParameter,
+            changeInfo: {changeType: 'UPDATE'},
+            elements: [enableValueToConfigElement(enableElement, value)],
+          },
+        ],
+      };
+
+      patchEntry(moduleInstanceId, {
+        calData: {...entry.calData, isSaving: true},
+      });
+
+      try {
+        const result = await putCalData(
+          projectId,
+          moduleInstanceId,
+          activeCkv.ckvSystemId,
+          payload,
+          [enableSystemId],
+        );
+
+        if (result.success && result.data) {
+          const latest = get().moduleDataByModuleId[moduleInstanceId];
+          const latestDto = latest?.calData?.dto;
+          // Only merge if this save is still the current one — a later
+          // call may have already completed and cleared isSaving, in
+          // which case this response is stale and must not clobber it.
+          if (latest?.calData?.isSaving && latestDto) {
+            patchEntry(moduleInstanceId, {
+              calData: {
+                ...latest.calData,
+                dto: mergeParametersById(latestDto, result.data),
+                lastMutation: 'set',
+                status: 'ready',
+              },
+            });
+          }
+          return;
+        }
+
+        showToast(result.message ?? 'Failed to save module data', 'danger');
+      } catch (error) {
+        const errorMsg =
+          error instanceof Error ? error.message : 'Failed to save module data';
+        logger.error('moduleDataSlice: setModuleEnable — thrown error', {
+          action: 'setModuleEnable',
+          component: 'moduleDataSlice',
+          error: errorMsg,
+        });
+        showToast(errorMsg, 'danger');
+      } finally {
+        const latest = get().moduleDataByModuleId[moduleInstanceId];
+        if (latest?.calData) {
+          patchEntry(moduleInstanceId, {
+            calData: {...latest.calData, isSaving: false},
+          });
+        }
+      }
     },
 
     setModuleOpenTab: (moduleId: string, tabId: string | null): void => {
