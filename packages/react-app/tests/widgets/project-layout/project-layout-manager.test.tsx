@@ -90,7 +90,7 @@ import {
   PanelTabEntity,
   useProjectLayoutStore,
 } from '~shared/store/use-project-layout-store';
-import {
+import ProjectLayoutManager, {
   tabLayoutService,
   TabLayoutService,
 } from '~widgets/project-layout/project-layout-manager';
@@ -114,7 +114,8 @@ describe('TabLayoutService — createProjectMainTab', () => {
     tabLayoutService.setManager(mockManager);
   });
 
-  // createProjectMainTab must register the project group in the store with the correct args
+  // createProjectMainTab must register the project group in the store with the
+  // correct args
   it('calls createProjectGroup with correct projectId, filePath, groupTitle and description', () => {
     const onTabClose = jest.fn(() => true);
     const factory = jest.fn(() => null);
@@ -187,7 +188,8 @@ describe('TabLayoutService — createProjectMainTab', () => {
       jest.fn(() => null),
     );
 
-    // switchToProjectGroup must be called — it handles app group collapsing internally
+    // switchToProjectGroup must be called — it handles app group collapsing
+    // internally
     expect(mockSwitch).toHaveBeenCalledWith('group-existing');
   });
 
@@ -224,7 +226,8 @@ describe('TabLayoutService — createProjectMainTab', () => {
     expect(result).toBe(existingMainTab);
   });
 
-  // failed group creation — throws without writing layout (saveLayoutConfig only called on success)
+  // failed group creation — throws without writing layout (saveLayoutConfig only
+  // called on success)
   it('throws when createProjectGroup returns false without writing layout', () => {
     mockCreateProjectGroup.mockReturnValueOnce(false);
 
@@ -244,7 +247,8 @@ describe('TabLayoutService — createProjectMainTab', () => {
     expect(mockSaveLayoutConfig).not.toHaveBeenCalled();
   });
 
-  // undefined description must be passed through as-is (null → undefined conversion happens in caller)
+  // undefined description must be passed through as-is (null → undefined conversion
+  // happens in caller)
   it('passes undefined description when not provided', () => {
     const layout = {layout: {children: [], type: 'row'}};
 
@@ -277,7 +281,8 @@ describe('TabLayoutService — addPanel', () => {
     tabLayoutService.setManager(mockManager);
   });
 
-  // addPanel must construct PanelTabEntity with all three args: title, component, onTabClose
+  // addPanel must construct PanelTabEntity with all three args: title, component,
+  // onTabClose
   it('constructs PanelTabEntity with title, component, and onTabClose', () => {
     const manager = new TabLayoutService();
     const component = <div />;
@@ -402,5 +407,117 @@ describe('project-layout-manager — save debounce', () => {
     // Flush all pending timers — debounce fires exactly once despite 5 calls
     jest.runAllTimers();
     expect(mockSaveLayoutConfig).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── onAction — FlexLayout_DeleteTab (individual project tab) ──────────────────
+
+describe('ProjectLayoutManager — onAction FlexLayout_DeleteTab', () => {
+  const mockRemoveProjectTab = jest.fn(() => true);
+
+  function makeManagerWithProjectTab(onTabClose: jest.Mock) {
+    const projectTab = {
+      component: null,
+      id: 'tab-1',
+      onProjectClose: jest.fn(),
+      onTabClose,
+      tabType: 0,
+      title: 'Module A',
+    };
+    const project = {
+      colorId: 1,
+      description: null,
+      id: 'project-1',
+      mainTab: {id: 'main-1'},
+      projectKey: 'key-1',
+      projectTabs: [projectTab],
+      title: 'Project',
+    };
+
+    (useProjectLayoutStore.getState as jest.Mock).mockReturnValue({
+      appGroups: [],
+      projectGroups: [project],
+      removeProjectTab: mockRemoveProjectTab,
+    });
+
+    const manager = new (ProjectLayoutManager as any)({});
+    return {manager, projectTab};
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('removes the tab immediately when onTabClose returns true synchronously', () => {
+    const onTabClose = jest.fn(() => true);
+    const {manager} = makeManagerWithProjectTab(onTabClose);
+
+    manager.onAction({
+      data: {node: 'tab-1'},
+      type: 'FlexLayout_DeleteTab',
+    });
+
+    expect(mockRemoveProjectTab).toHaveBeenCalledWith('project-1', 'tab-1');
+  });
+
+  it('does not remove the tab when onTabClose returns false synchronously', () => {
+    const onTabClose = jest.fn(() => false);
+    const {manager} = makeManagerWithProjectTab(onTabClose);
+
+    manager.onAction({
+      data: {node: 'tab-1'},
+      type: 'FlexLayout_DeleteTab',
+    });
+
+    expect(mockRemoveProjectTab).not.toHaveBeenCalled();
+  });
+
+  it('waits for a Promise-returning onTabClose before removing the tab', async () => {
+    let resolveConfirm: (value: boolean) => void = () => {};
+    const onTabClose = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    const {manager, projectTab} = makeManagerWithProjectTab(onTabClose);
+
+    manager.onAction({
+      data: {node: 'tab-1'},
+      type: 'FlexLayout_DeleteTab',
+    });
+
+    // Must not close before the promise resolves
+    expect(mockRemoveProjectTab).not.toHaveBeenCalled();
+    expect(projectTab.onProjectClose).not.toHaveBeenCalled();
+
+    resolveConfirm(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockRemoveProjectTab).toHaveBeenCalledWith('project-1', 'tab-1');
+    expect(projectTab.onProjectClose).toHaveBeenCalledWith('tab-1', 'Module A');
+  });
+
+  it('does not remove the tab when a Promise-returning onTabClose resolves false', async () => {
+    let resolveConfirm: (value: boolean) => void = () => {};
+    const onTabClose = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    const {manager} = makeManagerWithProjectTab(onTabClose);
+
+    manager.onAction({
+      data: {node: 'tab-1'},
+      type: 'FlexLayout_DeleteTab',
+    });
+
+    resolveConfirm(false);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockRemoveProjectTab).not.toHaveBeenCalled();
   });
 });

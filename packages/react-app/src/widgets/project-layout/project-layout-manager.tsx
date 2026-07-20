@@ -630,29 +630,38 @@ class ProjectLayoutManager extends Component<
         if (tabIndex !== -1) {
           // This is INDIVIDUAL PROJECT TAB CLOSE (not group destruction)
           const projectTab = project.projectTabs.find((t) => t.id === tabId);
-          if (projectTab) {
-            // Call individual tab close callback
-            if (projectTab.onTabClose) {
-              const shouldClose = projectTab.onTabClose(
-                tabId,
-                projectTab.title,
-              );
-              if (!shouldClose) {
-                return; // Prevent closing
-              }
-            }
-            // After permission granted, call cleanup callback
+          const finishClose = () => {
             if (
+              projectTab &&
               'onProjectClose' in projectTab &&
               typeof projectTab.onProjectClose === 'function'
             ) {
               projectTab.onProjectClose(tabId, projectTab.title);
             }
+            this.store.removeProjectTab(project.id, tabId);
+            // Store subscription will automatically trigger rebuild
+          };
+
+          if (projectTab?.onTabClose) {
+            const shouldClose = projectTab.onTabClose(tabId, projectTab.title);
+            if (shouldClose instanceof Promise) {
+              shouldClose
+                .then((confirmed) => {
+                  if (confirmed) {
+                    finishClose();
+                  }
+                })
+                .catch((error) => {
+                  logger.error(`Error in project tab close callback:${error}`);
+                });
+              return;
+            }
+            if (!shouldClose) {
+              return; // Prevent closing
+            }
           }
 
-          // Proceed with individual tab removal
-          this.store.removeProjectTab(project.id, tabId);
-          // Store subscription will automatically trigger rebuild
+          finishClose();
           return;
         }
       }
