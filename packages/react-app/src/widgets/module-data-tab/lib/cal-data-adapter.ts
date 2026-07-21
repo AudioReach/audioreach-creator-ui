@@ -40,8 +40,8 @@ export function buildGroupedTreeViewData(
   params: ParameterDetailDto[],
   systemId: string,
 ): TreeViewData {
-  const groupOrder: string[] = [];
-  const subgroupOrderByGroup = new Map<string, string[]>();
+  const groupOrder = new Set<string>();
+  const subgroupOrderByGroup = new Map<string, Set<string>>();
   const ungroupedElementsByGroup = new Map<string, ConfigElementDto[]>();
   const elementsByGroupAndSubgroup = new Map<string, ConfigElementDto[]>();
 
@@ -51,9 +51,7 @@ export function buildGroupedTreeViewData(
         continue;
       }
 
-      if (!groupOrder.includes(el.group)) {
-        groupOrder.push(el.group);
-      }
+      groupOrder.add(el.group);
 
       if (!el.subgroup) {
         const existing = ungroupedElementsByGroup.get(el.group) ?? [];
@@ -62,10 +60,8 @@ export function buildGroupedTreeViewData(
         continue;
       }
 
-      const subgroupOrder = subgroupOrderByGroup.get(el.group) ?? [];
-      if (!subgroupOrder.includes(el.subgroup)) {
-        subgroupOrder.push(el.subgroup);
-      }
+      const subgroupOrder = subgroupOrderByGroup.get(el.group) ?? new Set();
+      subgroupOrder.add(el.subgroup);
       subgroupOrderByGroup.set(el.group, subgroupOrder);
 
       const key = `${el.group} ${el.subgroup}`;
@@ -75,16 +71,16 @@ export function buildGroupedTreeViewData(
     }
   }
 
-  const items: TreeViewItem[] = groupOrder.map((group) => {
-    const structs: StructDto[] = (subgroupOrderByGroup.get(group) ?? []).map(
-      (subgroup) => ({
-        isReadOnly: false,
-        name: subgroup,
-        structType: subgroup,
-        type: 'STRUCT',
-        value: elementsByGroupAndSubgroup.get(`${group} ${subgroup}`) ?? [],
-      }),
-    );
+  const items: TreeViewItem[] = [...groupOrder].map((group) => {
+    const structs: StructDto[] = [
+      ...(subgroupOrderByGroup.get(group) ?? []),
+    ].map((subgroup) => ({
+      isReadOnly: false,
+      name: subgroup,
+      structType: subgroup,
+      type: 'STRUCT',
+      value: elementsByGroupAndSubgroup.get(`${group} ${subgroup}`) ?? [],
+    }));
 
     return {
       elements: [...(ungroupedElementsByGroup.get(group) ?? []), ...structs],

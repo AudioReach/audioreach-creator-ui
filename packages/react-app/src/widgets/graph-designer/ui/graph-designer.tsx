@@ -110,6 +110,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     new Map<string, React.RefObject<ModuleDataTabHandle | null>>(),
   );
 
+  // Synchronous lock so a second double-click on the same module during the
+  // in-flight queryModuleData() await can't also pass the moduleOpenTabs
+  // guard and create a duplicate tab.
+  const pendingModuleOpensRef = useRef(new Set<string>());
+
   // Collapse, position-override, and viewport state (consumer-owned).
   const [collapseByLevel, setCollapseByLevel] = useState<
     Record<string, Set<number>>
@@ -353,33 +358,41 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         layout.setActiveProjectTab(projectGroupId, existingTabId);
         return;
       }
-      // TODO: hardcodes selection to the first available CKV/TKV until the
-      // subgraph-header CKV/TKV inheritance selector lands.
-      const ok = await store.getState().queryModuleData(nodeId, label);
-      if (!ok) {
+      if (pendingModuleOpensRef.current.has(nodeId)) {
         return;
       }
-      const existingAfterFetch = store.getState().moduleOpenTabs[nodeId];
-      if (existingAfterFetch) {
-        layout.setActiveProjectTab(projectGroupId, existingAfterFetch);
-        return;
+      pendingModuleOpensRef.current.add(nodeId);
+      try {
+        // TODO: hardcodes selection to the first available CKV/TKV until the
+        // subgraph-header CKV/TKV inheritance selector lands.
+        const ok = await store.getState().queryModuleData(nodeId, label);
+        if (!ok) {
+          return;
+        }
+        const existingAfterFetch = store.getState().moduleOpenTabs[nodeId];
+        if (existingAfterFetch) {
+          layout.setActiveProjectTab(projectGroupId, existingAfterFetch);
+          return;
+        }
+        const moduleDataTabRef = createRef<ModuleDataTabHandle>();
+        moduleDataTabRefs.current.set(nodeId, moduleDataTabRef);
+        const tab = tabLayoutService.createProjectTab(
+          label,
+          <GraphDesignerStoreContext.Provider value={store}>
+            <ModuleDataTab ref={moduleDataTabRef} moduleId={nodeId} />
+          </GraphDesignerStoreContext.Provider>,
+          () => moduleDataTabRef.current?.confirmClose() ?? true,
+          () => {
+            moduleDataTabRefs.current.delete(nodeId);
+            store.getState().setModuleOpenTab(nodeId, null);
+            store.getState().clearModuleData(nodeId);
+          },
+        );
+        store.getState().setModuleOpenTab(nodeId, tab.id);
+        layout.setActiveProjectTab(projectGroupId, tab.id);
+      } finally {
+        pendingModuleOpensRef.current.delete(nodeId);
       }
-      const moduleDataTabRef = createRef<ModuleDataTabHandle>();
-      moduleDataTabRefs.current.set(nodeId, moduleDataTabRef);
-      const tab = tabLayoutService.createProjectTab(
-        label,
-        <GraphDesignerStoreContext.Provider value={store}>
-          <ModuleDataTab ref={moduleDataTabRef} moduleId={nodeId} />
-        </GraphDesignerStoreContext.Provider>,
-        () => moduleDataTabRef.current?.confirmClose() ?? true,
-        () => {
-          moduleDataTabRefs.current.delete(nodeId);
-          store.getState().setModuleOpenTab(nodeId, null);
-          store.getState().clearModuleData(nodeId);
-        },
-      );
-      store.getState().setModuleOpenTab(nodeId, tab.id);
-      layout.setActiveProjectTab(projectGroupId, tab.id);
     },
     [projectGroupId, store],
   );

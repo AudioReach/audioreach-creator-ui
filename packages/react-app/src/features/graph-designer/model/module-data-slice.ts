@@ -34,6 +34,8 @@ export interface ModuleDataEntry {
     dto?: CalDataDto;
     error?: string;
     groupedUiState?: GenericTreeViewUiState;
+    /** True while a Set request is in flight — blocks a second Set. */
+    isSaving?: boolean;
     /** How `dto` was last produced — tells the panel whether to pass 'get' (full re-seed) or 'set' (per-path reconciliation) to the tree view. */
     lastMutation?: 'get' | 'set';
     loadedScope: 'none' | 'partial' | 'full';
@@ -46,6 +48,8 @@ export interface ModuleDataEntry {
     availableTagIndices: TagInfoDto[];
     dto?: TagDataDto;
     error?: string;
+    /** True while a Set request is in flight — blocks a second Set. */
+    isSaving?: boolean;
     /** How `dto` was last produced — tells the panel whether to pass 'get' (full re-seed) or 'set' (per-path reconciliation) to the tree view. */
     lastMutation?: 'get' | 'set';
     selectedTagIndex?: string;
@@ -354,7 +358,7 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
       try {
         const result = await queryModuleIndices(projectId, moduleId);
 
-        if (!result.success || !result.data?.length) {
+        if (!result.success) {
           const errorMsg = result.message ?? 'Failed to query module data';
           logger.error('moduleDataSlice: queryModuleData — API error', {
             action: 'queryModuleData',
@@ -374,6 +378,23 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
           });
           showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
           return false;
+        }
+
+        if (!result.data?.length) {
+          logger.debug('moduleDataSlice: queryModuleData — no indices', {
+            action: 'queryModuleData',
+            component: 'moduleDataSlice',
+          });
+          patchEntry(moduleId, {
+            calData: mergePatch(DEFAULT_CAL_DATA, undefined, {status: 'ready'}),
+            moduleName,
+            tagData: mergePatch(DEFAULT_TAG_DATA, undefined, {status: 'ready'}),
+          });
+          showToast(
+            `No calibration or tag data available for ${moduleName}`,
+            'warning',
+          );
+          return true;
         }
 
         const [module] = result.data;
@@ -531,6 +552,13 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
         showToast('No module data loaded for this module', 'danger');
         return;
       }
+      if (entry.calData.isSaving) {
+        return;
+      }
+
+      patchEntry(moduleId, {
+        calData: {...entry.calData, isSaving: true},
+      });
 
       try {
         const result = await putCalData(
@@ -571,6 +599,13 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
           error: errorMsg,
         });
         showToast(errorMsg, 'danger');
+      } finally {
+        const latest = get().moduleDataByModuleId[moduleId];
+        if (latest?.calData) {
+          patchEntry(moduleId, {
+            calData: {...latest.calData, isSaving: false},
+          });
+        }
       }
     },
 
@@ -591,6 +626,13 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
         showToast('No module data loaded for this module', 'danger');
         return;
       }
+      if (entry.tagData.isSaving) {
+        return;
+      }
+
+      patchEntry(moduleId, {
+        tagData: {...entry.tagData, isSaving: true},
+      });
 
       try {
         const result = await putTagData(
@@ -632,6 +674,13 @@ export function createModuleDataSlice<S extends ModuleDataSlice>(
           error: errorMsg,
         });
         showToast(errorMsg, 'danger');
+      } finally {
+        const latest = get().moduleDataByModuleId[moduleId];
+        if (latest?.tagData) {
+          patchEntry(moduleId, {
+            tagData: {...latest.tagData, isSaving: false},
+          });
+        }
       }
     },
   };

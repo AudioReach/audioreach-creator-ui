@@ -62,6 +62,13 @@ function ModuleDataPanelBodyInner(
           readOnly={false}
           title={title}
         />
+      ) : status === 'ready' ? (
+        <div
+          className="flex h-full items-center justify-center text-sm"
+          style={{color: 'var(--color-text-neutral-secondary)'}}
+        >
+          No data available for this module
+        </div>
       ) : (
         <div className="flex h-full items-center justify-center">
           <ProgressRing />

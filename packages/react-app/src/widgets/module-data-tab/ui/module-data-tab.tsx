@@ -108,6 +108,10 @@ function ModuleDataTabInner(
   const activeUiState = effectiveTab === 'cal-data' ? calUiState : tagUiState;
   const activeDirty = isUiStateDirty(activeUiState);
   const activeInvalid = hasInvalidPaths(activeUiState);
+  const activeSaving =
+    effectiveTab === 'cal-data'
+      ? entry?.calData?.isSaving
+      : entry?.tagData?.isSaving;
 
   const anyDirty = isUiStateDirty(calUiState) || isUiStateDirty(tagUiState);
   const anyInvalidWhileDirty =
@@ -333,7 +337,7 @@ function ModuleDataTabInner(
           Get
         </Button>
         <Button
-          disabled={!activeDirty || activeInvalid}
+          disabled={!activeDirty || activeInvalid || activeSaving}
           emphasis="primary"
           onClick={handleSet}
           size="md"

@@ -170,6 +170,29 @@ describe('createModuleDataSlice — queryModuleData', () => {
     expect(entry.calData?.status).toBe('error');
     expect(entry.tagData?.status).toBe('error');
   });
+
+  it('treats a successful empty response as ready, not an error', async () => {
+    mockQueryModuleIndices.mockResolvedValueOnce({
+      data: [],
+      message: undefined,
+      success: true,
+    });
+
+    const store = makeStore();
+    const result = await store
+      .getState()
+      .queryModuleData(MODULE_ID, MODULE_NAME);
+
+    expect(result).toBe(true);
+    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'warning');
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.status).toBe('ready');
+    expect(entry.calData?.error).toBeUndefined();
+    expect(entry.tagData?.status).toBe('ready');
+    expect(entry.tagData?.error).toBeUndefined();
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    expect(mockGetTagData).not.toHaveBeenCalled();
+  });
 });
 
 describe('createModuleDataSlice — fetchCalData', () => {
@@ -295,6 +318,39 @@ describe('createModuleDataSlice — updateCalData', () => {
     expect(result).toBeUndefined();
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'danger');
     expect(mockPutCalData).not.toHaveBeenCalled();
+  });
+
+  it('ignores a second Set while the first is still in flight', async () => {
+    mockGetCalData.mockResolvedValueOnce({
+      data: makeCalDataDto(),
+      message: undefined,
+      success: true,
+    });
+    let resolvePut: (value: {
+      data: CalDataDto;
+      message: undefined;
+      success: true;
+    }) => void = () => {};
+    mockPutCalData.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePut = resolve;
+        }),
+    );
+
+    const store = makeStore();
+    await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
+
+    const firstSet = store.getState().updateCalData(MODULE_ID, {data: []});
+    const secondResult = await store
+      .getState()
+      .updateCalData(MODULE_ID, {data: []});
+
+    expect(secondResult).toBeUndefined();
+    expect(mockPutCalData).toHaveBeenCalledTimes(1);
+
+    resolvePut({data: makeCalDataDto(), message: undefined, success: true});
+    await firstSet;
   });
 });
 

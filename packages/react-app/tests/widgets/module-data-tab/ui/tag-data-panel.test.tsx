@@ -250,6 +250,17 @@ describe('TagDataPanel — status rendering', () => {
     expect(screen.queryByTestId('generic-tree-view')).not.toBeInTheDocument();
   });
 
+  it('renders an empty-data message when ready with no dto', () => {
+    const store = makeStore({dto: undefined, status: 'ready'});
+    renderPanel(store);
+
+    expect(
+      screen.getByText('No data available for this module'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('q-progress-ring')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('generic-tree-view')).not.toBeInTheDocument();
+  });
+
   it('renders the store error message when status is error', () => {
     const store = makeStore({
       dto: undefined,
