@@ -417,7 +417,9 @@ describe('ModuleDataTab — action bar Get/Set', () => {
   });
 });
 
-describe('ModuleDataTab — Batch Copy', () => {
+// TODO: Batch Copy button is commented out in the component until the
+// backend endpoint lands — re-enable this suite alongside it.
+describe.skip('ModuleDataTab — Batch Copy', () => {
   it('invokes the stub handler immediately when the active tab has no dirty paths', () => {
     mockCalGetTreeViewData.mockReturnValue({items: [], systemId: 'ckv-1'});
     const store = makeStore();

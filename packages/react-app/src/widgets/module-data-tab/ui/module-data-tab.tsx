@@ -92,7 +92,7 @@ function ModuleDataTabInner(
   }));
 
   const [activeTab, setActiveTab] = useState<SubTab>('cal-data');
-  const [batchCopyOpen, setBatchCopyOpen] = useState(false);
+  // const [batchCopyOpen, setBatchCopyOpen] = useState(false);
   const [closeResolver, setCloseResolver] = useState<
     ((value: boolean) => void) | null
   >(null);
@@ -157,47 +157,47 @@ function ModuleDataTabInner(
     }
   }
 
-  function invokeBatchCopyHandler(data?: TreeViewData) {
-    // TODO: no backend Batch Copy endpoint exists yet — wire this to the
-    // real entity/slice action once it lands.
-    logger.debug('ModuleDataTab: batch copy stub invoked', {
-      action: 'invokeBatchCopyHandler',
-      component: 'ModuleDataTab',
-      tag: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  function handleBatchCopy() {
-    if (!activeDirty) {
-      const data =
-        effectiveTab === 'cal-data'
-          ? calRef.current?.getTreeViewData()
-          : tagRef.current?.getTreeViewData();
-      logger.debug('ModuleDataTab: batch copy — clean tab', {
-        action: 'handleBatchCopy',
-        component: 'ModuleDataTab',
-      });
-      invokeBatchCopyHandler(data);
-      return;
-    }
-    setBatchCopyOpen(true);
-  }
-
-  function handleBatchCopySetAndCopy() {
-    handleSet();
-    invokeBatchCopyHandler();
-    setBatchCopyOpen(false);
-  }
-
-  function handleBatchCopyDiscardAndCopy() {
-    if (effectiveTab === 'cal-data') {
-      calRef.current?.reset();
-    } else {
-      tagRef.current?.reset();
-    }
-    invokeBatchCopyHandler();
-    setBatchCopyOpen(false);
-  }
+  // TODO: no backend Batch Copy endpoint exists yet — re-enable the
+  // handlers, button, and dialog below once it lands.
+  // function invokeBatchCopyHandler(data?: TreeViewData) {
+  //   logger.debug('ModuleDataTab: batch copy stub invoked', {
+  //     action: 'invokeBatchCopyHandler',
+  //     component: 'ModuleDataTab',
+  //     tag: data ? JSON.stringify(data) : undefined,
+  //   });
+  // }
+  //
+  // function handleBatchCopy() {
+  //   if (!activeDirty) {
+  //     const data =
+  //       effectiveTab === 'cal-data'
+  //         ? calRef.current?.getTreeViewData()
+  //         : tagRef.current?.getTreeViewData();
+  //     logger.debug('ModuleDataTab: batch copy — clean tab', {
+  //       action: 'handleBatchCopy',
+  //       component: 'ModuleDataTab',
+  //     });
+  //     invokeBatchCopyHandler(data);
+  //     return;
+  //   }
+  //   setBatchCopyOpen(true);
+  // }
+  //
+  // function handleBatchCopySetAndCopy() {
+  //   handleSet();
+  //   invokeBatchCopyHandler();
+  //   setBatchCopyOpen(false);
+  // }
+  //
+  // function handleBatchCopyDiscardAndCopy() {
+  //   if (effectiveTab === 'cal-data') {
+  //     calRef.current?.reset();
+  //   } else {
+  //     tagRef.current?.reset();
+  //   }
+  //   invokeBatchCopyHandler();
+  //   setBatchCopyOpen(false);
+  // }
 
   async function writeDirtySubTab(tab: SubTab): Promise<boolean> {
     if (tab === 'cal-data') {
@@ -341,11 +341,15 @@ function ModuleDataTabInner(
         >
           Set
         </Button>
+        {/* TODO: no backend Batch Copy endpoint exists yet — re-enable
+        once it lands.
         <Button onClick={handleBatchCopy} size="md" variant="outline">
           Batch Copy
-        </Button>
+        </Button> */}
       </div>
 
+      {/* TODO: no backend Batch Copy endpoint exists yet — re-enable
+      once it lands.
       <UnsavedChangesDialog
         description="You have unsaved changes. Set them before copying, or discard them."
         discardLabel="Discard Edits & Copy"
@@ -354,7 +358,7 @@ function ModuleDataTabInner(
         onSet={handleBatchCopySetAndCopy}
         open={batchCopyOpen}
         setLabel="Set & Copy"
-      />
+      /> */}
 
       <UnsavedChangesDialog
         description="You have unsaved changes. Set them before closing, or discard them."
