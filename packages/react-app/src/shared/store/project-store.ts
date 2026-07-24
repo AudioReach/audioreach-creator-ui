@@ -7,10 +7,12 @@ import {createStore, type StoreApi} from 'zustand';
 
 import {logger} from '~shared/lib/logger';
 
+import {createExclusiveLockSlice} from './project-store-slices/exclusive-lock-slice';
 import {createLogsSlice} from './project-store-slices/logs-slice';
 import {createProjectMetaDataSlice} from './project-store-slices/project-metadata-slice';
 import {createTabsSlice} from './project-store-slices/tabs-slice';
 import type {
+  ExclusiveLockSlice,
   LogsSlice,
   ProjectMetaDataSlice,
   ProjectStore,
@@ -43,6 +45,10 @@ export function createProjectStore(projectId: string): StoreApi<ProjectStore> {
     ...createLogsSlice(
       (partial) => set(partial as Partial<ProjectStore>),
       () => get() as LogsSlice,
+    ),
+    ...createExclusiveLockSlice(
+      (partial) => set(partial as Partial<ProjectStore>),
+      () => get() as ExclusiveLockSlice,
     ),
   }));
 }

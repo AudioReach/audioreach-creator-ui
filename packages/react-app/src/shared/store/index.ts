@@ -43,7 +43,11 @@ export type {
 
 // ── Project Store ──────────────────────────────────────────────────────────
 export {createProjectStore} from './project-store';
-export type {ProjectStore} from './project-store.types';
+export type {
+  ProjectStore,
+  ExclusiveLockSlice,
+  ExclusiveSessionMode,
+} from './project-store.types';
 export {
   ProjectStoreContext,
   useProjectStore,
