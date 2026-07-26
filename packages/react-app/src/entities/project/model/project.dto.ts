@@ -3,15 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export type ProjectType = 'OFFLINE' | 'DEVICE';
+import type {SessionMode} from './session.dto';
 
-export enum SessionMode {
-  DiffMerge = 'diff-merge',
-  Desginer = 'designer',
-  Simulation = 'simulation',
-  Connected = 'connected',
-  Disconnected = 'disconnected',
-}
+export type ProjectType = 'OFFLINE' | 'DEVICE';
 
 /**
  * Files returned by the backend download-files endpoint
