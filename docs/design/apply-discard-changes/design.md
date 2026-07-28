@@ -171,7 +171,7 @@ this feature):** `kvSelectionsById`, `excludedLinks`, `mode`, `isMutating`,
 ## 5. Data Model — DTOs
 
 All field names/types below match the backend API contract. Types
-this feature **owns** (§13) are declared here; `KeyValueInfo` / `RelatedEndPointLink` come
+this feature **owns** (§13) are declared here; `KeyValue` / `RelatedEndPointLink` come
 from the usecase entity, `ApiIssueItem` from the shared `api-issues` entity,
 `SessionResponseDto` / `SessionMode` from the shared `project` entity (§13), and
 `SubgraphKvSelectionDto` is owned here (§13).
@@ -181,7 +181,7 @@ from the usecase entity, `ApiIssueItem` from the shared `api-issues` entity,
 ```ts
 // model/create-usecases.dto.ts
 import type {ApiIssueItem} from '~entities/api-issues';
-import type {KeyValueInfo, RelatedEndPointLink} from '~entities/usecases';
+import type {KeyValue, RelatedEndPointLink} from '~entities/usecases';
 
 export interface SubgraphKvSelectionDto {
   systemId: string;
@@ -197,7 +197,7 @@ export interface CreateUsecasesRequestDto {
 
 export interface UsecaseIdentifierWithChangeInfoDto {
   changeId: string;
-  keyValueCollection: KeyValueInfo[];
+  keyValueCollection: KeyValue[];
   systemId: string;
   usecaseType: 'Ec' | 'Manual' | 'Regular';
   relatedEndPointLinks?: RelatedEndPointLink[];
@@ -217,7 +217,7 @@ export interface CreateUsecasesResponseDto {
 `SubgraphKvSelectionDto` is **owned here** — the edit-session slice exposes selection
 _state_ (`kvSelectionsById`), and this feature owns the _wire shape_ create-usecases
 accepts. `ApiIssueItem` is imported from the shared `~entities/api-issues` entity (D-O3),
-and `KeyValueInfo` / `RelatedEndPointLink` from the usecase entity — neither is redefined here.
+and `KeyValue` / `RelatedEndPointLink` from the usecase entity — neither is redefined here.
 `UsecaseIdentifierWithChangeInfoDto` is declared **standalone** (not `extends` the
 existing dead `UsecaseIdentifierDto`) to avoid coupling to unused code (D4). Its
 `changeId` is the required stageable handle.
@@ -1050,7 +1050,8 @@ is a **generic** backend issue contract, not apply/discard-specific, so it lives
 shared `entities/api-issues` entity from the start rather than being owned locally and
 promoted later. `create-usecases` is its first consumer.
 
-**Consumed from usecase entity — NOT redefined:** `KeyValueInfo`, `RelatedEndPointLink`
+**Consumed from usecase entity — NOT redefined:** `KeyValue` (re-exported from
+`KeyValueInfo`), `RelatedEndPointLink`
 (`entities/usecases/model/usecase-component.dto.ts`).
 
 **Consumed from validation-result-view — NOT redefined:** `ValidationResult`,
