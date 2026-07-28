@@ -22,6 +22,10 @@ Pnpm monorepo managed with Turbo. Four packages:
 
 Most development happens in `packages/react-app`.
 
+Design docs, requirements, and implementation plans for features live under
+`docs/design/<feature>/` and `docs/plans/<feature>/` respectively — check
+there for context on any in-progress or past feature work.
+
 ---
 
 ## Architecture
@@ -33,9 +37,13 @@ Feature-Sliced Design (FSD). Layers in `src/` from most stable to most volatile:
 - `widgets/` — Compositions of multiple features
 - `shared/` — Cross-cutting utilities, controls, stores, providers
 - `data/` — Static data and seed files
-- `pages/` — Reserved for top-level route pages; not yet in use
+- `assets/` — Static assets (images, icons)
+- `pages/` — Reserved path alias for future top-level route pages; no directory exists yet
 
-Each feature slice in `features/<name>/` follows this structure:
+Each feature slice in `features/<name>/` typically follows this structure,
+though not every feature has all four (e.g. a feature with no pure-utility
+logic omits `lib/`; some have an additional `hooks/` folder for React hooks
+that don't belong in `model/`):
 
 ```
 model/        ← Zustand stores, types, coordinators
@@ -75,7 +83,7 @@ Upper layers may import from lower layers but not vice versa. Features must not 
 
 Zustand v5. One store per concern, scoped per project where state is per-project.
 
-- Store files live in `features/<name>/model/use-<name>-store.ts`
+- New feature stores live in `features/<name>/model/use-<name>-store.ts`. Some existing cross-cutting stores live in `shared/store/` instead (e.g. project-scoped or global state not owned by one feature) — follow that precedent for state that isn't feature-local.
 - Export the hook (`useXxxStore`) and any types from the feature `index.ts`
 - Use selector functions to subscribe to only the slice of state needed — avoid subscribing to the whole store
 - Zustand store state must be serializable — avoid storing `Set`, `Map`, or class instances; use plain arrays and objects
@@ -88,7 +96,7 @@ Zustand v5. One store per concern, scoped per project where state is per-project
 - **Tailwind classes are the default** — use them for layout, spacing, typography, and borders
 - **Inline `style` props** are only acceptable for values that cannot be expressed as static Tailwind classes (e.g. dynamic CSS variable references, calculated widths)
 - **All colors must use QUI design token CSS variables** (e.g. `var(--color-border-support-info)`, `var(--color-background-neutral-02)`). Hardcoded hex or RGB values are not allowed in component code
-- Do not use raw Tailwind color utilities (e.g. `text-red-500`) when a semantic QUI token exists for that purpose
+- Do not use raw Tailwind color utilities (e.g. `text-red-500`) when a semantic QUI token exists for that purpose. Exception: the project's per-group color legend system (`tailwind.config.js`) intentionally defines a fixed palette of raw colors for dynamic per-project group coloring, where no semantic QUI token applies — don't flag usages of that palette
 - Tailwind classes are auto-sorted by `prettier-plugin-tailwindcss` — do not manually reorder them
 
 ---
@@ -203,18 +211,17 @@ The following are enforced during code review in addition to general correctness
 
 ## Claude Code setup
 
-### Superpowers plugin
+### Project skills
 
-This project uses the [Superpowers plugin](https://claude.com/plugins/superpowers) for
-skills (writing-plans, brainstorming, code-review, TDD, etc.). Install it via the
-Claude Code plugin marketplace:
+This project defines its own `brainstorming`, `writing-plans`,
+`executing-plans`, and `commit` skills in `.ai/skills/`, symlinked into
+`.claude/skills/`.
 
-```
-/plugins
-```
-
-Search for "superpowers" and install it. It activates automatically for this project
-via `.claude/settings.json`.
+**Always use these project skills for brainstorming, writing plans, and
+executing plans — do not use a same-named skill from any other plugin.**
+Invoke them by plain name (`brainstorming`, `writing-plans`,
+`executing-plans`) rather than any plugin-qualified name, even if one
+appears in `/skills` or a skill listing.
 
 ### QUI React MCP server
 

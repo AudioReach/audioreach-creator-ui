@@ -26,7 +26,8 @@
     "react-app": "pnpm -C packages/react-app",
     "clean": "pnpm run -C packages/electron-app clean && pnpm run -C packages/react-app clean && pnpm run -C packages/api-utils clean",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "setup-ai-links": "node scripts/setup-ai-links.js"
   },
   "devDependencies": {
     "@qualcomm-ui/eslint-config-fsd": "^1.0.1",

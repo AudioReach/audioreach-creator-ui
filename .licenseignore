@@ -12,6 +12,9 @@
 # dev scripts
 scripts/*
 
+# shared AI skills content (symlinked into tool-specific dirs)
+.ai/**
+
 # test files
 **/test/**
 **/tests/**

@@ -41,7 +41,8 @@
               "__spec__\/",
               ".*.spec\\.",
               "index\\.(ts|js)",
-              ".*.d\\.ts"
+              ".*.d\\.ts",
+              "\\.ai\/"
             ]
           },
           "lineCount": 100,
@@ -93,7 +94,8 @@
               "__spec__\/",
               ".*.spec\\.",
               "index\\.(ts|js)",
-              ".*.d\\.ts"
+              ".*.d\\.ts",
+              "\\.ai\/"
             ]
           },
           "lineCount": 100,
