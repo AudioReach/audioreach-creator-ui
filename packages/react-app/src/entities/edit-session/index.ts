@@ -1,3 +1,10 @@
+export {
+  commitChanges,
+  createUsecases,
+  discardChanges,
+  endSession,
+  stageChanges,
+} from './api/edit-session-api';
 export type {
   CommitChangesRequestDto,
   CommitChangesResponseDto,
