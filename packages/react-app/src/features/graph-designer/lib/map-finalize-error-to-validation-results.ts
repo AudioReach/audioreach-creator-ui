@@ -39,6 +39,10 @@ export type ReportableFinalizeError =
       code: '422' | '400';
       kind: 'endSessionDeterminate';
       message: string;
+    }
+  | {
+      kind: 'reconcileFailed';
+      message: string;
     };
 
 function joinOrDash(ids: string[]): string {
@@ -199,6 +203,18 @@ function mapEndSessionDeterminate(
   ];
 }
 
+function mapReconcileFailed(
+  error: Extract<ReportableFinalizeError, {kind: 'reconcileFailed'}>,
+): Omit<ValidationResult, 'id'>[] {
+  return [
+    {
+      errorCode: 'create-usecases-failed',
+      message: error.message,
+      severity: 'error',
+    },
+  ];
+}
+
 export function mapFinalizeErrorToValidationResults(
   error: ReportableFinalizeError,
 ): Omit<ValidationResult, 'id'>[] {
@@ -213,5 +229,7 @@ export function mapFinalizeErrorToValidationResults(
       return mapDiscardDeterminate(error);
     case 'endSessionDeterminate':
       return mapEndSessionDeterminate(error);
+    case 'reconcileFailed':
+      return mapReconcileFailed(error);
   }
 }
