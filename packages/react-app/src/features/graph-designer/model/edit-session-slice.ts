@@ -126,7 +126,7 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
         .get(projectId)
         ?.getState()
         .releaseExclusiveMode(LOCK_OWNER);
-      setSlice({mode: 'view'});
+      setSlice({...INITIAL_SESSION_LOCAL_STATE, mode: 'view'});
 
       logSession('exitEditMode', 'exitEditMode');
     },
