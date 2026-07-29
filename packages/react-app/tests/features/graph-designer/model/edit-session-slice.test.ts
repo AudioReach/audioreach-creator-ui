@@ -99,4 +99,68 @@ describe('EditSessionSlice', () => {
 
     expect(mockReleaseExclusiveMode).toHaveBeenCalledWith('usecase-edit');
   });
+
+  describe('stagedProcessedChangeIds', () => {
+    it('initializes to empty array', () => {
+      const store = createTestStore();
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual([]);
+    });
+
+    it('recordStageProcessed unions in new ids from empty state', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a', 'b']);
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual(['a', 'b']);
+    });
+
+    it('recordStageProcessed preserves order and deduplicates', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a', 'b']);
+      store.getState().recordStageProcessed(['b', 'c']);
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual([
+        'a',
+        'b',
+        'c',
+      ]);
+    });
+
+    it('clearStageProcessed resets to empty array', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a']);
+      store.getState().clearStageProcessed();
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual([]);
+    });
+
+    it('resetSessionLocalMaps clears stagedProcessedChangeIds', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a', 'b']);
+      store.getState().resetSessionLocalMaps();
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual([]);
+    });
+
+    it('exitEditMode clears stagedProcessedChangeIds', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a', 'b']);
+      store.getState().exitEditMode();
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual([]);
+    });
+
+    it('recordStageProcessed deduplicates ids within a single call', () => {
+      const store = createTestStore();
+
+      store.getState().recordStageProcessed(['a', 'a', 'b']);
+
+      expect(store.getState().stagedProcessedChangeIds).toEqual(['a', 'b']);
+    });
+  });
 });

@@ -31,6 +31,7 @@ export interface KvSelection {
 
 export interface EditSessionSlice {
   beginMutation: () => void;
+  clearStageProcessed: () => void;
   endMutation: () => void;
   enterEditMode: () => boolean;
   excludedLinks: Connection[];
@@ -39,7 +40,9 @@ export interface EditSessionSlice {
   kvSelectionsById: Record<string, KvSelection[]>;
   mode: 'view' | 'edit';
   pairLinksById: Record<string, SubgraphPairDto>;
+  recordStageProcessed: (ids: string[]) => void;
   resetSessionLocalMaps: () => void;
+  stagedProcessedChangeIds: string[];
   subgraphProvenanceById: Record<string, SubgraphProvenance>;
   /** Fixed for the lifetime of the edit session, set in `enterEditMode()`. */
   usesSubsystemVariant: boolean;
@@ -55,6 +58,7 @@ const INITIAL_SESSION_LOCAL_STATE = {
   excludedLinks: [] as Connection[],
   kvSelectionsById: {} as Record<string, KvSelection[]>,
   pairLinksById: {} as Record<string, SubgraphPairDto>,
+  stagedProcessedChangeIds: [] as string[],
   subgraphProvenanceById: {} as Record<string, SubgraphProvenance>,
 };
 
@@ -83,6 +87,10 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
     beginMutation: () => {
       logSession('beginMutation', 'beginMutation');
       setSlice({isMutating: true});
+    },
+
+    clearStageProcessed: (): void => {
+      setSlice({stagedProcessedChangeIds: []});
     },
 
     endMutation: () => {
@@ -134,6 +142,16 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
     isMutating: false,
 
     mode: 'view',
+
+    recordStageProcessed: (ids: string[]): void => {
+      setSlice((state) => {
+        const current = state.stagedProcessedChangeIds;
+        const newIds = ids.filter(
+          (id, index) => !current.includes(id) && ids.indexOf(id) === index,
+        );
+        return {stagedProcessedChangeIds: [...current, ...newIds]};
+      });
+    },
 
     resetSessionLocalMaps: (): void => {
       setSlice(INITIAL_SESSION_LOCAL_STATE);
