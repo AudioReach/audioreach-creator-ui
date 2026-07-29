@@ -14,6 +14,8 @@ export type ReconcileOutcome =
       kind: 'emptyReconcile';
       notices: ApiIssueItem[];
     }
+  | {kind: 'reconcileTransportIndeterminate'}
+  | {kind: 'reconcileFailed'; message: string}
   | {
       kind: 'review';
       notices: ApiIssueItem[];
