@@ -947,6 +947,8 @@ jest.mock('@qualcomm-ui/react/accordion', () => {
             children,
           ),
         ),
+      ItemSecondaryText: pass,
+      ItemText: pass,
       ItemTrigger: jest
         .fn()
         .mockImplementation(({children, onClick}) =>
