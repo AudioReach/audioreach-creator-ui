@@ -28,6 +28,7 @@ tabStoreRegistry.registerFactory(
   },
 );
 
+export {useApplyDiscard} from './hooks/use-apply-discard';
 export {useGraphDesigner} from './hooks/use-graph-designer';
 export {useKeyConfigurator} from './hooks/use-key-configurator';
 export {useModuleList} from './hooks/use-module-list';
