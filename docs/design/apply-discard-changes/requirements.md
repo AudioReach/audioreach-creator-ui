@@ -250,6 +250,14 @@ and are now closed.
   `success: true`, skip the summary dialog and finalize (commit all staged →
   end-session); this can happen even under a true routing-trigger flag when edits cancel
   out (FR-AD-08).
+- **Reconcile failure** — a `create-usecases` call that itself fails (`success: false`,
+  a determinate business failure) or times out/loses connection (an indeterminate
+  transport failure) must never be classified the same as empty reconciliation: the two
+  cases mean opposite things — "the backend confirmed there is nothing to apply" versus
+  "the backend could not tell us." A determinate reconcile failure is a reportable error
+  that keeps the session active and dirty, the same as any other pipeline failure
+  (FR-AD-11); a transport failure on reconcile is indeterminate the same way a
+  transport failure on a finalize call is (FR-AD-10).
 - **OK with nothing checked** — OK always attempts finalize (stage nothing →
   `commit-changes?enforceValidation=true` → `end-session`); it never collapses into a
   no-op or into Cancel. When no usecases are checked, the backend may reject the commit

@@ -439,6 +439,17 @@ distinguishes transport/HTTP failures (`success === false`, `data` absent) from 
 well-formed payload; the `create-usecases` issue array lives inside the response
 `data`, not on the envelope.
 
+The coordinator tells a transport failure (no response received — a network
+error or timeout) from a determinate business failure (a real HTTP status the
+backend returned) by parsing any three-digit `HTTP error: <nnn>` status out of
+`message`/`errors`. Recognizing a status at all is what marks a failure as
+determinate; only `400`/`422` on `end-session` carry a documented, distinct
+meaning ("no active session" / staged changes exist) and route to a named
+outcome — any other recognized status (e.g. a `500` from a failed
+`create-usecases` or `end-session` call) is still a determinate failure, not a
+transport outage, even though the coordinator has no bespoke outcome for it
+yet.
+
 `commitChanges` exposes `enforceValidation` as an optional argument (the endpoint
 supports both); the coordinator always passes `true` so the backend runs its
 commit-group validation rules — that is what turns "modules added but attached to no
@@ -569,24 +580,42 @@ sequenceDiagram
     else routing-relevant
         Hook->>Coord: runApply()
         Coord->>Api: POST create-usecases
-        Api-->>Coord: created / updated / deleted + issues
-        alt blocking issue present
-            Coord-->>Hook: blocked(issues)
-            Hook->>VView: clear + publish issues + focus tab
+        alt transport failure (no response received)
+            Coord-->>Hook: reconcileTransportIndeterminate
+            Note right of Hook: stay in edit mode, assert nothing (FR-AD-10)
+        else determinate failure (success false)
+            Api-->>Coord: error
+            Coord-->>Hook: reconcileFailed(message)
+            Hook->>VView: publish reportable error + focus tab
             Note right of Hook: session stays active + dirty
-        else no changes produced
-            Coord-->>Hook: finalizeDirectly
-            Note right of Hook: → Finalize (§8.2)
-        else changes to review
-            Coord-->>Hook: review(response, notices)
-            Hook->>Dialog: open (checkbox lists + nav choice)
-            opt notices present
-                Hook->>VView: publish notices + focus tab
+        else success
+            Api-->>Coord: created / updated / deleted + issues
+            alt blocking issue present
+                Coord-->>Hook: blocked(issues)
+                Hook->>VView: clear + publish issues + focus tab
+                Note right of Hook: session stays active + dirty
+            else no changes produced
+                Coord-->>Hook: finalizeDirectly
+                Note right of Hook: → Finalize (§8.2)
+            else changes to review
+                Coord-->>Hook: review(response, notices)
+                Hook->>Dialog: open (checkbox lists + nav choice)
+                opt notices present
+                    Hook->>VView: publish notices + focus tab
+                end
             end
         end
     end
     deactivate Hook
 ```
+
+`create-usecases` can itself fail — a transport failure (no response
+received) or a determinate business failure (`success: false`, e.g. the
+backend's documented 404/500 responses for this endpoint). Both are
+reportable outcomes distinct from `emptyReconcile`: a failed reconcile
+call must never be classified as "no changes to apply," since that would
+let Apply proceed into Finalize as though the backend confirmed there was
+nothing to reconcile.
 
 ### 8.2 Finalize — stage → commit → end-session
 
@@ -740,6 +769,7 @@ message; the toast is reserved for terminal status. A transport failure is indet
 | Apply gated on `isDirty` + guard                                                 | FR-AD-01, NFR-AD-01, I3          |
 | Non-routing → commit all staged + end-session                                    | FR-AD-02                         |
 | create-usecases reconcile                                                        | FR-AD-03                         |
+| create-usecases failure (determinate or transport-indeterminate)                 | FR-AD-10, FR-AD-11               |
 | Blocking issue → abort, publish, stay dirty                                      | FR-AD-04, I1, §10                |
 | Empty reconciliation → finalize (commit + end)                                   | FR-AD-08                         |
 | Review dialog (lists + nav choice)                                               | FR-AD-05, FR-AD-06               |
