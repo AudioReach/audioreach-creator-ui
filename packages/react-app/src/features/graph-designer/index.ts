@@ -40,5 +40,6 @@ export {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from './model/graph-designer-store-context';
+export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
