@@ -16,6 +16,10 @@ jest.mock('flexlayout-react', () => ({
   Actions: {
     addNode: jest.fn(),
     deleteTab: jest.fn(),
+    selectTab: jest.fn((nodeId: string) => ({
+      data: {tabNode: nodeId},
+      type: 'FlexLayout_SelectTab',
+    })),
     updateNodeAttributes: jest.fn(),
   },
   DockLocation: {BOTTOM: 'bottom', LEFT: 'left', RIGHT: 'right'},
@@ -85,6 +89,7 @@ jest.mock('~shared/config/config-manager', () => ({
   },
 }));
 
+import {tabFocusRegistry} from '~shared/store';
 import {PanelId} from '~shared/store/project-layout.types';
 import {
   PanelTabEntity,
@@ -105,8 +110,6 @@ const mockManager = {
   })),
   factory: jest.fn(() => null),
 } as any;
-
-// ── PanelIntegration.createProjectMainTab ────────────────────────────────────
 
 describe('TabLayoutService — createProjectMainTab', () => {
   beforeEach(() => {
@@ -273,8 +276,6 @@ describe('TabLayoutService — createProjectMainTab', () => {
   });
 });
 
-// ── PanelIntegration.addPanel ─────────────────────────────────────────────────
-
 describe('TabLayoutService — addPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -349,8 +350,6 @@ describe('TabLayoutService — addPanel', () => {
   });
 });
 
-// ── save debounce ─────────────────────────────────────────────────────────────
-
 describe('project-layout-manager — save debounce', () => {
   beforeEach(() => {
     capturedOnModelChange = null;
@@ -409,8 +408,6 @@ describe('project-layout-manager — save debounce', () => {
     expect(mockSaveLayoutConfig).toHaveBeenCalledTimes(1);
   });
 });
-
-// ── onAction — FlexLayout_DeleteTab (individual project tab) ──────────────────
 
 describe('ProjectLayoutManager — onAction FlexLayout_DeleteTab', () => {
   const mockRemoveProjectTab = jest.fn(() => true);
@@ -519,5 +516,55 @@ describe('ProjectLayoutManager — onAction FlexLayout_DeleteTab', () => {
     await Promise.resolve();
 
     expect(mockRemoveProjectTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('TabLayoutService — focusTab', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('calls doAction with Actions.selectTab(nodeId) when a model is present', () => {
+    const mockDoAction = jest.fn();
+    const mockManagerWithModel = {
+      state: {model: {doAction: mockDoAction}},
+    } as any;
+    const manager = new TabLayoutService();
+    manager.setManager(mockManagerWithModel);
+
+    manager.focusTab('some-node-id');
+
+    expect(mockDoAction).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(mockDoAction.mock.calls[0][0])).toBe(
+      JSON.stringify({
+        data: {tabNode: 'some-node-id'},
+        type: 'FlexLayout_SelectTab',
+      }),
+    );
+  });
+
+  it('does not throw when no manager is set', () => {
+    const manager = new TabLayoutService();
+
+    expect(() => manager.focusTab('some-node-id')).not.toThrow();
+  });
+});
+
+describe('tabLayoutService registration', () => {
+  it('registers the module-level tabLayoutService with tabFocusRegistry', () => {
+    const mockDoAction = jest.fn();
+    tabLayoutService.setManager({
+      state: {model: {doAction: mockDoAction}},
+    } as any);
+
+    tabFocusRegistry.focusTab('some-node-id');
+
+    expect(mockDoAction).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(mockDoAction.mock.calls[0][0])).toBe(
+      JSON.stringify({
+        data: {tabNode: 'some-node-id'},
+        type: 'FlexLayout_SelectTab',
+      }),
+    );
   });
 });

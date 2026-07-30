@@ -19,7 +19,6 @@ export type {
   ApplicationConfig,
 } from './project-layout.types';
 
-// ── Global Store ───────────────────────────────────────────────────────────
 export {useGlobalStore} from './global-store';
 export type {GlobalStore} from './global-store';
 export type {
@@ -33,7 +32,6 @@ export type {
   TabType,
 } from './global-store.types';
 
-// ── New Global Store Types ─────────────────────────────────────────────────
 export type {
   AppTab,
   ProjectGroup,
@@ -41,7 +39,6 @@ export type {
   SessionSlice,
 } from './global-store.types';
 
-// ── Project Store ──────────────────────────────────────────────────────────
 export {createProjectStore} from './project-store';
 export type {
   ProjectStore,
@@ -59,5 +56,13 @@ export {
   projectStoreRegistry,
 } from './project-store-registry';
 
-// ── Tab Store Registry ─────────────────────────────────────────────────────
 export {TabStoreRegistry, createTabStoreRegistry} from './tab-store-registry';
+
+export {
+  TabFocusRegistry,
+  createTabFocusRegistry,
+  tabFocusRegistry,
+} from './tab-focus-registry';
+export type {TabFocusHandler} from './tab-focus-registry';
+
+export {VALIDATION_RESULTS_TAB_NODE_ID} from './tab-node-ids';

@@ -15,6 +15,7 @@ import {
 
 import {
   type Action,
+  Actions,
   type DockLocation,
   type IJsonModel,
   Layout,
@@ -31,6 +32,7 @@ import {
 } from '~features/panel-collapse';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {logger} from '~shared/lib/logger';
+import {tabFocusRegistry} from '~shared/store';
 import type {
   OnGroupClose,
   OnProjectClose,
@@ -1586,8 +1588,20 @@ export class TabLayoutService {
   setManager(manager: ProjectLayoutManager): void {
     this.globalManager = manager;
   }
+
+  /**
+   * Selects the tab with the given node id in the FlexLayout model.
+   *
+   * The manager may not be set yet, and its model is only populated once
+   * the panel mounts — either being unavailable is a valid no-op, since
+   * there is nothing to focus before then.
+   */
+  focusTab(nodeId: string): void {
+    this.globalManager?.state.model?.doAction(Actions.selectTab(nodeId));
+  }
 }
 
 export default ProjectLayoutManager;
 
 export const tabLayoutService = new TabLayoutService();
+tabFocusRegistry.register(tabLayoutService);
