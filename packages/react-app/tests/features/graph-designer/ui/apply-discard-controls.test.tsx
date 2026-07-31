@@ -5,8 +5,8 @@
 
 jest.mock('~shared/lib/logger');
 
-jest.mock('~features/graph-designer', () => ({
-  ...jest.requireActual('~features/graph-designer'),
+jest.mock('~features/graph-designer/hooks/use-apply-discard', () => ({
+  ...jest.requireActual('~features/graph-designer/hooks/use-apply-discard'),
   useApplyDiscard: jest.fn(),
 }));
 
@@ -74,7 +74,7 @@ import type {CreateUsecasesResponseDto} from '~entities/edit-session';
 import {
   useApplyDiscard,
   type UseApplyDiscardReturn,
-} from '~features/graph-designer';
+} from '~features/graph-designer/hooks/use-apply-discard';
 import {
   createGraphDesignerStore,
   type GraphDesignerStore,
@@ -235,14 +235,14 @@ describe('ApplyDiscardControls', () => {
     const store = makeStore('edit', true);
     renderControls(store);
 
-    expect(screen.getByText('Apply changes')).toBeInTheDocument();
+    expect(screen.getByText('Summary')).toBeInTheDocument();
   });
 
   it('does not render the apply summary dialog when pendingReview is null', () => {
     const store = makeStore('edit', true);
     renderControls(store);
 
-    expect(screen.queryByText('Apply changes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Summary')).not.toBeInTheDocument();
   });
 
   it('wires submitReview and cancelReview to the apply summary dialog', () => {

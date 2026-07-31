@@ -702,6 +702,10 @@ jest.mock('@qualcomm-ui/react-core/portal', () => ({
   }),
 }));
 
+jest.mock('~features/graph-designer/lib/dev-mode', () => ({
+  isDevMode: jest.fn(() => false),
+}));
+
 jest.mock('~shared/providers/theme-provider', () => ({
   Theme: {Dark: 'dark', Light: 'light'},
   ThemeProvider: ({children}: {children: React.ReactNode}) => children,

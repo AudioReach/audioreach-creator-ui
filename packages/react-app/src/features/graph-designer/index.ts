@@ -10,6 +10,7 @@ import {
   tabStoreRegistry,
 } from '~shared/store/tab-store-registry';
 
+import {isDevMode} from './lib/dev-mode';
 import {createGraphDesignerStore} from './model/graph-designer-store';
 import {evictModuleListFilterCache} from './model/module-list-slice';
 import {evictSubgraphListFilterCache} from './model/subgraph-list-slice';
@@ -17,14 +18,22 @@ import {evictSubgraphListFilterCache} from './model/subgraph-list-slice';
 tabStoreRegistry.registerFactory(
   'graph-designer',
   (tabId: string, projectId: string) => {
+    const store = createGraphDesignerStore(tabId, projectId);
+    let devRegistry: Record<string, unknown> | undefined;
+    if (isDevMode()) {
+      devRegistry = (
+        window as unknown as {__graphStore?: Record<string, unknown>}
+      ).__graphStore ??= {};
+      devRegistry[tabId] = store;
+    }
     tabStoreRegistry.registerCleanup(tabId, () => {
       evictModuleListFilterCache(projectId);
       evictSubgraphListFilterCache(projectId);
+      if (devRegistry) {
+        delete devRegistry[tabId];
+      }
     });
-    return createGraphDesignerStore(
-      tabId,
-      projectId,
-    ) as unknown as TabStoreInstance;
+    return store as unknown as TabStoreInstance;
   },
 );
 
@@ -43,3 +52,4 @@ export {
 export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
+export {ApplyDiscardControls} from './ui/apply-discard-controls';

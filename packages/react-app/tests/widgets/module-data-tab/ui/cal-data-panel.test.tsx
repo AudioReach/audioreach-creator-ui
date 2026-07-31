@@ -59,6 +59,30 @@ jest.mock('@qualcomm-ui/react/dialog', () => {
   };
 });
 
+jest.mock('@qualcomm-ui/react/radio', () => {
+  const React = jest.requireActual('react');
+  return {
+    Radio: ({label, value}: {label: string; value: string}) =>
+      React.createElement(
+        'label',
+        {},
+        React.createElement('input', {
+          'aria-label': label,
+          readOnly: true,
+          type: 'radio',
+          value,
+        }),
+        label,
+      ),
+    RadioGroup: {
+      Items: ({children}: {children: unknown}) =>
+        React.createElement('div', {}, children),
+      Root: ({children}: {children: unknown}) =>
+        React.createElement('div', {}, children),
+    },
+  };
+});
+
 import type {
   CalDataDto,
   CkvDto,

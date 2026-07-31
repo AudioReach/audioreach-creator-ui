@@ -38,6 +38,7 @@ import {
   type UsecaseCategory,
 } from '~entities/usecases';
 import {
+  ApplyDiscardControls,
   GraphDesignerStoreContext,
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
@@ -798,14 +799,19 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           borderBottom: '1px solid var(--color-border-neutral-02)',
         }}
       >
-        <UsecaseSelectionControl
-          disabled={isSystemWorkflow}
-          onSelectedUsecasesChange={setSelectedUsecases}
-          projectId={projectId}
-          selectAll={isSystemWorkflow && !isWorkflowLoading}
-          selectedUsecases={selectedUsecases}
-          usecaseData={resolvedData}
-        />
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <UsecaseSelectionControl
+              disabled={isSystemWorkflow}
+              onSelectedUsecasesChange={setSelectedUsecases}
+              projectId={projectId}
+              selectAll={isSystemWorkflow && !isWorkflowLoading}
+              selectedUsecases={selectedUsecases}
+              usecaseData={resolvedData}
+            />
+          </div>
+          <ApplyDiscardControls projectId={projectId} />
+        </div>
       </div>
 
       {/* Graph Visualizer below */}

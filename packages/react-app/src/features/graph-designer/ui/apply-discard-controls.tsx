@@ -9,10 +9,8 @@ import {Check, Pencil, Trash2} from 'lucide-react';
 
 import {Button} from '@qualcomm-ui/react/button';
 
-import {
-  useApplyDiscard,
-  useGraphDesignerStoreShallow,
-} from '~features/graph-designer';
+import {useApplyDiscard} from '../hooks/use-apply-discard';
+import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-context';
 
 import {ApplySummaryDialog} from './apply-summary-dialog';
 import {DiscardConfirmDialog} from './discard-confirm-dialog';
