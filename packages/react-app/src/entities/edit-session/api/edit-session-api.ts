@@ -23,12 +23,6 @@ import type {
   StageChangesResponseDto,
 } from '../model/stage-changes.dto';
 
-/**
- * Create usecases for a project.
- * @param projectId - The unique identifier of the project
- * @param body - Request body with activeSubgraphs and selectedUsecaseSystemIds
- * @returns Response with created, updated, and deleted usecases
- */
 export async function createUsecases(
   projectId: string,
   body: CreateUsecasesRequestDto,
@@ -39,12 +33,6 @@ export async function createUsecases(
   );
 }
 
-/**
- * Stage changes for a project.
- * @param projectId - The unique identifier of the project
- * @param changeIds - Array of change identifiers to stage
- * @returns Response with processed and failed change IDs
- */
 export async function stageChanges(
   projectId: string,
   changeIds: string[],
@@ -55,14 +43,7 @@ export async function stageChanges(
   );
 }
 
-/**
- * Commit changes for a project.
- * When changeIds is omitted, all staged changes are committed.
- * @param projectId - The unique identifier of the project
- * @param changeIds - Optional array of change identifiers to commit
- * @param enforceValidation - Whether to enforce validation (default: false)
- * @returns Response with processed and failed change IDs
- */
+/** Omitting `changeIds` commits all staged changes. */
 export async function commitChanges(
   projectId: string,
   changeIds?: string[],
@@ -75,13 +56,7 @@ export async function commitChanges(
   );
 }
 
-/**
- * Discard changes for a project.
- * When changeIds is omitted, all staged changes are discarded.
- * @param projectId - The unique identifier of the project
- * @param changeIds - Optional array of change identifiers to discard
- * @returns Response with processed, failed, and cascaded change IDs
- */
+/** Omitting `changeIds` discards all staged changes. */
 export async function discardChanges(
   projectId: string,
   changeIds?: string[],
@@ -92,11 +67,6 @@ export async function discardChanges(
   );
 }
 
-/**
- * End the edit session for a project.
- * @param projectId - The unique identifier of the project
- * @returns Session response with project ID and session mode
- */
 export async function endSession(
   projectId: string,
 ): Promise<ApiResult<SessionResponseDto>> {

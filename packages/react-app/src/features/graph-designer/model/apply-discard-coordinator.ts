@@ -125,7 +125,7 @@ async function finalizeEndSession(
   }
 
   if (!isTransportFailure(result)) {
-    return {kind: 'endSessionTransportIndeterminate'};
+    return {kind: 'endSessionPostCommitReloadNeeded'};
   }
 
   const retryResult = await deps.endSession(projectId);

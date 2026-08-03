@@ -7,6 +7,27 @@ import {Children, isValidElement} from 'react';
 
 import {fireEvent, render, screen} from '@testing-library/react';
 
+jest.mock('@qualcomm-ui/react/accordion', () => ({
+  Accordion: {
+    ItemContent: ({children}: any) => <div>{children}</div>,
+    ItemIndicator: () => <span />,
+    ItemRoot: ({children, value}: any) => (
+      <div data-testid={`accordion-item-${value}`}>{children}</div>
+    ),
+    ItemSecondaryText: ({children}: any) => <span>{children}</span>,
+    ItemText: ({children}: any) => <span>{children}</span>,
+    ItemTrigger: ({children}: any) => <button type="button">{children}</button>,
+    Root: ({children, defaultValue}: any) => (
+      <div
+        data-default-value={JSON.stringify(defaultValue)}
+        data-testid="accordion-root"
+      >
+        {children}
+      </div>
+    ),
+  },
+}));
+
 jest.mock('@qualcomm-ui/react/button', () => ({
   Button: ({children, onClick}: any) => (
     <button onClick={onClick}>{children}</button>
@@ -105,7 +126,67 @@ const buildResponse = (
   ...overrides,
 });
 
+const makeRows = (
+  prefix: string,
+  count: number,
+): CreateUsecasesResponseDto['created'] =>
+  Array.from({length: count}, (_, index) =>
+    makeRow({changeId: `${prefix}-${index}`, systemId: `${prefix}-${index}`}),
+  );
+
 describe('ApplySummaryDialog', () => {
+  it('expands every category by default when total rows are at or below the threshold', () => {
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({
+          created: makeRows('created', 8),
+          updated: makeRows('updated', 7),
+        })}
+      />,
+    );
+
+    const root = screen.getByTestId('accordion-root');
+    expect(JSON.parse(root.getAttribute('data-default-value') ?? '[]')).toEqual(
+      ['created', 'updated'],
+    );
+  });
+
+  it('expands only the first category by default when total rows exceed the threshold', () => {
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({
+          created: makeRows('created', 10),
+          updated: makeRows('updated', 6),
+        })}
+      />,
+    );
+
+    const root = screen.getByTestId('accordion-root');
+    expect(JSON.parse(root.getAttribute('data-default-value') ?? '[]')).toEqual(
+      ['created'],
+    );
+  });
+
+  it('renders a flat layout with no accordion when only one category is non-empty', () => {
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({created: makeRows('created', 20)})}
+      />,
+    );
+
+    expect(screen.queryByTestId('accordion-root')).not.toBeInTheDocument();
+    expect(screen.getByText('Created')).toBeInTheDocument();
+  });
+
   it('renders only non-empty sections', () => {
     const updatedRow = makeRow({
       changeId: 'updated-1',

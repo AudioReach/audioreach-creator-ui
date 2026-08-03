@@ -555,6 +555,24 @@ describe('runFinalize', () => {
     });
   });
 
+  it('returns reload-needed without retrying when end-session returns a determinate but uncategorized failure', async () => {
+    const endSession = jest
+      .fn()
+      .mockResolvedValueOnce(
+        apiFailure<SessionResponseDto>({errors: ['HTTP error: 500']}),
+      );
+    const deps = fullHappyPathDeps(endSession);
+
+    const outcome = await runFinalize(deps, {
+      checkedChangeIds: ['a'],
+      processedFromPrevAttempt: [],
+      projectId: 'proj-1',
+    });
+
+    expect(outcome).toEqual({kind: 'endSessionPostCommitReloadNeeded'});
+    expect(endSession).toHaveBeenCalledTimes(1);
+  });
+
   it('retries end-session on transport failure and returns committed on retry success', async () => {
     const endSession = jest
       .fn()
