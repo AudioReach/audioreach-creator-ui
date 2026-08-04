@@ -407,7 +407,9 @@ export function useApplyDiscard(
       if (!response) {
         return;
       }
-      const createdSystemIds = response.created.map((r) => r.systemId);
+      const createdSystemIds = response.created
+        .filter((r) => checkedChangeIds.includes(r.changeId))
+        .map((r) => r.systemId);
       setPendingReview(null);
       pendingReviewResponseRef.current = null;
       setIsBusy(true);

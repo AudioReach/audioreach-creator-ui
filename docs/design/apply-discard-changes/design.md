@@ -843,12 +843,26 @@ READONLY. `isBusy` (the §7.2 guard) disables both during an in-flight operation
 Driven by `CreateUsecasesResponseDto`. Renders one section per **non-empty** category
 (Created / Updated / Deleted); a section with no rows is omitted (FR-AD-05). Each row
 is a `Checkbox` (checked by default) labelled with the usecase display name, keyed by
-`changeId`. The section list is data-driven from the response keys, so future
-categories render without structural change (requirements §7 boundary).
+`changeId`. Deleted-category checkboxes render `readOnly` — visible and focusable, but
+non-togglable — since a pending deletion is always staged and committed and cannot be
+unchecked (FR-AD-05, I2). The "Deleted" section title carries an inline `Info` icon
+(inside `Accordion.ItemText` / the flat-layout `h3`, not beside it) explaining why its
+rows can't be unchecked, rather than wrapping every row individually — keeping the icon
+inside the title element preserves identical header layout/height across all
+categories and avoids nesting an interactive tooltip trigger inside the accordion
+trigger's own `<button>`. The tooltip uses the composite
+`Tooltip.Root/Trigger/Positioner/Content` API without an outer `Portal` (matching the
+pattern already used elsewhere in this repo for tooltips inside modal dialogs) — a
+portalled tooltip content node sits outside the `Dialog`'s DOM subtree, which the
+dialog's focus/inert handling treats as background content and visually suppresses.
+The section list is data-driven from the response keys, so future categories render
+without structural change (requirements §7
+boundary).
 
-When `created.length > 0`, renders the navigation `RadioGroup` (FR-AD-06): options
-`keep` (default) / `add` / `switch`, each with a one-line helper. Hidden when there
-are no created rows.
+When at least one created row remains checked, renders the navigation `RadioGroup`
+(FR-AD-06): options `keep` (default) / `add` / `switch`, each with a one-line helper.
+Hidden when there are no created rows, or when the user has unchecked every created
+row.
 
 Footer: **OK** (collects checked `changeId`s + nav choice → `onOK`) and **Cancel**
 (→ `onCancel`). Local component state holds the checkbox selection and nav choice;

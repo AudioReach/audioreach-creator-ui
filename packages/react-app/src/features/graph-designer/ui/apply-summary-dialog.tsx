@@ -5,14 +5,16 @@
 
 import {useState} from 'react';
 
-import {CirclePlus, type LucideIcon, Pencil, Trash2} from 'lucide-react';
+import {CirclePlus, Info, type LucideIcon, Pencil, Trash2} from 'lucide-react';
 
 import {Accordion} from '@qualcomm-ui/react/accordion';
 import {Button} from '@qualcomm-ui/react/button';
 import {Checkbox} from '@qualcomm-ui/react/checkbox';
 import {Dialog} from '@qualcomm-ui/react/dialog';
 import {Divider} from '@qualcomm-ui/react/divider';
+import {Icon} from '@qualcomm-ui/react/icon';
 import {Radio, RadioGroup} from '@qualcomm-ui/react/radio';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import type {
   CreateUsecasesResponseDto,
@@ -31,6 +33,7 @@ interface ApplySummaryDialogProps {
 interface Category {
   icon: LucideIcon;
   key: string;
+  readOnly?: boolean;
   rows: UsecaseIdentifierWithChangeInfoDto[];
   title: string;
 }
@@ -66,22 +69,45 @@ function defaultExpandedKeys(categories: Category[]): string[] {
   return categories.length > 0 ? [categories[0].key] : [];
 }
 
+function DeletedInfoTooltip() {
+  return (
+    <Tooltip.Root positioning={{placement: 'right'}}>
+      <Tooltip.Trigger>
+        <span className="ml-2 inline-flex items-center">
+          <Icon icon={Info} size="lg" />
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Positioner>
+        <Tooltip.Content>
+          <Tooltip.Arrow>
+            <Tooltip.ArrowTip />
+          </Tooltip.Arrow>
+          Deleted use cases cannot be excluded
+        </Tooltip.Content>
+      </Tooltip.Positioner>
+    </Tooltip.Root>
+  );
+}
+
 function CategorySection({
   checkedByChangeId,
   onToggle,
+  readOnly,
   rows,
   title,
 }: {
   checkedByChangeId: Record<string, boolean>;
   onToggle: (changeId: string, checked: boolean) => void;
+  readOnly?: boolean;
   rows: UsecaseIdentifierWithChangeInfoDto[];
   title?: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
       {title && (
-        <h3 className="text-sm font-semibold text-[color:var(--color-text-neutral-primary)]">
+        <h3 className="flex items-center gap-1 text-sm font-semibold text-[color:var(--color-text-neutral-primary)]">
           {title}
+          {readOnly && <DeletedInfoTooltip />}
         </h3>
       )}
       {rows.map((row) => (
@@ -90,6 +116,7 @@ function CategorySection({
           checked={checkedByChangeId[row.changeId]}
           label={rowLabel(row)}
           onCheckedChange={(checked) => onToggle(row.changeId, checked)}
+          readOnly={readOnly}
           size="sm"
         />
       ))}
@@ -120,8 +147,18 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
   const categories: Category[] = [
     {icon: CirclePlus, key: 'created', rows: created, title: 'Created'},
     {icon: Pencil, key: 'updated', rows: updated, title: 'Updated'},
-    {icon: Trash2, key: 'deleted', rows: deleted, title: 'Deleted'},
+    {
+      icon: Trash2,
+      key: 'deleted',
+      readOnly: true,
+      rows: deleted,
+      title: 'Deleted',
+    },
   ].filter((category) => category.rows.length > 0);
+
+  const anyCreatedChecked = created.some(
+    (row) => checkedByChangeId[row.changeId],
+  );
 
   return (
     <Dialog.Root
@@ -134,12 +171,13 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
       }}
       open={open}
       placement="center"
+      scrollBehavior="inside"
       size="md"
     >
       <Dialog.FloatingPortal>
         <Dialog.Body>
           <Dialog.Heading>Summary</Dialog.Heading>
-          <div className="flex max-h-[50vh] flex-col gap-4 overflow-y-auto pr-2">
+          <div className="flex flex-col gap-4">
             {categories.length > 1 ? (
               <Accordion.Root
                 className="flex flex-col gap-2"
@@ -154,7 +192,10 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
                     <Accordion.ItemRoot value={category.key}>
                       <Accordion.ItemTrigger icon={category.icon}>
                         <Accordion.ItemText>
-                          {category.title}
+                          <span className="inline-flex items-center gap-1">
+                            {category.title}
+                            {category.readOnly && <DeletedInfoTooltip />}
+                          </span>
                         </Accordion.ItemText>
                         <Accordion.ItemSecondaryText>
                           {usecaseCountLabel(category.rows.length)}
@@ -165,6 +206,7 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
                         <CategorySection
                           checkedByChangeId={checkedByChangeId}
                           onToggle={toggleRow}
+                          readOnly={category.readOnly}
                           rows={category.rows}
                         />
                       </Accordion.ItemContent>
@@ -178,13 +220,14 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
                   key={category.key}
                   checkedByChangeId={checkedByChangeId}
                   onToggle={toggleRow}
+                  readOnly={category.readOnly}
                   rows={category.rows}
                   title={category.title}
                 />
               ))
             )}
           </div>
-          {created.length > 0 && (
+          {created.length > 0 && anyCreatedChecked && (
             <div className="flex flex-col gap-4">
               <Divider />
               <h4 className="text-sm font-semibold text-[color:var(--color-text-neutral-primary)]">

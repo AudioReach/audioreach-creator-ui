@@ -57,8 +57,8 @@ and Discard.
 | FR-AD-02 | On Apply, the routing-trigger flag selects the branch: routing-relevant edits (flag true) run the reconcile/review pipeline; non-routing-only edits (flag false) skip review and finalize by committing the auto-staged edits, then ending the session. |
 | FR-AD-03 | The reconcile step validates the edits and returns the set of usecase changes to review. |
 | FR-AD-04 | Issues that are blocking (`category` BLOCKING, or `severity` FATAL/ERROR) abort Apply; non-blocking and backend-acknowledged data-loss issues are shown but the user may proceed. |
-| FR-AD-05 | The review dialog lists created/updated/deleted usecases, all selected by default; empty categories are hidden. |
-| FR-AD-06 | When new usecases are created, the user chooses how the canvas selection updates (keep / add / switch); hidden otherwise. |
+| FR-AD-05 | The review dialog lists created/updated/deleted usecases, all selected by default; empty categories are hidden. Deleted usecases are always selected and cannot be deselected — a pending deletion cannot be partially applied. |
+| FR-AD-06 | When new usecases are created, the user chooses how the canvas selection updates (keep / add / switch); hidden when there are no created usecases, or when the user has unchecked every created row. |
 | FR-AD-07 | Confirming stages the selected usecases, commits all staged changes (with validation enforced), and ends the session; cancelling returns to editing unchanged. Confirming with no usecases selected still attempts the commit/end-session — the backend may reject it (e.g. modules added but attached to no committed usecase), which surfaces as a reportable error and leaves the session active for the user to correct. |
 | FR-AD-08 | When reconciliation yields no usecase changes, Apply skips the review dialog and finalizes by committing the auto-staged edits, then ending the session. |
 | FR-AD-09 | A reportable finalize-call business error — from Apply's `stage-changes` / `commit-changes` / `end-session`, or Discard's `discard-changes` / `end-session` — keeps the session active with the pending changes intact; the user may correct the cause and retry, or discard. |
@@ -109,7 +109,9 @@ assert is this transport window, which it defers to a user-driven reload (FR-AD-
 than misrepresenting.
 
 **I2 — Commit XOR clear:** A usecase change is either staged-then-committed or
-cleared — never both. Unchecked summary rows are never committed.
+cleared — never both. Unchecked summary rows are never committed. Exception: deleted
+rows are exempt from the unchecked-to-clear path — they are always staged and
+committed, never left uncommitted.
 
 **I3 — Single in-flight operation:** At most one Apply or Discard operation runs at
 a time (see NFR-AD-01).

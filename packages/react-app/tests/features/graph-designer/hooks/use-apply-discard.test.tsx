@@ -591,7 +591,7 @@ describe('useApplyDiscard', () => {
       const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
 
       await act(async () => {
-        await result.current.submitReview([], 'add');
+        await result.current.submitReview(['change-1'], 'add');
       });
 
       expect(loadGraphDataSpy).toHaveBeenCalledWith([
@@ -613,10 +613,29 @@ describe('useApplyDiscard', () => {
       const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
 
       await act(async () => {
-        await result.current.submitReview([], 'switch');
+        await result.current.submitReview(['change-1'], 'switch');
       });
 
       expect(loadGraphDataSpy).toHaveBeenCalledWith(['uc-new-1']);
+      loadGraphDataSpy.mockRestore();
+    });
+
+    it('nav choice switch reloads no created usecases once the created row is unchecked', async () => {
+      const store = makeStore();
+      const response = makeReviewResponse();
+      const {result} = await openReview(store, response);
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+      const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
+
+      await act(async () => {
+        await result.current.submitReview([], 'switch');
+      });
+
+      expect(loadGraphDataSpy).toHaveBeenCalledWith([]);
       loadGraphDataSpy.mockRestore();
     });
   });

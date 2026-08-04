@@ -35,11 +35,16 @@ jest.mock('@qualcomm-ui/react/button', () => ({
 }));
 
 jest.mock('@qualcomm-ui/react/checkbox', () => ({
-  Checkbox: ({checked, label, onCheckedChange}: any) => (
+  Checkbox: ({checked, label, onCheckedChange, readOnly}: any) => (
     <label>
       <input
         checked={checked ?? false}
-        onChange={(e) => onCheckedChange(e.target.checked)}
+        onChange={(e) => {
+          if (!readOnly) {
+            onCheckedChange(e.target.checked);
+          }
+        }}
+        readOnly={readOnly}
         type="checkbox"
       />
       {label}
@@ -57,6 +62,10 @@ jest.mock('@qualcomm-ui/react/dialog', () => ({
     IndicatorIcon: () => <span />,
     Root: ({children, open}: any) => (open ? <div>{children}</div> : null),
   },
+}));
+
+jest.mock('@qualcomm-ui/react/icon', () => ({
+  Icon: () => <span />,
 }));
 
 jest.mock('@qualcomm-ui/react/radio', () => ({
@@ -100,6 +109,17 @@ jest.mock('@qualcomm-ui/react/radio', () => ({
         })}
       </div>
     ),
+  },
+}));
+
+jest.mock('@qualcomm-ui/react/tooltip', () => ({
+  Tooltip: {
+    Arrow: ({children}: any) => <>{children}</>,
+    ArrowTip: () => null,
+    Content: ({children}: any) => <div>{children}</div>,
+    Positioner: ({children}: any) => <div>{children}</div>,
+    Root: ({children}: any) => <div>{children}</div>,
+    Trigger: ({children}: any) => <>{children}</>,
   },
 }));
 
@@ -244,6 +264,54 @@ describe('ApplySummaryDialog', () => {
     expect(
       screen.getByText('Switch to created usecases only'),
     ).toBeInTheDocument();
+  });
+
+  it('hides the radio group once every created row is unchecked', () => {
+    const createdRow = makeRow({
+      changeId: 'created-1',
+      usecaseAliasName: 'Created Alias',
+    });
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({created: [createdRow]})}
+      />,
+    );
+
+    expect(screen.getByText('Keep current selection')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Created Alias'));
+
+    expect(
+      screen.queryByText('Keep current selection'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('makes deleted-row checkboxes read-only so they cannot be unchecked', () => {
+    const onOK = jest.fn();
+    const deletedRow = makeRow({
+      changeId: 'deleted-1',
+      usecaseAliasName: 'Deleted Alias',
+    });
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={onOK}
+        open
+        response={buildResponse({deleted: [deletedRow]})}
+      />,
+    );
+
+    const checkbox = screen.getByLabelText('Deleted Alias');
+    expect(checkbox).toHaveAttribute('readonly');
+    expect(checkbox).not.toBeDisabled();
+
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByText('OK'));
+
+    expect(onOK).toHaveBeenCalledWith(['deleted-1'], 'keep');
   });
 
   it('invokes onOK with all change ids checked and the default nav choice', () => {
