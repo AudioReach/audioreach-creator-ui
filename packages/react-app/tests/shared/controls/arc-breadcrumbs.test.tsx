@@ -163,11 +163,10 @@ describe('ArcBreadcrumbs - Generic Controls API', () => {
       const handleItemClick = jest.fn(
         (
           event: React.MouseEvent<HTMLElement>,
-          item: ArcBreadcrumbItem,
+          _item: ArcBreadcrumbItem,
           _index: number,
         ) => {
           event.preventDefault();
-          console.log(`Navigating to: ${item.label}`);
         },
       );
       const user = userEvent.setup();

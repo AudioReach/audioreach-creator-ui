@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import {fireEvent, render, screen} from '@testing-library/react';
 
 import {useModuleTagKeysStore} from '~features/key-configurator/model/module-tag-keys-store';

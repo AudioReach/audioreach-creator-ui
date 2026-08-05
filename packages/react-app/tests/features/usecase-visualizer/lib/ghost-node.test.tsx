@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import {render, screen} from '@testing-library/react';
 import {ReactFlowProvider} from '@xyflow/react';
 

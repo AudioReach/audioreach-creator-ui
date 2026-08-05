@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import {TabType} from '~shared/store/project-layout.types';
 import {
   APP_CONFIG,

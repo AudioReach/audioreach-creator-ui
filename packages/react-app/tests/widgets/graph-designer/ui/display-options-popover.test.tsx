@@ -62,13 +62,13 @@ jest.mock('@qualcomm-ui/react/radio', () => ({
           return child;
         }
         return (
-          <button
+          <div
             data-testid={`q-radio-select-${child.props.value}`}
             onClick={() => onValueChange(child.props.value)}
-            type="button"
+            role="button"
           >
             {child}
-          </button>
+          </div>
         );
       })}
     </div>

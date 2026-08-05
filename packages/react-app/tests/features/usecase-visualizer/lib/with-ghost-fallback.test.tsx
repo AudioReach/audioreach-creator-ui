@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import type {ComponentType} from 'react';
 
 import {render, screen} from '@testing-library/react';

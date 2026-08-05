@@ -21,18 +21,21 @@ window.HTMLElement.prototype.scrollIntoView = jest.fn();
 
 // Suppress console warnings in tests (optional)
 const originalError = console.error;
-// Known QUI library behaviour: custom component props (startIcon, onFocusChange,
-// etc.) are forwarded to underlying DOM elements. React 19 passes 'Warning: %s'
-// as args[0] and the interpolated message as args[1]; match both positions.
+// Known QUI library bugs: custom props forwarded to native DOM elements.
+// React 19 calls console.error(fmt, name, ...) with literal `%s` placeholders
+// in args[0] and the interpolated prop name in args[1]. Match args[0]'s
+// format-string shape — matching a pre-interpolated string never fires
+// because the string isn't interpolated until Jest's console formatter runs.
 const QUI_PROP_LEAK_PATTERNS = [
-  /React does not recognize the `\w+` prop on a DOM element/,
-  /Unknown event handler property `\w+`\. It will be ignored/,
-  /Received `\w+` for a non-boolean attribute `\w+`/,
+  /React does not recognize the `%s` prop on a DOM element/,
+  /Received `%s` for a non-boolean attribute `%s`/,
+  /Unknown event handler property `%s`\. It will be ignored/,
 ];
 function isQuiPropLeak(args: unknown[]): boolean {
-  return args.some(
-    (a) =>
-      typeof a === 'string' && QUI_PROP_LEAK_PATTERNS.some((re) => re.test(a)),
+  const first = args[0];
+  return (
+    typeof first === 'string' &&
+    QUI_PROP_LEAK_PATTERNS.some((re) => re.test(first))
   );
 }
 beforeAll(() => {
@@ -172,10 +175,13 @@ jest.mock('@qualcomm-ui/react/button', () => ({
         className,
         disabled,
         endIcon: _endIcon,
+        fullWidth: _fw,
         iconPosition: _iconPosition,
         onClick,
+        size: _size,
         startIcon: _startIcon,
         type = 'button',
+        variant: _variant,
         ...props
       }) => {
         return createElement(
@@ -200,7 +206,10 @@ jest.mock('@qualcomm-ui/react/button', () => ({
         children,
         className,
         disabled,
+        fullWidth: _fw,
         onClick,
+        size: _size,
+        variant: _variant,
         ...props
       }) => {
         return createElement(
@@ -664,13 +673,17 @@ jest.mock('@qualcomm-ui/react/popover', () => ({
         children,
       );
     }),
-    Root: jest.fn().mockImplementation(({children, open, ...props}) => {
-      return createElement(
-        'div',
-        {'data-open': open, 'data-testid': 'popover-root', ...props},
-        children,
-      );
-    }),
+    Root: jest
+      .fn()
+      .mockImplementation(
+        ({children, onOpenChange: _onOpenChange, open, ...props}) => {
+          return createElement(
+            'div',
+            {'data-open': open, 'data-testid': 'popover-root', ...props},
+            children,
+          );
+        },
+      ),
     Trigger: jest.fn().mockImplementation(({children, ...props}) => {
       // Handle render prop pattern
       if (typeof children === 'function') {

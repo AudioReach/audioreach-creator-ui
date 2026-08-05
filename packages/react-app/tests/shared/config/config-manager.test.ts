@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {DEFAULT_USER_PREFERENCES} from '~shared/config/user-preferences-types';
 import {GetFlexLayoutConfig, graphDesignerLayout} from '~shared/config/utils';

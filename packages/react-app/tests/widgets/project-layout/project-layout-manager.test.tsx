@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/lib/logger');
+
 import {render} from '@testing-library/react';
 
 let capturedOnModelChange: ((model: any) => void) | null = null;
