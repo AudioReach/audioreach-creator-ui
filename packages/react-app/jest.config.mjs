@@ -106,8 +106,18 @@ export default {
     ],
   },
 
-  // Transform flexlayout-react (ESM) so Jest can process it
-  transformIgnorePatterns: ['/node_modules/(?!flexlayout-react)'],
+  // Several dependencies ship pure ESM that Jest's runtime cannot execute
+  // directly; allow ts-jest to transform them to CommonJS. pnpm nests real
+  // packages under node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>, so the
+  // first path segment after node_modules is `.pnpm`, not the package scope —
+  // a naive `(?!@scope)` lookahead never matches. The two entries below cover
+  // both the .pnpm store path and any hoisted top-level path. The
+  // `@qualcomm-ui` match covers the whole scope, including qui's own
+  // transitive sub-packages (qds-core, react-core, utils, core).
+  transformIgnorePatterns: [
+    '/node_modules/\\.pnpm/(?!(.*(@qualcomm-ui|flexlayout-react)))',
+    '/node_modules/(?!\\.pnpm)(?!(@qualcomm-ui|flexlayout-react)/)',
+  ],
 
   // Verbose output
   verbose: true,
