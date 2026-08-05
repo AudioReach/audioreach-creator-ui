@@ -158,6 +158,37 @@ Zustand v5. One store per concern, scoped per project where state is per-project
 - Coverage threshold: 10% globally (branches, functions, lines, statements)
 - Run `pnpm test` locally; CI runs `pnpm test:ci` (coverage + no watch mode)
 
+### No console output in tests
+
+`tests/test-setup.ts` fails any test that emits an unfiltered call to
+`console.error`, `console.warn`, `console.debug`, `console.info`, or
+`console.log`. The only allowlisted noise is the `ReactDOM.render is
+deprecated` warning and qui prop-leak warnings on `console.error` (see
+`QUI_PROP_LEAK_PATTERNS`); every other channel starts with an empty allowlist.
+Anything reaching a guarded channel must be fixed at the source, not
+tolerated:
+
+- **Logger output** (`[ERROR]`/`[WARN]`/`[INFO]`/`[DEBUG]` from
+  `~shared/lib/logger`) — add `jest.mock('~shared/lib/logger')` at the top of
+  the suite, right after the SPDX header. Every suite that renders code
+  paths which log needs this. The logger routes each level to its matching
+  `console` channel, so a missing mock will fail via whichever channel the
+  code path uses.
+- **React DOM warnings from qui mocks** — the mock is forwarding a
+  non-standard prop to a native element. Destructure the offending prop out
+  (`fooProp: _fooProp,`) in the mock's factory so it never reaches the DOM.
+- **Invalid HTML nesting** (e.g. `<button>` inside `<button>`) — the mock is
+  using the wrong element for its click target. Use a `<div role="button">`
+  instead when the mock's child may itself be interactive.
+- **Stray `console.log` from debugging** — remove it before committing.
+- **Legitimately unavoidable noise from a third-party library** — extend the
+  matching channel's allowlist in `test-setup.ts` (or add a sibling filter)
+  with a comment explaining why.
+
+Never suppress noise by wrapping a console channel locally or by broadening
+the global filter without justification — those are the paths that silently
+rot the suite.
+
 ---
 
 ## Commit messages

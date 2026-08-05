@@ -19,8 +19,15 @@ import {
 // that call it (e.g. ParameterDetailPane auto-scroll) do not throw in tests.
 window.HTMLElement.prototype.scrollIntoView = jest.fn();
 
-// Suppress console warnings in tests (optional)
+// Any unfiltered call to a console channel fails the test. Documented in
+// `.ai/context/CONTEXT.md` § "No console.error in test output". Filters below
+// exist per channel; only `error` has legitimate carve-outs today.
 const originalError = console.error;
+const originalWarn = console.warn;
+const originalDebug = console.debug;
+const originalInfo = console.info;
+const originalLog = console.log;
+
 // Known QUI library bugs: custom props forwarded to native DOM elements.
 // React 19 calls console.error(fmt, name, ...) with literal `%s` placeholders
 // in args[0] and the interpolated prop name in args[1]. Match args[0]'s
@@ -38,21 +45,50 @@ function isQuiPropLeak(args: unknown[]): boolean {
     QUI_PROP_LEAK_PATTERNS.some((re) => re.test(first))
   );
 }
-beforeAll(() => {
-  console.error = (...args) => {
-    if (
-      typeof args[0] === 'string' &&
-      (args[0].includes('Warning: ReactDOM.render is deprecated') ||
-        isQuiPropLeak(args))
-    ) {
+
+function isAllowedError(args: unknown[]): boolean {
+  return (
+    typeof args[0] === 'string' &&
+    (args[0].includes('Warning: ReactDOM.render is deprecated') ||
+      isQuiPropLeak(args))
+  );
+}
+
+function failOnConsole(
+  channel: 'error' | 'warn' | 'debug' | 'info' | 'log',
+  original: (...args: unknown[]) => void,
+  isAllowed: (args: unknown[]) => boolean,
+): (...args: unknown[]) => void {
+  return (...args: unknown[]) => {
+    if (isAllowed(args)) {
       return;
     }
-    originalError.call(console, ...args);
+    // Print the args so the failure output shows what leaked, then throw so
+    // the test fails with a source-attributed stack. Mock the source (e.g.
+    // jest.mock the logger) rather than allowlisting real code output.
+    original.call(console, ...args);
+    throw new Error(
+      `Unexpected console.${channel} in tests. See preceding output. args[0]: ${String(args[0]).slice(0, 200)}`,
+    );
   };
+}
+
+const never = (): boolean => false;
+
+beforeAll(() => {
+  console.error = failOnConsole('error', originalError, isAllowedError);
+  console.warn = failOnConsole('warn', originalWarn, never);
+  console.debug = failOnConsole('debug', originalDebug, never);
+  console.info = failOnConsole('info', originalInfo, never);
+  console.log = failOnConsole('log', originalLog, never);
 });
 
 afterAll(() => {
   console.error = originalError;
+  console.warn = originalWarn;
+  console.debug = originalDebug;
+  console.info = originalInfo;
+  console.log = originalLog;
 });
 
 // Global mocks for @qualcomm-ui/react components
