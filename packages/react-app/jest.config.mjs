@@ -69,7 +69,7 @@ export default {
   rootDir: '.',
 
   // Setup files
-  setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/test-setup.ts'],
 
   testEnvironment: 'jsdom',
 
