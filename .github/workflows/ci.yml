@@ -11,6 +11,17 @@ on:
     branches: [main, "feature/*"]
   workflow_dispatch:
 
+# This job only reads the repo and uploads artifacts; drop the default token
+# down to read-only.
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same ref so a new push to a PR stops the
+# previous in-flight run instead of queueing another full pipeline.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     name: CI Checks
@@ -61,7 +72,6 @@ jobs:
 
       - name: Test (React only)
         run: pnpm run -C packages/react-app test:ci
-        continue-on-error: true
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
