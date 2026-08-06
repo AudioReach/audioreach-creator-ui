@@ -24,8 +24,11 @@ import {Theme, useTheme} from '~shared/providers/theme-provider';
 import {AppTabEntity, useProjectLayoutStore} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {TabGroupType} from '~shared/store/project-layout.types';
+import {projectStoreRegistry} from '~shared/store/project-store-registry';
 import ProjectLayoutManager from '~widgets/project-layout/project-layout-manager';
 import ArcStartPage from '~widgets/start-page/ui/arc-start-page';
+
+import {releaseUsecaseEditLocks} from '../lib/release-usecase-edit-locks';
 
 const EditorShellContent: React.FC = () => {
   const {keyboardShortcuts} = useSideNavContext();
@@ -191,6 +194,8 @@ export const EditorShell: React.FC = () => {
   // Save configuration on app exit
   useEffect(() => {
     const handleBeforeUnload = () => {
+      releaseUsecaseEditLocks(projectStoreRegistry);
+
       // beforeunload is synchronous, so we can't reliably await async operations
       // Just trigger the save without waiting
       ConfigFileManager.instance.save().catch((error) => {
