@@ -7,6 +7,8 @@ import type {StoreApi} from 'zustand';
 
 import {logger} from '~shared/lib/logger';
 
+import type {ModuleDataSlice} from './module-data-slice';
+
 export interface SubgraphHeaderSelection {
   keyValues: Record<string, string>;
   subgraphId: string;
@@ -29,11 +31,16 @@ export interface SubgraphHeaderSelectionSlice {
  * Creates the subgraph-header-selection slice for composing into the
  * GraphDesignerStore.
  *
+ * @remarks The store type `S` must also compose `ModuleDataSlice` —
+ * `initializeHeaderSelection` and `setHeaderKeyValue` both call
+ * `syncEnableOverlays` to keep canvas enable-switch overlays in sync with the
+ * newly-resolved header selection.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.
  */
 export function createSubgraphHeaderSelectionSlice<
-  S extends SubgraphHeaderSelectionSlice,
+  S extends SubgraphHeaderSelectionSlice &
+    Pick<ModuleDataSlice, 'syncEnableOverlays'>,
 >(
   set: StoreApi<S>['setState'],
   get: StoreApi<S>['getState'],
@@ -58,6 +65,7 @@ export function createSubgraphHeaderSelectionSlice<
           [subgraphId]: {keyValues: defaults, subgraphId},
         },
       } as Partial<S>);
+      get().syncEnableOverlays(subgraphId);
     },
 
     setHeaderKeyValue: (
@@ -79,6 +87,7 @@ export function createSubgraphHeaderSelectionSlice<
           },
         },
       } as Partial<S>);
+      get().syncEnableOverlays(subgraphId);
     },
   };
 }
