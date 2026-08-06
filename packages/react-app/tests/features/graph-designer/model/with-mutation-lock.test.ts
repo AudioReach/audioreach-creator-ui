@@ -41,8 +41,8 @@ const mockEndSession = jest.mocked(endSession);
 const mockStartSession = jest.mocked(startSession);
 
 function makeStore(projectId = 'proj-wml-1') {
-  return createStore<EditSessionSlice>((set) =>
-    createEditSessionSlice(set, projectId),
+  return createStore<EditSessionSlice>((set, get) =>
+    createEditSessionSlice(set, get, projectId),
   );
 }
 

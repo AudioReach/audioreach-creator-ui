@@ -79,7 +79,7 @@ export function createGraphDesignerStore(
   return createStore<GraphDesignerStore>((set, get) => ({
     ...createUsecaseSelectionSlice(set),
     ...createGraphDataSlice(set, get, projectId),
-    ...createEditSessionSlice(set, projectId),
+    ...createEditSessionSlice(set, get, projectId),
     ...createVisualizerSlice(set),
     ...createSubsystemSlice(set, get),
     ...createKeyConfigSlice(set),

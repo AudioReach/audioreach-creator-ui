@@ -12,7 +12,7 @@ import type {KeyValue} from '~entities/usecases';
 import {logger} from '~shared/lib/logger';
 import {projectStoreRegistry} from '~shared/store/project-store-registry';
 
-import type {Connection} from './graph-data-slice';
+import type {Connection, UsecaseGraphData} from './graph-data-slice';
 
 /**
  * Where a subgraph currently on canvas came from this edit session
@@ -42,8 +42,13 @@ export interface EditSessionSlice {
   kvSelectionsById: Record<string, KvSelection[]>;
   mode: 'view' | 'edit';
   pairLinksById: Record<string, SubgraphPairResponseDto>;
+  pruneSessionLocalMapsForSubgraph: (subgraphId: string) => void;
   recordStageProcessed: (ids: string[]) => void;
   resetSessionLocalMaps: () => void;
+  setSubgraphProvenance: (
+    subgraphId: string,
+    provenance: SubgraphProvenance,
+  ) => void;
   stagedProcessedChangeIds: string[];
   subgraphProvenanceById: Record<string, SubgraphProvenance>;
   /** Fixed for the lifetime of the edit session, set in `enterEditMode()`. */
@@ -66,16 +71,18 @@ const INITIAL_SESSION_LOCAL_STATE = {
 
 /**
  * Creates the edit-session slice for composing into the Graph Designer tab
- * store. Holds session bookkeeping only (mode, exclusive lock, the single
- * serial mutation flag) — no graph data of its own.
+ * store. Holds session bookkeeping (mode, exclusive lock, the single serial
+ * mutation flag) plus provenance/KV/pairLinks maps derived from graph data
+ * — it owns no graph data itself, but reads it via `get()` to seed
+ * provenance on entry.
  *
  * @param set - Zustand set function bound to the parent store state.
+ * @param get - Zustand get function bound to the parent store state.
  * @param projectId - Project identifier this session's exclusive lock is scoped to.
  */
-export function createEditSessionSlice<S extends EditSessionSlice>(
-  set: SetState<S>,
-  projectId: string,
-): EditSessionSlice {
+export function createEditSessionSlice<
+  S extends EditSessionSlice & {graphData: UsecaseGraphData | null},
+>(set: SetState<S>, get: () => S, projectId: string): EditSessionSlice {
   const setSlice = set as SetState<EditSessionSlice>;
   const logSession = (message: string, action: string): void => {
     logger.debug(`editSessionSlice: ${message}`, {
@@ -122,6 +129,12 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
         return false;
       }
 
+      const subgraphs = get().graphData?.subgraphs ?? {};
+      const subgraphProvenanceById: Record<string, SubgraphProvenance> = {};
+      for (const subgraphId of Object.keys(subgraphs)) {
+        subgraphProvenanceById[subgraphId] = 'pre-loaded';
+      }
+
       const endResult = await endSession(projectId);
       if (!endResult.success) {
         const projectResult = await getProjectById(projectId);
@@ -151,6 +164,7 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
 
       setSlice({
         mode: 'edit',
+        subgraphProvenanceById,
         usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,
       });
       projectStore.getState().setEditModeState('edit');
@@ -185,6 +199,26 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
 
     mode: 'view',
 
+    pruneSessionLocalMapsForSubgraph: (subgraphId: string): void => {
+      setSlice((state) => {
+        const {[subgraphId]: _removedProvenance, ...subgraphProvenanceById} =
+          state.subgraphProvenanceById;
+        const {[subgraphId]: _removedKv, ...kvSelectionsById} =
+          state.kvSelectionsById;
+        const pairLinksById: typeof state.pairLinksById = {};
+        for (const [pairKey, pair] of Object.entries(state.pairLinksById)) {
+          if (
+            pair.sourceSubgraphSystemId === subgraphId ||
+            pair.destinationSubgraphSystemId === subgraphId
+          ) {
+            continue;
+          }
+          pairLinksById[pairKey] = pair;
+        }
+        return {kvSelectionsById, pairLinksById, subgraphProvenanceById};
+      });
+    },
+
     recordStageProcessed: (ids: string[]): void => {
       setSlice((state) => {
         const current = state.stagedProcessedChangeIds;
@@ -197,6 +231,18 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
 
     resetSessionLocalMaps: (): void => {
       setSlice(INITIAL_SESSION_LOCAL_STATE);
+    },
+
+    setSubgraphProvenance: (
+      subgraphId: string,
+      provenance: SubgraphProvenance,
+    ): void => {
+      setSlice((state) => ({
+        subgraphProvenanceById: {
+          ...state.subgraphProvenanceById,
+          [subgraphId]: provenance,
+        },
+      }));
     },
 
     usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,

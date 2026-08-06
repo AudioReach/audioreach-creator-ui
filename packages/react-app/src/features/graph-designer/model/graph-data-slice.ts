@@ -615,16 +615,29 @@ export function createGraphDataSlice<
       //    real names for any subgraph newly created by this mutation.
       await get().recomputeContainersAndSubgraphs();
 
-      // 3. pairLinksById/excludedLinks — direct lookup against the
+      // 3. Prune session-local maps for every subgraph the backend reports
+      //    as deleted (its last module was removed) — subgraphProvenanceById/
+      //    kvSelectionsById/pairLinksById must not keep a stale entry for a
+      //    subgraph that no longer derives from any surviving module.
+      for (const subgraphId of collections.deleted.subgraphs ?? []) {
+        get().pruneSessionLocalMapsForSubgraph(subgraphId);
+      }
+
+      // 4. pairLinksById/excludedLinks — direct lookup against the
       //    deleted bucket's own link ids, no diffing needed.
       get().pruneDeletedLinkBookkeeping(deletedLinkIds);
 
-      // 4. totalLinksAtPort — the response never includes the surviving
+      // 5. totalLinksAtPort — the response never includes the surviving
       //    sibling endpoint's updated count directly.
       get().adjustSurvivingPortCounts(
         [...collections.added.dataLinks, ...collections.added.controlLinks],
         deletedLinkEndpoints,
       );
+
+      // 6. Any successful add/delete reconciled through here leaves the
+      //    session dirty — gates the Apply button (apply-discard-changes
+      //    design.md §7.1).
+      get().markDirty();
     },
 
     applyDeletedCollection: (collection: DeletedIdsCollection): void => {

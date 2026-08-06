@@ -55,7 +55,7 @@ function makeStore(moduleList: ModuleDefinition[] = []) {
   const store = createStore<TestStore>((set, get) => ({
     ...createGraphDataSlice(set, get, 'proj-1'),
     ...createModuleListSlice(set, get, 'proj-1'),
-    ...createEditSessionSlice(set, 'proj-1'),
+    ...createEditSessionSlice(set, get, 'proj-1'),
   }));
   if (moduleList.length > 0) {
     store.setState({moduleList});

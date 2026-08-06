@@ -443,7 +443,11 @@ Mechanics' concern, same split as [§4](#4-port-context-menu).
 
 ## 6. API Surface
 
-New additions to `entities/usecases/api/usecases-api.ts`. All confirmed
+New additions to `entities/usecases/api/usecases-api.ts`, except
+`patchSpfModule` (row 7 below) which lives in
+`entities/spf-modules/api/spf-modules-api.ts` — already implemented by
+[node-operations-design.md §3.4](node-operations-design.md#34-rename-fr-mod-07),
+reused here unchanged for its port-count fields. All confirmed
 against the current backend swagger, per
 [design.md §7.1](design.md#71-confirmed-endpoints)/[§7.3](design.md#73-non-cascading-narrow-response-endpoints).
 

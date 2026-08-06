@@ -436,6 +436,11 @@ itself) and merges them into `GraphDataSlice`, then:
    id-only deleted bucket (shape 4 above), each deleted link's endpoints
    are resolved from `graphData.connections` before the link's own entry
    is removed, since the id alone carries no endpoint fields.
+5. Marks the session dirty (`markDirty`) — any successful add/delete
+   reconciled through here enables the Apply button
+   ([apply-discard-changes/design.md §7.1](../apply-discard-changes/design.md#71-confirmed-endpoints)).
+   Rename bypasses this reconciler (narrow direct write, §2.4) and calls
+   `markDirty` itself on success.
 
 Two narrow-response endpoint classes are **excluded** from this mechanism
 (no collection to reconcile): (a) actions that mutate exactly one
