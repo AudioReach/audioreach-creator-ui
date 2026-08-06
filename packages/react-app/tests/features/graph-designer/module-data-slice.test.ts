@@ -69,6 +69,7 @@ type TestStore = ModuleDataSlice &
 
 function makeWidenedStore(options: {
   headerSelectionsBySubgraphId?: SubgraphHeaderSelectionSlice['headerSelectionsBySubgraphId'];
+  moduleDefinitionsById?: ModuleListSlice['moduleDefinitionsById'];
   moduleInstances?: Record<string, ModuleInstance>;
   withEnableDefinition?: boolean;
 }) {
@@ -91,10 +92,10 @@ function makeWidenedStore(options: {
     loadModuleList: async () => {},
     markClean: () => {},
     markDirty: () => {},
-    moduleDefinitionsById: {},
+    moduleDefinitionsById: options.moduleDefinitionsById ?? {},
     moduleList: [],
     moduleListSearchQuery: '',
-    moduleListStatus: 'uninitialized',
+    moduleListStatus: 'ready',
     selectedDspTypes: [],
     selectedModuleTypes: [],
     setModuleListSearchQuery: () => {},
@@ -106,7 +107,10 @@ function makeWidenedStore(options: {
       headerSelectionsBySubgraphId: options.headerSelectionsBySubgraphId,
     });
   }
-  if (options.withEnableDefinition ?? true) {
+  if (
+    !options.moduleDefinitionsById &&
+    (options.withEnableDefinition ?? true)
+  ) {
     store.setState({
       moduleDefinitionsById: {
         [MODULE_DEFINITION_ID]: makeModuleDefinitionDtoWithEnable(),
@@ -252,6 +256,172 @@ function makeParam(
     systemId: parameterId,
     ...overrides,
   };
+}
+
+function makeModuleDefinitionWithEnable(
+  overrides?: Partial<SpfModuleDefinitionResponseDto>,
+): SpfModuleDefinitionResponseDto {
+  return {
+    builtIn: true,
+    customModuleInfo: {
+      entryPointTag: '',
+      fileName: '',
+      interfaceTypeId: 0,
+      interfaceVersionId: 0,
+      majorTypeId: 0,
+    },
+    deprecated: false,
+    description: '',
+    displayName: 'Splitter',
+    isOffloadable: false,
+    modSearchKeys: '',
+    moduleDirectionType: 'SOURCE',
+    moduleId: 2012,
+    moduleInfo: {
+      containerTypeInfo: [],
+      dynamicIntents: [],
+      inputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-in'},
+      mdfModuleType: '',
+      metaData: 0,
+      moduleTypeInfo: {
+        buildType: '',
+        islandFriendly: false,
+        majorModuleType: '',
+      },
+      outputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-out'},
+      pidFramework: 0,
+      reserved: 0,
+      stackSize: 0,
+      staticCtrlPorts: {
+        portId: 0,
+        portIntents: [],
+        portName: '',
+        systemId: 'ctrl',
+      },
+    },
+    name: 'Splitter',
+    paramDefinitionsSummaryInfo: [
+      {
+        deprecated: false,
+        description: '',
+        isHidden: false,
+        isReadOnly: false,
+        name: 'Enable',
+        paramId: 0x8001026,
+        pidType: '',
+        systemId: ENABLE_PARAM_SYSTEM_ID,
+        toolPolicy: '',
+      },
+    ],
+    processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
+    systemId: 'def-2012',
+    vocoderModuleType: '',
+    ...overrides,
+  };
+}
+
+function enableDtoFixture(value: string): CalDataDto {
+  return {
+    changeInfo: {changeType: 'NONE'},
+    Ckv: [],
+    parameters: [
+      {
+        changeInfo: {changeType: 'NONE'},
+        elements: [
+          {
+            allowedValues: [
+              {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+              {name: 'Disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+            ],
+            isReadOnly: false,
+            name: 'Enable',
+            type: 'CONFIG_ELEMENT',
+            value,
+          },
+        ],
+        name: 'Enable',
+        parameterId: '0x8001026',
+        systemId: ENABLE_PARAM_SYSTEM_ID,
+      },
+    ],
+    systemId: 'ckv-devicerx-btrx',
+  };
+}
+
+const ENABLE_MODULE_ID = 'mod-2012';
+
+function makeStoreWithEnableModule() {
+  return makeWidenedStore({
+    headerSelectionsBySubgraphId: {
+      'sg-502': {keyValues: {'key-device': 'v-btrx'}, subgraphId: 'sg-502'},
+    },
+    moduleDefinitionsById: {
+      'mod-def-2012': makeModuleDefinitionWithEnable(),
+    },
+    moduleInstances: {
+      [ENABLE_MODULE_ID]: makeModuleInstance({
+        ckvs: [
+          makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']]),
+          makeCkv('ckv-devicerx-headset', [['key-device', 'v-headset']]),
+        ],
+        moduleId: 'mod-def-2012',
+        moduleInstanceId: ENABLE_MODULE_ID,
+        subgraphId: 'sg-502',
+      }),
+    },
+  });
+}
+
+function makeStoreWithUnresolvedHeader() {
+  return makeWidenedStore({
+    headerSelectionsBySubgraphId: {
+      'sg-502': {keyValues: {'key-device': 'NA'}, subgraphId: 'sg-502'},
+    },
+    moduleDefinitionsById: {
+      'mod-def-2012': makeModuleDefinitionWithEnable(),
+    },
+    moduleInstances: {
+      [ENABLE_MODULE_ID]: makeModuleInstance({
+        ckvs: [
+          makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']]),
+          makeCkv('ckv-devicerx-headset', [['key-device', 'v-headset']]),
+        ],
+        moduleId: 'mod-def-2012',
+        moduleInstanceId: ENABLE_MODULE_ID,
+        subgraphId: 'sg-502',
+      }),
+    },
+  });
+}
+
+function makeStoreWithTwoSubgraphs() {
+  return makeWidenedStore({
+    headerSelectionsBySubgraphId: {
+      '502': {keyValues: {'key-device': 'v-a'}, subgraphId: '502'},
+      '503': {keyValues: {'key-device': 'v-btrx'}, subgraphId: '503'},
+    },
+    moduleDefinitionsById: {
+      'mod-def-2011': makeModuleDefinitionWithEnable({
+        moduleId: 2011,
+        systemId: 'def-2011',
+      }),
+      'mod-def-2012': makeModuleDefinitionWithEnable(),
+    },
+    moduleInstances: {
+      [ENABLE_MODULE_ID]: makeModuleInstance({
+        ckvs: [makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']])],
+        moduleId: 'mod-def-2012',
+        moduleInstanceId: ENABLE_MODULE_ID,
+        subgraphId: '503',
+      }),
+      'mod-2011': makeModuleInstance({
+        ckvs: [makeCkv('ckv-a', [['key-device', 'v-a']])],
+        moduleId: 'mod-def-2011',
+        moduleInstanceId: 'mod-2011',
+        subgraphId: '502',
+      }),
+    },
+  });
 }
 
 beforeEach(() => {
@@ -546,6 +716,188 @@ describe('createModuleDataSlice — fetchCalData', () => {
       'ckv-1',
       ['param-1'],
     );
+  });
+  it('does not replace a full DTO with a partial response for the same CKV', async () => {
+    const fullDto = makeCalDataDto({
+      parameters: [makeParam('param-1'), makeParam('param-2')],
+    });
+
+    const store = makeStore();
+    // Seed a full DTO already in place for ckv-1.
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: fullDto,
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-1',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    // Partial fetch for the same CKV arrives — full DTO must be preserved.
+    await store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
+
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.loadedScope).toBe('full');
+    expect(entry.calData?.dto).toBe(fullDto);
+  });
+
+  it('does not replace a full DTO with a partial success for a different CKV', async () => {
+    const fullDto = makeCalDataDto({systemId: 'ckv-2'});
+
+    const store = makeStore();
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: fullDto,
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-2',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    // Stale partial fetch for CKV A resolves after full CKV B is loaded.
+    await store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
+
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.loadedScope).toBe('full');
+    expect(entry.calData?.dto).toBe(fullDto);
+    expect(entry.calData?.selectedCalIndex).toBe('ckv-2');
+  });
+
+  it('does not mark a full DTO as errored when a partial failure arrives for a different CKV', async () => {
+    const fullDto = makeCalDataDto({systemId: 'ckv-2'});
+
+    const store = makeStore();
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: fullDto,
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-2',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    // Partial fetch for CKV A fails — must not clobber the full CKV B entry.
+    const result = await store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
+
+    expect(result).toBe(false);
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.loadedScope).toBe('full');
+    expect(entry.calData?.status).toBe('ready');
+    expect(entry.calData?.dto).toBe(fullDto);
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('does not mark a full DTO as errored when a partial same-CKV failure arrives', async () => {
+    const fullDto = makeCalDataDto();
+
+    const store = makeStore();
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: fullDto,
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-1',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    // Partial failure for the same CKV — must not clobber the full DTO.
+    const result = await store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
+
+    expect(result).toBe(false);
+    expect(mockGetCalData).not.toHaveBeenCalled();
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.loadedScope).toBe('full');
+    expect(entry.calData?.status).toBe('ready');
+    expect(entry.calData?.dto).toBe(fullDto);
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a full DTO that arrived in-flight while a partial request was already in progress', async () => {
+    let resolveGet!: (value: {
+      data: CalDataDto;
+      message: undefined;
+      success: true;
+    }) => void;
+    mockGetCalData.mockImplementationOnce(
+      () =>
+        new Promise<{data: CalDataDto; message: undefined; success: true}>(
+          (res) => {
+            resolveGet = res;
+          },
+        ),
+    );
+
+    const store = makeStore();
+    // Start a partial fetch — this sets status: 'loading'.
+    const fetchPromise = store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
+
+    // While the partial is in flight, the tab opens and seeds a full DTO.
+    const fullDto = makeCalDataDto({
+      parameters: [makeParam('param-1'), makeParam('param-2')],
+    });
+    store.setState({
+      moduleDataByModuleId: {
+        [MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto: fullDto,
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-1',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+
+    // Partial response arrives — in-flight guard must discard it.
+    resolveGet({
+      data: makeCalDataDto({parameters: [makeParam('param-1')]}),
+      message: undefined,
+      success: true,
+    });
+    await fetchPromise;
+
+    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    expect(entry.calData?.loadedScope).toBe('full');
+    expect(entry.calData?.dto).toBe(fullDto);
   });
 });
 
@@ -1128,6 +1480,155 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       (p) => p.parameterId === '0x8001026',
     )?.elements[0];
     expect(enableElement).toEqual({...ENABLE_ELEMENT, value: '0x0'}); // second call's intent wins
+  });
+});
+
+describe('createModuleDataSlice — syncEnableOverlays', () => {
+  beforeEach(() => {
+    // fetchCalData is the real implementation (only spied on, not replaced),
+    // so its underlying GET must resolve to avoid an unhandled rejection.
+    mockGetCalData.mockResolvedValue({
+      data: enableDtoFixture('0x1'),
+      message: undefined,
+      success: true,
+    });
+  });
+
+  it('dispatches a partial enable-scoped fetch for each resolved enable module', () => {
+    const store = makeStoreWithEnableModule();
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'mod-2012',
+      'ckv-devicerx-btrx',
+      'partial',
+      [ENABLE_PARAM_SYSTEM_ID],
+    );
+  });
+
+  it('skips modules whose active CKV is unresolved', () => {
+    const store = makeStoreWithUnresolvedHeader();
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips a module whose cached DTO already matches the resolved CKV', () => {
+    const store = makeStoreWithEnableModule();
+    // Seed a ready DTO already on the resolved CKV.
+    store.setState((s) => ({
+      moduleDataByModuleId: {
+        ...s.moduleDataByModuleId,
+        'mod-2012': {
+          calData: {
+            availableCalIndices: [],
+            dto: enableDtoFixture('0x1'),
+            loadedScope: 'partial',
+            selectedCalIndex: 'ckv-devicerx-btrx',
+            status: 'ready',
+          },
+          moduleName: 'Splitter',
+        },
+      },
+    }));
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refetches when the cached DTO belongs to a different CKV', () => {
+    const store = makeStoreWithEnableModule();
+    store.setState((s) => ({
+      moduleDataByModuleId: {
+        ...s.moduleDataByModuleId,
+        'mod-2012': {
+          calData: {
+            availableCalIndices: [],
+            dto: enableDtoFixture('0x1'),
+            loadedScope: 'partial',
+            selectedCalIndex: 'ckv-devicerx-headset', // stale CKV
+            status: 'ready',
+          },
+          moduleName: 'Splitter',
+        },
+      },
+    }));
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'mod-2012',
+      'ckv-devicerx-btrx',
+      'partial',
+      [ENABLE_PARAM_SYSTEM_ID],
+    );
+  });
+
+  it('scopes to a single subgraph when subgraphId is passed', () => {
+    const store = makeStoreWithTwoSubgraphs(); // 502 and 503 each with an enable module
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays('503');
+
+    const calledModuleIds = fetchSpy.mock.calls.map((c) => c[0]);
+    expect(calledModuleIds).toEqual(['mod-2012']); // only subgraph 503's module
+  });
+
+  it('skips a module that has a full DTO loaded, even when the header CKV differs from the loaded one', () => {
+    const store = makeStoreWithEnableModule();
+    // Seed a full DTO for a different CKV than the active header selection —
+    // the tab opened on headset, but the header now resolves to btrx.
+    store.setState((s) => ({
+      moduleDataByModuleId: {
+        ...s.moduleDataByModuleId,
+        'mod-2012': {
+          calData: {
+            availableCalIndices: [],
+            dto: enableDtoFixture('0x1'),
+            loadedScope: 'full',
+            selectedCalIndex: 'ckv-devicerx-headset',
+            status: 'ready',
+          },
+          moduleName: 'Splitter',
+        },
+      },
+    }));
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips a module that has a fetch in flight, even when the header CKV differs', () => {
+    const store = makeStoreWithEnableModule();
+    // Simulate a fetch already in progress for a different CKV.
+    store.setState((s) => ({
+      moduleDataByModuleId: {
+        ...s.moduleDataByModuleId,
+        'mod-2012': {
+          calData: {
+            availableCalIndices: [],
+            loadedScope: 'partial',
+            selectedCalIndex: 'ckv-devicerx-headset',
+            status: 'loading',
+          },
+          moduleName: 'Splitter',
+        },
+      },
+    }));
+    const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
+
+    store.getState().syncEnableOverlays();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

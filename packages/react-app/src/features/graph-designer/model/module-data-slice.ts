@@ -44,7 +44,10 @@ export interface ModuleDataEntry {
     groupedUiState?: GenericTreeViewUiState;
     /** True while a Set request is in flight — blocks a second Set. */
     isSaving?: boolean;
-    /** How `dto` was last produced — tells the panel whether to pass 'get' (full re-seed) or 'set' (per-path reconciliation) to the tree view. */
+    /**
+     * How `dto` was last produced — tells the panel whether to pass 'get' (full
+     * re-seed) or 'set' (per-path reconciliation) to the tree view.
+     */
     lastMutation?: 'get' | 'set';
     loadedScope: 'none' | 'partial' | 'full';
     selectedCalIndex?: string;
@@ -58,7 +61,10 @@ export interface ModuleDataEntry {
     error?: string;
     /** True while a Set request is in flight — blocks a second Set. */
     isSaving?: boolean;
-    /** How `dto` was last produced — tells the panel whether to pass 'get' (full re-seed) or 'set' (per-path reconciliation) to the tree view. */
+    /**
+     * How `dto` was last produced — tells the panel whether to pass 'get' (full
+     * re-seed) or 'set' (per-path reconciliation) to the tree view.
+     */
     lastMutation?: 'get' | 'set';
     selectedTagIndex?: string;
     /** Parent tag's systemId — tag-data GET/PUT is keyed by (tag, tkv). */
@@ -113,6 +119,16 @@ export interface ModuleDataSlice {
     moduleId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
+  /**
+   * Proactively fetches the enable parameter (partial scope) for every
+   * enable-carrying module whose active CKV is resolved, so canvas
+   * enable-switch overlays reflect real values without opening the module
+   * data tab (design.md §21.8). Fetches are dispatched concurrently and are
+   * idempotent — a module whose cached DTO already matches its resolved CKV
+   * is skipped. Pass `subgraphId` to limit the sweep to one subgraph (header
+   * change); omit it to sweep all (mount).
+   */
+  syncEnableOverlays: (subgraphId?: string) => void;
   updateCalData: (
     moduleId: string,
     payload: UpdateSpfModuleCalDataRequest,
@@ -158,9 +174,9 @@ function enableValueToConfigElement(
  *
  * @remarks The store type `S` must also compose `GraphDataSlice`,
  * `ModuleListSlice`, and `SubgraphHeaderSelectionSlice` — `setModuleEnable`
- * reads a module instance's CKVs and its subgraph's header selection to
- * resolve the active CKV, and reads `moduleDefinitionsById` to resolve the
- * enable parameter's systemId, before writing the enable parameter.
+ * and `syncEnableOverlays` read a module instance's CKVs and its subgraph's
+ * header selection to resolve the active CKV, and both also read
+ * `moduleDefinitionsById` to resolve the enable parameter's systemId.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.
  * @param projectId - Project identifier bound at construction time.
@@ -210,6 +226,12 @@ export function createModuleDataSlice<
       const entry = get().moduleDataByModuleId[moduleId];
       const moduleName = entry?.moduleName ?? '';
 
+      // Do not disturb a full DTO with a partial background prefetch — the
+      // pre-request loading patch alone would overwrite status/selectedCalIndex.
+      if (scope === 'partial' && entry?.calData?.loadedScope === 'full') {
+        return false;
+      }
+
       patchEntry(moduleId, {
         calData: mergePatch(DEFAULT_CAL_DATA, entry?.calData, {
           error: undefined,
@@ -231,6 +253,9 @@ export function createModuleDataSlice<
         const base = latest?.calData;
 
         if (!result.success || !result.data) {
+          if (scope === 'partial' && base?.loadedScope === 'full') {
+            return false;
+          }
           const errorMsg = result.message ?? 'Failed to fetch module data';
           logger.error('moduleDataSlice: fetchCalData — GET failed', {
             action: 'fetchCalData',
@@ -248,6 +273,17 @@ export function createModuleDataSlice<
           return false;
         }
 
+        // Second-line race guard: a partial response must not disturb a full
+        // DTO regardless of which CKV it was loaded for — the tab's full
+        // calibration data is a superset of any background overlay prefetch.
+        if (scope === 'partial' && base?.loadedScope === 'full') {
+          // Returns true (not false) even though the response was discarded —
+          // the fetch itself succeeded, it was just superseded. Callers that
+          // branch on this return value should treat true as "request
+          // completed," not "dto now reflects this fetch."
+          return true;
+        }
+
         patchEntry(moduleId, {
           calData: mergePatch(DEFAULT_CAL_DATA, base, {
             dto: result.data,
@@ -262,13 +298,16 @@ export function createModuleDataSlice<
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error';
+        const latest = get().moduleDataByModuleId[moduleId];
+        const base = latest?.calData;
+        if (scope === 'partial' && base?.loadedScope === 'full') {
+          return false;
+        }
         logger.error('moduleDataSlice: fetchCalData — thrown error', {
           action: 'fetchCalData',
           component: 'moduleDataSlice',
           error: errorMsg,
         });
-        const latest = get().moduleDataByModuleId[moduleId];
-        const base = latest?.calData;
         patchEntry(moduleId, {
           calData: mergePatch(DEFAULT_CAL_DATA, base, {
             error: errorMsg,
@@ -706,6 +745,73 @@ export function createModuleDataSlice<
           },
         },
       });
+    },
+
+    syncEnableOverlays: (subgraphId?: string): void => {
+      logger.debug('moduleDataSlice: syncEnableOverlays', {
+        action: 'syncEnableOverlays',
+        component: 'moduleDataSlice',
+      });
+
+      const state = get();
+      const moduleInstances = state.graphData?.moduleInstances;
+      if (!moduleInstances) {
+        return;
+      }
+      for (const moduleInstance of Object.values(moduleInstances)) {
+        if (
+          subgraphId !== undefined &&
+          moduleInstance.subgraphId !== subgraphId
+        ) {
+          continue;
+        }
+        const definition = state.moduleDefinitionsById[moduleInstance.moduleId];
+        const enableSystemId = resolveEnableParamSystemId(definition);
+        if (!enableSystemId) {
+          // Definition not loaded yet (moduleListStatus not 'ready') — every
+          // module resolves undefined here, making this call a no-op. Self-
+          // heals on the next header change or the mount effect's eventual
+          // fire, so no permanent staleness.
+          continue;
+        }
+        const headerSelection =
+          state.headerSelectionsBySubgraphId[moduleInstance.subgraphId];
+        const activeCkv = resolveActiveCkv(
+          moduleInstance.ckvs ?? [],
+          headerSelection?.keyValues ?? {},
+        );
+        if (!activeCkv.isResolved) {
+          continue;
+        }
+        const entry =
+          state.moduleDataByModuleId[moduleInstance.moduleInstanceId];
+        const cal = entry?.calData;
+        // Never background-fetch a module whose tab has already loaded a full
+        // DTO — partial overlay fetches must not disturb a decoupled tab CKV.
+        if (cal?.loadedScope === 'full') {
+          continue;
+        }
+        // Skip any module with an in-flight fetch — a background partial
+        // must not pile onto a tab-opening full fetch that is already
+        // in progress. Tradeoff: a header change while a fetch is running
+        // defers the new CKV until the next sync trigger.
+        if (cal?.status === 'loading') {
+          continue;
+        }
+        // Skip if a fetch for this exact CKV already landed successfully.
+        if (
+          cal?.selectedCalIndex === activeCkv.ckvSystemId &&
+          cal.status === 'ready'
+        ) {
+          continue;
+        }
+        void get().fetchCalData(
+          moduleInstance.moduleInstanceId,
+          activeCkv.ckvSystemId,
+          'partial',
+          [enableSystemId],
+        );
+      }
     },
 
     updateCalData: async (
