@@ -128,6 +128,22 @@ describe('SubgraphNode — header', () => {
       screen.queryByTestId('subgraph-header-slot'),
     ).not.toBeInTheDocument();
   });
+
+  it('groups the header slot with the title, left of the collapse button', () => {
+    renderSubgraphNode(makeSubgraph({label: 'Audio SG'}), {
+      eventHandlers: {onSubgraphCollapse: jest.fn()},
+      renderNodeContent: () => ({
+        header: <div data-testid="ckv-slot">CKV</div>,
+      }),
+    });
+    const header = screen.getByTestId('subgraph-header');
+    const titleGroup = screen.getByTestId('subgraph-header-title-group');
+    const slot = screen.getByTestId('subgraph-header-slot');
+    // The slot lives inside the left title group, not as a centered sibling
+    // of the header row.
+    expect(titleGroup).toContainElement(slot);
+    expect(header.children).toHaveLength(2); // title group + collapse button
+  });
 });
 
 describe('SubgraphNode — collapse toggle', () => {

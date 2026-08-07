@@ -68,17 +68,22 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
         className="subgraph-header flex items-center justify-between gap-2 px-2 py-1"
         data-testid="subgraph-header"
       >
-        <span className="text-primary flex items-center gap-1 truncate text-xs font-semibold">
-          {node.label}
-          {showSubgraphId ? (
-            <span className="text-secondary" data-testid="subgraph-id">
-              {`#${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
-            </span>
+        <div
+          className="flex min-w-0 items-center gap-2"
+          data-testid="subgraph-header-title-group"
+        >
+          <span className="text-primary flex items-center gap-1 truncate text-xs font-semibold">
+            {node.label}
+            {showSubgraphId ? (
+              <span className="text-secondary" data-testid="subgraph-id">
+                {`#${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
+              </span>
+            ) : null}
+          </span>
+          {override?.header ? (
+            <span data-testid="subgraph-header-slot">{override.header}</span>
           ) : null}
-        </span>
-        {override?.header ? (
-          <span data-testid="subgraph-header-slot">{override.header}</span>
-        ) : null}
+        </div>
         {onSubgraphCollapse ? (
           <InlineIconButton
             aria-label="Collapse subgraph"
