@@ -4,7 +4,10 @@
  */
 
 import type {BitFieldDto, NameValuePairDto} from '~entities/spf-module-data';
-import {isBooleanSwitch} from '~features/generic-tree-view/lib/is-boolean-switch';
+import {
+  isBooleanSwitch,
+  resolveBooleanPair,
+} from '~features/generic-tree-view/lib/is-boolean-switch';
 
 jest.mock('~shared/lib/logger');
 
@@ -58,5 +61,37 @@ describe('isBooleanSwitch', () => {
       },
     ];
     expect(isBooleanSwitch(avs)).toBe(false);
+  });
+});
+
+describe('resolveBooleanPair', () => {
+  it('resolves on/off by name when enable is first', () => {
+    const pair = [
+      {name: 'enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+      {name: 'disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+    ] as const;
+    const {off, on} = resolveBooleanPair([...pair]);
+    expect(on.value).toBe('0x1');
+    expect(off.value).toBe('0x0');
+  });
+
+  it('resolves on/off by name when disable is first', () => {
+    const pair = [
+      {name: 'disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+      {name: 'enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+    ] as const;
+    const {off, on} = resolveBooleanPair([...pair]);
+    expect(on.value).toBe('0x1');
+    expect(off.value).toBe('0x0');
+  });
+
+  it('resolves on/off for on/off synonym pairs', () => {
+    const pair = [
+      {name: 'On', type: 'NAME_VALUE_PAIR', value: '1'},
+      {name: 'Off', type: 'NAME_VALUE_PAIR', value: '0'},
+    ] as const;
+    const {off, on} = resolveBooleanPair([...pair]);
+    expect(on.value).toBe('1');
+    expect(off.value).toBe('0');
   });
 });

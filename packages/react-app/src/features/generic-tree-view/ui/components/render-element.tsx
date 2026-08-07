@@ -18,7 +18,7 @@ import type {
 
 import {elementKey} from '../../lib/element-key';
 import {isBitField} from '../../lib/is-bit-field';
-import {isBooleanSwitch} from '../../lib/is-boolean-switch';
+import {isBooleanSwitch, resolveBooleanPair} from '../../lib/is-boolean-switch';
 import {isPolicyVisible} from '../../lib/is-policy-visible';
 import {parseQFormatN} from '../../lib/parse-q-format-n';
 import {toHexString} from '../../lib/to-hex-string';
@@ -424,7 +424,7 @@ function renderControl(
   }
 
   if (elem.allowedValues && isBooleanSwitch(elem.allowedValues)) {
-    const [off, on] = elem.allowedValues;
+    const {off, on} = resolveBooleanPair(elem.allowedValues);
     return (
       <SwitchControl
         currentValue={currentValue}
