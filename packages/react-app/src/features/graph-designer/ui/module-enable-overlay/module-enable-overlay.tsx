@@ -57,7 +57,7 @@ export function ModuleEnableOverlay({
   if (!isCkvResolved) {
     return (
       <div
-        className="bg-background-neutral-01/50 absolute inset-0"
+        className="nodrag nopan bg-background-neutral-01/50 absolute inset-0"
         data-testid="module-enable-overlay-unresolved"
         onClick={(event) => event.stopPropagation()}
       >
@@ -74,14 +74,22 @@ export function ModuleEnableOverlay({
 
   if (!isReady) {
     return (
-      <div onClick={(event) => event.stopPropagation()}>
+      <div
+        className="nodrag nopan"
+        data-testid="module-enable-overlay-loading"
+        onClick={(event) => event.stopPropagation()}
+      >
         <Switch aria-label="Module enable" checked={false} disabled size="sm" />
       </div>
     );
   }
 
   return (
-    <div onClick={(event) => event.stopPropagation()}>
+    <div
+      className="nodrag nopan"
+      data-testid="module-enable-overlay-ready"
+      onClick={(event) => event.stopPropagation()}
+    >
       <Switch
         aria-label="Module enable"
         checked={value}
