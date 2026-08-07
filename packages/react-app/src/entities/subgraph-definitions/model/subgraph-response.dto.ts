@@ -6,22 +6,26 @@
 import type {
   ControlLinkDto,
   DataLinkDto,
+  EndPointLink,
+  KeyValueInfo,
 } from '~entities/usecases/model/usecase-component.dto';
 
 /**
- * Subgraph data transfer object
+ * Subgraph response data transfer object
  */
-export interface SubgraphDto {
-  description?: string;
+export interface SubgraphResponseDto {
+  id: number;
   name: string;
-  subgraphId: number;
-  subgraphType: string;
+  relatedEndPointLinks: EndPointLink[];
+  SGKV: KeyValueInfo[];
+  subGraphSharedType: string;
+  systemId: string;
 }
 
 /**
- * Subgraph pair data tranfer object
+ * Subgraph pair response data transfer object
  */
-export interface SubgraphPairDto {
+export interface SubgraphPairResponseDto {
   controlLinks: ControlLinkDto[];
   dataLinks: DataLinkDto[];
   destinationSubgraphSystemId: string;

@@ -68,7 +68,7 @@ export interface SpfModuleDto {
   name: string;
   parentId?: number;
   relatedEndPointLinks: EndPointLink[];
-  subgraphId: number;
+  subgraphId: string;
   systemId: string;
   tags?: TagInfoDto[];
 }
@@ -134,28 +134,28 @@ export interface SubsystemDto {
 export interface DataLinkDto {
   changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
-  destinationId: number;
-  destinationPortId: number;
+  destinationId: string;
+  destinationPortId: string;
   isDangling: boolean;
   name: string;
   parentId?: number;
   relatedEndPointLinks: EndPointLink[];
-  sourceId: number;
-  sourcePortId: number;
+  sourceId: string;
+  sourcePortId: string;
   systemId: string;
 }
 
 export interface ControlLinkDto {
   changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
-  destinationId: number;
-  destinationPortId: number;
+  destinationId: string;
+  destinationPortId: string;
   isDangling: boolean;
   name: string;
   parentId?: number;
   relatedEndPointLinks: EndPointLink[];
-  sourceId: number;
-  sourcePortId: number;
+  sourceId: string;
+  sourcePortId: string;
   systemId: string;
 }
 

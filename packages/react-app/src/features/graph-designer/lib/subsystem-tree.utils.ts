@@ -30,7 +30,7 @@ export function buildSubsystemTree(
       if (!subsystemSubgraphIds.has(m.parentId)) {
         subsystemSubgraphIds.set(m.parentId, new Set());
       }
-      subsystemSubgraphIds.get(m.parentId)!.add(String(m.subgraphId));
+      subsystemSubgraphIds.get(m.parentId)!.add(m.subgraphId);
     }
   }
 

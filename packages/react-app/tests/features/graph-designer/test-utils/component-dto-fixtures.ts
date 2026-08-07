@@ -26,7 +26,7 @@ export function makeSpfModuleDto(
     moduleId: 200,
     name: 'AudioDecoder',
     relatedEndPointLinks: [],
-    subgraphId: 1,
+    subgraphId: 'sys-sg-1',
     systemId: 'sys-mod-1',
     ...overrides,
   };
@@ -38,13 +38,13 @@ export function makeDataLinkDto(
   return {
     changeInfo: {changeType: 'CREATE'},
     connectionType: 'MODULE_MODULE',
-    destinationId: 2,
-    destinationPortId: 20,
+    destinationId: '2',
+    destinationPortId: '20',
     isDangling: false,
     name: 'link',
     relatedEndPointLinks: [],
-    sourceId: 1,
-    sourcePortId: 10,
+    sourceId: '1',
+    sourcePortId: '10',
     systemId: 'link-1',
     ...overrides,
   };

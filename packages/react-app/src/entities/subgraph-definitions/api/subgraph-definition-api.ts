@@ -5,7 +5,7 @@
 
 import {type ApiResult, httpClient} from '~shared/api';
 
-import type {SubgraphDto} from '../model/subgraph-definition.dto';
+import type {SubgraphResponseDto} from '../model/subgraph-response.dto';
 
 /**
  * Fetch all subgraphs for a project
@@ -14,6 +14,8 @@ import type {SubgraphDto} from '../model/subgraph-definition.dto';
  */
 export async function getAllSubgraphs(
   projectId: string,
-): Promise<ApiResult<SubgraphDto[]>> {
-  return httpClient.get<SubgraphDto[]>(`/projects/${projectId}/subgraphs`);
+): Promise<ApiResult<SubgraphResponseDto[]>> {
+  return httpClient.get<SubgraphResponseDto[]>(
+    `/projects/${projectId}/subgraphs`,
+  );
 }

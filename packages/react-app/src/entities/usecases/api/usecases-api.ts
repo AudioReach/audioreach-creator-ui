@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import type {SubgraphResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {type ApiResult, httpClient} from '~shared/api';
 
 import type {ComponentCollectionDto} from '../model/usecase-component.dto';
@@ -85,5 +86,21 @@ export async function getUsecasesFilteredBySubsystem(
 ): Promise<ApiResult<SubsystemFilteredUsecasesDto[]>> {
   return httpClient.get<SubsystemFilteredUsecasesDto[]>(
     `/projects/${projectId}/usecases/filtered-by-subsystem`,
+  );
+}
+
+/**
+ * Query subgraph details for specified system IDs.
+ * @param projectId - The unique identifier of the project
+ * @param systemIds - Array of subgraph system identifiers
+ * @returns Array of SubgraphResponseDto matching the given system IDs
+ */
+export async function getSubgraphsByIds(
+  projectId: string,
+  systemIds: string[],
+): Promise<ApiResult<SubgraphResponseDto[]>> {
+  return httpClient.post<SubgraphResponseDto[]>(
+    `/projects/${projectId}/subgraphs/query`,
+    {systemIds},
   );
 }

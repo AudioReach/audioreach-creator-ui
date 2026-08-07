@@ -13,7 +13,10 @@ jest.mock('~shared/store/project-store-registry', () => ({
 
 import {createStore} from 'zustand';
 
-import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
+import {
+  getSubgraphsByIds,
+  getUsecaseComponents,
+} from '~entities/usecases/api/usecases-api';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
@@ -36,6 +39,15 @@ import {
 } from './test-utils/component-dto-fixtures';
 
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
+const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+
+beforeEach(() => {
+  mockGetSubgraphsByIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
+});
 
 type TestStore = GraphDataSlice & ModuleListSlice & EditSessionSlice;
 
@@ -52,7 +64,6 @@ function makeStore(moduleList: ModuleDefinition[] = []) {
 }
 
 function moduleWithPort(overrides: {
-  id: number;
   moduleInstanceId: string;
   portId: string;
   totalLinksAtPort: number;
@@ -60,7 +71,6 @@ function moduleWithPort(overrides: {
   return {
     containerId: 'c1',
     displayName: 'M',
-    id: overrides.id,
     inputPorts: [
       {
         direction: 'input',
@@ -93,7 +103,7 @@ const minimalDto = {
       id: 1,
       moduleId: 200,
       name: 'AudioDecoder',
-      subgraphId: 1,
+      subgraphId: 'sys-sg-1',
       systemId: 'sys-mod-1',
     },
   ],
@@ -171,6 +181,96 @@ describe('createGraphDataSlice — moduleType resolution', () => {
   });
 });
 
+describe('createGraphDataSlice — subgraph name enrichment', () => {
+  it('queries getSubgraphsByIds with the loaded subgraph ids and overlays the real name/type onto the placeholder', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          name: 'RealSubgraphName',
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: 'AUDIO_PLAYBACK',
+          systemId: 'sys-sg-1',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(mockGetSubgraphsByIds).toHaveBeenCalledWith('proj-1', ['sys-sg-1']);
+    const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
+    expect(subgraph?.subgraphName).toBe('RealSubgraphName');
+    expect(subgraph?.subgraphType).toBe('AUDIO_PLAYBACK');
+  });
+
+  it('leaves the placeholder subgraph name in place when getSubgraphsByIds fails', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      message: 'boom',
+      success: false,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
+    expect(subgraph?.subgraphName).toBe('Subgraph sys-sg-1');
+  });
+
+  it('carries forward a real subgraph name across an incremental recompute rather than resetting to the placeholder', () => {
+    const store = makeStore([]);
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {
+          'sys-mod-1': {
+            containerId: '10',
+            displayName: 'AudioDecoder',
+            inputPorts: [],
+            moduleId: '200',
+            moduleInstanceId: 'sys-mod-1',
+            moduleName: 'AudioDecoder',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'sys-sg-1',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {
+          'sys-sg-1': {
+            containers: [],
+            subgraphId: 'sys-sg-1',
+            subgraphName: 'RealSubgraphName',
+            subgraphType: 'AUDIO_PLAYBACK',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    store.getState().recomputeContainersAndSubgraphs();
+
+    const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
+    expect(subgraph?.subgraphName).toBe('RealSubgraphName');
+    expect(subgraph?.subgraphType).toBe('AUDIO_PLAYBACK');
+  });
+});
+
 describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
   const dtoWithSubsystem = {
     controlLinks: [],
@@ -186,7 +286,7 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
         name: 'AudioDecoder',
         // parentId links the module's subgraph to subsystem id=20
         parentId: 20,
-        subgraphId: 5,
+        subgraphId: 'sys-sg-5',
         systemId: 'sys-mod-1',
       },
     ],
@@ -212,7 +312,7 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     await store.getState().loadGraphData(['uc-1']);
 
     const subsystem = store.getState().graphData?.subsystems['sys-ss-20'];
-    expect(subsystem?.subgraphs).toContain('5');
+    expect(subsystem?.subgraphs).toContain('sys-sg-5');
   });
 
   it('leaves Subsystem.subgraphs empty when no module has a parentId linking it to that subsystem', async () => {
@@ -269,7 +369,6 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
     const instance = store.getState().graphData!.moduleInstances['sys-mod-1'];
     expect(instance).toBeDefined();
     expect(instance.moduleType).toBe('SOURCE');
-    expect(instance.id).toBe(1);
   });
 
   it('preserves an existing module\'s position when it is upserted again (an "updated" entry)', () => {
@@ -282,7 +381,6 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
           'sys-mod-1': {
             containerId: '10',
             displayName: 'AudioDecoder',
-            id: 1,
             inputPorts: [],
             moduleId: '200',
             moduleInstanceId: 'sys-mod-1',
@@ -320,7 +418,6 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
           'sys-mod-1': {
             containerId: '10',
             displayName: 'AudioDecoder',
-            id: 1,
             inputPorts: [],
             moduleId: '200',
             moduleInstanceId: 'sys-mod-1',
@@ -350,7 +447,7 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
 });
 
 describe('applyAddedCollection / applyDeletedCollection — links', () => {
-  it('upserts a data link, resolving a module endpoint and a subsystem endpoint by numeric id', () => {
+  it('upserts a data link, using the link DTO endpoint systemIds directly', () => {
     const store = makeStore();
     store.setState({
       graphData: {
@@ -360,7 +457,6 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
           'sys-mod-1': {
             containerId: '10',
             displayName: 'AudioDecoder',
-            id: 1,
             inputPorts: [],
             moduleId: '200',
             moduleInstanceId: 'sys-mod-1',
@@ -377,7 +473,6 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
           'sys-ss-1': {
             controlPorts: [],
             dataPorts: [],
-            id: 99,
             subgraphs: [],
             subsystemId: 'sys-ss-1',
             subsystemName: 'Subsystem A',
@@ -389,7 +484,11 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
     store.getState().applyAddedCollection({
       controlLinks: [],
       dataLinks: [
-        makeDataLinkDto({destinationId: 99, sourceId: 1, systemId: 'link-1'}),
+        makeDataLinkDto({
+          destinationId: 'sys-ss-1',
+          sourceId: 'sys-mod-1',
+          systemId: 'link-1',
+        }),
       ],
       spfModules: [],
     });
@@ -472,7 +571,6 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
 
     const ss = store.getState().graphData!.subsystems['sys-ss-1'];
     expect(ss).toBeDefined();
-    expect(ss.id).toBe(99);
     expect(ss.subgraphs).toEqual([]);
   });
 
@@ -489,7 +587,6 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
           'sys-ss-1': {
             controlPorts: [],
             dataPorts: [],
-            id: 99,
             subgraphs: ['subgraph-1', 'subgraph-2'],
             subsystemId: 'sys-ss-1',
             subsystemName: 'Subsystem A',
@@ -523,7 +620,6 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
           'sys-ss-1': {
             controlPorts: [],
             dataPorts: [],
-            id: 99,
             subgraphs: [],
             subsystemId: 'sys-ss-1',
             subsystemName: 'Subsystem A',
@@ -552,7 +648,6 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
           'sys-mod-1': {
             containerId: '10',
             displayName: 'AudioDecoder',
-            id: 1,
             inputPorts: [],
             moduleId: '200',
             moduleInstanceId: 'sys-mod-1',
@@ -572,7 +667,11 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
     store.getState().applyAddedCollection({
       controlLinks: [],
       dataLinks: [
-        makeDataLinkDto({destinationId: 99, sourceId: 1, systemId: 'link-1'}),
+        makeDataLinkDto({
+          destinationId: 'sys-ss-1',
+          sourceId: 'sys-mod-1',
+          systemId: 'link-1',
+        }),
       ],
       spfModules: [],
       subsystems: [makeSubsystemDto()],
@@ -586,7 +685,7 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
 });
 
 describe('recomputeContainersAndSubgraphs', () => {
-  it('re-derives containers/subgraphs from moduleInstances, dropping any that no longer have a surviving module', () => {
+  it('re-derives containers/subgraphs from moduleInstances, dropping any that no longer have a surviving module', async () => {
     const store = makeStore();
     store.setState({
       graphData: {
@@ -594,7 +693,6 @@ describe('recomputeContainersAndSubgraphs', () => {
         containers: {
           'old-container': {
             containerId: 'old-container',
-            containerName: 'stale',
             moduleInstances: ['gone-module'],
             subgraphId: 'old-subgraph',
           },
@@ -603,7 +701,6 @@ describe('recomputeContainersAndSubgraphs', () => {
           'mod-1': {
             containerId: 'container-1',
             displayName: 'Mod 1',
-            id: 1,
             inputPorts: [],
             moduleId: '100',
             moduleInstanceId: 'mod-1',
@@ -620,7 +717,7 @@ describe('recomputeContainersAndSubgraphs', () => {
       },
     });
 
-    store.getState().recomputeContainersAndSubgraphs();
+    await store.getState().recomputeContainersAndSubgraphs();
 
     const {containers, subgraphs} = store.getState().graphData!;
     expect(Object.keys(containers)).toEqual(['container-1']);
@@ -629,7 +726,7 @@ describe('recomputeContainersAndSubgraphs', () => {
     expect(subgraphs['subgraph-1'].containers).toEqual(['container-1']);
   });
 
-  it('carries a module diffState onto its subgraph', () => {
+  it('carries a module diffState onto its subgraph', async () => {
     const store = makeStore();
     store.setState({
       graphData: {
@@ -640,7 +737,6 @@ describe('recomputeContainersAndSubgraphs', () => {
             containerId: 'container-1',
             diffState: 'added',
             displayName: 'Mod 1',
-            id: 1,
             inputPorts: [],
             moduleId: '100',
             moduleInstanceId: 'mod-1',
@@ -657,11 +753,83 @@ describe('recomputeContainersAndSubgraphs', () => {
       },
     });
 
-    store.getState().recomputeContainersAndSubgraphs();
+    await store.getState().recomputeContainersAndSubgraphs();
 
     expect(store.getState().graphData!.subgraphs['subgraph-1'].diffState).toBe(
       'added',
     );
+  });
+
+  it('fetches real names only for subgraphs newly created by this mutation, leaving already-named subgraphs untouched', async () => {
+    const store = makeStore();
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      data: [
+        {
+          id: 2,
+          name: 'Real New Subgraph',
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: 'AUDIO_PLAYBACK',
+          systemId: 'subgraph-new',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {
+          'mod-existing': {
+            containerId: 'container-1',
+            displayName: 'Mod Existing',
+            inputPorts: [],
+            moduleId: '100',
+            moduleInstanceId: 'mod-existing',
+            moduleName: 'Mod Existing',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'subgraph-existing',
+          },
+          'mod-new': {
+            containerId: 'container-2',
+            displayName: 'Mod New',
+            inputPorts: [],
+            moduleId: '100',
+            moduleInstanceId: 'mod-new',
+            moduleName: 'Mod New',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'subgraph-new',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {
+          'subgraph-existing': {
+            containers: ['container-1'],
+            subgraphId: 'subgraph-existing',
+            subgraphName: 'Existing Subgraph',
+            subgraphType: 'AUDIO_RECORD',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    await store.getState().recomputeContainersAndSubgraphs();
+
+    expect(mockGetSubgraphsByIds).toHaveBeenCalledWith('proj-1', [
+      'subgraph-new',
+    ]);
+    const {subgraphs} = store.getState().graphData!;
+    expect(subgraphs['subgraph-existing'].subgraphName).toBe(
+      'Existing Subgraph',
+    );
+    expect(subgraphs['subgraph-new'].subgraphName).toBe('Real New Subgraph');
+    expect(subgraphs['subgraph-new'].subgraphType).toBe('AUDIO_PLAYBACK');
   });
 });
 
@@ -768,13 +936,11 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-dst': moduleWithPort({
-            id: 2,
             moduleInstanceId: 'mod-dst',
             portId: '20',
             totalLinksAtPort: 1,
           }),
           'mod-src': moduleWithPort({
-            id: 1,
             moduleInstanceId: 'mod-src',
             portId: '10',
             totalLinksAtPort: 0,
@@ -789,10 +955,10 @@ describe('adjustSurvivingPortCounts', () => {
     store.getState().adjustSurvivingPortCounts(
       [
         makeDataLinkDto({
-          destinationId: 2,
-          destinationPortId: 20,
-          sourceId: 1,
-          sourcePortId: 10,
+          destinationId: 'mod-dst',
+          destinationPortId: '20',
+          sourceId: 'mod-src',
+          sourcePortId: '10',
         }),
       ],
       [],
@@ -811,13 +977,11 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-dst': moduleWithPort({
-            id: 2,
             moduleInstanceId: 'mod-dst',
             portId: '20',
             totalLinksAtPort: 2,
           }),
           'mod-src': moduleWithPort({
-            id: 1,
             moduleInstanceId: 'mod-src',
             portId: '10',
             totalLinksAtPort: 1,
@@ -833,10 +997,10 @@ describe('adjustSurvivingPortCounts', () => {
       [],
       [
         makeDataLinkDto({
-          destinationId: 2,
-          destinationPortId: 20,
-          sourceId: 1,
-          sourcePortId: 10,
+          destinationId: 'mod-dst',
+          destinationPortId: '20',
+          sourceId: 'mod-src',
+          sourcePortId: '10',
         }),
       ],
     );
@@ -854,7 +1018,6 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-src': moduleWithPort({
-            id: 1,
             moduleInstanceId: 'mod-src',
             portId: '10',
             totalLinksAtPort: 0,
@@ -870,10 +1033,10 @@ describe('adjustSurvivingPortCounts', () => {
       store.getState().adjustSurvivingPortCounts(
         [
           makeDataLinkDto({
-            destinationId: 999,
-            destinationPortId: 20,
-            sourceId: 1,
-            sourcePortId: 10,
+            destinationId: 'mod-gone',
+            destinationPortId: '20',
+            sourceId: 'mod-src',
+            sourcePortId: '10',
           }),
         ],
         [],
@@ -888,7 +1051,7 @@ describe('adjustSurvivingPortCounts', () => {
 });
 
 describe('applyComponentCollection', () => {
-  it('merges added/updated/deleted modules and links, then recomputes containers/subgraphs, prunes link bookkeeping, and adjusts port counts in one pass', () => {
+  it('merges added/updated/deleted modules and links, then recomputes containers/subgraphs, prunes link bookkeeping, and adjusts port counts in one pass', async () => {
     const store = makeStore();
     store.setState({
       excludedLinks: [
@@ -906,13 +1069,11 @@ describe('applyComponentCollection', () => {
         containers: {},
         moduleInstances: {
           'mod-old-dst': moduleWithPort({
-            id: 2,
             moduleInstanceId: 'mod-old-dst',
             portId: '20',
             totalLinksAtPort: 1,
           }),
           'mod-old-src': moduleWithPort({
-            id: 1,
             moduleInstanceId: 'mod-old-src',
             portId: '10',
             totalLinksAtPort: 1,
@@ -934,22 +1095,30 @@ describe('applyComponentCollection', () => {
 
     const empty = {controlLinks: [], dataLinks: [], spfModules: []};
 
-    store.getState().applyComponentCollection({
+    await store.getState().applyComponentCollection({
       added: {
         ...empty,
         dataLinks: [
           makeDataLinkDto({
-            destinationId: 2,
-            destinationPortId: 20,
-            sourceId: 1,
-            sourcePortId: 10,
+            destinationId: 'mod-old-dst',
+            destinationPortId: '20',
+            sourceId: 'mod-old-src',
+            sourcePortId: '10',
             systemId: 'new-link',
           }),
         ],
       },
       deleted: {
         ...empty,
-        dataLinks: [makeDataLinkDto({systemId: 'old-link'})],
+        dataLinks: [
+          makeDataLinkDto({
+            destinationId: 'mod-old-dst',
+            destinationPortId: '20',
+            sourceId: 'mod-old-src',
+            sourcePortId: '10',
+            systemId: 'old-link',
+          }),
+        ],
       },
       updated: empty,
     });

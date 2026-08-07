@@ -30,7 +30,6 @@ const graphData: UsecaseGraphData = {
   containers: {
     '5': {
       containerId: '5',
-      containerName: 'Container 5',
       moduleInstances: ['sys-mod-1', 'sys-mod-2'],
       subgraphId: '1',
     },

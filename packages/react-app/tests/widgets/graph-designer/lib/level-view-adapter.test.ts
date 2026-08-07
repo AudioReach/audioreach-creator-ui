@@ -13,7 +13,6 @@ const baseData: UsecaseGraphData = {
   containers: {
     '10': {
       containerId: '10',
-      containerName: 'Container 10',
       moduleInstances: ['sys-mod-1'],
       subgraphId: '5',
     },
@@ -45,7 +44,6 @@ const baseData: UsecaseGraphData = {
     'sys-ss-20': {
       controlPorts: [],
       dataPorts: [],
-      id: 20,
       subgraphs: ['5'],
       subsystemId: 'sys-ss-20',
       subsystemName: 'AudioSubsystem',

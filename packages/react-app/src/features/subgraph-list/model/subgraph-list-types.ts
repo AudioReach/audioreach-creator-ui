@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {SubgraphDto} from '~entities/subgraph-definitions';
+import type {SubgraphResponseDto} from '~entities/subgraph-definitions';
 
 export interface DraggedSubgraphInfo {
   subgraphId: number;
@@ -28,7 +28,7 @@ export interface SubgraphListStore {
   setSearchString: (query: string) => void;
   setSelectedSubgraphTypes: (types: string[]) => void;
 
-  setSubgraphList: (subgraphList: SubgraphDto[]) => void;
+  setSubgraphList: (subgraphList: SubgraphResponseDto[]) => void;
   // Stores the subgraph definitions from backend
-  subgraphList: SubgraphDto[];
+  subgraphList: SubgraphResponseDto[];
 }

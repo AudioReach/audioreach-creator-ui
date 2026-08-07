@@ -4,6 +4,7 @@
  */
 
 jest.mock('~shared/lib/logger');
+jest.mock('~entities/usecases/api/usecases-api');
 jest.mock('~shared/store/global-store', () => ({
   useGlobalStore: {
     getState: jest.fn(() => ({
@@ -12,6 +13,7 @@ jest.mock('~shared/store/global-store', () => ({
   },
 }));
 
+import {getSubgraphsByIds} from '~entities/usecases/api/usecases-api';
 import type {
   ControlLinkDto,
   DataLinkDto,
@@ -27,6 +29,16 @@ import {
   makeSpfModuleDto,
   makeSubsystemDto,
 } from '../test-utils/component-dto-fixtures';
+
+const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+
+beforeEach(() => {
+  mockGetSubgraphsByIds.mockResolvedValue({
+    data: [],
+    message: undefined,
+    success: true,
+  });
+});
 
 describe('GraphDesignerStore — EditSessionSlice composition', () => {
   it('composes EditSessionSlice with correct initial state and methods', () => {
@@ -118,7 +130,6 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           'mod-A': {
             containerId: 'c1',
             displayName: 'Mod A',
-            id: 1,
             inputPorts: [],
             moduleId: '100',
             moduleInstanceId: 'mod-A',
@@ -152,7 +163,6 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           'ss-1': {
             controlPorts: [],
             dataPorts: [],
-            id: 50,
             subgraphs: ['sg-1'],
             subsystemId: 'ss-1',
             subsystemName: 'Subsystem 1',
@@ -193,15 +203,15 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
     };
 
     await withMutationLock(store.getState, async () => {
-      store.getState().applyComponentCollection({
+      await store.getState().applyComponentCollection({
         added: {
           ...empty,
           dataLinks: [
             makeDataLinkDto({
-              destinationId: 2,
-              destinationPortId: 21,
-              sourceId: 1,
-              sourcePortId: 12,
+              destinationId: 'mod-B',
+              destinationPortId: '21',
+              sourceId: 'mod-A',
+              sourcePortId: '12',
               systemId: 'link-new',
             }),
           ],
@@ -220,7 +230,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
               id: 2,
               moduleId: 300,
               name: 'Mod B',
-              subgraphId: 2,
+              subgraphId: '2',
               systemId: 'mod-B',
             }),
           ],
@@ -229,10 +239,10 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           ...empty,
           dataLinks: [
             makeDataLinkDto({
-              destinationId: 50,
-              destinationPortId: 90,
-              sourceId: 1,
-              sourcePortId: 11,
+              destinationId: 'ss-1',
+              destinationPortId: '90',
+              sourceId: 'mod-A',
+              sourcePortId: '11',
               systemId: 'link-old',
             }),
           ],

@@ -1,6 +1,7 @@
 export {
   deleteUsecases,
   getAllUsecases,
+  getSubgraphsByIds,
   getUsecaseComponents,
   getUsecasesFilteredBySubsystem,
   getUsecasesWithFilter,

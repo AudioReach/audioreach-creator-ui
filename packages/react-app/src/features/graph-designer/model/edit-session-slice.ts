@@ -5,7 +5,7 @@
 
 import type {StoreApi} from 'zustand';
 
-import type {SubgraphPairDto} from '~entities/subgraph-definitions/model/subgraph-definition.dto';
+import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import type {KeyValue} from '~entities/usecases';
 import {logger} from '~shared/lib/logger';
 import {projectStoreRegistry} from '~shared/store/project-store-registry';
@@ -39,7 +39,7 @@ export interface EditSessionSlice {
   isMutating: boolean;
   kvSelectionsById: Record<string, KvSelection[]>;
   mode: 'view' | 'edit';
-  pairLinksById: Record<string, SubgraphPairDto>;
+  pairLinksById: Record<string, SubgraphPairResponseDto>;
   recordStageProcessed: (ids: string[]) => void;
   resetSessionLocalMaps: () => void;
   stagedProcessedChangeIds: string[];
@@ -57,7 +57,7 @@ const LOCK_OWNER = 'usecase-edit';
 const INITIAL_SESSION_LOCAL_STATE = {
   excludedLinks: [] as Connection[],
   kvSelectionsById: {} as Record<string, KvSelection[]>,
-  pairLinksById: {} as Record<string, SubgraphPairDto>,
+  pairLinksById: {} as Record<string, SubgraphPairResponseDto>,
   stagedProcessedChangeIds: [] as string[],
   subgraphProvenanceById: {} as Record<string, SubgraphProvenance>,
 };

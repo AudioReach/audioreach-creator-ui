@@ -7,7 +7,7 @@ import type {StoreApi} from 'zustand';
 
 import {
   getAllSubgraphs,
-  type SubgraphDto,
+  type SubgraphResponseDto,
 } from '~entities/subgraph-definitions';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
@@ -50,13 +50,13 @@ export function evictSubgraphListFilterCache(projectId: string): void {
   subgraphFilterCache.delete(projectId);
 }
 
-function toSubgraphDefinition(dto: SubgraphDto): SubgraphDefinition {
+function toSubgraphDefinition(dto: SubgraphResponseDto): SubgraphDefinition {
   return {
     category: '',
-    description: dto.description ?? '',
-    subgraphId: String(dto.subgraphId),
+    description: '',
+    subgraphId: String(dto.id),
     subgraphName: dto.name,
-    subgraphType: dto.subgraphType,
+    subgraphType: dto.subGraphSharedType,
   };
 }
 

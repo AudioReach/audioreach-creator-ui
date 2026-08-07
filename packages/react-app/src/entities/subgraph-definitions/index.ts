@@ -1,2 +1,5 @@
 export {getAllSubgraphs} from './api/subgraph-definition-api';
-export type {SubgraphDto} from './model/subgraph-definition.dto';
+export type {
+  SubgraphPairResponseDto,
+  SubgraphResponseDto,
+} from './model/subgraph-response.dto';

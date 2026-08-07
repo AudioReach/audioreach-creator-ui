@@ -5,9 +5,9 @@
 
 import type {StoreApi} from 'zustand';
 
-import type {SubgraphPairDto} from '~entities/subgraph-definitions/model/subgraph-definition.dto';
 import type {CkvDto, TagInfoDto} from '~entities/spf-module-data';
-import {getUsecaseComponents} from '~entities/usecases';
+import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
+import {getSubgraphsByIds, getUsecaseComponents} from '~entities/usecases';
 import type {
   ComponentCollectionDto,
   ControlLinkDto,
@@ -38,11 +38,6 @@ export interface ModuleInstance {
   diffChangedFields?: string[];
   diffState?: DiffState;
   displayName: string;
-  /** Numeric primary key from the DTO (`SpfModuleDto.id`) — distinct from
-   *  `moduleInstanceId` (the string `systemId`). Needed to resolve a
-   *  link's numeric `sourceId`/`destinationId` back to its endpoint
-   *  module during incremental reconciliation. */
-  id: number;
   inputPorts: Port[];
   moduleId: string;
   moduleInstanceId: string;
@@ -74,7 +69,6 @@ export interface Subgraph {
 
 export interface Container {
   containerId: string;
-  containerName: string;
   moduleInstances: string[];
   subgraphId: string;
 }
@@ -89,8 +83,6 @@ export interface SubsystemPort {
 export interface Subsystem {
   controlPorts: SubsystemPort[];
   dataPorts: SubsystemPort[];
-  /** Numeric primary key from the DTO. */
-  id: number;
   subgraphs: string[];
   /** Always a stringified integer from the backend (e.g. `'42'`). */
   subsystemId: string;
@@ -99,10 +91,17 @@ export interface Subsystem {
 
 export interface UsecaseGraphData {
   connections: Connection[];
+  /** Keyed by the container's systemId (`ContainerDto.systemId`). */
   containers: Record<string, Container>;
+  /** Keyed by the module's systemId (`SpfModuleDto.systemId`). */
   moduleInstances: Record<string, ModuleInstance>;
   selectedUsecases: string[];
+  /**
+   * Keyed by the subgraph's systemId, i.e. subgraphSystemId
+   * (`SpfModuleDto.subgraphId`).
+   */
   subgraphs: Record<string, Subgraph>;
+  /** Keyed by the subsystem's systemId (`SubsystemDto.systemId`). */
   subsystems: Record<string, Subsystem>;
 }
 
@@ -116,7 +115,7 @@ export interface GraphDataSlice {
     added: ComponentCollectionDto;
     deleted: ComponentCollectionDto;
     updated: ComponentCollectionDto;
-  }) => void;
+  }) => Promise<void>;
   applyDeletedCollection: (collection: ComponentCollectionDto) => void;
   clearGraphData: () => void;
   graphData: UsecaseGraphData | null;
@@ -130,7 +129,7 @@ export interface GraphDataSlice {
   markClean: () => void;
   markDirty: () => void;
   pruneDeletedLinkBookkeeping: (deleted: ComponentCollectionDto) => void;
-  recomputeContainersAndSubgraphs: () => void;
+  recomputeContainersAndSubgraphs: () => Promise<void>;
 }
 
 function toDiffState(changeType: string): DiffState | undefined {
@@ -154,21 +153,28 @@ function toDiffState(changeType: string): DiffState | undefined {
  * (incremental reconciliation, design.md §6.3) — both
  * drive it from the same already-mapped `ModuleInstance` records rather
  * than each keeping its own copy of the grouping loop.
+ *
+ * `existingSubgraphs`, when passed, carries forward `subgraphName`/
+ * `subgraphType` for a subgraph that already existed — real names fetched
+ * via `getSubgraphsByIds` must survive a later incremental recompute rather
+ * than resetting to the `Subgraph ${id}` placeholder.
  */
 function deriveContainersAndSubgraphs(
   moduleInstances: Record<string, ModuleInstance>,
+  existingSubgraphs?: Record<string, Subgraph>,
 ): {
   containers: Record<string, Container>;
+  newSubgraphs: Record<string, Subgraph>;
   subgraphs: Record<string, Subgraph>;
 } {
   const containers: Record<string, Container> = {};
   const subgraphs: Record<string, Subgraph> = {};
+  const newSubgraphs: Record<string, Subgraph> = {};
 
   for (const [moduleInstanceId, m] of Object.entries(moduleInstances)) {
     if (!(m.containerId in containers)) {
       containers[m.containerId] = {
         containerId: m.containerId,
-        containerName: `Container ${m.containerId}`,
         moduleInstances: [],
         subgraphId: m.subgraphId,
       };
@@ -176,12 +182,17 @@ function deriveContainersAndSubgraphs(
     containers[m.containerId].moduleInstances.push(moduleInstanceId);
 
     if (!(m.subgraphId in subgraphs)) {
-      subgraphs[m.subgraphId] = {
+      const existing = existingSubgraphs?.[m.subgraphId];
+      const sg: Subgraph = {
         containers: [],
         subgraphId: m.subgraphId,
-        subgraphName: `Subgraph ${m.subgraphId}`,
-        subgraphType: '',
+        subgraphName: existing?.subgraphName ?? `Subgraph ${m.subgraphId}`,
+        subgraphType: existing?.subgraphType ?? '',
       };
+      subgraphs[m.subgraphId] = sg;
+      if (!existing) {
+        newSubgraphs[m.subgraphId] = sg;
+      }
     }
     const sg = subgraphs[m.subgraphId];
     if (!sg.containers.includes(m.containerId)) {
@@ -192,7 +203,41 @@ function deriveContainersAndSubgraphs(
     }
   }
 
-  return {containers, subgraphs};
+  return {containers, newSubgraphs, subgraphs};
+}
+
+/**
+ * Fetches real subgraph names/types from the backend and overlays them onto
+ * the placeholder entries `deriveContainersAndSubgraphs` produces, mutating
+ * `subgraphs` in place. Failure is non-fatal — the placeholder name is left
+ * in place so a naming lookup failure doesn't block the graph from loading.
+ */
+async function applyRealSubgraphNames(
+  projectId: string,
+  subgraphs: Record<string, Subgraph>,
+): Promise<void> {
+  const subgraphIds = Object.keys(subgraphs);
+  if (subgraphIds.length === 0) {
+    return;
+  }
+
+  const result = await getSubgraphsByIds(projectId, subgraphIds);
+  if (!result.success || !result.data) {
+    logger.error('graphDataSlice: applyRealSubgraphNames — API error', {
+      action: 'loadGraphData',
+      component: 'graphDataSlice',
+      error: result.message,
+    });
+    return;
+  }
+
+  for (const dto of result.data) {
+    const sg = subgraphs[dto.systemId];
+    if (sg) {
+      sg.subgraphName = dto.name;
+      sg.subgraphType = dto.subGraphSharedType;
+    }
+  }
 }
 
 /**
@@ -245,7 +290,6 @@ function toModuleInstance(
   return {
     containerId: String(m.containerId),
     displayName: m.alias || m.name,
-    id: m.id,
     inputPorts: [...inputPorts, ...controlPorts],
     moduleId: String(m.moduleId),
     moduleInstanceId: m.systemId,
@@ -253,7 +297,7 @@ function toModuleInstance(
     moduleType,
     outputPorts,
     position: existing?.position ?? {x: 0, y: 0},
-    subgraphId: String(m.subgraphId),
+    subgraphId: m.subgraphId,
   };
 }
 
@@ -277,45 +321,7 @@ function removeModule(
   return next;
 }
 
-/**
- * Indexes a record's entries by their numeric backend id, so link-endpoint
- * resolution below is a `Map.get` instead of an `Object.values().find()`
- * scan per link (a full-collection scan repeated for every link in a
- * mutation response otherwise).
- */
-function indexByNumericId<T>(
-  entries: Record<string, T>,
-  idOf: (entry: T) => number,
-): Map<number, T> {
-  const index = new Map<number, T>();
-  for (const entry of Object.values(entries)) {
-    index.set(idOf(entry), entry);
-  }
-  return index;
-}
-
-/**
- * Resolves a link endpoint's numeric backend id (`sourceId`/
- * `destinationId`) to the string `systemId` `Connection.fromModuleId`/
- * `toModuleId` needs — the endpoint may be a module *or* a subsystem
- * (a cross-subsystem bridge hop), so both indexes are checked, module
- * first. Returns `undefined` if neither matches (an endpoint deleted in
- * the same response); callers fall back to `String(numericId)`.
- */
-function resolveEndpointSystemId(
-  moduleById: Map<number, ModuleInstance>,
-  subsystemById: Map<number, Subsystem>,
-  numericId: number,
-): string | undefined {
-  return (
-    moduleById.get(numericId)?.moduleInstanceId ??
-    subsystemById.get(numericId)?.subsystemId
-  );
-}
-
 function upsertLink(
-  moduleById: Map<number, ModuleInstance>,
-  subsystemById: Map<number, Subsystem>,
   connections: Connection[],
   link: ControlLinkDto | DataLinkDto,
   connectionType: 'control' | 'data',
@@ -323,14 +329,10 @@ function upsertLink(
   const conn: Connection = {
     connectionId: link.systemId,
     connectionType,
-    fromModuleId:
-      resolveEndpointSystemId(moduleById, subsystemById, link.sourceId) ??
-      String(link.sourceId),
-    fromPortId: String(link.sourcePortId),
-    toModuleId:
-      resolveEndpointSystemId(moduleById, subsystemById, link.destinationId) ??
-      String(link.destinationId),
-    toPortId: String(link.destinationPortId),
+    fromModuleId: link.sourceId,
+    fromPortId: link.sourcePortId,
+    toModuleId: link.destinationId,
+    toPortId: link.destinationPortId,
   };
   return [
     ...connections.filter((c) => c.connectionId !== conn.connectionId),
@@ -369,7 +371,6 @@ function toSubsystem(
       portName: p.name,
       portType: 'data' as const,
     })),
-    id: ss.id,
     subgraphs: existing?.subgraphs ?? [],
     subsystemId: ss.systemId,
     subsystemName: ss.name,
@@ -418,20 +419,17 @@ function withAdjustedPort(
 }
 
 /**
- * Adjusts port counts for one link's endpoints. `moduleInstanceIdByNumericId`
- * maps a module's numeric id to its `moduleInstanceId` (systemId) — indexed
- * once per `adjustSurvivingPortCounts` call rather than re-scanned per link,
- * since ids are stable across the fold even though port counts aren't; the
- * always-current module is then re-read from `next` by that key.
+ * Adjusts port counts for one link's endpoints. `sourceId`/`destinationId`
+ * on the link are already the endpoint's `moduleInstanceId` (systemId), so
+ * each endpoint is looked up directly in `next` by that key.
  */
 function adjustModuleInstancesForLink(
   moduleInstances: Record<string, ModuleInstance>,
-  moduleInstanceIdByNumericId: Map<number, string>,
   link: DataLinkDto | ControlLinkDto,
   delta: number,
 ): Record<string, ModuleInstance> {
   let next = moduleInstances;
-  for (const [moduleNumericId, portNumericId] of [
+  for (const [instanceId, portId] of [
     [link.sourceId, link.sourcePortId],
     [link.destinationId, link.destinationPortId],
   ] as const) {
@@ -439,14 +437,13 @@ function adjustModuleInstancesForLink(
     // same response's module bucket, or it's a subsystem rather than a
     // module — port coloring is a module-port concept only, so there is
     // nothing to adjust for either case; skip, don't throw.
-    const instanceId = moduleInstanceIdByNumericId.get(moduleNumericId);
-    const module = instanceId ? next[instanceId] : undefined;
-    if (!instanceId || !module) {
+    const module = next[instanceId];
+    if (!module) {
       continue;
     }
     next = {
       ...next,
-      [instanceId]: withAdjustedPort(module, String(portNumericId), delta),
+      [instanceId]: withAdjustedPort(module, portId, delta),
     };
   }
   return next;
@@ -479,17 +476,10 @@ export function createGraphDataSlice<
       if (!graphData) {
         return;
       }
-      const moduleInstanceIdByNumericId = new Map(
-        Object.values(graphData.moduleInstances).map((m) => [
-          m.id,
-          m.moduleInstanceId,
-        ]),
-      );
       let moduleInstances = graphData.moduleInstances;
       for (const link of addedLinks) {
         moduleInstances = adjustModuleInstancesForLink(
           moduleInstances,
-          moduleInstanceIdByNumericId,
           link,
           +1,
         );
@@ -497,7 +487,6 @@ export function createGraphDataSlice<
       for (const link of deletedLinks) {
         moduleInstances = adjustModuleInstancesForLink(
           moduleInstances,
-          moduleInstanceIdByNumericId,
           link,
           -1,
         );
@@ -534,26 +523,12 @@ export function createGraphDataSlice<
       for (const ss of collection.subsystems ?? []) {
         subsystems = upsertSubsystem(subsystems, ss);
       }
-      const moduleById = indexByNumericId(moduleInstances, (m) => m.id);
-      const subsystemById = indexByNumericId(subsystems, (ss) => ss.id);
       let connections = graphData.connections;
       for (const l of collection.dataLinks) {
-        connections = upsertLink(
-          moduleById,
-          subsystemById,
-          connections,
-          l,
-          'data',
-        );
+        connections = upsertLink(connections, l, 'data');
       }
       for (const l of collection.controlLinks) {
-        connections = upsertLink(
-          moduleById,
-          subsystemById,
-          connections,
-          l,
-          'control',
-        );
+        connections = upsertLink(connections, l, 'control');
       }
       logger.debug('graphDataSlice: applyAddedCollection', {
         action: 'applyAddedCollection',
@@ -564,11 +539,11 @@ export function createGraphDataSlice<
       } as unknown as Partial<S>);
     },
 
-    applyComponentCollection: (collections: {
+    applyComponentCollection: async (collections: {
       added: ComponentCollectionDto;
       deleted: ComponentCollectionDto;
       updated: ComponentCollectionDto;
-    }): void => {
+    }): Promise<void> => {
       logger.debug('graphDataSlice: applyComponentCollection', {
         action: 'applyComponentCollection',
         component: 'graphDataSlice',
@@ -582,8 +557,9 @@ export function createGraphDataSlice<
       get().applyDeletedCollection(collections.deleted);
 
       // 2. Containers/subgraphs are never first-class response entities —
-      //    re-derive them from whichever modules survived step 1.
-      get().recomputeContainersAndSubgraphs();
+      //    re-derive them from whichever modules survived step 1, fetching
+      //    real names for any subgraph newly created by this mutation.
+      await get().recomputeContainersAndSubgraphs();
 
       // 3. pairLinksById/excludedLinks — direct lookup against the
       //    deleted bucket's own link ids, no diffing needed.
@@ -681,7 +657,9 @@ export function createGraphDataSlice<
         const spfModules = dto.spfModules ?? [];
         const subsystemDtos = dto.subsystems ?? [];
 
-        // Build numeric id → systemId lookup used when mapping connections.
+        // Build numeric id → systemId lookup used to resolve a module's
+        // parentId (its parent subsystem's numeric id) to that subsystem's
+        // systemId, below.
         const numericIdToSystemId = new Map<number, string>();
         for (const m of spfModules) {
           numericIdToSystemId.set(m.id, m.systemId);
@@ -701,7 +679,7 @@ export function createGraphDataSlice<
           if (m.parentId !== undefined) {
             const ssId = numericIdToSystemId.get(m.parentId);
             if (ssId) {
-              const sgId = String(m.subgraphId);
+              const sgId = m.subgraphId;
               const list = subsystemIdToSubgraphs.get(ssId);
               if (list) {
                 list.push(sgId);
@@ -732,8 +710,9 @@ export function createGraphDataSlice<
           moduleInstances[m.systemId] = instance;
         }
 
-        const {containers, subgraphs} =
+        const {containers, newSubgraphs, subgraphs} =
           deriveContainersAndSubgraphs(moduleInstances);
+        await applyRealSubgraphNames(projectId, newSubgraphs);
 
         const subsystems: Record<string, Subsystem> = {};
         for (const ss of subsystemDtos) {
@@ -750,7 +729,6 @@ export function createGraphDataSlice<
               portName: p.name,
               portType: 'data' as const,
             })),
-            id: ss.id,
             subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,
             subsystemName: ss.name,
@@ -762,13 +740,10 @@ export function createGraphDataSlice<
           const conn: Connection = {
             connectionId: link.systemId,
             connectionType: 'data',
-            fromModuleId:
-              numericIdToSystemId.get(link.sourceId) ?? String(link.sourceId),
-            fromPortId: String(link.sourcePortId),
-            toModuleId:
-              numericIdToSystemId.get(link.destinationId) ??
-              String(link.destinationId),
-            toPortId: String(link.destinationPortId),
+            fromModuleId: link.sourceId,
+            fromPortId: link.sourcePortId,
+            toModuleId: link.destinationId,
+            toPortId: link.destinationPortId,
           };
           const diffState = toDiffState(link.changeInfo?.changeType);
           if (diffState) {
@@ -780,13 +755,10 @@ export function createGraphDataSlice<
           const conn: Connection = {
             connectionId: link.systemId,
             connectionType: 'control',
-            fromModuleId:
-              numericIdToSystemId.get(link.sourceId) ?? String(link.sourceId),
-            fromPortId: String(link.sourcePortId),
-            toModuleId:
-              numericIdToSystemId.get(link.destinationId) ??
-              String(link.destinationId),
-            toPortId: String(link.destinationPortId),
+            fromModuleId: link.sourceId,
+            fromPortId: link.sourcePortId,
+            toModuleId: link.destinationId,
+            toPortId: link.destinationPortId,
           };
           const diffState = toDiffState(link.changeInfo?.changeType);
           if (diffState) {
@@ -861,7 +833,7 @@ export function createGraphDataSlice<
         },
       );
       const {excludedLinks, pairLinksById} = get();
-      const nextPairLinksById: Record<string, SubgraphPairDto> = {};
+      const nextPairLinksById: Record<string, SubgraphPairResponseDto> = {};
       for (const [pairKey, pair] of Object.entries(pairLinksById)) {
         const dataLinks = pair.dataLinks.filter(
           (l) => !deletedLinkIds.has(l.systemId),
@@ -882,18 +854,29 @@ export function createGraphDataSlice<
       } as unknown as Partial<S>);
     },
 
-    recomputeContainersAndSubgraphs: (): void => {
+    recomputeContainersAndSubgraphs: async (): Promise<void> => {
       const {graphData} = get();
       if (!graphData) {
         return;
       }
-      const {containers, subgraphs} = deriveContainersAndSubgraphs(
-        graphData.moduleInstances,
-      );
+      const {containers, newSubgraphs, subgraphs} =
+        deriveContainersAndSubgraphs(
+          graphData.moduleInstances,
+          graphData.subgraphs,
+        );
       logger.debug('graphDataSlice: recomputeContainersAndSubgraphs', {
         action: 'recomputeContainersAndSubgraphs',
         component: 'graphDataSlice',
       });
+
+      // A subgraph deriveContainersAndSubgraphs reports as new is freshly
+      // created by this mutation — it only got the `Subgraph ${id}`
+      // placeholder and needs its real name/type fetched, same as
+      // loadGraphData does for a full snapshot.
+      if (Object.keys(newSubgraphs).length > 0) {
+        await applyRealSubgraphNames(projectId, newSubgraphs);
+      }
+
       set({
         graphData: {...graphData, containers, subgraphs},
       } as unknown as Partial<S>);

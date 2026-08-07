@@ -37,7 +37,10 @@ import type {StoreApi} from 'zustand';
 
 import type {ApiIssueItem} from '~entities/api-issues';
 import type {CreateUsecasesResponseDto} from '~entities/edit-session';
-import {getUsecaseComponents} from '~entities/usecases/api/usecases-api';
+import {
+  getSubgraphsByIds,
+  getUsecaseComponents,
+} from '~entities/usecases/api/usecases-api';
 import {useApplyDiscard} from '~features/graph-designer/hooks/use-apply-discard';
 import * as coordinator from '~features/graph-designer/model/apply-discard-coordinator';
 import type {
@@ -62,6 +65,7 @@ const mockRunDiscard = jest.mocked(coordinator.runDiscard);
 const mockShowToast = jest.mocked(showToast);
 const mockFocusTab = jest.mocked(tabFocusRegistry.focusTab);
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
+const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 
 const PROJECT_ID = 'proj-1';
 
@@ -140,6 +144,11 @@ function mockFailedReload(): void {
 describe('useApplyDiscard', () => {
   beforeEach(() => {
     mockSuccessfulReload();
+    mockGetSubgraphsByIds.mockResolvedValue({
+      data: [],
+      message: undefined as never,
+      success: true,
+    });
   });
 
   describe('apply — reconcile outcomes', () => {
