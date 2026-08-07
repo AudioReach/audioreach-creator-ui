@@ -142,11 +142,7 @@ export function createModuleOperations(
     get().applyComponentCollection({
       added: EMPTY_COLLECTION,
       updated: EMPTY_COLLECTION,
-      deleted: {
-        spfModules: result.data.removedSpfModules,
-        dataLinks: result.data.removedDataLinks,
-        controlLinks: result.data.removedControlLinks,
-      },
+      deleted: result.data.deleted,
     });
     return true;
   }
@@ -427,20 +423,24 @@ Promise<boolean>`, per [§2.2](#22-the-mutation-wrapper-pattern) — the
 `Inner` function is what batch delete
 ([canvas-ui-mechanics-design.md §4](canvas-ui-mechanics-design.md#4-multi-select-and-batch-delete))
 calls directly, under its own single outer lock. Single call to `DELETE
-/spf-modules/{id}`, returning `RemoveSpfModuleResponseDto
-{removedSpfModules, removedDataLinks, removedControlLinks}` — the deleted
-module plus every link the backend cascaded to per FR-MOD-06. On success,
-wrapped as the "deleted" bucket
-(`{added: EMPTY_COLLECTION, updated: EMPTY_COLLECTION, deleted: {spfModules:
-result.data.removedSpfModules, dataLinks: result.data.removedDataLinks,
-controlLinks: result.data.removedControlLinks}}`) and passed to
-`get().applyComponentCollection(...)` — the same reconciliation call every
-other cascading action in this doc uses. This naturally drops the
-container/subgraph once their last module is gone
-(`recomputeContainersAndSubgraphs`) and prunes
-`subgraphProvenanceById`/`kvSelectionsById`/`pairLinksById` for a subgraph
-that no longer derives — the reconciler's existing pruning step, unchanged
-from every other delete path.
+/spf-modules/{id}`, returning `RemoveSpfModuleResponseDto {deleted:
+{spfModules, subgraphs, containers, dataLinks, controlLinks}}` — id-only
+arrays, not full DTOs, since the backend has already discarded the
+entities by response time. `deleted.subgraphs`/`deleted.containers`
+carry the ids of any subgraph/container that no longer has a surviving
+module after this delete, resolved by the backend itself rather than
+inferred client-side. On success, `result.data.deleted` is passed directly
+as the "deleted" bucket to `get().applyComponentCollection({added:
+EMPTY_COLLECTION, updated: EMPTY_COLLECTION, deleted: result.data.deleted})`
+— the same reconciliation call every other cascading action in this doc
+uses. This naturally drops the container/subgraph once their last module
+is gone (`recomputeContainersAndSubgraphs`) and prunes
+`subgraphProvenanceById`/`kvSelectionsById`/`pairLinksById` for every id in
+`deleted.subgraphs` — the reconciler's existing pruning step
+(design.md §6.3 point 2), unchanged from every other delete path.
+`deleted.containers` has no session-local map of its own and is otherwise
+unused — a container disappears purely as a side effect of
+`recomputeContainersAndSubgraphs`.
 
 ### 3.4 Rename (FR-MOD-07)
 
@@ -471,6 +471,12 @@ async function renameModuleInstance(
       showToast(result.message ?? 'Failed to rename module', 'danger');
       return;
     }
+    if (!get().graphData?.moduleInstances[moduleInstanceId]) {
+      logger.warn(
+        `no local module instance for ${moduleInstanceId}, skipping state write`,
+      );
+      return;
+    }
     set((s) => ({
       graphData: s.graphData && {
         ...s.graphData,
@@ -483,6 +489,7 @@ async function renameModuleInstance(
         },
       },
     }));
+    get().markDirty();
   });
 }
 ```
@@ -490,7 +497,17 @@ async function renameModuleInstance(
 This is the narrow-write pattern `design.md` §2's architectural principle
 requires for every properties-panel edit — landing in `GraphDataSlice`
 directly rather than a panel-local store, so canvas and any other open
-panel observe the rename.
+panel observe the rename. The explicit `markDirty()` call is necessary
+here specifically because rename bypasses `applyComponentCollection`
+(design.md §6.3 point 5's `markDirty` call lives inside that reconciler,
+which the add/delete paths funnel through but rename does not).
+
+The existence guard before the write handles a stale panel reference: the
+module could have been removed by a sibling action (e.g. a delete
+dispatched from elsewhere in the same edit session) between the panel
+issuing the rename and this PATCH resolving. Every narrow-write rename
+(`renameSubgraph`, `renameSubsystem`) must perform the same
+look-up-then-skip-if-gone check before writing back its own field.
 
 ---
 
@@ -645,11 +662,7 @@ async function deleteSubgraphInner(
     get().applyComponentCollection({
       added: {spfModules: [], dataLinks: [], controlLinks: []},
       updated: {spfModules: [], dataLinks: [], controlLinks: []},
-      deleted: {
-        spfModules: result.data.removedSpfModules,
-        dataLinks: result.data.removedDataLinks,
-        controlLinks: result.data.removedControlLinks,
-      },
+      deleted: result.data.deleted,
     });
   }
   return true;
@@ -917,24 +930,33 @@ other multi-call partial-failure gaps
 
 ## 7. API Surface
 
-All additions to `entities/usecases/api/usecases-api.ts`. Confirmed
-against the current backend swagger, per
-[design.md §7](design.md#7-api-design). Every path below is project-scoped
-(`/projects/{projectId}/...`), matching every existing function already in
-`usecases-api.ts` (`getAllUsecases`, `getUsecaseComponents`, etc.) —
-`design.md` §7's own table omits the `/projects/{projectId}` prefix for
-brevity; this doc's table is the corrected, literal path each function
-calls. Several requirements in this doc (container/subgraph delete,
-container-ID edit, subsystem expand) have **no endpoint of their own** —
-they're compositions of the module/subsystem endpoints below, called once
-per affected module/child rather than through a single cascading call; see
-each operation's own section for the composition.
+`createSpfModule`/`deleteSpfModule`/`patchSpfModule` live in
+`entities/spf-modules/api/spf-modules-api.ts` — their own entity, alongside
+the request/response DTOs in `entities/spf-modules/model/spf-module-crud.dto.ts`
+(`CreateSpfModuleRequestDto`, `PatchSpfModuleRequestDto`,
+`RemoveSpfModuleResponseDto`), since they're a module-domain REST resource
+(`/spf-modules`) rather than a usecase operation; `SpfModuleDto` itself
+stays in `entities/usecases/model/usecase-component.dto.ts`; and the module
+CRUD functions import it from there for their return types. Every other
+addition below — `getSubgraphContents`/`getSubgraphPairs`/`renameSubgraph`
+and the subsystem functions — goes in `entities/usecases/api/usecases-api.ts`,
+alongside every existing function already there (`getAllUsecases`,
+`getUsecaseComponents`, etc.). Confirmed against the current backend
+swagger, per [design.md §7](design.md#7-api-design). Every path below is
+project-scoped (`/projects/{projectId}/...`) — `design.md` §7's own table
+omits the `/projects/{projectId}` prefix for brevity; this doc's table is
+the corrected, literal path each function calls. Several requirements in
+this doc (container/subgraph delete, container-ID edit, subsystem expand)
+have **no endpoint of their own** — they're compositions of the
+module/subsystem endpoints below, called once per affected module/child
+rather than through a single cascading call; see each operation's own
+section for the composition.
 
 | Function | Method | Path | Request | Response |
 | --- | --- | --- | --- | --- |
-| `createSpfModule` | POST | `/projects/{projectId}/spf-modules` | `CreateSpfModuleRequestDto {moduleDefinitionId, processorSystemId, parentSystemId?, subgraphSystemId?, containerSystemId?}` — see below | `SpfModuleDto` |
-| `deleteSpfModule` | DELETE | `/projects/{projectId}/spf-modules/{id}` | — | `RemoveSpfModuleResponseDto {removedSpfModules, removedDataLinks, removedControlLinks}` |
-| `patchSpfModule` | PATCH | `/projects/{projectId}/spf-modules/{id}` | `{alias?, containerId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` — covers module rename (§3.4) and container-ID edit (§5) |
+| `createSpfModule` | POST | `/projects/{projectId}/spf-modules` | `CreateSpfModuleRequestDto {moduleDefinitionSystemId, processorSystemId, parentSystemId?, subgraphSystemId?, containerSystemId?}` — see below | `SpfModuleDto` |
+| `deleteSpfModule` | DELETE | `/projects/{projectId}/spf-modules/{id}` | — | `RemoveSpfModuleResponseDto {deleted: {spfModules, subgraphs, containers, dataLinks, controlLinks}}` — every array is `string[]` of systemIds, not full DTOs |
+| `patchSpfModule` | PATCH | `/projects/{projectId}/spf-modules/{id}` | `{alias?, containerSystemId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` — covers module rename (§3.4) and container-ID edit (§5) |
 | `getSubgraphContents` | GET | `/projects/{projectId}/subgraphs/{id}/components` | — | `ComponentCollectionDto` |
 | `getSubgraphPairs` | GET | `/projects/{projectId}/subgraphs/{id}/subgraph-pairs` | — | `SubgraphPairDto[]` |
 | `renameSubgraph` | PATCH | `/projects/{projectId}/subgraphs/{id}` | `{name: string}` | `SubgraphDto` — see [§4.6](#46-rename-req-017-req-057). **Endpoint not present in current swagger — backend-committed, not yet landed.** |
@@ -1018,7 +1040,7 @@ sequenceDiagram
     loop for each module in the subgraph
       S->>B: DELETE /spf-modules/{moduleId}
       alt success
-        B-->>S: RemoveSpfModuleResponseDto (removedSpfModules, removedDataLinks, removedControlLinks)
+        B-->>S: RemoveSpfModuleResponseDto (deleted: {spfModules, subgraphs, containers, dataLinks, controlLinks})
         S->>G: applyComponentCollection (deleted bucket)
       else failure
         B-->>S: error

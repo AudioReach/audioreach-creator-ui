@@ -45,11 +45,20 @@ export {useSubgraphList} from './hooks/use-subgraph-list';
 export {useSubsystemBrowser} from './hooks/use-subsystem-browser';
 export {useValidationResults} from './hooks/use-validation-results';
 export {
+  parseModuleDropPayload,
+  resolveModuleDropTarget,
+} from './lib/module-operations';
+export {
   GraphDesignerStoreContext,
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from './model/graph-designer-store-context';
 export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
+export type {
+  ModuleDropPayload,
+  ModuleDropResolution,
+  ModuleOperations,
+} from './lib/module-operations';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
 export {ApplyDiscardControls} from './ui/apply-discard-controls';

@@ -36,6 +36,11 @@ import {
 } from '~shared/store/tab-store-slices/validation-result-slice';
 
 import {
+  createModuleOperations,
+  type ModuleOperations,
+} from '../lib/module-operations';
+
+import {
   createEditSessionSlice,
   type EditSessionSlice,
 } from './edit-session-slice';
@@ -62,6 +67,7 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   ValidationResultSlice &
   ModuleListSlice &
   ModuleDataSlice &
+  ModuleOperations &
   SubgraphListSlice &
   SubgraphHeaderSelectionSlice &
   PropertiesViewSlice &
@@ -86,6 +92,7 @@ export function createGraphDesignerStore(
     ...createValidationResultSlice(set, get),
     ...createModuleListSlice(set, get, projectId),
     ...createModuleDataSlice(set, get, projectId),
+    ...createModuleOperations(set, projectId),
     ...createSubgraphListSlice(set, get, projectId),
     ...createSubgraphHeaderSelectionSlice(set, get),
     ...createPropertiesViewSlice(set),

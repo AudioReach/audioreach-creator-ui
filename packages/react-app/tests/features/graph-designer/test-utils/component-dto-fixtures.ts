@@ -8,6 +8,25 @@ import type {
   SpfModuleDto,
   SubsystemDto,
 } from '~entities/usecases/model/usecase-component.dto';
+import type {ModuleInstance} from '~features/graph-designer/model/graph-data-slice';
+
+export function makeModuleInstance(
+  overrides: Partial<ModuleInstance> = {},
+): ModuleInstance {
+  return {
+    containerId: '10',
+    displayName: 'AudioDecoder',
+    inputPorts: [],
+    moduleId: '200',
+    moduleInstanceId: 'sys-mod-1',
+    moduleName: 'AudioDecoder',
+    moduleType: '',
+    outputPorts: [],
+    position: {x: 0, y: 0},
+    subgraphId: '1',
+    ...overrides,
+  };
+}
 
 export function makeSpfModuleDto(
   overrides: Partial<SpfModuleDto> = {},
