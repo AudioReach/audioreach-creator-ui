@@ -1,6 +1,6 @@
 # Display Options
 
-**Version:** 1.1
+**Version:** 1.2
 
 ## Revision History
 
@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | 1.0 | 2026-07-27 | Initial merge of `display-options.md`, `port-visibility.md`, and the `expand-collapse-subgraphs` design into one doc. |
 | 1.1 | 2026-07-30 | Expand Subgraphs checkbox now reads and writes `visualization.expandSubgraphs` directly via `savePreference`; `subgraph-collapse.ts` keeps only `allSubgraphIds` and `collapseSetForLevel`. Also adds a progress overlay — a blurred backdrop with a QUI `ProgressRing` and an "Expanding Subgraphs"/"Collapsing Subgraphs" label — shown while `graph-designer.tsx` applies a checkbox click. |
+| 1.2 | 2026-08-03 | Wires up Show Control Links, Show Dangling Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isDangling` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/dangling link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
 
 ## Feature Overview and Strategic Fit
 
@@ -26,6 +27,11 @@ preference but nothing reads it yet. Wiring each one up to actually drive
 rendering is documented in its own subsection below (see *Port Visibility*
 and *Expand/Collapse All Subgraphs*), since each is a self-contained slice of
 this same Display Options design rather than an independent feature.
+
+Three more controls — **Show Control Links**, **Show Dangling Links**, and
+**Highlight PP Modules** — ship the same way: the checkboxes and their
+preferences already exist and persist correctly, but nothing downstream
+reads them. See *Link Visibility and PP Highlight* below.
 
 ### Port Visibility
 
@@ -56,6 +62,28 @@ collapsing removes a subgraph from `LevelView.subgraphs[]` (moving it to
 only ever lives on the **raw** `levelView`, never on the post-`applyCollapses`
 graph — a distinction this design calls back to by name wherever it matters.
 Implementation: see *Expand/Collapse Design* under Component Design.
+
+### Link Visibility and PP Highlight
+
+**Show Control Links** and **Show Dangling Links** wire up two independent
+link-visibility toggles. A link is rendered only if
+`(isDangling ? showDanglingLinks : true) && (isControlLink ? showControlLinks : true)`:
+unchecking Show Control Links hides every control link regardless of its
+dangling state; unchecking Show Dangling Links hides any dangling link —
+data or control — regardless of the control-link toggle. A normal
+(non-dangling) data link is never affected by either checkbox.
+
+Neither the backend's `isDangling` flag nor a link's control/data kind
+previously reached the rendered graph in a form these checkboxes could act
+on — wiring this up threads `isDangling` from the DTO through to the
+rendered `DataLink`/`ControlLink`. See *Link Visibility Design* under
+Component Design.
+
+**Highlight PP Modules** wires up a purely visual toggle: when checked,
+every module whose type is `'PP'` (post-processing, per the backend's
+`majorModuleType` field) is drawn with a distinct background/border. It has
+no effect on layout — toggling it never re-triggers ELK. See *PP Highlight
+Design* under Component Design.
 
 ---
 
@@ -92,6 +120,30 @@ Implementation: see *Expand/Collapse Design* under Component Design.
 - `widgets/graph-designer/lib/apply-port-visibility.ts` — new file. Pure
   function `applyPortVisibility(level, effectiveMode)` that filters each
   module's `ports` array.
+- `features/graph-designer/model/graph-data-slice.ts` — `Connection` gains
+  `isDangling: boolean`, copied from `DataLinkDto`/`ControlLinkDto` in the
+  DTO-to-`Connection` mapping loops.
+- `entities/graph/model/graph.types.ts` — `EdgeBase` gains
+  `isDangling?: boolean` (inherited by `DataLink`/`ControlLink`; optional
+  since proxy links have no natural dangling value). `ModuleNode` gains
+  `isPpModule?: boolean`.
+- `widgets/graph-designer/lib/level-view-adapter.ts` — copies
+  `Connection.isDangling` onto the `DataLink`/`ControlLink` it constructs.
+- `widgets/graph-designer/lib/apply-link-visibility.ts` — new file. Pure
+  function `applyLinkVisibility(level, showControlLinks, showDanglingLinks)`
+  that filters `dataLinks`/`controlLinks` per the visibility rule above.
+- `widgets/graph-designer/lib/apply-pp-highlight.ts` — new file. Pure
+  function `applyPpHighlight(level, ppModuleIds)` that stamps
+  `isPpModule: true` onto matching modules.
+- `graph-designer.tsx` calls `applyLinkVisibility` and `applyPpHighlight` in
+  the `graph` useMemo (post-layout, alongside `applyCollapses`/
+  `applyPositionOverrides`). Derives `ppModuleIds` from the already-loaded
+  `moduleList` slice, and eager-loads it if the preference is turned on
+  before the module palette has ever been opened.
+- `features/usecase-visualizer/ui/node-types/module-node.tsx` — reads
+  `node.isPpModule` directly and applies a QUI-token background/border when
+  true, composed with the existing search/selection highlight (which still
+  wins when active).
 
 ---
 
@@ -148,6 +200,11 @@ its value here (see Error Handling below).
 | Show Control Links checkbox | As a user, I want to check or uncheck Show Control Links from the Popover | Must Have | Functional |
 | Show Dangling Links checkbox | As a user, I want to check or uncheck Show Dangling Links from the Popover | Must Have | Functional |
 | Highlight PP Modules checkbox | As a user, I want to check or uncheck Highlight PP Modules from the Popover | Must Have | Functional |
+| Link Visibility — filter rule | A link is visible only if `(isDangling ? showDanglingLinks : true) && (isControlLink ? showControlLinks : true)`. Show Control Links hides every control link when off, regardless of dangling state. Show Dangling Links hides any dangling link — data or control — when off, regardless of the control-link toggle. A non-dangling data link is never hidden by either. | Must Have | Functional |
+| Link Visibility — dangling data threading | `isDangling` from `DataLinkDto`/`ControlLinkDto` is threaded through `Connection` and into the rendered `DataLink`/`ControlLink` so the filter above has data to act on. | Must Have | Functional |
+| Link Visibility — resize and live update on toggle | Toggling either checkbox re-filters the `LevelView` immediately. Runs post-layout (same stage as PP Highlight) — it is purely visual and never re-triggers ELK. | Must Have | Functional |
+| PP Highlight — module match rule | A module is highlighted when its module definition's `moduleInfo.moduleTypeInfo.majorModuleType === 'PP'`. | Must Have | Functional |
+| PP Highlight — no relayout on toggle | Toggling Highlight PP Modules is purely visual — it never re-triggers ELK layout. | Must Have | Functional |
 | Port Visibility — active port definition | A module port is active if its id appears as `sourcePortId`/`targetPortId` in `dataLinks`, `controlLinks`, `proxyDataLinks`, or `proxyControlLinks`. Applies to input, output, and control ports. `SubsystemNode`/`SubgraphProxyNode` ports have no active/non-active distinction — all are treated as active. | Must Have | Functional |
 | Port Visibility — reuse existing control | The existing "Show all ports" checkbox and `display.portVisibilityMode` preference drive this feature. No new control or preference. Only visible under Detailed View. | Must Have | Functional |
 | Port Visibility — effective visibility rule | Effective mode = `viewMode === 'detailed' ? portVisibilityMode : 'active'`. Compact View always forces active-only; Detailed View honors the saved preference. | Must Have | Functional |
@@ -184,8 +241,9 @@ its value here (see Error Handling below).
 - The Popover has four sections: Graph View, Workflow, Graph Display, and
   Usecase Name
 - Checkboxes show the current on/off state; "Show all ports" only appears
-  once Detailed View is selected. "Expand Subgraphs" reflects
-  `visualization.expandSubgraphs` directly.
+  once Detailed View is selected. "Expand Subgraphs", "Show Control Links",
+  "Show Dangling Links", and "Highlight PP Modules" are always visible and
+  each reflects its preference directly.
 - RadioGroup controls show the current selection
 - Every change writes immediately to the user preferences store (see
   Preference persistence above for the exact save mechanism)
@@ -269,6 +327,9 @@ since the two already share a parent.
 - Show Control Links
 - Show Dangling Links
 
+See *Link Visibility Design* and *PP Highlight Design* below for how
+`graph-designer.tsx` applies these three.
+
 **Workflow** — a single `RadioGroup` with `Usecase Workflow` / `System Workflow`:
 - When `Usecase Workflow` is selected, a nested `RadioGroup` (`Subsystem
   level` / `Usecase level`) renders indented directly beneath it
@@ -302,6 +363,54 @@ since the two already share a parent.
 
 Each control reads the current saved preference and writes back immediately
 when the user makes a change.
+
+### Link Visibility Design
+
+**Data threading.** `DataLinkDto`/`ControlLinkDto` already carry
+`isDangling: boolean` from the backend, but `graph-data-slice.ts`'s
+DTO-to-`Connection` mapping drops it. `Connection` needs an
+`isDangling: boolean` field, copied from the DTO. `EdgeBase`
+(`entities/graph/model/graph.types.ts`) needs an `isDangling?: boolean`
+field — optional since `ProxyDataLink`/`ProxyControlLink` have no natural
+dangling value once collapsed. `level-view-adapter.ts` copies
+`Connection.isDangling` onto the `DataLink`/`ControlLink` it builds.
+
+**`applyLinkVisibility(level, showControlLinks, showDanglingLinks)`.**
+Returns `level` unchanged when both flags are `true`; otherwise filters
+`dataLinks`/`controlLinks` per the Requirements rule. `proxyDataLinks`/
+`proxyControlLinks` are untouched — they're synthesized downstream, after
+this filter has already run.
+
+**Pipeline wiring:** runs post-layout, in the `graph` useMemo alongside
+`applyPpHighlight` — it's purely visual and never re-triggers ELK. Note:
+`applyPortVisibility` computes active ports from the unfiltered link set,
+so a port used only by a hidden control link stays visible with no wire —
+intended, since this feature hides links, not ports.
+
+### PP Highlight Design
+
+**Module match.** A module is a PP (post-processing) module when
+`moduleTypeInfo.majorModuleType === 'PP'` (confirmed against the backend's
+`MajorModuleType` enum and `docs/swagger-api.json`). Already reaches
+`ModuleDefinition.category` in the `moduleList` slice; no DTO change needed.
+
+**`applyPpHighlight(level, ppModuleIds)`.** Returns `level` unchanged when
+`ppModuleIds` is empty; otherwise stamps `isPpModule: true` on modules whose
+id is in the set.
+
+Runs **post-layout**, in the `graph` useMemo after `applyPositionOverrides`
+— it's purely visual and must never re-trigger ELK.
+
+**Pipeline wiring:** `graph-designer.tsx` derives `ppModuleIds` from the
+`moduleList` slice, memoized on `highlightPPModules` and `moduleList`.
+Since `moduleList` is normally lazy-loaded only when the module palette
+opens, an effect eager-loads it as soon as the preference turns on.
+
+**Rendering:** `module-node.tsx` reads `node.isPpModule` directly (same
+tier as `node.shape`/`node.icon`) and applies
+`var(--color-background-support-success)` /
+`var(--color-border-support-success)`, composed with the existing highlight
+precedence — search/selection highlight still wins when active.
 
 ### Port Visibility Design
 
@@ -439,6 +548,10 @@ Not applicable on frontend.
   modes. A module with zero active ports renders with an empty `ports`
   array, a valid existing state no different from a module that has no
   ports of a given `portIoType` today.
+- `applyLinkVisibility` and `applyPpHighlight` are likewise pure, total
+  functions. A level with no `controlLinks`/`dataLinks` filters to empty
+  arrays without throwing; a module whose type has no `majorModuleType`
+  match is simply never highlighted — no new failure mode.
 
 ---
 
@@ -451,6 +564,10 @@ Not applicable on frontend.
 - `expandSubgraphs` and `display.portVisibilityMode` already exist in the
   preferences schema; wiring them up changes no persisted shape, only which
   code reads them
+- `showControlLinks`, `showDanglingLinks`, and `highlightPPModules` are the
+  same — already-persisted preferences; wiring them up adds no new
+  persisted shape. `isDangling`/`isPpModule` are runtime-only fields on
+  `LevelView`/`ModuleNode`, never written to disk.
 
 ---
 
@@ -472,6 +589,13 @@ Not applicable on frontend.
 - `allSubgraphIds` and `collapseSetForLevel` are O(n) over a level's
   subgraphs, negligible next to the `applyCollapses` / layout pipeline that
   already runs per render.
+- `applyLinkVisibility` is O(links), and runs **after** layout in the `graph`
+  useMemo — toggling Show Control Links/Show Dangling Links never
+  re-triggers ELK, only a cheap re-filter of the already-positioned link
+  lists.
+- `applyPpHighlight` is O(modules), and runs **after** layout in the `graph`
+  useMemo — toggling Highlight PP Modules never re-triggers ELK, only a
+  cheap re-map of the already-positioned module list.
 
 ---
 
@@ -520,12 +644,35 @@ Not applicable on frontend.
   for empty/absent `subgraphs`
 - `collapseSetForLevel`: returns an empty set when `expandSubgraphs` is
   `true`; returns every subgraph id when `false`
+- `applyLinkVisibility`: `showControlLinks=true, showDanglingLinks=true`
+  returns the input unchanged (reference equality); `showControlLinks=false`
+  removes every control link regardless of dangling state while data links
+  are untouched; `showDanglingLinks=false` removes every dangling link
+  (data or control) regardless of the control-link toggle; both `false`
+  leaves only non-dangling data links; a level with no `dataLinks`/
+  `controlLinks` keys filters to empty arrays without throwing;
+  `proxyDataLinks`/`proxyControlLinks` are always returned unchanged
+- `buildLevelViewFromGraphData` — `isDangling` passthrough: a `Connection`
+  with `isDangling: true`/`false` produces a `DataLink`/`ControlLink` with
+  the same `isDangling` value (not omitted, since `Connection.isDangling`
+  is non-optional)
+- `applyPpHighlight`: an empty `ppModuleIds` returns the input unchanged
+  (reference equality); a module whose `moduleId` (as string) is in the set
+  gets `isPpModule: true`; a module not in the set is returned as the same
+  object reference; non-module fields pass through untouched
+- `ModuleNode`: `isPpModule: true` applies the PP background/border and a
+  `data-pp-module="true"` attribute; `isPpModule` absent/`false` omits the
+  attribute and uses default styling; `isPpModule: true` combined with an
+  active search/selection highlight shows the highlight, not the PP color —
+  the existing highlight precedence wins
 
 **Integration Tests:**
 
 - Click Display Options → QUI Popover opens
 - Check/uncheck Show Control Links, Show MDF Modules → correct preference
   save triggered
+- Check/uncheck Show Dangling Links, Highlight PP Modules → correct
+  preference save triggered
 - Select Detailed View → correct preference save triggered, ID checkboxes
   and Show all ports appear
 - Select System Workflow → correct preference save triggered,
@@ -546,6 +693,8 @@ Not applicable on frontend.
 
 - Uncheck Show Dangling Links / Show MDF Modules → close Popover → simulate
   reload → verify preference still off
+- Uncheck Show Control Links, check Highlight PP Modules → close → reopen →
+  verify both persisted
 - Select Detailed View → close → reopen → verify still selected
 - Select System Workflow → close → reopen → verify still selected and the
   nested level radios stay hidden
@@ -577,6 +726,18 @@ in the running app:
 - Clicking Expand Subgraphs shows the blur overlay with a spinning
   `ProgressRing` and the correct "Expanding"/"Collapsing Subgraphs" label
   until the recompute finishes
+- Load a usecase with a PP module. Checking Highlight PP Modules applies
+  the highlight to those modules immediately, with no visible relayout
+  flicker (module positions do not shift) — including the first time it's
+  checked before the module palette has ever been opened, which triggers a
+  background `loadModuleList()`.
+- Load a usecase with at least one link with `isDangling: true`. Unchecking
+  Show Control Links hides every control link (dangling or not); dangling
+  data links stay visible. Unchecking Show Dangling Links hides every
+  dangling link (data and control); non-dangling control links stay
+  visible. Both unchecked leaves only non-dangling data links. Each toggle
+  applies immediately with no visible relayout flicker (module/container/
+  subgraph positions do not shift).
 
 ---
 
