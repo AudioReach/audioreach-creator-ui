@@ -5,6 +5,9 @@
 
 import type {StoreApi} from 'zustand';
 
+import {endSession, startSession} from '~entities/edit-session';
+import {getProjectById} from '~entities/project/api/projects-api';
+import {SessionMode} from '~entities/project/model/session.dto';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import type {KeyValue} from '~entities/usecases';
 import {logger} from '~shared/lib/logger';
@@ -33,9 +36,9 @@ export interface EditSessionSlice {
   beginMutation: () => void;
   clearStageProcessed: () => void;
   endMutation: () => void;
-  enterEditMode: () => boolean;
+  enterEditMode: () => Promise<boolean>;
   excludedLinks: Connection[];
-  exitEditMode: () => void;
+  exitEditMode: () => Promise<boolean>;
   isMutating: boolean;
   kvSelectionsById: Record<string, KvSelection[]>;
   mode: 'view' | 'edit';
@@ -98,7 +101,7 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
       setSlice({isMutating: false});
     },
 
-    enterEditMode: () => {
+    enterEditMode: async () => {
       const projectStore = projectStoreRegistry.get(projectId);
       if (!projectStore) {
         logSession(
@@ -120,23 +123,60 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
         return false;
       }
 
+      const endResult = await endSession(projectId);
+      if (!endResult.success) {
+        const projectResult = await getProjectById(projectId);
+        const alreadyEnded =
+          projectResult.success &&
+          projectResult.data?.sessionMode === SessionMode.Readonly;
+
+        if (!alreadyEnded) {
+          logSession(
+            'enterEditMode rejected — endSession did not take effect',
+            'enterEditMode',
+          );
+          projectStore.getState().releaseExclusiveMode(LOCK_OWNER);
+          return false;
+        }
+      }
+
+      const startResult = await startSession(projectId, SessionMode.Designer);
+      if (!startResult.success) {
+        logSession(
+          'enterEditMode rejected — startSession failed',
+          'enterEditMode',
+        );
+        projectStore.getState().releaseExclusiveMode(LOCK_OWNER);
+        return false;
+      }
+
       setSlice({
         mode: 'edit',
         usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,
       });
+      projectStore.getState().setEditModeState('edit');
 
       logSession('enterEditMode succeeded', 'enterEditMode');
       return true;
     },
 
-    exitEditMode: () => {
-      projectStoreRegistry
-        .get(projectId)
-        ?.getState()
-        .releaseExclusiveMode(LOCK_OWNER);
-      setSlice({...INITIAL_SESSION_LOCAL_STATE, mode: 'view'});
+    exitEditMode: async () => {
+      const startResult = await startSession(projectId, SessionMode.Tuning);
+      if (!startResult.success) {
+        logSession(
+          'exitEditMode rejected — startSession failed',
+          'exitEditMode',
+        );
+        return false;
+      }
 
-      logSession('exitEditMode', 'exitEditMode');
+      const projectStore = projectStoreRegistry.get(projectId);
+      projectStore?.getState().releaseExclusiveMode(LOCK_OWNER);
+      setSlice({...INITIAL_SESSION_LOCAL_STATE, mode: 'view'});
+      projectStore?.getState().setEditModeState('view');
+
+      logSession('exitEditMode succeeded', 'exitEditMode');
+      return true;
     },
 
     isMutating: false,

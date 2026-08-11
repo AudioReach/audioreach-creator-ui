@@ -137,7 +137,10 @@ async function settleAfterReload(
   }
   showToast(successToast.message, successToast.variant);
   store.getState().markClean();
-  store.getState().exitEditMode();
+  const exited = await store.getState().exitEditMode();
+  if (!exited) {
+    showToast("Couldn't exit edit mode", 'danger');
+  }
   logTerminal(action, outcomeKind, projectId, successStatus);
 }
 

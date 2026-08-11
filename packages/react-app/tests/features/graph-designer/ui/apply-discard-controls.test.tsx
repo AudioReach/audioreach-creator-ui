@@ -41,6 +41,10 @@ jest.mock('@qualcomm-ui/react/dialog', () => ({
   },
 }));
 
+jest.mock('@qualcomm-ui/react/icon', () => ({
+  Icon: () => <span />,
+}));
+
 jest.mock('@qualcomm-ui/react/checkbox', () => ({
   Checkbox: ({checked, label, onCheckedChange}: any) => (
     <label>
@@ -84,6 +88,11 @@ import {
   GraphDesignerStoreContext,
 } from '~features/graph-designer/model/graph-designer-store-context';
 import {ApplyDiscardControls} from '~features/graph-designer/ui/apply-discard-controls';
+import {
+  createProjectStore,
+  type ProjectStore,
+  ProjectStoreContext,
+} from '~shared/store';
 
 const mockUseApplyDiscard = jest.mocked(useApplyDiscard);
 
@@ -121,7 +130,7 @@ function makeStore(
 ): StoreApi<GraphDesignerStore> {
   const store = createGraphDesignerStore('tab-1', PROJECT_ID);
   if (mode === 'edit') {
-    store.getState().enterEditMode();
+    store.setState({mode: 'edit'});
   }
   if (isDirty) {
     store.getState().markDirty();
@@ -129,13 +138,18 @@ function makeStore(
   return store;
 }
 
-function renderControls(store: StoreApi<GraphDesignerStore>) {
+function renderControls(
+  store: StoreApi<GraphDesignerStore>,
+  projectStore: StoreApi<ProjectStore> = createProjectStore(PROJECT_ID),
+) {
   return render(
-    <GraphDesignerStoreContext.Provider
-      value={store as unknown as GraphDesignerStoreApi}
-    >
-      <ApplyDiscardControls projectId={PROJECT_ID} />
-    </GraphDesignerStoreContext.Provider>,
+    <ProjectStoreContext.Provider value={projectStore}>
+      <GraphDesignerStoreContext.Provider
+        value={store as unknown as GraphDesignerStoreApi}
+      >
+        <ApplyDiscardControls projectId={PROJECT_ID} />
+      </GraphDesignerStoreContext.Provider>
+    </ProjectStoreContext.Provider>,
   );
 }
 
@@ -151,15 +165,6 @@ describe('ApplyDiscardControls', () => {
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.queryByText('Apply')).not.toBeInTheDocument();
     expect(screen.queryByText('Discard')).not.toBeInTheDocument();
-  });
-
-  it('calls enterEditMode when Edit is clicked', () => {
-    const store = makeStore('view');
-    renderControls(store);
-
-    fireEvent.click(screen.getByText('Edit'));
-
-    expect(store.getState().mode).toBe('edit');
   });
 
   it('disables Apply and enables Discard when clean and not busy', () => {

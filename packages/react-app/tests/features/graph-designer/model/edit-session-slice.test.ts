@@ -4,42 +4,59 @@
  */
 
 jest.mock('~shared/lib/logger');
-
-const mockReleaseExclusiveMode = jest.fn();
-const mockSetActiveExclusiveMode = jest.fn(() => true);
-
-jest.mock('~shared/store/project-store-registry', () => ({
-  projectStoreRegistry: {
-    get: jest.fn(() => ({
-      getState: () => ({
-        releaseExclusiveMode: mockReleaseExclusiveMode,
-        setActiveExclusiveMode: mockSetActiveExclusiveMode,
-      }),
-    })),
-  },
+jest.mock('~entities/edit-session', () => ({
+  endSession: jest.fn(),
+  startSession: jest.fn(),
+}));
+jest.mock('~entities/project/api/projects-api', () => ({
+  getProjectById: jest.fn(),
 }));
 
-import {createStore} from 'zustand';
+import {createStore, type StoreApi} from 'zustand';
 
+import {endSession, startSession} from '~entities/edit-session';
+import {getProjectById} from '~entities/project/api/projects-api';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
 } from '~features/graph-designer/model/edit-session-slice';
+import {
+  createProjectStore,
+  type ProjectStore,
+} from '~shared/store/project-store';
+import {projectStoreRegistry} from '~shared/store/project-store-registry';
 
-function createTestStore(projectId = 'proj-1') {
-  return createStore<EditSessionSlice>((set) =>
+const mockEndSession = jest.mocked(endSession);
+const mockStartSession = jest.mocked(startSession);
+const mockGetProjectById = jest.mocked(getProjectById);
+
+function createTestStore(projectId = 'proj-1'): {
+  projectStore: StoreApi<ProjectStore>;
+  store: StoreApi<EditSessionSlice>;
+} {
+  const projectStore = createProjectStore(projectId);
+  projectStoreRegistry.register(projectId, projectStore);
+  const store = createStore<EditSessionSlice>((set) =>
     createEditSessionSlice(set, projectId),
   );
+  return {projectStore, store};
 }
 
 describe('EditSessionSlice', () => {
   beforeEach(() => {
-    mockReleaseExclusiveMode.mockClear();
-    mockSetActiveExclusiveMode.mockClear();
+    projectStoreRegistry.clear();
+    mockEndSession.mockReset();
+    mockStartSession.mockReset();
+    mockGetProjectById.mockReset();
   });
 
-  it('clears session-local maps when exiting edit mode', () => {
-    const store = createTestStore();
+  it('clears session-local maps when exiting edit mode', async () => {
+    const {store} = createTestStore();
+    mockStartSession.mockResolvedValue({
+      data: {projectId: 'proj-1', sessionMode: 'TUNING', summary: 'ok'},
+      message: 'ok',
+      success: true,
+    });
 
     store.setState({
       excludedLinks: [
@@ -66,7 +83,7 @@ describe('EditSessionSlice', () => {
       subgraphProvenanceById: {sg1: 'newly-created'},
     });
 
-    store.getState().exitEditMode();
+    await store.getState().exitEditMode();
 
     const state = store.getState();
     expect(state.mode).toBe('view');
@@ -76,39 +93,51 @@ describe('EditSessionSlice', () => {
     expect(state.subgraphProvenanceById).toEqual({});
   });
 
-  it('does not carry session-local state from a prior session into a new one', () => {
-    const store = createTestStore();
+  it('does not carry session-local state from a prior session into a new one', async () => {
+    const {store} = createTestStore();
+    mockEndSession.mockResolvedValue({message: 'ok', success: true});
+    mockStartSession.mockResolvedValue({
+      data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
+      message: 'ok',
+      success: true,
+    });
 
-    store.getState().enterEditMode();
+    await store.getState().enterEditMode();
     store.setState({
       kvSelectionsById: {
         sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
       },
     });
-    store.getState().exitEditMode();
+    await store.getState().exitEditMode();
 
-    store.getState().enterEditMode();
+    await store.getState().enterEditMode();
 
     expect(store.getState().kvSelectionsById).toEqual({});
   });
 
-  it('releases the exclusive lock when exiting edit mode', () => {
-    const store = createTestStore();
+  it('releases the exclusive lock when exiting edit mode', async () => {
+    const {projectStore, store} = createTestStore();
+    projectStore.getState().setActiveExclusiveMode('usecase-edit');
+    mockStartSession.mockResolvedValue({
+      data: {projectId: 'proj-1', sessionMode: 'TUNING', summary: 'ok'},
+      message: 'ok',
+      success: true,
+    });
 
-    store.getState().exitEditMode();
+    await store.getState().exitEditMode();
 
-    expect(mockReleaseExclusiveMode).toHaveBeenCalledWith('usecase-edit');
+    expect(projectStore.getState().activeExclusiveMode).toBe('none');
   });
 
   describe('stagedProcessedChangeIds', () => {
     it('initializes to empty array', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       expect(store.getState().stagedProcessedChangeIds).toEqual([]);
     });
 
     it('recordStageProcessed unions in new ids from empty state', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a', 'b']);
 
@@ -116,7 +145,7 @@ describe('EditSessionSlice', () => {
     });
 
     it('recordStageProcessed preserves order and deduplicates', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a', 'b']);
       store.getState().recordStageProcessed(['b', 'c']);
@@ -129,7 +158,7 @@ describe('EditSessionSlice', () => {
     });
 
     it('clearStageProcessed resets to empty array', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a']);
       store.getState().clearStageProcessed();
@@ -138,7 +167,7 @@ describe('EditSessionSlice', () => {
     });
 
     it('resetSessionLocalMaps clears stagedProcessedChangeIds', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a', 'b']);
       store.getState().resetSessionLocalMaps();
@@ -146,21 +175,153 @@ describe('EditSessionSlice', () => {
       expect(store.getState().stagedProcessedChangeIds).toEqual([]);
     });
 
-    it('exitEditMode clears stagedProcessedChangeIds', () => {
-      const store = createTestStore();
+    it('exitEditMode clears stagedProcessedChangeIds', async () => {
+      const {store} = createTestStore();
+      mockStartSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'TUNING', summary: 'ok'},
+        message: 'ok',
+        success: true,
+      });
 
       store.getState().recordStageProcessed(['a', 'b']);
-      store.getState().exitEditMode();
+      await store.getState().exitEditMode();
 
       expect(store.getState().stagedProcessedChangeIds).toEqual([]);
     });
 
     it('recordStageProcessed deduplicates ids within a single call', () => {
-      const store = createTestStore();
+      const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a', 'a', 'b']);
 
       expect(store.getState().stagedProcessedChangeIds).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('enterEditMode', () => {
+    it('returns false and calls no API when the lock is already held', async () => {
+      const {projectStore, store} = createTestStore();
+      projectStore.getState().setActiveExclusiveMode('diff-merge');
+
+      expect(await store.getState().enterEditMode()).toBe(false);
+      expect(mockEndSession).not.toHaveBeenCalled();
+      expect(projectStore.getState().editModeState).toBe('view');
+    });
+
+    it('ends the session, starts designer mode, and updates the real project store', async () => {
+      const {projectStore, store} = createTestStore();
+      mockEndSession.mockResolvedValue({message: 'ok', success: true});
+      mockStartSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
+        message: 'ok',
+        success: true,
+      });
+
+      expect(await store.getState().enterEditMode()).toBe(true);
+      expect(store.getState().mode).toBe('edit');
+      expect(projectStore.getState().editModeState).toBe('edit');
+      expect(projectStore.getState().activeExclusiveMode).toBe('usecase-edit');
+      expect(mockStartSession).toHaveBeenCalledWith('proj-1', 'DESIGNER');
+    });
+
+    it('proceeds when endSession fails but getProjectById confirms READONLY', async () => {
+      const {projectStore, store} = createTestStore();
+      mockEndSession.mockResolvedValue({message: 'failed', success: false});
+      mockGetProjectById.mockResolvedValue({
+        data: {
+          description: '',
+          name: 'p',
+          projectId: 'proj-1',
+          projectType: 'OFFLINE',
+          sessionMode: 'READONLY',
+        },
+        message: 'ok',
+        success: true,
+      });
+      mockStartSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
+        message: 'ok',
+        success: true,
+      });
+
+      expect(await store.getState().enterEditMode()).toBe(true);
+      expect(projectStore.getState().editModeState).toBe('edit');
+    });
+
+    it('releases the lock and returns false when endSession fails and getProjectById reports a non-READONLY mode', async () => {
+      const {projectStore, store} = createTestStore();
+      mockEndSession.mockResolvedValue({message: 'failed', success: false});
+      mockGetProjectById.mockResolvedValue({
+        data: {
+          description: '',
+          name: 'p',
+          projectId: 'proj-1',
+          projectType: 'OFFLINE',
+          sessionMode: 'TUNING',
+        },
+        message: 'ok',
+        success: true,
+      });
+
+      expect(await store.getState().enterEditMode()).toBe(false);
+      expect(projectStore.getState().activeExclusiveMode).toBe('none');
+      expect(projectStore.getState().editModeState).toBe('view');
+      expect(mockStartSession).not.toHaveBeenCalled();
+    });
+
+    it('releases the lock and returns false when startSession fails', async () => {
+      const {projectStore, store} = createTestStore();
+      mockEndSession.mockResolvedValue({message: 'ok', success: true});
+      mockStartSession.mockResolvedValue({message: 'failed', success: false});
+
+      expect(await store.getState().enterEditMode()).toBe(false);
+      expect(projectStore.getState().activeExclusiveMode).toBe('none');
+      expect(projectStore.getState().editModeState).toBe('view');
+    });
+  });
+
+  describe('exitEditMode', () => {
+    it('starts a tuning session and updates the real project store', async () => {
+      const {projectStore, store} = createTestStore();
+      projectStore.getState().setActiveExclusiveMode('usecase-edit');
+      mockStartSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'TUNING', summary: 'ok'},
+        message: 'ok',
+        success: true,
+      });
+
+      expect(await store.getState().exitEditMode()).toBe(true);
+      expect(mockStartSession).toHaveBeenCalledWith('proj-1', 'TUNING');
+      expect(projectStore.getState().activeExclusiveMode).toBe('none');
+      expect(projectStore.getState().editModeState).toBe('view');
+      expect(store.getState().mode).toBe('view');
+    });
+
+    it('returns false and leaves the lock held when startSession fails', async () => {
+      const {projectStore, store} = createTestStore();
+      projectStore.getState().setActiveExclusiveMode('usecase-edit');
+      mockStartSession.mockResolvedValue({message: 'failed', success: false});
+
+      expect(await store.getState().exitEditMode()).toBe(false);
+      expect(projectStore.getState().activeExclusiveMode).toBe('usecase-edit');
+    });
+
+    it('clears session-local maps only on successful exit', async () => {
+      const {store} = createTestStore();
+      mockStartSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'TUNING', summary: 'ok'},
+        message: 'ok',
+        success: true,
+      });
+      store.setState({
+        kvSelectionsById: {
+          sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
+        },
+      });
+
+      await store.getState().exitEditMode();
+
+      expect(store.getState().kvSelectionsById).toEqual({});
     });
   });
 });

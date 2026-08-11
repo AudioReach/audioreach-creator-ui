@@ -37,6 +37,7 @@ import type {StoreApi} from 'zustand';
 
 import type {ApiIssueItem} from '~entities/api-issues';
 import type {CreateUsecasesResponseDto} from '~entities/edit-session';
+import {startSession} from '~entities/edit-session/api/edit-session-api';
 import {
   getSubgraphsByIds,
   getUsecaseComponents,
@@ -66,6 +67,7 @@ const mockShowToast = jest.mocked(showToast);
 const mockFocusTab = jest.mocked(tabFocusRegistry.focusTab);
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+const mockStartSession = jest.mocked(startSession);
 
 const PROJECT_ID = 'proj-1';
 
@@ -99,7 +101,7 @@ function makeReviewResponse(
 
 function makeStore(): StoreApi<GraphDesignerStore> {
   const store = createGraphDesignerStore('tab-1', PROJECT_ID);
-  store.getState().enterEditMode();
+  store.setState({mode: 'edit'});
   return store;
 }
 
@@ -147,6 +149,11 @@ describe('useApplyDiscard', () => {
     mockGetSubgraphsByIds.mockResolvedValue({
       data: [],
       message: undefined as never,
+      success: true,
+    });
+    mockStartSession.mockResolvedValue({
+      data: {projectId: PROJECT_ID, sessionMode: 'TUNING', summary: 'ok'},
+      message: 'ok',
       success: true,
     });
   });

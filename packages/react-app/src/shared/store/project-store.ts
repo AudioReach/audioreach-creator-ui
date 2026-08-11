@@ -33,7 +33,19 @@ export function createProjectStore(projectId: string): StoreApi<ProjectStore> {
       });
     },
 
+    editModeState: 'view',
+
     projectId,
+
+    setEditModeState: (state: 'view' | 'edit'): void => {
+      set({editModeState: state});
+
+      logger.debug(`Edit mode state set: ${state}`, {
+        action: 'set_edit_mode_state',
+        component: 'ProjectStore',
+        projectId,
+      });
+    },
 
     // Typed wrappers narrow set/get to each slice's own surface — no `any` needed.
     ...createProjectMetaDataSlice(

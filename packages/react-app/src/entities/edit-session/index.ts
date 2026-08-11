@@ -4,6 +4,7 @@ export {
   discardChanges,
   endSession,
   stageChanges,
+  startSession,
 } from './api/edit-session-api';
 export type {
   CommitChangesRequestDto,

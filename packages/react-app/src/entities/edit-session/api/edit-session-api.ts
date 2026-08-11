@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {SessionResponseDto} from '~entities/project';
+import type {SessionMode, SessionResponseDto} from '~entities/project';
 import {type ApiResult, httpClient} from '~shared/api';
 
 import type {
@@ -72,5 +72,15 @@ export async function endSession(
 ): Promise<ApiResult<SessionResponseDto>> {
   return httpClient.post<SessionResponseDto>(
     `/projects/${projectId}/end-session`,
+  );
+}
+
+export async function startSession(
+  projectId: string,
+  mode: SessionMode,
+): Promise<ApiResult<SessionResponseDto>> {
+  return httpClient.post<SessionResponseDto>(
+    `/projects/${projectId}/start-session`,
+    {mode},
   );
 }

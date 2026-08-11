@@ -9,6 +9,9 @@ import {Check, Pencil, Trash2} from 'lucide-react';
 
 import {Button} from '@qualcomm-ui/react/button';
 
+import {showToast} from '~shared/controls/global-toaster';
+import {useProjectStoreShallow} from '~shared/store';
+
 import {useApplyDiscard} from '../hooks/use-apply-discard';
 import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-context';
 
@@ -28,8 +31,18 @@ export function ApplyDiscardControls({projectId}: ApplyDiscardControlsProps) {
     isDirty: s.isDirty,
     mode: s.mode,
   }));
+  const activeExclusiveMode = useProjectStoreShallow(
+    (s) => s.activeExclusiveMode,
+  );
   const applyDiscard = useApplyDiscard({projectId, routingTriggered});
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+
+  const handleEditClick = async (): Promise<void> => {
+    const entered = await enterEditMode();
+    if (!entered) {
+      showToast("Couldn't start edit mode", 'danger');
+    }
+  };
 
   const handleDiscardClick = (): void => {
     if (isDirty) {
@@ -48,8 +61,9 @@ export function ApplyDiscardControls({projectId}: ApplyDiscardControlsProps) {
     <>
       {mode === 'view' && (
         <Button
+          disabled={activeExclusiveMode !== 'none'}
           emphasis="neutral"
-          onClick={enterEditMode}
+          onClick={() => void handleEditClick()}
           startIcon={Pencil}
           variant="fill"
         >

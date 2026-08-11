@@ -20,8 +20,9 @@ import {
   endSession,
   stageChanges,
   type StageChangesResponseDto,
+  startSession,
 } from '~entities/edit-session';
-import type {SessionResponseDto} from '~entities/project';
+import {SessionMode, type SessionResponseDto} from '~entities/project';
 import {httpClient} from '~shared/api';
 
 describe('edit-session-api', () => {
@@ -200,6 +201,23 @@ describe('edit-session-api', () => {
       expect(httpClient.post).toHaveBeenCalledWith('/projects/p1/end-session');
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResponse);
+    });
+  });
+
+  describe('startSession', () => {
+    it('should call httpClient.post with correct URL and mode body', async () => {
+      (httpClient.post as jest.Mock).mockResolvedValue({
+        data: {projectId: 'p1', sessionMode: 'DESIGNER', summary: 'started'},
+        success: true,
+      });
+
+      const result = await startSession('p1', SessionMode.Designer);
+
+      expect(httpClient.post).toHaveBeenCalledWith(
+        '/projects/p1/start-session',
+        {mode: SessionMode.Designer},
+      );
+      expect(result.success).toBe(true);
     });
   });
 });

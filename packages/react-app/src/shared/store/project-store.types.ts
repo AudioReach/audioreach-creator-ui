@@ -27,7 +27,9 @@ import type {UserPreferencesSlice} from './project-store-slices/user-preferences
 
 export type ProjectStore = {
   closeProject: () => void;
+  editModeState: 'view' | 'edit';
   projectId: string;
+  setEditModeState: (state: 'view' | 'edit') => void;
 } & ProjectMetaDataSlice &
   TabsSlice &
   LogsSlice &
