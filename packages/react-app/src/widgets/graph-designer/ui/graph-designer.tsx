@@ -52,6 +52,7 @@ import {
   type SearchHighlights,
   UsecaseVisualizer,
   type ViewportState,
+  VISUALIZER_MODE,
   type XY,
 } from '~features/usecase-visualizer';
 import {useUserPreferences} from '~shared/config/hooks';
@@ -59,7 +60,7 @@ import {WORKFLOW_TYPES} from '~shared/config/user-preferences-types';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
-import {useProjectLayoutStore} from '~shared/store';
+import {useProjectLayoutStore, useProjectStoreShallow} from '~shared/store';
 import {
   ModuleDataTab,
   type ModuleDataTabHandle,
@@ -170,8 +171,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   >({});
 
   const levelId = levelView?.levelId ?? '';
-  const collapsedSubgraphs = (collapseByLevel[levelId] ??
-    EMPTY_SET) as Set<number>;
+  const collapsedSubgraphs = collapseByLevel[levelId] ?? EMPTY_SET;
 
   // Shows a blur overlay while a large graph recompute is in progress, so
   // the screen doesn't look frozen.
@@ -465,6 +465,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Side nav implementation
   const hasSelection = (graph.modules?.length ?? 0) > 0;
   const canUndoRedo = false; // TODO: Support undo/redo stack
+
+  const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   const handleModuleDoubleClick = useCallback(
     async (nodeId: string, nodeKind: NodeKind, label: string) => {
@@ -934,6 +936,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             eventHandlers={eventHandlers}
             graph={graph}
             initialViewport={viewportByLevel[levelId]}
+            mode={isEditable ? VISUALIZER_MODE.EDIT : VISUALIZER_MODE.READONLY}
             onScreenshotApiReady={handleScreenshotReady}
             rendering={visualizerRendering}
             searchHighlights={searchHighlights}
