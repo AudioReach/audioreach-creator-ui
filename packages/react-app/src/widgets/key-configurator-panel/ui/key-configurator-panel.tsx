@@ -15,18 +15,21 @@ import {ModuleConfigurationPanel} from '~features/key-configurator/module-config
 import {SubgraphKeyVectorConfigPanel} from '~features/key-configurator/subgraph-configurator-view';
 import {SubsystemConfigPanel} from '~features/key-configurator/subsystem-configurator-view';
 import {logger} from '~shared/lib/logger';
+import {useProjectStoreShallow} from '~shared/store';
 import {
   ConfiguratorPanel,
   ConfiguratorUtils,
 } from '~widgets/configurator-panel';
 
 export const KeyConfiguratorPanel: React.FC = () => {
-  // KeyConfigurator store - single source of truth for all state
+  // KeyConfigurator store - single source of truth for selection/data state
   // Get the Zustand hook and use selectors to subscribe to specific state changes
   const useStore = useKeyConfiguratorSelectionStore();
   const selectedItems = useStore((state) => state.selectedItems);
   const projectId = useStore((state) => state.projectId);
-  const isEditable = useStore((state) => state.isEditable);
+  const isEditable = useProjectStoreShallow(
+    (state) => state.editModeState === 'edit',
+  );
   const setSelectedItems = useStore((state) => state.setSelectedItems);
   const initializeConfiguration = useStore(
     (state) => state.initializeConfiguration,

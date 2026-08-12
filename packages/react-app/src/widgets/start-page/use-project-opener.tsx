@@ -188,9 +188,11 @@ export function useProjectOpener({
         }
         if (component === KEY_CONFIGURATOR_COMPONENT_NAME) {
           return (
-            <GraphDesignerStoreContext.Provider value={tabStore}>
-              <KeyConfiguratorPanel />
-            </GraphDesignerStoreContext.Provider>
+            <ProjectStoreContext.Provider value={projectStore}>
+              <GraphDesignerStoreContext.Provider value={tabStore}>
+                <KeyConfiguratorPanel />
+              </GraphDesignerStoreContext.Provider>
+            </ProjectStoreContext.Provider>
           );
         }
         if (component === VALIDATION_RESULTS_COMPONENT_NAME) {
