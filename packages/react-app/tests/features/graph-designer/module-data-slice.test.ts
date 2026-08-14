@@ -468,7 +468,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
       .queryModuleData(MODULE_ID, MODULE_NAME);
 
     expect(result).toBe(true);
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.availableCalIndices).toHaveLength(2);
     expect(entry.tagData?.availableTagIndices).toHaveLength(1);
     expect(mockGetCalData).toHaveBeenCalledWith(
@@ -520,7 +520,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     expect(result).toBe(true);
     expect(mockGetCalData).not.toHaveBeenCalled();
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.selectedCalIndex).toBeUndefined();
     expect(mockGetTagData).toHaveBeenCalledWith(
       PROJECT_ID,
@@ -614,7 +614,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
     });
     const existingDto = makeCalDataDto();
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -629,7 +629,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
     });
 
     const promise = store.getState().queryModuleData(MODULE_ID, MODULE_NAME);
-    const midFlightEntry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const midFlightEntry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(midFlightEntry.calData?.dto).toBe(existingDto);
     expect(midFlightEntry.calData?.selectedCalIndex).toBe('ckv-1');
 
@@ -650,7 +650,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     expect(result).toBe(false);
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'danger');
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.status).toBe('error');
     expect(entry.tagData?.status).toBe('error');
   });
@@ -669,7 +669,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     expect(result).toBe(true);
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'warning');
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.status).toBe('ready');
     expect(entry.calData?.error).toBeUndefined();
     expect(entry.tagData?.status).toBe('ready');
@@ -690,7 +690,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
     const store = makeStore();
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.status).toBe('ready');
     expect(entry.calData?.lastMutation).toBe('get');
@@ -708,7 +708,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
       .getState()
       .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('partial');
     expect(mockGetCalData).toHaveBeenCalledWith(
       PROJECT_ID,
@@ -725,7 +725,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
     const store = makeStore();
     // Seed a full DTO already in place for ckv-1.
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -745,7 +745,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
       .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
 
     expect(mockGetCalData).not.toHaveBeenCalled();
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.dto).toBe(fullDto);
   });
@@ -755,7 +755,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
 
     const store = makeStore();
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -775,7 +775,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
       .fetchCalData(MODULE_ID, 'ckv-1', 'partial', ['param-1']);
 
     expect(mockGetCalData).not.toHaveBeenCalled();
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.dto).toBe(fullDto);
     expect(entry.calData?.selectedCalIndex).toBe('ckv-2');
@@ -786,7 +786,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
 
     const store = makeStore();
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -807,7 +807,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
 
     expect(result).toBe(false);
     expect(mockGetCalData).not.toHaveBeenCalled();
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.status).toBe('ready');
     expect(entry.calData?.dto).toBe(fullDto);
@@ -819,7 +819,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
 
     const store = makeStore();
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -840,7 +840,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
 
     expect(result).toBe(false);
     expect(mockGetCalData).not.toHaveBeenCalled();
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.status).toBe('ready');
     expect(entry.calData?.dto).toBe(fullDto);
@@ -873,7 +873,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
       parameters: [makeParam('param-1'), makeParam('param-2')],
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -895,7 +895,7 @@ describe('createModuleDataSlice — fetchCalData', () => {
     });
     await fetchPromise;
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.loadedScope).toBe('full');
     expect(entry.calData?.dto).toBe(fullDto);
   });
@@ -913,7 +913,7 @@ describe('createModuleDataSlice — setCalUiState / setGroupedCalUiState / setTa
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
     store.getState().setCalUiState(MODULE_ID, {searchText: 'gain'});
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.uiState?.searchText).toBe('gain');
   });
 
@@ -921,7 +921,7 @@ describe('createModuleDataSlice — setCalUiState / setGroupedCalUiState / setTa
     const store = makeStore();
     store.getState().setCalUiState(MODULE_ID, {searchText: 'gain'});
 
-    expect(store.getState().moduleDataByModuleId[MODULE_ID]).toBeUndefined();
+    expect(store.getState().moduleDataByInstanceId[MODULE_ID]).toBeUndefined();
   });
 });
 
@@ -938,7 +938,7 @@ describe('createModuleDataSlice — setModuleOpenTab', () => {
     store.getState().setModuleOpenTab(MODULE_ID, 'cal-tab');
 
     expect(store.getState().moduleOpenTabs[MODULE_ID]).toBe('cal-tab');
-    expect(store.getState().moduleDataByModuleId[MODULE_ID]).toBeDefined();
+    expect(store.getState().moduleDataByInstanceId[MODULE_ID]).toBeDefined();
   });
 });
 
@@ -967,7 +967,7 @@ describe('createModuleDataSlice — updateCalData', () => {
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
     await store.getState().updateCalData(MODULE_ID, {data: []});
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.dto?.parameters).toEqual([
       makeParam('param-1', {
         elements: [{type: 'NAME_VALUE_PAIR', value: 'updated'}],
@@ -1071,7 +1071,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1119,7 +1119,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     );
     expect(mockPutCalData.mock.calls[0][3].data).toHaveLength(1);
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     const parameters = entry.calData?.dto?.parameters ?? [];
     expect(parameters).toHaveLength(2);
     expect(
@@ -1146,7 +1146,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       withEnableDefinition: false,
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1226,7 +1226,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       withEnableDefinition: false,
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1257,7 +1257,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1289,7 +1289,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     });
     const originalDto = makeCalDataDtoWithEnable();
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1311,7 +1311,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     await store.getState().setModuleEnable(MODULE_ID, true);
 
     expect(mockShowToast).toHaveBeenCalledWith('boom', 'danger');
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.dto).toBe(originalDto);
   });
 
@@ -1327,7 +1327,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1358,7 +1358,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1391,7 +1391,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     store.setState({
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -1431,12 +1431,12 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     // tested above.
     await Promise.resolve();
     store.setState((s) => ({
-      moduleDataByModuleId: {
-        ...s.moduleDataByModuleId,
+      moduleDataByInstanceId: {
+        ...s.moduleDataByInstanceId,
         [MODULE_ID]: {
-          ...s.moduleDataByModuleId[MODULE_ID],
+          ...s.moduleDataByInstanceId[MODULE_ID],
           calData: {
-            ...s.moduleDataByModuleId[MODULE_ID].calData!,
+            ...s.moduleDataByInstanceId[MODULE_ID].calData!,
             isSaving: false,
           },
         },
@@ -1475,7 +1475,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     });
     await first;
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     const enableElement = entry.calData?.dto?.parameters.find(
       (p) => p.parameterId === '0x8001026',
     )?.elements[0];
@@ -1521,8 +1521,8 @@ describe('createModuleDataSlice — syncEnableOverlays', () => {
     const store = makeStoreWithEnableModule();
     // Seed a ready DTO already on the resolved CKV.
     store.setState((s) => ({
-      moduleDataByModuleId: {
-        ...s.moduleDataByModuleId,
+      moduleDataByInstanceId: {
+        ...s.moduleDataByInstanceId,
         'mod-2012': {
           calData: {
             availableCalIndices: [],
@@ -1545,8 +1545,8 @@ describe('createModuleDataSlice — syncEnableOverlays', () => {
   it('refetches when the cached DTO belongs to a different CKV', () => {
     const store = makeStoreWithEnableModule();
     store.setState((s) => ({
-      moduleDataByModuleId: {
-        ...s.moduleDataByModuleId,
+      moduleDataByInstanceId: {
+        ...s.moduleDataByInstanceId,
         'mod-2012': {
           calData: {
             availableCalIndices: [],
@@ -1586,8 +1586,8 @@ describe('createModuleDataSlice — syncEnableOverlays', () => {
     // Seed a full DTO for a different CKV than the active header selection —
     // the tab opened on headset, but the header now resolves to btrx.
     store.setState((s) => ({
-      moduleDataByModuleId: {
-        ...s.moduleDataByModuleId,
+      moduleDataByInstanceId: {
+        ...s.moduleDataByInstanceId,
         'mod-2012': {
           calData: {
             availableCalIndices: [],
@@ -1611,8 +1611,8 @@ describe('createModuleDataSlice — syncEnableOverlays', () => {
     const store = makeStoreWithEnableModule();
     // Simulate a fetch already in progress for a different CKV.
     store.setState((s) => ({
-      moduleDataByModuleId: {
-        ...s.moduleDataByModuleId,
+      moduleDataByInstanceId: {
+        ...s.moduleDataByInstanceId,
         'mod-2012': {
           calData: {
             availableCalIndices: [],
@@ -1682,7 +1682,7 @@ describe('createModuleDataSlice — updateTagData', () => {
     await store.getState().fetchTagData(MODULE_ID, 'tag-1', 'tkv-1');
     await store.getState().updateTagData(MODULE_ID, {data: []});
 
-    const entry = store.getState().moduleDataByModuleId[MODULE_ID];
+    const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.tagData?.dto?.parameters).toEqual([
       makeParam('param-1'),
       makeParam('param-2', {
@@ -1703,7 +1703,7 @@ describe('createModuleDataSlice — updateTagData', () => {
 });
 
 describe('createModuleDataSlice — clearModuleData', () => {
-  it('removes the entry for the given moduleId', async () => {
+  it('removes the entry for the given moduleInstanceId', async () => {
     mockGetCalData.mockResolvedValueOnce({
       data: makeCalDataDto(),
       message: undefined,
@@ -1714,6 +1714,6 @@ describe('createModuleDataSlice — clearModuleData', () => {
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
     store.getState().clearModuleData(MODULE_ID);
 
-    expect(store.getState().moduleDataByModuleId[MODULE_ID]).toBeUndefined();
+    expect(store.getState().moduleDataByInstanceId[MODULE_ID]).toBeUndefined();
   });
 });

@@ -156,7 +156,7 @@ const MODULE_NAME = 'AudioDecoder';
 
 interface TestStoreShape {
   clearModuleData: jest.Mock;
-  moduleDataByModuleId: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId: Record<string, ModuleDataEntry>;
   setCalUiState: jest.Mock;
   setModuleOpenTab: jest.Mock;
   setTagUiState: jest.Mock;
@@ -214,13 +214,13 @@ function makeStore(
 ): StoreApi<TestStoreShape> {
   return createStore<TestStoreShape>((set, get) => ({
     clearModuleData: jest.fn(),
-    moduleDataByModuleId: {[MODULE_ID]: entry},
-    setCalUiState: jest.fn((moduleId: string, patch: unknown) => {
-      const existing = get().moduleDataByModuleId[moduleId];
+    moduleDataByInstanceId: {[MODULE_ID]: entry},
+    setCalUiState: jest.fn((moduleInstanceId: string, patch: unknown) => {
+      const existing = get().moduleDataByInstanceId[moduleInstanceId];
       set({
-        moduleDataByModuleId: {
-          ...get().moduleDataByModuleId,
-          [moduleId]: {
+        moduleDataByInstanceId: {
+          ...get().moduleDataByInstanceId,
+          [moduleInstanceId]: {
             ...existing,
             calData: {...existing.calData, ...(patch as object)},
           },
@@ -242,7 +242,7 @@ function renderTab(
     <GraphDesignerStoreContext.Provider
       value={store as unknown as GraphDesignerStoreApi}
     >
-      <ModuleDataTab ref={ref} moduleId={MODULE_ID} />
+      <ModuleDataTab ref={ref} moduleInstanceId={MODULE_ID} />
     </GraphDesignerStoreContext.Provider>,
   );
 }

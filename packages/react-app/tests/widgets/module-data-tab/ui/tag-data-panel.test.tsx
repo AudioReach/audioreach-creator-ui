@@ -102,7 +102,7 @@ const MODULE_NAME = 'AudioDecoder';
 
 interface TestStoreShape {
   fetchTagData: jest.Mock;
-  moduleDataByModuleId: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId: Record<string, ModuleDataEntry>;
   setTagUiState: jest.Mock;
   updateTagData: jest.Mock;
 }
@@ -156,12 +156,16 @@ function makeStore(
 ): StoreApi<TestStoreShape> {
   return createStore<TestStoreShape>((set, get) => ({
     fetchTagData: jest.fn(
-      async (moduleId: string, tagSystemId: string, tkvSystemId: string) => {
-        const existing = get().moduleDataByModuleId[moduleId];
+      async (
+        moduleInstanceId: string,
+        tagSystemId: string,
+        tkvSystemId: string,
+      ) => {
+        const existing = get().moduleDataByInstanceId[moduleInstanceId];
         set({
-          moduleDataByModuleId: {
-            ...get().moduleDataByModuleId,
-            [moduleId]: {
+          moduleDataByInstanceId: {
+            ...get().moduleDataByInstanceId,
+            [moduleInstanceId]: {
               ...existing,
               tagData: {
                 ...existing.tagData,
@@ -177,7 +181,7 @@ function makeStore(
         return true;
       },
     ),
-    moduleDataByModuleId: {
+    moduleDataByInstanceId: {
       [MODULE_ID]: {
         moduleName: MODULE_NAME,
         tagData: {
@@ -206,7 +210,7 @@ function renderPanel(
     <GraphDesignerStoreContext.Provider
       value={store as unknown as StoreApi<GraphDesignerStore>}
     >
-      <TagDataPanel ref={ref} moduleId={MODULE_ID} />
+      <TagDataPanel ref={ref} moduleInstanceId={MODULE_ID} />
     </GraphDesignerStoreContext.Provider>,
   );
 }
@@ -302,7 +306,7 @@ describe('TagDataPanel — status rendering', () => {
   it('renders a progress indicator when no tagData entry exists yet', () => {
     const store = createStore<TestStoreShape>(() => ({
       fetchTagData: jest.fn().mockResolvedValue(true),
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {moduleName: MODULE_NAME},
       },
       setTagUiState: jest.fn(),

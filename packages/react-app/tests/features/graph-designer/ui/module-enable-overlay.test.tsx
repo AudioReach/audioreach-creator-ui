@@ -25,7 +25,7 @@ const ENABLE_PARAM_SYSTEM_ID = 'PARAM_ID_MODULE_ENABLE_SYS_ID';
 interface TestStoreShape {
   graphData: {moduleInstances: Record<string, ModuleInstance>};
   headerSelectionsBySubgraphId: GraphDesignerStore['headerSelectionsBySubgraphId'];
-  moduleDataByModuleId: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId: Record<string, ModuleDataEntry>;
   moduleDefinitionsById: Record<string, SpfModuleDefinitionResponseDto>;
   setModuleEnable: jest.Mock;
 }
@@ -136,14 +136,14 @@ function makeEnableParamDefinitionsSummaryInfo() {
 
 function makeStore(options: {
   headerSelectionsBySubgraphId?: GraphDesignerStore['headerSelectionsBySubgraphId'];
-  moduleDataByModuleId?: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId?: Record<string, ModuleDataEntry>;
   moduleDefinitionsById?: Record<string, SpfModuleDefinitionResponseDto>;
   moduleInstances?: Record<string, ModuleInstance>;
 }): StoreApi<TestStoreShape> {
   return createStore<TestStoreShape>(() => ({
     graphData: {moduleInstances: options.moduleInstances ?? {}},
     headerSelectionsBySubgraphId: options.headerSelectionsBySubgraphId ?? {},
-    moduleDataByModuleId: options.moduleDataByModuleId ?? {},
+    moduleDataByInstanceId: options.moduleDataByInstanceId ?? {},
     moduleDefinitionsById: options.moduleDefinitionsById ?? {},
     setModuleEnable: jest.fn(),
   }));
@@ -212,7 +212,7 @@ describe('ModuleEnableOverlay — CKV resolved, value not fetched (State 2)', ()
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
       },
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_INSTANCE_ID]: {
           calData: {
             availableCalIndices: [],
@@ -248,7 +248,7 @@ describe('ModuleEnableOverlay — ready (State 1)', () => {
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
       },
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_INSTANCE_ID]: {
           calData: {
             availableCalIndices: [],

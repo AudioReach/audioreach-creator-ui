@@ -144,8 +144,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Store API for imperative action calls and provider value for new tabs.
   const store = useGraphDesignerStore();
 
-  // Keyed by moduleId so the tab-close callback can reach the specific
-  // ModuleDataTab instance's confirmClose() handle.
+  // Keyed by moduleInstanceId (nodeId) so the tab-close callback can reach
+  // the specific ModuleDataTab instance's confirmClose() handle.
   const moduleDataTabRefs = useRef(
     new Map<string, React.RefObject<ModuleDataTabHandle | null>>(),
   );
@@ -496,7 +496,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         const tab = tabLayoutService.createProjectTab(
           label,
           <GraphDesignerStoreContext.Provider value={store}>
-            <ModuleDataTab ref={moduleDataTabRef} moduleId={nodeId} />
+            <ModuleDataTab ref={moduleDataTabRef} moduleInstanceId={nodeId} />
           </GraphDesignerStoreContext.Provider>,
           () => moduleDataTabRef.current?.confirmClose() ?? true,
           () => {

@@ -90,33 +90,36 @@ function mergeParametersById<
 }
 
 export interface ModuleDataSlice {
-  clearModuleData: (moduleId: string) => void;
+  clearModuleData: (moduleInstanceId: string) => void;
   fetchCalData: (
-    moduleId: string,
+    moduleInstanceId: string,
     ckvSystemId: string,
     scope?: 'partial' | 'full',
     paramSystemIds?: string[],
   ) => Promise<boolean>;
   fetchTagData: (
-    moduleId: string,
+    moduleInstanceId: string,
     tagSystemId: string,
     tkvSystemId: string,
   ) => Promise<boolean>;
-  moduleDataByModuleId: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId: Record<string, ModuleDataEntry>;
   moduleOpenTabs: Record<string, string | null>;
-  queryModuleData: (moduleId: string, moduleName: string) => Promise<boolean>;
+  queryModuleData: (
+    moduleInstanceId: string,
+    moduleName: string,
+  ) => Promise<boolean>;
   setCalUiState: (
-    moduleId: string,
+    moduleInstanceId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
   setGroupedCalUiState: (
-    moduleId: string,
+    moduleInstanceId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
   setModuleEnable: (moduleInstanceId: string, value: boolean) => Promise<void>;
-  setModuleOpenTab: (moduleId: string, tabId: string | null) => void;
+  setModuleOpenTab: (moduleInstanceId: string, tabId: string | null) => void;
   setTagUiState: (
-    moduleId: string,
+    moduleInstanceId: string,
     patch: Partial<GenericTreeViewUiState>,
   ) => void;
   /**
@@ -130,11 +133,11 @@ export interface ModuleDataSlice {
    */
   syncEnableOverlays: (subgraphId?: string) => void;
   updateCalData: (
-    moduleId: string,
+    moduleInstanceId: string,
     payload: UpdateSpfModuleCalDataRequest,
   ) => Promise<CalDataDto | void>;
   updateTagData: (
-    moduleId: string,
+    moduleInstanceId: string,
     payload: UpdateSpfModuleTagDataRequest,
   ) => Promise<TagDataDto | void>;
 }
@@ -191,29 +194,33 @@ export function createModuleDataSlice<
   get: StoreApi<S>['getState'],
   projectId: string,
 ): ModuleDataSlice {
-  const patchEntry = (moduleId: string, patch: Partial<ModuleDataEntry>) => {
-    const existing = get().moduleDataByModuleId[moduleId];
+  const patchEntry = (
+    moduleInstanceId: string,
+    patch: Partial<ModuleDataEntry>,
+  ) => {
+    const existing = get().moduleDataByInstanceId[moduleInstanceId];
     set({
-      moduleDataByModuleId: {
-        ...get().moduleDataByModuleId,
-        [moduleId]: {...existing, ...patch} as ModuleDataEntry,
+      moduleDataByInstanceId: {
+        ...get().moduleDataByInstanceId,
+        [moduleInstanceId]: {...existing, ...patch} as ModuleDataEntry,
       },
     } as Partial<S>);
   };
 
   return {
-    clearModuleData: (moduleId: string): void => {
+    clearModuleData: (moduleInstanceId: string): void => {
       logger.debug('moduleDataSlice: clearModuleData', {
         action: 'clearModuleData',
         component: 'moduleDataSlice',
       });
 
-      const {[moduleId]: _removed, ...remaining} = get().moduleDataByModuleId;
-      set({moduleDataByModuleId: remaining} as Partial<S>);
+      const {[moduleInstanceId]: _removed, ...remaining} =
+        get().moduleDataByInstanceId;
+      set({moduleDataByInstanceId: remaining} as Partial<S>);
     },
 
     fetchCalData: async (
-      moduleId: string,
+      moduleInstanceId: string,
       ckvSystemId: string,
       scope: 'partial' | 'full' = 'full',
       paramSystemIds?: string[],
@@ -223,7 +230,7 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       const moduleName = entry?.moduleName ?? '';
 
       // Do not disturb a full DTO with a partial background prefetch — the
@@ -232,7 +239,7 @@ export function createModuleDataSlice<
         return false;
       }
 
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         calData: mergePatch(DEFAULT_CAL_DATA, entry?.calData, {
           error: undefined,
           selectedCalIndex: ckvSystemId,
@@ -244,12 +251,12 @@ export function createModuleDataSlice<
       try {
         const result = await getCalData(
           projectId,
-          moduleId,
+          moduleInstanceId,
           ckvSystemId,
           scope === 'partial' ? paramSystemIds : undefined,
         );
 
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.calData;
 
         if (!result.success || !result.data) {
@@ -262,7 +269,7 @@ export function createModuleDataSlice<
             component: 'moduleDataSlice',
             error: errorMsg,
           });
-          patchEntry(moduleId, {
+          patchEntry(moduleInstanceId, {
             calData: mergePatch(DEFAULT_CAL_DATA, base, {
               error: errorMsg,
               selectedCalIndex: ckvSystemId,
@@ -284,7 +291,7 @@ export function createModuleDataSlice<
           return true;
         }
 
-        patchEntry(moduleId, {
+        patchEntry(moduleInstanceId, {
           calData: mergePatch(DEFAULT_CAL_DATA, base, {
             dto: result.data,
             error: undefined,
@@ -298,7 +305,7 @@ export function createModuleDataSlice<
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error';
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.calData;
         if (scope === 'partial' && base?.loadedScope === 'full') {
           return false;
@@ -308,7 +315,7 @@ export function createModuleDataSlice<
           component: 'moduleDataSlice',
           error: errorMsg,
         });
-        patchEntry(moduleId, {
+        patchEntry(moduleInstanceId, {
           calData: mergePatch(DEFAULT_CAL_DATA, base, {
             error: errorMsg,
             selectedCalIndex: ckvSystemId,
@@ -321,7 +328,7 @@ export function createModuleDataSlice<
     },
 
     fetchTagData: async (
-      moduleId: string,
+      moduleInstanceId: string,
       tagSystemId: string,
       tkvSystemId: string,
     ): Promise<boolean> => {
@@ -330,10 +337,10 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       const moduleName = entry?.moduleName ?? '';
 
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         moduleName,
         tagData: mergePatch(DEFAULT_TAG_DATA, entry?.tagData, {
           error: undefined,
@@ -346,12 +353,12 @@ export function createModuleDataSlice<
       try {
         const result = await getTagData(
           projectId,
-          moduleId,
+          moduleInstanceId,
           tagSystemId,
           tkvSystemId,
         );
 
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.tagData;
 
         if (!result.success || !result.data) {
@@ -361,7 +368,7 @@ export function createModuleDataSlice<
             component: 'moduleDataSlice',
             error: errorMsg,
           });
-          patchEntry(moduleId, {
+          patchEntry(moduleInstanceId, {
             tagData: mergePatch(DEFAULT_TAG_DATA, base, {
               error: errorMsg,
               selectedTagIndex: tkvSystemId,
@@ -373,7 +380,7 @@ export function createModuleDataSlice<
           return false;
         }
 
-        patchEntry(moduleId, {
+        patchEntry(moduleInstanceId, {
           tagData: mergePatch(DEFAULT_TAG_DATA, base, {
             dto: result.data,
             error: undefined,
@@ -392,9 +399,9 @@ export function createModuleDataSlice<
           component: 'moduleDataSlice',
           error: errorMsg,
         });
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.tagData;
-        patchEntry(moduleId, {
+        patchEntry(moduleInstanceId, {
           tagData: mergePatch(DEFAULT_TAG_DATA, base, {
             error: errorMsg,
             selectedTagIndex: tkvSystemId,
@@ -407,12 +414,12 @@ export function createModuleDataSlice<
       }
     },
 
-    moduleDataByModuleId: {},
+    moduleDataByInstanceId: {},
 
     moduleOpenTabs: {},
 
     queryModuleData: async (
-      moduleId: string,
+      moduleInstanceId: string,
       moduleName: string,
     ): Promise<boolean> => {
       logger.debug('moduleDataSlice: queryModuleData', {
@@ -420,8 +427,8 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
-      const entry = get().moduleDataByModuleId[moduleId];
-      patchEntry(moduleId, {
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
+      patchEntry(moduleInstanceId, {
         calData: mergePatch(DEFAULT_CAL_DATA, entry?.calData, {
           error: undefined,
           status: 'loading',
@@ -434,7 +441,7 @@ export function createModuleDataSlice<
       });
 
       try {
-        const result = await queryModuleIndices(projectId, moduleId);
+        const result = await queryModuleIndices(projectId, moduleInstanceId);
 
         if (!result.success) {
           const errorMsg = result.message ?? 'Failed to query module data';
@@ -443,8 +450,8 @@ export function createModuleDataSlice<
             component: 'moduleDataSlice',
             error: errorMsg,
           });
-          const latest = get().moduleDataByModuleId[moduleId];
-          patchEntry(moduleId, {
+          const latest = get().moduleDataByInstanceId[moduleInstanceId];
+          patchEntry(moduleInstanceId, {
             calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
               error: errorMsg,
               status: 'error',
@@ -464,8 +471,8 @@ export function createModuleDataSlice<
             action: 'queryModuleData',
             component: 'moduleDataSlice',
           });
-          const latest = get().moduleDataByModuleId[moduleId];
-          patchEntry(moduleId, {
+          const latest = get().moduleDataByInstanceId[moduleInstanceId];
+          patchEntry(moduleInstanceId, {
             calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
               availableCalIndices: [],
               dto: undefined,
@@ -492,8 +499,8 @@ export function createModuleDataSlice<
         const availableCalIndices = module.ckvs ?? [];
         const availableTagIndices = module.tags ?? [];
 
-        const latest = get().moduleDataByModuleId[moduleId];
-        patchEntry(moduleId, {
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
+        patchEntry(moduleInstanceId, {
           calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
             availableCalIndices,
             status: 'ready',
@@ -505,7 +512,8 @@ export function createModuleDataSlice<
           }),
         });
 
-        const moduleInstance = get().graphData?.moduleInstances[moduleId];
+        const moduleInstance =
+          get().graphData?.moduleInstances[moduleInstanceId];
         const headerSelection = moduleInstance
           ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphId]
           : undefined;
@@ -519,10 +527,14 @@ export function createModuleDataSlice<
 
         await Promise.all([
           activeCkv.isResolved
-            ? get().fetchCalData(moduleId, activeCkv.ckvSystemId)
+            ? get().fetchCalData(moduleInstanceId, activeCkv.ckvSystemId)
             : Promise.resolve(),
           firstTag && firstTkv
-            ? get().fetchTagData(moduleId, firstTag.systemId, firstTkv.systemId)
+            ? get().fetchTagData(
+                moduleInstanceId,
+                firstTag.systemId,
+                firstTkv.systemId,
+              )
             : Promise.resolve(),
         ]);
 
@@ -535,8 +547,8 @@ export function createModuleDataSlice<
           component: 'moduleDataSlice',
           error: errorMsg,
         });
-        const latest = get().moduleDataByModuleId[moduleId];
-        patchEntry(moduleId, {
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
+        patchEntry(moduleInstanceId, {
           calData: mergePatch(DEFAULT_CAL_DATA, latest?.calData, {
             error: errorMsg,
             status: 'error',
@@ -553,18 +565,18 @@ export function createModuleDataSlice<
     },
 
     setCalUiState: (
-      moduleId: string,
+      moduleInstanceId: string,
       patch: Partial<GenericTreeViewUiState>,
     ): void => {
       logger.debug('moduleDataSlice: setCalUiState', {
         action: 'setCalUiState',
         component: 'moduleDataSlice',
       });
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       if (!entry?.calData) {
         return;
       }
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         calData: {
           ...entry.calData,
           uiState: {
@@ -577,18 +589,18 @@ export function createModuleDataSlice<
     },
 
     setGroupedCalUiState: (
-      moduleId: string,
+      moduleInstanceId: string,
       patch: Partial<GenericTreeViewUiState>,
     ): void => {
       logger.debug('moduleDataSlice: setGroupedCalUiState', {
         action: 'setGroupedCalUiState',
         component: 'moduleDataSlice',
       });
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       if (!entry?.calData) {
         return;
       }
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         calData: {
           ...entry.calData,
           groupedUiState: {
@@ -621,7 +633,7 @@ export function createModuleDataSlice<
         return;
       }
 
-      const entry = get().moduleDataByModuleId[moduleInstanceId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       if (entry?.calData?.selectedCalIndex !== activeCkv.ckvSystemId) {
         return;
       }
@@ -672,7 +684,7 @@ export function createModuleDataSlice<
         );
 
         if (result.success && result.data) {
-          const latest = get().moduleDataByModuleId[moduleInstanceId];
+          const latest = get().moduleDataByInstanceId[moduleInstanceId];
           const latestDto = latest?.calData?.dto;
           // Only merge if this save is still the current one — a later
           // call may have already completed and cleared isSaving, in
@@ -701,7 +713,7 @@ export function createModuleDataSlice<
         });
         showToast(errorMsg, 'danger');
       } finally {
-        const latest = get().moduleDataByModuleId[moduleInstanceId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         if (latest?.calData) {
           patchEntry(moduleInstanceId, {
             calData: {...latest.calData, isSaving: false},
@@ -710,7 +722,10 @@ export function createModuleDataSlice<
       }
     },
 
-    setModuleOpenTab: (moduleId: string, tabId: string | null): void => {
+    setModuleOpenTab: (
+      moduleInstanceId: string,
+      tabId: string | null,
+    ): void => {
       logger.debug('moduleDataSlice: setModuleOpenTab', {
         action: 'setModuleOpenTab',
         component: 'moduleDataSlice',
@@ -718,24 +733,24 @@ export function createModuleDataSlice<
       set({
         moduleOpenTabs: {
           ...get().moduleOpenTabs,
-          [moduleId]: tabId,
+          [moduleInstanceId]: tabId,
         },
       } as Partial<S>);
     },
 
     setTagUiState: (
-      moduleId: string,
+      moduleInstanceId: string,
       patch: Partial<GenericTreeViewUiState>,
     ): void => {
       logger.debug('moduleDataSlice: setTagUiState', {
         action: 'setTagUiState',
         component: 'moduleDataSlice',
       });
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       if (!entry?.tagData) {
         return;
       }
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         tagData: {
           ...entry.tagData,
           uiState: {
@@ -784,7 +799,7 @@ export function createModuleDataSlice<
           continue;
         }
         const entry =
-          state.moduleDataByModuleId[moduleInstance.moduleInstanceId];
+          state.moduleDataByInstanceId[moduleInstance.moduleInstanceId];
         const cal = entry?.calData;
         // Never background-fetch a module whose tab has already loaded a full
         // DTO — partial overlay fetches must not disturb a decoupled tab CKV.
@@ -815,7 +830,7 @@ export function createModuleDataSlice<
     },
 
     updateCalData: async (
-      moduleId: string,
+      moduleInstanceId: string,
       payload: UpdateSpfModuleCalDataRequest,
     ): Promise<CalDataDto | void> => {
       logger.debug('moduleDataSlice: updateCalData', {
@@ -823,7 +838,7 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       const ckvSystemId = entry?.calData?.selectedCalIndex;
 
       if (!entry?.calData || !ckvSystemId) {
@@ -834,26 +849,26 @@ export function createModuleDataSlice<
         return;
       }
 
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         calData: {...entry.calData, isSaving: true},
       });
 
       try {
         const result = await putCalData(
           projectId,
-          moduleId,
+          moduleInstanceId,
           ckvSystemId,
           payload,
         );
 
         if (result.success && result.data) {
-          const latest = get().moduleDataByModuleId[moduleId];
+          const latest = get().moduleDataByInstanceId[moduleInstanceId];
           if (latest?.calData?.dto) {
             const mergedDto = mergeParametersById(
               latest.calData.dto,
               result.data,
             );
-            patchEntry(moduleId, {
+            patchEntry(moduleInstanceId, {
               calData: {
                 ...latest.calData,
                 dto: mergedDto,
@@ -878,9 +893,9 @@ export function createModuleDataSlice<
         });
         showToast(errorMsg, 'danger');
       } finally {
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         if (latest?.calData) {
-          patchEntry(moduleId, {
+          patchEntry(moduleInstanceId, {
             calData: {...latest.calData, isSaving: false},
           });
         }
@@ -888,7 +903,7 @@ export function createModuleDataSlice<
     },
 
     updateTagData: async (
-      moduleId: string,
+      moduleInstanceId: string,
       payload: UpdateSpfModuleTagDataRequest,
     ): Promise<TagDataDto | void> => {
       logger.debug('moduleDataSlice: updateTagData', {
@@ -896,7 +911,7 @@ export function createModuleDataSlice<
         component: 'moduleDataSlice',
       });
 
-      const entry = get().moduleDataByModuleId[moduleId];
+      const entry = get().moduleDataByInstanceId[moduleInstanceId];
       const tagSystemId = entry?.tagData?.selectedTagSystemId;
       const tkvSystemId = entry?.tagData?.selectedTagIndex;
 
@@ -908,27 +923,27 @@ export function createModuleDataSlice<
         return;
       }
 
-      patchEntry(moduleId, {
+      patchEntry(moduleInstanceId, {
         tagData: {...entry.tagData, isSaving: true},
       });
 
       try {
         const result = await putTagData(
           projectId,
-          moduleId,
+          moduleInstanceId,
           tagSystemId,
           tkvSystemId,
           payload,
         );
 
         if (result.success && result.data) {
-          const latest = get().moduleDataByModuleId[moduleId];
+          const latest = get().moduleDataByInstanceId[moduleInstanceId];
           if (latest?.tagData?.dto) {
             const mergedDto = mergeParametersById(
               latest.tagData.dto,
               result.data,
             );
-            patchEntry(moduleId, {
+            patchEntry(moduleInstanceId, {
               tagData: {
                 ...latest.tagData,
                 dto: mergedDto,
@@ -953,9 +968,9 @@ export function createModuleDataSlice<
         });
         showToast(errorMsg, 'danger');
       } finally {
-        const latest = get().moduleDataByModuleId[moduleId];
+        const latest = get().moduleDataByInstanceId[moduleInstanceId];
         if (latest?.tagData) {
-          patchEntry(moduleId, {
+          patchEntry(moduleInstanceId, {
             tagData: {...latest.tagData, isSaving: false},
           });
         }

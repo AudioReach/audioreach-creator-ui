@@ -44,7 +44,7 @@ export function selectModuleEnable(
     return {isCkvResolved: false, isPresent: true};
   }
 
-  const calData = state.moduleDataByModuleId[moduleInstanceId]?.calData;
+  const calData = state.moduleDataByInstanceId[moduleInstanceId]?.calData;
   if (calData?.selectedCalIndex !== activeCkv.ckvSystemId) {
     return {isCkvResolved: true, isPresent: true, isReady: false};
   }

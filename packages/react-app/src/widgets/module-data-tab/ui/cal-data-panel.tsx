@@ -31,18 +31,18 @@ import {IndexSwitchDialog} from './index-switch-dialog';
 import {ModuleDataPanelBody} from './module-data-panel-body';
 
 interface CalDataPanelProps {
-  moduleId: string;
+  moduleInstanceId: string;
 }
 
 function CalDataPanelInner(
   props: CalDataPanelProps,
   ref: React.Ref<GenericTreeViewHandle>,
 ) {
-  const {moduleId} = props;
+  const {moduleInstanceId} = props;
 
   const {entry, fetchCalData, setCalUiState, updateCalData} =
     useGraphDesignerStoreShallow((state) => ({
-      entry: state.moduleDataByModuleId[moduleId],
+      entry: state.moduleDataByInstanceId[moduleInstanceId],
       fetchCalData: state.fetchCalData,
       setCalUiState: state.setCalUiState,
       updateCalData: state.updateCalData,
@@ -80,9 +80,15 @@ function CalDataPanelInner(
     }
     const [firstIndex] = sortedCalIndices;
     if (firstIndex) {
-      void fetchCalData(moduleId, firstIndex.systemId);
+      void fetchCalData(moduleInstanceId, firstIndex.systemId);
     }
-  }, [hasCalData, selectedCalIndex, fetchCalData, moduleId, sortedCalIndices]);
+  }, [
+    hasCalData,
+    selectedCalIndex,
+    fetchCalData,
+    moduleInstanceId,
+    sortedCalIndices,
+  ]);
 
   const collection = useMemo(
     () =>
@@ -118,12 +124,12 @@ function CalDataPanelInner(
         const dirtyItems = treeViewRef.current?.getEditedTreeViewItems();
         if (dirtyItems) {
           await updateCalData(
-            moduleId,
+            moduleInstanceId,
             dirtyItemsToCalDataRequest(dirtyItems, calData.dto),
           );
         }
       },
-      onSwitch: (newIndex) => void fetchCalData(moduleId, newIndex),
+      onSwitch: (newIndex) => void fetchCalData(moduleInstanceId, newIndex),
     });
 
   return (
@@ -141,7 +147,7 @@ function CalDataPanelInner(
         data={treeViewData}
         error={calData?.error}
         initialUiState={calData?.uiState}
-        onUiStateChange={(patch) => setCalUiState(moduleId, patch)}
+        onUiStateChange={(patch) => setCalUiState(moduleInstanceId, patch)}
         status={calData?.status}
         title={entry?.moduleName ?? ''}
       />

@@ -102,7 +102,7 @@ function makeCalDataDto(overrides?: Partial<CalDataDto>): CalDataDto {
 
 function makeState(options: {
   headerSelectionsBySubgraphId?: GraphDesignerStore['headerSelectionsBySubgraphId'];
-  moduleDataByModuleId?: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId?: Record<string, ModuleDataEntry>;
   moduleDefinitionsById?: Record<string, SpfModuleDefinitionResponseDto>;
   moduleInstances?: Record<string, ModuleInstance>;
 }): GraphDesignerStore {
@@ -116,7 +116,7 @@ function makeState(options: {
       subsystems: {},
     },
     headerSelectionsBySubgraphId: options.headerSelectionsBySubgraphId ?? {},
-    moduleDataByModuleId: options.moduleDataByModuleId ?? {},
+    moduleDataByInstanceId: options.moduleDataByInstanceId ?? {},
     moduleDefinitionsById: options.moduleDefinitionsById ?? {},
   } as unknown as GraphDesignerStore;
 }
@@ -133,7 +133,7 @@ function makeStateWithEnableModule(options: {
         subgraphId: 'sg-1',
       },
     },
-    moduleDataByModuleId: {
+    moduleDataByInstanceId: {
       'mod-2012': {
         calData: {
           availableCalIndices: [],
@@ -274,7 +274,7 @@ describe('selectModuleEnable', () => {
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
       },
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         'inst-1': {
           calData: {
             availableCalIndices: [],
@@ -319,7 +319,7 @@ describe('selectModuleEnable', () => {
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
       },
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         'inst-1': {
           calData: {
             availableCalIndices: [],
@@ -390,7 +390,7 @@ describe('selectModuleEnable', () => {
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
       },
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         'inst-1': {
           calData: {
             availableCalIndices: [],

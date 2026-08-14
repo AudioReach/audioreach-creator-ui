@@ -102,7 +102,7 @@ const MODULE_NAME = 'AudioDecoder';
 
 interface TestStoreShape {
   fetchCalData: jest.Mock;
-  moduleDataByModuleId: Record<string, ModuleDataEntry>;
+  moduleDataByInstanceId: Record<string, ModuleDataEntry>;
   setCalUiState: jest.Mock;
   updateCalData: jest.Mock;
 }
@@ -144,26 +144,28 @@ function makeStore(
   entry: Partial<NonNullable<ModuleDataEntry['calData']>> = {},
 ): StoreApi<TestStoreShape> {
   return createStore<TestStoreShape>((set, get) => ({
-    fetchCalData: jest.fn(async (moduleId: string, ckvSystemId: string) => {
-      const existing = get().moduleDataByModuleId[moduleId];
-      set({
-        moduleDataByModuleId: {
-          ...get().moduleDataByModuleId,
-          [moduleId]: {
-            ...existing,
-            calData: {
-              ...existing.calData,
-              dto: makeCalDataDto({systemId: ckvSystemId}),
-              error: undefined,
-              selectedCalIndex: ckvSystemId,
-              status: 'ready',
-            } as ModuleDataEntry['calData'],
+    fetchCalData: jest.fn(
+      async (moduleInstanceId: string, ckvSystemId: string) => {
+        const existing = get().moduleDataByInstanceId[moduleInstanceId];
+        set({
+          moduleDataByInstanceId: {
+            ...get().moduleDataByInstanceId,
+            [moduleInstanceId]: {
+              ...existing,
+              calData: {
+                ...existing.calData,
+                dto: makeCalDataDto({systemId: ckvSystemId}),
+                error: undefined,
+                selectedCalIndex: ckvSystemId,
+                status: 'ready',
+              } as ModuleDataEntry['calData'],
+            },
           },
-        },
-      });
-      return true;
-    }),
-    moduleDataByModuleId: {
+        });
+        return true;
+      },
+    ),
+    moduleDataByInstanceId: {
       [MODULE_ID]: {
         calData: {
           availableCalIndices: [
@@ -192,7 +194,7 @@ function renderPanel(
     <GraphDesignerStoreContext.Provider
       value={store as unknown as StoreApi<GraphDesignerStore>}
     >
-      <CalDataPanel ref={ref} moduleId={MODULE_ID} />
+      <CalDataPanel ref={ref} moduleInstanceId={MODULE_ID} />
     </GraphDesignerStoreContext.Provider>,
   );
 }
@@ -288,7 +290,7 @@ describe('CalDataPanel — status rendering', () => {
   it('renders a progress indicator when no calData entry exists yet', () => {
     const store = createStore<TestStoreShape>(() => ({
       fetchCalData: jest.fn().mockResolvedValue(true),
-      moduleDataByModuleId: {
+      moduleDataByInstanceId: {
         [MODULE_ID]: {moduleName: MODULE_NAME},
       },
       setCalUiState: jest.fn(),

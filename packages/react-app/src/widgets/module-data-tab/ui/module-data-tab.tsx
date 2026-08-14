@@ -34,12 +34,12 @@ import {TagDataPanel} from './tag-data-panel';
 import {UnsavedChangesDialog} from './unsaved-changes-dialog';
 
 async function writeDirtyTab<Dto, Payload>(
-  moduleId: string,
+  moduleInstanceId: string,
   dto: Dto | undefined,
   uiState: GenericTreeViewUiState | undefined,
   toTreeViewData: (dto: Dto) => TreeViewData,
   toRequest: (items: TreeViewItem[], dto: Dto) => Payload,
-  update: (moduleId: string, payload: Payload) => Promise<unknown>,
+  update: (moduleInstanceId: string, payload: Payload) => Promise<unknown>,
 ): Promise<boolean> {
   if (!dto || !uiState || !isUiStateDirty(uiState)) {
     return true;
@@ -51,7 +51,7 @@ async function writeDirtyTab<Dto, Payload>(
     new Map(Object.entries(uiState.elementValues)),
     new Map(Object.entries(uiState.arrayCounts)),
   );
-  const result = await update(moduleId, toRequest(dirtyItems, dto));
+  const result = await update(moduleInstanceId, toRequest(dirtyItems, dto));
   return Boolean(result);
 }
 
@@ -60,7 +60,7 @@ export interface ModuleDataTabHandle {
 }
 
 interface ModuleDataTabProps {
-  moduleId: string;
+  moduleInstanceId: string;
 }
 
 type SubTab = 'cal-data' | 'tag-data';
@@ -69,7 +69,7 @@ function ModuleDataTabInner(
   props: ModuleDataTabProps,
   ref: React.Ref<ModuleDataTabHandle>,
 ) {
-  const {moduleId} = props;
+  const {moduleInstanceId} = props;
 
   const {
     entry,
@@ -81,7 +81,7 @@ function ModuleDataTabInner(
     updateCalData,
     updateTagData,
   } = useGraphDesignerStoreShallow((state) => ({
-    entry: state.moduleDataByModuleId[moduleId],
+    entry: state.moduleDataByInstanceId[moduleInstanceId],
     fetchCalData: state.fetchCalData,
     fetchTagData: state.fetchTagData,
     setCalUiState: state.setCalUiState,
@@ -127,7 +127,7 @@ function ModuleDataTabInner(
       const dirtyItems = calRef.current?.getEditedTreeViewItems();
       if (dirtyItems && entry?.calData?.dto) {
         void updateCalData(
-          moduleId,
+          moduleInstanceId,
           dirtyItemsToCalDataRequest(dirtyItems, entry.calData.dto),
         );
       }
@@ -135,7 +135,7 @@ function ModuleDataTabInner(
       const dirtyItems = tagRef.current?.getEditedTreeViewItems();
       if (dirtyItems && entry?.tagData?.dto) {
         void updateTagData(
-          moduleId,
+          moduleInstanceId,
           dirtyItemsToTagDataRequest(dirtyItems, entry.tagData.dto),
         );
       }
@@ -150,13 +150,13 @@ function ModuleDataTabInner(
     if (effectiveTab === 'cal-data') {
       const ckvSystemId = entry?.calData?.selectedCalIndex;
       if (ckvSystemId) {
-        void fetchCalData(moduleId, ckvSystemId);
+        void fetchCalData(moduleInstanceId, ckvSystemId);
       }
     } else {
       const tagSystemId = entry?.tagData?.selectedTagSystemId;
       const tkvSystemId = entry?.tagData?.selectedTagIndex;
       if (tagSystemId && tkvSystemId) {
-        void fetchTagData(moduleId, tagSystemId, tkvSystemId);
+        void fetchTagData(moduleInstanceId, tagSystemId, tkvSystemId);
       }
     }
   }
@@ -206,7 +206,7 @@ function ModuleDataTabInner(
   async function writeDirtySubTab(tab: SubTab): Promise<boolean> {
     if (tab === 'cal-data') {
       return writeDirtyTab(
-        moduleId,
+        moduleInstanceId,
         entry?.calData?.dto,
         entry?.calData?.uiState,
         calDataDtoToTreeViewData,
@@ -216,7 +216,7 @@ function ModuleDataTabInner(
     }
 
     return writeDirtyTab(
-      moduleId,
+      moduleInstanceId,
       entry?.tagData?.dto,
       entry?.tagData?.uiState,
       tagDataDtoToTreeViewData,
@@ -240,7 +240,7 @@ function ModuleDataTabInner(
       return;
     }
 
-    setModuleOpenTab(moduleId, null);
+    setModuleOpenTab(moduleInstanceId, null);
     closeResolver?.(true);
     setCloseResolver(null);
   }
@@ -250,9 +250,17 @@ function ModuleDataTabInner(
       action: 'handleDiscardAndClose',
       component: 'ModuleDataTab',
     });
-    setCalUiState(moduleId, {dirtyPaths: [], invalidPaths: [], setPaths: []});
-    setTagUiState(moduleId, {dirtyPaths: [], invalidPaths: [], setPaths: []});
-    setModuleOpenTab(moduleId, null);
+    setCalUiState(moduleInstanceId, {
+      dirtyPaths: [],
+      invalidPaths: [],
+      setPaths: [],
+    });
+    setTagUiState(moduleInstanceId, {
+      dirtyPaths: [],
+      invalidPaths: [],
+      setPaths: [],
+    });
+    setModuleOpenTab(moduleInstanceId, null);
     closeResolver?.(true);
     setCloseResolver(null);
   }
@@ -317,13 +325,16 @@ function ModuleDataTabInner(
 
           <Tabs.Panel className="min-h-0 min-w-0 flex-1" value="cal-data">
             {effectiveTab === 'cal-data' && (
-              <CalDataPanel ref={calRef} moduleId={moduleId} />
+              <CalDataPanel ref={calRef} moduleInstanceId={moduleInstanceId} />
             )}
           </Tabs.Panel>
           {isTagged && (
             <Tabs.Panel className="min-h-0 min-w-0 flex-1" value="tag-data">
               {effectiveTab === 'tag-data' && (
-                <TagDataPanel ref={tagRef} moduleId={moduleId} />
+                <TagDataPanel
+                  ref={tagRef}
+                  moduleInstanceId={moduleInstanceId}
+                />
               )}
             </Tabs.Panel>
           )}

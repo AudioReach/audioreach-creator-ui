@@ -31,7 +31,7 @@ import {IndexSwitchDialog} from './index-switch-dialog';
 import {ModuleDataPanelBody} from './module-data-panel-body';
 
 interface TagDataPanelProps {
-  moduleId: string;
+  moduleInstanceId: string;
 }
 
 interface TkvOption {
@@ -54,11 +54,11 @@ function TagDataPanelInner(
   props: TagDataPanelProps,
   ref: React.Ref<GenericTreeViewHandle>,
 ) {
-  const {moduleId} = props;
+  const {moduleInstanceId} = props;
 
   const {entry, fetchTagData, setTagUiState, updateTagData} =
     useGraphDesignerStoreShallow((state) => ({
-      entry: state.moduleDataByModuleId[moduleId],
+      entry: state.moduleDataByInstanceId[moduleInstanceId],
       fetchTagData: state.fetchTagData,
       setTagUiState: state.setTagUiState,
       updateTagData: state.updateTagData,
@@ -102,12 +102,12 @@ function TagDataPanelInner(
     const [firstOption] = options;
     if (firstOption) {
       void fetchTagData(
-        moduleId,
+        moduleInstanceId,
         firstOption.tagSystemId,
         firstOption.tkvSystemId,
       );
     }
-  }, [hasTagData, selectedTagIndex, fetchTagData, moduleId, options]);
+  }, [hasTagData, selectedTagIndex, fetchTagData, moduleInstanceId, options]);
 
   const collection = useMemo(
     () =>
@@ -142,13 +142,17 @@ function TagDataPanelInner(
         const dirtyItems = treeViewRef.current?.getEditedTreeViewItems();
         if (dirtyItems) {
           await updateTagData(
-            moduleId,
+            moduleInstanceId,
             dirtyItemsToTagDataRequest(dirtyItems, tagData.dto),
           );
         }
       },
       onSwitch: (option) =>
-        void fetchTagData(moduleId, option.tagSystemId, option.tkvSystemId),
+        void fetchTagData(
+          moduleInstanceId,
+          option.tagSystemId,
+          option.tkvSystemId,
+        ),
     });
 
   return (
@@ -166,7 +170,7 @@ function TagDataPanelInner(
         data={treeViewData}
         error={tagData?.error}
         initialUiState={tagData?.uiState}
-        onUiStateChange={(patch) => setTagUiState(moduleId, patch)}
+        onUiStateChange={(patch) => setTagUiState(moduleInstanceId, patch)}
         status={tagData?.status}
         title={entry?.moduleName ?? ''}
       />
