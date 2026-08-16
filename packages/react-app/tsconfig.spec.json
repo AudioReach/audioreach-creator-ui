@@ -2,7 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "baseUrl": "./",
     "moduleResolution": "bundler",
     "types": ["jest", "@testing-library/jest-dom"]
   },

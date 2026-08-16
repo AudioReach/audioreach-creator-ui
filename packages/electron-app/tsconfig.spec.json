@@ -2,7 +2,6 @@
   "extends": "@audioreach-creator-ui/tsconfig/tsconfig.strict.json",
   "compilerOptions": {
     "composite": true,
-    "baseUrl": "./",
     "moduleResolution": "bundler",
     "paths": {
       "~utils": ["./tests/utils/index.ts"]
