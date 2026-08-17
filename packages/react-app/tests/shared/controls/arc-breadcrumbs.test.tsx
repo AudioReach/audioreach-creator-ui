@@ -424,12 +424,11 @@ describe('ArcBreadcrumbs - Generic Controls API', () => {
 
       render(<ArcBreadcrumbs items={itemsWithDropdown} />);
 
-      // Should render the dropdown trigger as a span with button role (without dropdown arrow in
-      // the text)
+      // Should render the dropdown trigger as a real button (without dropdown
+      // arrow in the text)
       const homeButton = screen.getByText('Home');
       expect(homeButton).toBeInTheDocument();
-      expect(homeButton.tagName).toBe('SPAN');
-      expect(homeButton).toHaveAttribute('role', 'button');
+      expect(homeButton.tagName).toBe('BUTTON');
     });
   });
 });

@@ -38,7 +38,7 @@ export function SubsystemNode({data: node, selected}: SubsystemNodeProps) {
         backgroundColor:
           selected || highlight.state === 'active'
             ? 'var(--color-background-support-info-subtle)'
-            : 'var(--color-background-neutral-05)',
+            : 'var(--node-shade-medium)',
         borderColor:
           selected || highlight.state !== 'none'
             ? 'var(--color-border-support-info)'

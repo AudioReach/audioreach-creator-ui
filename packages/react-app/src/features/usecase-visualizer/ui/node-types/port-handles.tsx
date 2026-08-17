@@ -25,7 +25,7 @@ interface PortHandlesProps {
 }
 
 const HANDLE_CLASS_BASE =
-  'port-handle bg-[var(--color-background-neutral-06)] border-[var(--color-border-neutral-10)]';
+  'port-handle bg-[var(--node-shade-strong)] border-[var(--color-border-neutral-10)]';
 
 export function PortHandles({anchorHeight, node}: PortHandlesProps) {
   const connectable = node.locked !== true;

@@ -46,6 +46,28 @@
   @media screen and (min-width: 768px) {
     --app-padding-x: 48px;
   }
+
+  /*
+   * QDS dropped the neutral-04/05/06 ramp, so the usecase-visualizer node
+   * layers derive their shading from neutral-03 instead. Mixing toward
+   * neutral-10 (near-black on light, near-white on dark) pulls in the right
+   * contrast direction in both themes without a light/dark branch.
+   */
+  --node-shade-subtle: color-mix(
+    in oklch,
+    var(--color-background-neutral-03) 92%,
+    var(--color-background-neutral-10) 8%
+  );
+  --node-shade-medium: color-mix(
+    in oklch,
+    var(--color-background-neutral-03) 84%,
+    var(--color-background-neutral-10) 16%
+  );
+  --node-shade-strong: color-mix(
+    in oklch,
+    var(--color-background-neutral-03) 74%,
+    var(--color-background-neutral-10) 26%
+  );
 }
 
 

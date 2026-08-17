@@ -5,7 +5,11 @@
 
 import {useMemo, useState} from 'react';
 
-import {createTreeCollection} from '@qualcomm-ui/core/tree';
+import type {PopoverTriggerBindings} from '@qualcomm-ui/core/popover';
+import {
+  createTreeCollection,
+  type TreeLeafNodeBindings,
+} from '@qualcomm-ui/core/tree';
 import {Popover} from '@qualcomm-ui/react/popover';
 import {SideNav} from '@qualcomm-ui/react/side-nav';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
@@ -13,6 +17,85 @@ import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import type {SideNavItem} from '~shared/types/side-nav-types';
 
 import {useSideNavContext} from './side-nav-provider';
+
+type ButtonRenderProps = React.ComponentPropsWithRef<'button'> & {
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+function PopoverLeafItem({
+  isNavExpanded,
+  node,
+}: {
+  isNavExpanded: boolean;
+  node: SideNavItem;
+}) {
+  const triggerLeaf = (
+    triggerProps: PopoverTriggerBindings & {className?: string},
+  ) => (
+    <SideNav.LeafNode
+      render={(leafProps) => {
+        const sideNavProps = leafProps as TreeLeafNodeBindings & {
+          className?: string;
+        };
+        const buttonProps: ButtonRenderProps = {
+          ...sideNavProps,
+          ...triggerProps,
+          className: [sideNavProps.className, triggerProps.className]
+            .filter(Boolean)
+            .join(' '),
+          onClick: (event) => {
+            triggerProps.onClick(event);
+            sideNavProps.onClick(event);
+          },
+          onFocus: sideNavProps.onFocus,
+          onPointerDown: triggerProps.onPointerDown,
+          style: sideNavProps.style,
+          type: 'button',
+        };
+
+        return <button {...buttonProps} />;
+      }}
+    >
+      <SideNav.NodeIndicator />
+      {node.icon ? <SideNav.NodeIcon icon={node.icon} /> : null}
+      {isNavExpanded ? (
+        <SideNav.NodeText>{node.label}</SideNav.NodeText>
+      ) : null}
+    </SideNav.LeafNode>
+  );
+
+  return (
+    <Popover.Root
+      lazyMount
+      positioning={{placement: 'right'}}
+      unmountOnExit
+    >
+      <Popover.Anchor>
+        {isNavExpanded ? (
+          <Popover.Trigger>{triggerLeaf}</Popover.Trigger>
+        ) : (
+          <Tooltip
+            positioning={{placement: 'right'}}
+            trigger={
+              <span>
+                <Popover.Trigger>{triggerLeaf}</Popover.Trigger>
+              </span>
+            }
+          >
+            {node.tooltip ?? node.label}
+          </Tooltip>
+        )}
+      </Popover.Anchor>
+      <Popover.Positioner>
+        <Popover.Content>
+          <Popover.Arrow />
+          {node.popoverContent}
+        </Popover.Content>
+      </Popover.Positioner>
+    </Popover.Root>
+  );
+}
 
 export function ArcSideNav() {
   const [open, setOpen] = useState(false);
@@ -218,16 +301,7 @@ export function ArcSideNav() {
             }
             renderLeaf={({node}) =>
               node.popoverContent ? (
-                <Popover
-                  lazyMount
-                  positioning={{placement: 'right'}}
-                  trigger={(triggerProps) =>
-                    renderLeafInner(node, triggerProps, false)
-                  }
-                  unmountOnExit
-                >
-                  {node.popoverContent}
-                </Popover>
+                <PopoverLeafItem isNavExpanded={open} node={node} />
               ) : (
                 renderLeafInner(
                   node,

@@ -60,7 +60,7 @@ test('Clicking About menu item shows toast', async () => {
   await page.waitForLoadState('networkidle');
 
   // Get the side nav root element to check its state
-  const sideNav = page.locator('[data-scope="side-nav"][data-part="root"]');
+  const sideNav = page.locator('[data-side-nav-part="root"]');
 
   // Verify side nav starts in closed state
   await expect(sideNav).toHaveAttribute('data-state', 'closed');

@@ -106,9 +106,7 @@ describe('SubsystemNode — selection styling', () => {
       '[data-testid="subsystem-node"]',
     ) as HTMLElement;
     expect(node.style.borderColor).toContain('--color-border-neutral-10');
-    expect(node.style.backgroundColor).toContain(
-      '--color-background-neutral-05',
-    );
+    expect(node.style.backgroundColor).toContain('--node-shade-medium');
   });
 });
 

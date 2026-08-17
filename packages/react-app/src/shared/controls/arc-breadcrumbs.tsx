@@ -178,18 +178,16 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                     >
                       <Popover.Trigger>
                         {(triggerProps) => (
-                          <span
+                          <button
                             {...triggerProps}
                             className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
-                            onClick={(event: React.MouseEvent<HTMLElement>) => {
+                            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                               handleBreadcrumbClick(event, item, index);
-                              triggerProps.onClick?.(event as any);
+                              triggerProps.onClick?.(event);
                             }}
-                            role="button"
-                            tabIndex={0}
                           >
                             {item.label}
-                          </span>
+                          </button>
                         )}
                       </Popover.Trigger>
                       <Popover.Content

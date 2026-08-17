@@ -77,7 +77,7 @@ export function GhostNode({node, selected}: GhostNodeProps) {
         backgroundColor:
           highlight.state === 'active'
             ? highlight.activeBackgroundColor
-            : 'var(--color-background-neutral-04)',
+            : 'var(--node-shade-subtle)',
         borderColor,
         height: node.height,
         width: node.width,

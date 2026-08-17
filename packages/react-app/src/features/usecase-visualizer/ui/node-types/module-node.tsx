@@ -146,7 +146,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
   const background =
     highlight.state === 'active'
       ? highlight.activeBackgroundColor
-      : 'var(--color-background-neutral-05)';
+      : 'var(--node-shade-medium)';
   // Selection shows the same info-coloured border as a search match; search
   // state still wins when present.
   const borderColor =

@@ -155,23 +155,23 @@ importers:
         specifier: workspace:*
         version: link:../api-utils
       '@qualcomm-ui/core':
-        specifier: ^1.3.0
-        version: 1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
+        specifier: ^1.11.8
+        version: 1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
       '@qualcomm-ui/dom':
-        specifier: ^1.0.7
-        version: 1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0)
+        specifier: ^1.1.6
+        version: 1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3)
       '@qualcomm-ui/qds-core':
-        specifier: ^1.16.0
-        version: 1.16.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
+        specifier: ^1.35.1
+        version: 1.35.1(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
       '@qualcomm-ui/react':
-        specifier: ^1.11.0
-        version: 1.11.0(5d39e8d6fb2424f2d8f143f2682fbefe)
+        specifier: ^1.27.5
+        version: 1.27.5(b86685fb9162bb1e5928af548e1a7bd7)
       '@qualcomm-ui/react-core':
-        specifier: ^1.2.0
-        version: 1.2.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: ^1.5.10
+        version: 1.5.10(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@qualcomm-ui/utils':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.3.3
+        version: 1.3.3
       '@xyflow/react':
         specifier: ^12.8.2
         version: 12.8.2(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1134,18 +1134,18 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@qualcomm-ui/core@1.3.0':
-    resolution: {integrity: sha512-kcfo6MRHZKJKWZ2GREN8SvYazGmlfRGeZqNO2KQtLIzCZ1TZ+23fMIQySzLSlI1vucgYk0lNvivAhyb/m5at1w==}
+  '@qualcomm-ui/core@1.11.8':
+    resolution: {integrity: sha512-c0hd1EIpvyxgyNPM4lkbf3b1e1Xa24WBmi0sQPF7AZNWn3cd4mlCzNfbDAPWPej5xFWn3FDSCzWQGSTnA/+uYg==}
     peerDependencies:
       '@internationalized/number': '>=3.6.4'
-      '@qualcomm-ui/dom': ^1.0.7
-      '@qualcomm-ui/utils': ^1.1.0
+      '@qualcomm-ui/dom': ^1.1.6
+      '@qualcomm-ui/utils': ^1.3.3
 
-  '@qualcomm-ui/dom@1.0.7':
-    resolution: {integrity: sha512-gfIpJoVxS7CD0h1Mq3IOlFDROZShcxH0be9KsCA+NFaHOg+0nbi4cE7OQa5yAVqLhCwbR0Td+5HWm2pChhXuYw==}
+  '@qualcomm-ui/dom@1.1.6':
+    resolution: {integrity: sha512-Kk26Qj7ZnOs3c2c4peSWt6YlbIWtxaowpTf5BQQ0hEGR55tcVq3ofemLznP1s/1kxQJM1vhae8921A8ciRkyBA==}
     peerDependencies:
       '@floating-ui/dom': '>=1.7.0'
-      '@qualcomm-ui/utils': ^1.1.0
+      '@qualcomm-ui/utils': ^1.3.3
 
   '@qualcomm-ui/eslint-config-fsd@2.0.0':
     resolution: {integrity: sha512-atC9Aqyp4wRYsGHI/SQRPrUVi62GkP4Q22Dhxz66Habfes4m1RnBY2/zDO1WbJ4udkW2TqaJ3PomUdVxiW1XVg==}
@@ -1216,37 +1216,37 @@ packages:
     peerDependencies:
       eslint: ^9.0.0
 
-  '@qualcomm-ui/qds-core@1.16.0':
-    resolution: {integrity: sha512-MudUeN01RPH7l3xJN/y+unmmZIwdnldYO8QCOfgzRTVt1gX2OvDWWkZR7GBA61mRLcJDw8493BXarf9N8S6XYg==}
+  '@qualcomm-ui/qds-core@1.35.1':
+    resolution: {integrity: sha512-xVn3W+k1X/+vKgAnJuArC48bMGJRqQ7XMfB21j52UbcUTH8misDDp5LL2lazCY7n0Ew7XO3y/IJ9CNK0jQnlgg==}
     peerDependencies:
-      '@qualcomm-ui/core': ^1.3.0
-      '@qualcomm-ui/utils': ^1.1.0
+      '@qualcomm-ui/core': ^1.11.8
+      '@qualcomm-ui/utils': ^1.3.3
 
-  '@qualcomm-ui/react-core@1.2.0':
-    resolution: {integrity: sha512-n3x0JMw4iq6mzlQjc8rVUj7ystA8VpZdgIg4AZxtt1OYoNjXiWrZ4BhBCA43zPxLLtWWQ/T5TspLkkSUKFl1CA==}
+  '@qualcomm-ui/react-core@1.5.10':
+    resolution: {integrity: sha512-889uoHjctlv9Y1yj7nSHChx+Oq7BNPfwHgNSffgB1Za+cC9AmhS+XPN5rrW8dm+aC/kUBRRSoeiVAiGxkJoZmA==}
     peerDependencies:
-      '@qualcomm-ui/core': ^1.3.0
-      '@qualcomm-ui/dom': ^1.0.7
-      '@qualcomm-ui/utils': ^1.1.0
-      '@tanstack/react-virtual': '>=3.13.9'
-      lucide-react: '>=0.483.0 <1'
-      react: '>=19.0.0'
-      react-dom: '>=19.0.0'
-
-  '@qualcomm-ui/react@1.11.0':
-    resolution: {integrity: sha512-AJuEnkxYqJFYJRUIoChLPOVuHBMA9c0aEFKdlm6uAL40VD1GKaxXNuvWO//JeFWQhaV8p95WHtX3b2kx10JZXQ==}
-    peerDependencies:
-      '@qualcomm-ui/core': ^1.3.0
-      '@qualcomm-ui/qds-core': ^1.16.0
-      '@qualcomm-ui/react-core': ^1.2.0
-      '@qualcomm-ui/utils': ^1.1.0
+      '@qualcomm-ui/core': ^1.11.8
+      '@qualcomm-ui/dom': ^1.1.6
+      '@qualcomm-ui/utils': ^1.3.3
       '@tanstack/react-virtual': '>=3.13.9'
       lucide-react: '>=0.483.0 <2'
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
 
-  '@qualcomm-ui/utils@1.1.0':
-    resolution: {integrity: sha512-EzLJRklp9Pn0vp1SIOYGls20CN4+Aosf6BWWY8lGaH/o82gszgRVJ6ufT1Tzbi3Z8Put1phbV7YhhIql8Bm6uw==}
+  '@qualcomm-ui/react@1.27.5':
+    resolution: {integrity: sha512-MZXkex6Ur6OO4txJLDVQlYXLnCbHe3zvG0SnHQx/cxjup6TySp6TV5vgNRMk6PsYlyHJ05QDJgb/DKUFiLyjZw==}
+    peerDependencies:
+      '@qualcomm-ui/core': ^1.11.8
+      '@qualcomm-ui/qds-core': ^1.35.1
+      '@qualcomm-ui/react-core': ^1.5.10
+      '@qualcomm-ui/utils': ^1.3.3
+      '@tanstack/react-virtual': '>=3.13.9'
+      lucide-react: '>=0.483.0 <2'
+      react: '>=19.0.0'
+      react-dom: '>=19.0.0'
+
+  '@qualcomm-ui/utils@1.3.3':
+    resolution: {integrity: sha512-AX4yhP+t5/ICfO4AfE/QSLqh5lPctICCoMcPs+WcL7TQ4d8Z0VcT6O5Lir7N1KNU/KRlc6Qz6i4IMjuG5BH6Nw==}
 
   '@rolldown/pluginutils@1.0.0-beta.19':
     resolution: {integrity: sha512-3FL3mnMbPu0muGOCaKAhhFEYmqv9eTfPSJRJmANrCwtgK8VuxpsZDGK+m0LYAGoyO8+0j5uRe4PeyPDK1yA/hA==}
@@ -6561,16 +6561,16 @@ snapshots:
     dependencies:
       playwright: 1.54.1
 
-  '@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)':
+  '@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)':
     dependencies:
       '@internationalized/number': 3.6.5
-      '@qualcomm-ui/dom': 1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/utils': 1.1.0
+      '@qualcomm-ui/dom': 1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/utils': 1.3.3
 
-  '@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0)':
+  '@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3)':
     dependencies:
       '@floating-ui/dom': 1.7.4
-      '@qualcomm-ui/utils': 1.1.0
+      '@qualcomm-ui/utils': 1.3.3
 
   '@qualcomm-ui/eslint-config-fsd@2.0.0(eslint-plugin-boundaries@7.2.0(@typescript-eslint/parser@8.67.0(eslint@10.8.1(jiti@2.7.0)(supports-color@9.4.0))(supports-color@9.4.0)(typescript@5.9.3))(eslint-import-resolver-typescript@4.4.4)(eslint@10.8.1(jiti@2.7.0)(supports-color@9.4.0))(supports-color@9.4.0))(eslint@10.8.1(jiti@2.7.0)(supports-color@9.4.0))(typescript-eslint@8.67.0(eslint@10.8.1(jiti@2.7.0)(supports-color@9.4.0))(supports-color@9.4.0)(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
@@ -6636,33 +6636,33 @@ snapshots:
     dependencies:
       eslint: 10.8.1(jiti@2.7.0)(supports-color@9.4.0)
 
-  '@qualcomm-ui/qds-core@1.16.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)':
+  '@qualcomm-ui/qds-core@1.35.1(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)':
     dependencies:
-      '@qualcomm-ui/core': 1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/utils': 1.1.0
+      '@qualcomm-ui/core': 1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/utils': 1.3.3
 
-  '@qualcomm-ui/react-core@1.2.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@qualcomm-ui/react-core@1.5.10(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      '@qualcomm-ui/core': 1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/dom': 1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/utils': 1.1.0
+      '@qualcomm-ui/core': 1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/dom': 1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/utils': 1.3.3
       '@tanstack/react-virtual': 3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       lucide-react: 0.483.0(react@19.1.0)
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@qualcomm-ui/react@1.11.0(5d39e8d6fb2424f2d8f143f2682fbefe)':
+  '@qualcomm-ui/react@1.27.5(b86685fb9162bb1e5928af548e1a7bd7)':
     dependencies:
-      '@qualcomm-ui/core': 1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/qds-core': 1.16.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)
-      '@qualcomm-ui/react-core': 1.2.0(@qualcomm-ui/core@1.3.0(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/dom@1.0.7(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.1.0))(@qualcomm-ui/utils@1.1.0)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@qualcomm-ui/utils': 1.1.0
+      '@qualcomm-ui/core': 1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/qds-core': 1.35.1(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)
+      '@qualcomm-ui/react-core': 1.5.10(@qualcomm-ui/core@1.11.8(@internationalized/number@3.6.5)(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/dom@1.1.6(@floating-ui/dom@1.7.4)(@qualcomm-ui/utils@1.3.3))(@qualcomm-ui/utils@1.3.3)(@tanstack/react-virtual@3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(lucide-react@0.483.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@qualcomm-ui/utils': 1.3.3
       '@tanstack/react-virtual': 3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       lucide-react: 0.483.0(react@19.1.0)
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@qualcomm-ui/utils@1.1.0': {}
+  '@qualcomm-ui/utils@1.3.3': {}
 
   '@rolldown/pluginutils@1.0.0-beta.19': {}
 
