@@ -595,6 +595,31 @@ describe('useApplyDiscard', () => {
       expect(store.getState().graphDataStatus).toBe('error');
     });
 
+    it('committed shows a second error toast and stays in edit mode when exitEditMode fails', async () => {
+      const store = makeStore();
+      const {result} = await openReview(store);
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+      mockStartSession.mockResolvedValue({message: 'boom', success: false});
+
+      await act(async () => {
+        await result.current.submitReview([], 'keep');
+      });
+
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.stringContaining('applied'),
+        'success',
+      );
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "Couldn't exit edit mode",
+        'danger',
+      );
+      expect(store.getState().mode).toBe('edit');
+    });
+
     it('nav choice add reloads selectedUsecases plus createdSystemIds, deduplicated', async () => {
       const store = makeStore();
       const response = makeReviewResponse();

@@ -16,12 +16,18 @@ import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import {useModuleList} from '~features/graph-designer';
 import {isValidProjectId} from '~shared/config/utils';
 import {logger} from '~shared/lib/logger';
+import {useProjectStoreShallow} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {searchItems} from '~shared/utils/search-utils';
 
 export function ModuleList(): ReactElement {
   // Get the active project ID from the global store
   const projectId = useGlobalStore((s) => s.activeProjectId);
+
+  // No editable actions exist in this palette yet (browse/filter only) — read
+  // for when drag-to-canvas placement lands, so this stays wired to the same
+  // source every other panel already reads.
+  const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   // Get module list state from tab store via hook
   const {
@@ -45,7 +51,10 @@ export function ModuleList(): ReactElement {
     if (moduleListStatus === 'uninitialized') {
       void loadModuleList();
     }
-  }, [projectId, moduleListStatus, loadModuleList]);
+    logger.debug(`[ModuleList] editable state: ${isEditable}`, {
+      component: 'ModuleList',
+    });
+  }, [projectId, moduleListStatus, loadModuleList, isEditable]);
 
   const isLoading = moduleListStatus === 'loading';
 

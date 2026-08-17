@@ -5,6 +5,13 @@
 
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/usecases/api/usecases-api');
+jest.mock('~entities/edit-session', () => ({
+  endSession: jest.fn(),
+  startSession: jest.fn(),
+}));
+jest.mock('~entities/project/api/projects-api', () => ({
+  getProjectById: jest.fn(),
+}));
 jest.mock('~shared/store/global-store', () => ({
   useGlobalStore: {
     getState: jest.fn(() => ({
@@ -13,6 +20,7 @@ jest.mock('~shared/store/global-store', () => ({
   },
 }));
 
+import {endSession, startSession} from '~entities/edit-session';
 import {getSubgraphsByIds} from '~entities/usecases/api/usecases-api';
 import type {
   ControlLinkDto,
@@ -31,11 +39,19 @@ import {
 } from '../test-utils/component-dto-fixtures';
 
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+const mockEndSession = jest.mocked(endSession);
+const mockStartSession = jest.mocked(startSession);
 
 beforeEach(() => {
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
-    message: undefined,
+    message: undefined as never,
+    success: true,
+  });
+  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockStartSession.mockResolvedValue({
+    data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
+    message: 'ok',
     success: true,
   });
 });
@@ -68,7 +84,7 @@ describe('createGraphDesignerStore — exclusive lock across two tabs on the sam
     projectStoreRegistry.clear();
   });
 
-  it('blocks a second tab on the same project while the first tab holds edit mode, then allows it once the first tab exits', () => {
+  it('blocks a second tab on the same project while the first tab holds edit mode, then allows it once the first tab exits', async () => {
     projectStoreRegistry.register(
       'proj-shared-1',
       createProjectStore('proj-shared-1'),
@@ -76,8 +92,8 @@ describe('createGraphDesignerStore — exclusive lock across two tabs on the sam
     const tabA = createGraphDesignerStore('tab-a', 'proj-shared-1');
     const tabB = createGraphDesignerStore('tab-b', 'proj-shared-1');
 
-    const firstTabAcquired = tabA.getState().enterEditMode();
-    const secondTabAcquired = tabB.getState().enterEditMode();
+    const firstTabAcquired = await tabA.getState().enterEditMode();
+    const secondTabAcquired = await tabB.getState().enterEditMode();
 
     expect(firstTabAcquired).toBe(true);
     expect(secondTabAcquired).toBe(false);
@@ -87,8 +103,8 @@ describe('createGraphDesignerStore — exclusive lock across two tabs on the sam
       projectStoreRegistry.get('proj-shared-1')?.getState().activeExclusiveMode,
     ).toBe('usecase-edit');
 
-    tabA.getState().exitEditMode();
-    const secondTabAcquiredAfterExit = tabB.getState().enterEditMode();
+    await tabA.getState().exitEditMode();
+    const secondTabAcquiredAfterExit = await tabB.getState().enterEditMode();
 
     expect(secondTabAcquiredAfterExit).toBe(true);
     expect(tabB.getState().mode).toBe('edit');
@@ -192,7 +208,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
       },
     });
 
-    const entered = store.getState().enterEditMode();
+    const entered = await store.getState().enterEditMode();
     expect(entered).toBe(true);
     expect(store.getState().mode).toBe('edit');
 
@@ -297,7 +313,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
       graphData.moduleInstances['mod-B'].inputPorts[0].totalLinksAtPort,
     ).toBe(1);
 
-    store.getState().exitEditMode();
+    await store.getState().exitEditMode();
 
     expect(store.getState().mode).toBe('view');
     expect(

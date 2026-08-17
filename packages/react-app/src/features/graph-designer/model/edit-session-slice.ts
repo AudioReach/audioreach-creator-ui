@@ -6,8 +6,7 @@
 import type {StoreApi} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
-import {getProjectById} from '~entities/project/api/projects-api';
-import {SessionMode} from '~entities/project/model/session.dto';
+import {getProjectById, SessionMode} from '~entities/project';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import type {KeyValue} from '~entities/usecases';
 import {logger} from '~shared/lib/logger';
@@ -161,6 +160,9 @@ export function createEditSessionSlice<S extends EditSessionSlice>(
     },
 
     exitEditMode: async () => {
+      // No endSession call here: Apply/Discard already end the session as
+      // the last step of their own commit/discard sequence before calling
+      // this — see docs/design/edit-mode-toggle/edit-mode-toggle-design.md §3.
       const startResult = await startSession(projectId, SessionMode.Tuning);
       if (!startResult.success) {
         logSession(

@@ -16,12 +16,18 @@ import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import {useSubgraphList} from '~features/graph-designer';
 import {isValidProjectId} from '~shared/config/utils';
 import {logger} from '~shared/lib/logger';
+import {useProjectStoreShallow} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {searchItems} from '~shared/utils/search-utils';
 
 export function SubgraphList(): ReactElement {
   // Get the active project ID from the global store
   const projectId = useGlobalStore((s) => s.activeProjectId);
+
+  // No editable actions exist in this palette yet (browse/filter only) — read
+  // for when drag-to-canvas placement lands, so this stays wired to the same
+  // source every other panel already reads.
+  const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   // Get subgraph list state from tab store via hook
   const {
@@ -43,7 +49,10 @@ export function SubgraphList(): ReactElement {
     if (subgraphListStatus === 'uninitialized') {
       void loadSubgraphList();
     }
-  }, [projectId, subgraphListStatus, loadSubgraphList]);
+    logger.debug(`[SubgraphList] editable state: ${isEditable}`, {
+      component: 'SubgraphList',
+    });
+  }, [projectId, subgraphListStatus, loadSubgraphList, isEditable]);
 
   const isLoading = subgraphListStatus === 'loading';
 

@@ -81,6 +81,10 @@ export function ApplyDiscardControls({projectId}: ApplyDiscardControlsProps) {
           >
             Apply
           </Button>
+          {/* Not gated on isDirty: also the recovery path if a prior
+          Apply/Discard committed but exitEditMode failed afterward — the
+          session is still 'edit' with nothing left to discard, so clicking
+          this retries exiting rather than discarding anything. */}
           <Button
             disabled={applyDiscard.isBusy}
             emphasis="danger"

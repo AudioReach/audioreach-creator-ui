@@ -167,16 +167,20 @@ export function useProjectOpener({
         }
         if (component === MODULE_LIST_COMPONENT_NAME) {
           return (
-            <GraphDesignerStoreContext.Provider value={tabStore}>
-              <ModuleList />
-            </GraphDesignerStoreContext.Provider>
+            <ProjectStoreContext.Provider value={projectStore}>
+              <GraphDesignerStoreContext.Provider value={tabStore}>
+                <ModuleList />
+              </GraphDesignerStoreContext.Provider>
+            </ProjectStoreContext.Provider>
           );
         }
         if (component === SUBGRAPH_LIST_COMPONENT_NAME) {
           return (
-            <GraphDesignerStoreContext.Provider value={tabStore}>
-              <SubgraphList />
-            </GraphDesignerStoreContext.Provider>
+            <ProjectStoreContext.Provider value={projectStore}>
+              <GraphDesignerStoreContext.Provider value={tabStore}>
+                <SubgraphList />
+              </GraphDesignerStoreContext.Provider>
+            </ProjectStoreContext.Provider>
           );
         }
         if (component === LOG_VIEW_COMPONENT_NAME) {

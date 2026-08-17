@@ -71,7 +71,7 @@ jest.mock('@qualcomm-ui/react/radio', () => ({
   },
 }));
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import type {StoreApi} from 'zustand';
 
 import type {CreateUsecasesResponseDto} from '~entities/edit-session';
@@ -165,6 +165,17 @@ describe('ApplyDiscardControls', () => {
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.queryByText('Apply')).not.toBeInTheDocument();
     expect(screen.queryByText('Discard')).not.toBeInTheDocument();
+  });
+
+  it('invokes enterEditMode when Edit is clicked', async () => {
+    const store = makeStore('view');
+    const enterEditMode = jest.fn().mockResolvedValue(true);
+    store.setState({enterEditMode});
+    renderControls(store);
+
+    fireEvent.click(screen.getByText('Edit'));
+
+    await waitFor(() => expect(enterEditMode).toHaveBeenCalledTimes(1));
   });
 
   it('disables Apply and enables Discard when clean and not busy', () => {
