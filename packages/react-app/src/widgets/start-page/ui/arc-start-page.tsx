@@ -353,7 +353,7 @@ export default function ArcStartPage({
           <Button
             emphasis="neutral"
             endIcon={ChevronRight}
-            onClick={openWorkspaceProject}
+            onClick={() => void openWorkspaceProject()}
             size="md"
             startIcon={Folder}
             variant="fill"
@@ -417,7 +417,7 @@ export default function ArcStartPage({
                 <UnifiedGridView
                   devices={filteredDevices}
                   onOpenDevice={openDevice}
-                  onOpenProject={openRecentProject}
+                  onOpenProject={(project) => void openRecentProject(project)}
                   onRemoveFromRecent={removeFromRecent}
                   onShowInExplorer={handleShowInExplorer}
                   projects={filteredProjects}
@@ -428,9 +428,11 @@ export default function ArcStartPage({
                 <UnifiedListView
                   devices={filteredDevices}
                   onOpenDevice={openDevice}
-                  onOpenProject={openRecentProject}
+                  onOpenProject={(project) => void openRecentProject(project)}
                   onRemoveFromRecent={removeFromRecent}
-                  onShowInExplorer={handleShowInExplorer}
+                  onShowInExplorer={(projectId) =>
+                    void handleShowInExplorer(projectId)
+                  }
                   projects={filteredProjects}
                   showDevices={showDevices}
                   showProjects={showProjects}

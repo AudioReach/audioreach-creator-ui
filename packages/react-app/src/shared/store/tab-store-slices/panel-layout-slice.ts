@@ -16,10 +16,10 @@ type SetState<T> = StoreApi<T>['setState'];
 
 // ── Slice creator ──────────────────────────────────────────────────────────
 
-export function createPanelLayoutSlice<S extends PanelLayoutSlice>(
-  set: SetState<S>,
+export function createPanelLayoutSlice(
+  set: SetState<PanelLayoutSlice>,
 ): PanelLayoutSlice {
-  const setSlice = set as SetState<PanelLayoutSlice>;
+  const setSlice = set;
 
   return {
     panelLayoutJson: null,

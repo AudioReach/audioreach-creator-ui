@@ -22,10 +22,10 @@ export interface SearchSlice {
 
 type SetState<T> = StoreApi<T>['setState'];
 
-export function createSearchSlice<S extends SearchSlice>(
-  set: SetState<S>,
+export function createSearchSlice(
+  set: SetState<SearchSlice>,
 ): SearchSlice {
-  const setSlice = set as SetState<SearchSlice>;
+  const setSlice = set;
   return {
     addToHistory: (term: string) => {
       const trimmed = term.trim();

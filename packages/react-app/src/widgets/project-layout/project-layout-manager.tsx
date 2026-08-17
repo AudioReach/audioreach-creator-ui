@@ -374,7 +374,9 @@ class ProjectLayoutManager extends Component<
         removeSidePlaceholdersIfNeeded(model);
         return model;
       } catch (error) {
-        logger.error(`Failed to parse FlexLayout JSON:${error}`);
+        logger.error(
+          `Failed to parse FlexLayout JSON:${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
@@ -1202,7 +1204,9 @@ export class TabLayoutService {
                     } else {
                     }
                   } catch (error) {
-                    logger.error(`Error parsing layout JSON:${error}`);
+                    logger.error(
+                      `Error parsing layout JSON:${error instanceof Error ? error.message : String(error)}`,
+                    );
                   }
                 }
 
@@ -1528,7 +1532,7 @@ export class TabLayoutService {
                       }
                     } catch (error) {
                       logger.error(
-                        `[PROJECT TAB ${projectTab.title}] Error parsing layout JSON: ${error}`,
+                        `[PROJECT TAB ${projectTab.title}] Error parsing layout JSON: ${error instanceof Error ? error.message : String(error)}`,
                       );
                     }
                   }

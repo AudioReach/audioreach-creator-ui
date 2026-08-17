@@ -73,10 +73,10 @@ type SetState<T> = StoreApi<T>['setState'];
  * @param get - Zustand get function bound to the parent store state.
  * @returns The initial state and actions for the key-config slice.
  */
-export function createKeyConfigSlice<S extends KeyConfigSlice>(
-  set: SetState<S>,
+export function createKeyConfigSlice(
+  set: SetState<KeyConfigSlice>,
 ): KeyConfigSlice {
-  const setSlice = set as SetState<KeyConfigSlice>;
+  const setSlice = set;
   let configContext: ConfigurationContext | null = null;
   return {
     calibrationKeys: [],

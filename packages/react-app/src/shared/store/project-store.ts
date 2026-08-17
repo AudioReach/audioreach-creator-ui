@@ -13,12 +13,7 @@ import {createProjectMetaDataSlice} from './project-store-slices/project-metadat
 import {createTabsSlice} from './project-store-slices/tabs-slice';
 import {createUserPreferencesSlice} from './project-store-slices/user-preferences-slice';
 import type {
-  ExclusiveLockSlice,
-  LogsSlice,
-  ProjectMetaDataSlice,
   ProjectStore,
-  TabsSlice,
-  UserPreferencesSlice,
 } from './project-store.types';
 
 export type {ProjectStore};
@@ -50,24 +45,24 @@ export function createProjectStore(projectId: string): StoreApi<ProjectStore> {
     // Typed wrappers narrow set/get to each slice's own surface — no `any` needed.
     ...createProjectMetaDataSlice(
       (partial) => set(partial as Partial<ProjectStore>),
-      () => get() as ProjectMetaDataSlice,
+      () => get(),
     ),
     ...createTabsSlice(
       (partial) => set(partial as Partial<ProjectStore>),
-      () => get() as TabsSlice,
+      () => get(),
     ),
     ...createLogsSlice(
       (partial) => set(partial as Partial<ProjectStore>),
-      () => get() as LogsSlice,
+      () => get(),
     ),
     ...createUserPreferencesSlice(
       (partial) => set(partial as Partial<ProjectStore>),
-      () => get() as UserPreferencesSlice,
+      () => get(),
       projectId,
     ),
     ...createExclusiveLockSlice(
       (partial) => set(partial as Partial<ProjectStore>),
-      () => get() as ExclusiveLockSlice,
+      () => get(),
     ),
   }));
 }

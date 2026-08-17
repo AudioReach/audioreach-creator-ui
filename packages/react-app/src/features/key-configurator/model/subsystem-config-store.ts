@@ -74,7 +74,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
       });
     },
 
-    fetchSubsystemConfig: async (subsystemId: number) => {
+    fetchSubsystemConfig: (subsystemId: number): Promise<void> => {
       const state = get();
 
       if (!state.projectId) {
@@ -82,7 +82,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           action: 'fetch_subsystem_config',
           component: 'SubsystemConfigStore',
         });
-        return;
+        return Promise.resolve();
       }
 
       // Check if this subsystem is already in cache
@@ -97,7 +97,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           component: 'SubsystemConfigStore',
           projectId: state.projectId,
         });
-        return;
+        return Promise.resolve();
       }
 
       // Fetch from backend
@@ -136,6 +136,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
         component: 'SubsystemConfigStore',
         projectId: state.projectId,
       });
+      return Promise.resolve();
     },
 
     initialize: (projectId: string) => {
@@ -165,7 +166,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
       set(initialState);
     },
 
-    saveToBackend: async () => {
+    saveToBackend: (): Promise<boolean> => {
       const state = get();
 
       if (!state.projectId) {
@@ -173,7 +174,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           action: 'save_to_backend',
           component: 'SubsystemConfigStore',
         });
-        return false;
+        return Promise.resolve(false);
       }
 
       try {
@@ -196,7 +197,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           projectId: state.projectId,
         });
 
-        return false;
+        return Promise.resolve(false);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
@@ -206,7 +207,7 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           error: errorMessage,
           projectId: state.projectId,
         });
-        return false;
+        return Promise.resolve(false);
       }
     },
 

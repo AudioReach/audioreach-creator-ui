@@ -34,7 +34,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
   },
 }));
 
-import {createStore, type StoreApi} from 'zustand';
+import {createStore} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
 import {type AnyNode, NODE_KIND} from '~entities/graph';
@@ -118,7 +118,7 @@ function makeTestStore(projectId = 'proj-mod-ops-1') {
   store.setState({graphData: EMPTY_GRAPH_DATA});
 
   const moduleOperations = createModuleOperations(
-    store.setState as unknown as StoreApi<GraphDesignerStore>['setState'],
+    store.setState,
     projectId,
   );
   const get = store.getState as unknown as () => GraphDesignerStore;

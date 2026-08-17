@@ -623,7 +623,7 @@ describe('runFinalize', () => {
         )
         .mockResolvedValueOnce(
           apiFailure<SessionResponseDto>({errors: ['HTTP error: 400']}),
-        ) as unknown as () => Promise<ApiResult<SessionResponseDto>>,
+        ),
     );
 
     const outcome = await runFinalize(deps, {
@@ -644,7 +644,7 @@ describe('runFinalize', () => {
         )
         .mockResolvedValueOnce(
           apiFailure<SessionResponseDto>({errors: ['Request timed out']}),
-        ) as unknown as () => Promise<ApiResult<SessionResponseDto>>,
+        ),
     );
 
     const outcome = await runFinalize(deps, {

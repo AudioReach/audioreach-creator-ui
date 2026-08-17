@@ -136,7 +136,7 @@ export const useSubgraphConfigStore = create<SubgraphConfigStore>(
       set(initialState);
     },
 
-    saveToBackend: async () => {
+    saveToBackend: (): Promise<boolean> => {
       const state = get();
 
       if (!state.projectId) {
@@ -144,7 +144,7 @@ export const useSubgraphConfigStore = create<SubgraphConfigStore>(
           action: 'save_to_backend',
           component: 'SubgraphConfigStore',
         });
-        return false;
+        return Promise.resolve(false);
       }
 
       try {
@@ -167,7 +167,7 @@ export const useSubgraphConfigStore = create<SubgraphConfigStore>(
           projectId: state.projectId,
         });
 
-        return false;
+        return Promise.resolve(false);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
@@ -177,7 +177,7 @@ export const useSubgraphConfigStore = create<SubgraphConfigStore>(
           error: errorMessage,
           projectId: state.projectId,
         });
-        return false;
+        return Promise.resolve(false);
       }
     },
 

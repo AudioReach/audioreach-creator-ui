@@ -19,7 +19,7 @@ function makeFile(bytes: number[], name: string): File {
   if (typeof (file as any).arrayBuffer !== 'function') {
     Object.defineProperty(file, 'arrayBuffer', {
       configurable: true,
-      value: () => Promise.resolve(new Uint8Array(bytes).buffer as ArrayBuffer),
+      value: () => Promise.resolve(new Uint8Array(bytes).buffer),
     });
   }
   return file;

@@ -199,7 +199,7 @@ export default function ArcProjectCard({
                   <Menu.ItemLabel>Remove from recent</Menu.ItemLabel>
                 </Menu.Item>
                 <Menu.Item
-                  onClick={handleShowInExplorer}
+                  onClick={() => void handleShowInExplorer()}
                   value="openContainingFolderMenuItem"
                 >
                   <Menu.ItemLabel>Show in explorer</Menu.ItemLabel>

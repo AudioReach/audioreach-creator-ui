@@ -128,12 +128,12 @@ function toModuleDefinition(
  * @param _get - Zustand get function bound to the parent store state.
  * @returns The initial state and actions for the module-list slice.
  */
-export function createModuleListSlice<S extends ModuleListSlice>(
-  set: SetState<S>,
-  _get: GetState<S>,
+export function createModuleListSlice(
+  set: SetState<ModuleListSlice>,
+  _get: GetState<ModuleListSlice>,
   projectId: string,
 ): ModuleListSlice {
-  const setSlice = set as SetState<ModuleListSlice>;
+  const setSlice = set;
   const patchFilterCache = (
     patch: Partial<{dspTypes: string[]; moduleTypes: string[]}>,
   ) => {

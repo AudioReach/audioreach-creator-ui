@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
-import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 import {Menu} from '@qualcomm-ui/react/menu';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
@@ -142,7 +141,9 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
     try {
       await navigator.clipboard.writeText(fullText);
     } catch (error) {
-      logger.error(`Failed to copy to clipboard: ${error}`);
+      logger.error(
+        `Failed to copy to clipboard: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
@@ -159,7 +160,9 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
     try {
       await navigator.clipboard.writeText(logsText);
     } catch (error) {
-      logger.error(`Failed to save logs to clipboard: ${error}`);
+      logger.error(
+        `Failed to save logs to clipboard: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
@@ -181,7 +184,7 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
                 trigger={
                   <span>
                     <Menu.Trigger>
-                      <InlineIconButton
+                      <Menu.InlineIconButton
                         aria-label="Filter logs"
                         icon={ListFilter}
                         size="sm"
@@ -256,7 +259,7 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
               aria-label="Copy selected log"
               emphasis="neutral"
               icon={Copy}
-              onClick={copySelectedLog}
+              onClick={() => void copySelectedLog()}
               size="sm"
               variant="ghost"
             />
@@ -279,7 +282,7 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
             disabled={filteredLogs.length === 0}
             emphasis="neutral"
             icon={Save}
-            onClick={saveAllFilteredLogs}
+            onClick={() => void saveAllFilteredLogs()}
             size="sm"
             variant="ghost"
           />

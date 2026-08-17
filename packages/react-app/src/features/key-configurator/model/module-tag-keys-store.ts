@@ -195,7 +195,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
     set(initialState);
   },
 
-  saveToBackend: async () => {
+  saveToBackend: (): Promise<boolean> => {
     const state = get();
 
     if (!state.projectId) {
@@ -203,7 +203,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
         action: 'save_to_backend',
         component: 'ModuleTagKeysStore',
       });
-      return false;
+      return Promise.resolve(false);
     }
 
     try {
@@ -231,7 +231,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
         projectId: state.projectId,
       });
 
-      return false;
+      return Promise.resolve(false);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -241,7 +241,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
         error: errorMessage,
         projectId: state.projectId,
       });
-      return false;
+      return Promise.resolve(false);
     }
   },
 

@@ -24,10 +24,10 @@ type SetState<T> = StoreApi<T>['setState'];
 // ---------------------------------------------------------------------------
 
 /** Only used in GraphDesignerStore (not DiffMergeStore). */
-export function createPropertiesViewSlice<S extends PropertiesViewSlice>(
-  set: SetState<S>,
+export function createPropertiesViewSlice(
+  set: SetState<PropertiesViewSlice>,
 ): PropertiesViewSlice {
-  const setSlice = set as SetState<PropertiesViewSlice>;
+  const setSlice = set;
 
   return {
     closePropertiesPanel: () => {

@@ -856,8 +856,8 @@ describe('createModuleDataSlice — fetchCalData', () => {
     mockGetCalData.mockImplementationOnce(
       () =>
         new Promise<{data: CalDataDto; message: undefined; success: true}>(
-          (res) => {
-            resolveGet = res;
+          (resolve) => {
+            resolveGet = resolve;
           },
         ),
     );

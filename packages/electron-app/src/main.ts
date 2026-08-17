@@ -211,11 +211,10 @@ const createWindow = async () => {
   }
 };
 
-void app.whenReady().then(() => {
-  void createWindow().then(() => {
-    // Create application menu after window is ready
-    createApplicationMenu();
-  });
+void app.whenReady().then(async () => {
+  await createWindow();
+  // Create application menu after window is ready
+  createApplicationMenu();
 });
 
 app.on('activate', () => {

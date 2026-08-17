@@ -54,7 +54,6 @@ import {
   type GraphDesignerStore,
 } from '~features/graph-designer/model/graph-designer-store';
 import {
-  type GraphDesignerStoreApi,
   GraphDesignerStoreContext,
 } from '~features/graph-designer/model/graph-designer-store-context';
 import {showToast} from '~shared/controls/global-toaster';
@@ -114,7 +113,7 @@ function renderApplyDiscard(
     {
       wrapper: ({children}) => (
         <GraphDesignerStoreContext.Provider
-          value={store as unknown as GraphDesignerStoreApi}
+          value={store}
         >
           {children}
         </GraphDesignerStoreContext.Provider>

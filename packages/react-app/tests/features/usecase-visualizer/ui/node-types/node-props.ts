@@ -32,7 +32,7 @@ function makeNodeProps<T extends {id: string}>(
     type,
     zIndex: 0,
     ...overrides,
-  } as unknown as NodeProps;
+  };
 }
 
 export const makeContainerNodeProps = (

@@ -117,7 +117,9 @@ export function ThemeProvider({children}: ThemeProviderProps) {
   }
 
   return (
-    <ThemeContext.Provider value={{setTheme, theme}}>
+    <ThemeContext.Provider
+      value={{setTheme: (newTheme: Theme) => void setTheme(newTheme), theme}}
+    >
       {children}
     </ThemeContext.Provider>
   );

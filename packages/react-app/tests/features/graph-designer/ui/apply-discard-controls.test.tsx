@@ -84,7 +84,6 @@ import {
   type GraphDesignerStore,
 } from '~features/graph-designer/model/graph-designer-store';
 import {
-  type GraphDesignerStoreApi,
   GraphDesignerStoreContext,
 } from '~features/graph-designer/model/graph-designer-store-context';
 import {ApplyDiscardControls} from '~features/graph-designer/ui/apply-discard-controls';

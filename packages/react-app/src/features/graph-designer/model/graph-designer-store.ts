@@ -87,18 +87,39 @@ export function createGraphDesignerStore(
     ...createGraphDataSlice(set, get, projectId),
     ...createEditSessionSlice(set, get, projectId),
     ...createVisualizerSlice(set),
-    ...createSubsystemSlice(set, get),
-    ...createKeyConfigSlice(set),
+    ...createSubsystemSlice(
+      (partial) => set(partial as Partial<GraphDesignerStore>),
+      get,
+    ),
+    ...createKeyConfigSlice((partial) =>
+      set(partial as Partial<GraphDesignerStore>),
+    ),
     ...createValidationResultSlice(set, get),
-    ...createModuleListSlice(set, get, projectId),
+    ...createModuleListSlice(
+      (partial) => set(partial as Partial<GraphDesignerStore>),
+      get,
+      projectId,
+    ),
     ...createModuleDataSlice(set, get, projectId),
     ...createModuleOperations(set, projectId),
-    ...createSubgraphListSlice(set, get, projectId),
+    ...createSubgraphListSlice(
+      (partial) => set(partial as Partial<GraphDesignerStore>),
+      get,
+      projectId,
+    ),
     ...createSubgraphHeaderSelectionSlice(set, get),
-    ...createPropertiesViewSlice(set),
-    ...createPanelLayoutSlice(set),
-    ...createPanelTabRegistrySlice(set),
-    ...createSearchSlice(set),
+    ...createPropertiesViewSlice((partial) =>
+      set(partial as Partial<GraphDesignerStore>),
+    ),
+    ...createPanelLayoutSlice((partial) =>
+      set(partial as Partial<GraphDesignerStore>),
+    ),
+    ...createPanelTabRegistrySlice((partial) =>
+      set(partial as Partial<GraphDesignerStore>),
+    ),
+    ...createSearchSlice((partial) =>
+      set(partial as Partial<GraphDesignerStore>),
+    ),
 
     // Seed usecase selection from global store on creation.
     selectedUsecases: initialSelectedUsecases,

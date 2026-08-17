@@ -49,7 +49,7 @@ function makeNodeProps(node: ModuleNode): NodeProps {
     selected: false,
     type: 'module',
     zIndex: 0,
-  } as unknown as NodeProps;
+  };
 }
 
 describe('withGhostFallback', () => {

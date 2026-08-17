@@ -135,7 +135,7 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
       if (onValueChange) {
         onValueChange('', {
           target: {value: ''},
-        } as React.ChangeEvent<HTMLInputElement>);
+        });
       }
       if (onClear) {
         onClear();
@@ -779,7 +779,7 @@ jest.mock('~features/usecase-visualizer/model/visualizer-store-context', () => {
     ): unknown => {
       try {
         return actual.useVisualizerStore(
-          selector as Parameters<typeof actual.useVisualizerStore>[0],
+          selector,
         );
       } catch {
         return selector(defaultState);

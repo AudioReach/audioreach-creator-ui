@@ -19,10 +19,10 @@ type SetState<T> = StoreApi<T>['setState'];
 
 // ── Slice creator ──────────────────────────────────────────────────────────
 
-export function createPanelTabRegistrySlice<S extends PanelTabRegistrySlice>(
-  set: SetState<S>,
+export function createPanelTabRegistrySlice(
+  set: SetState<PanelTabRegistrySlice>,
 ): PanelTabRegistrySlice {
-  const setSlice = set as SetState<PanelTabRegistrySlice>;
+  const setSlice = set;
 
   return {
     panelTabRegistry: {},

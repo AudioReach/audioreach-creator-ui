@@ -81,8 +81,8 @@ export function deepEqual<T>(a: T, b: T, seen = new WeakMap()): boolean {
 
   // Handle objects
   if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a as object);
-    const keysB = Object.keys(b as object);
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
 
     // Check if objects have the same number of keys
     if (keysA.length !== keysB.length) {
@@ -91,7 +91,7 @@ export function deepEqual<T>(a: T, b: T, seen = new WeakMap()): boolean {
 
     // Check if all keys and values are equal
     for (const key of keysA) {
-      if (!Object.prototype.hasOwnProperty.call(b, key)) {
+      if (!Object.hasOwn(b, key)) {
         return false;
       }
 

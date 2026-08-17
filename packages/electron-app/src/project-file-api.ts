@@ -13,9 +13,9 @@ import type {
   SaveValidationResultsResponseData,
 } from '@audioreach-creator-ui/api-utils/';
 import {dialog, shell} from 'electron';
-import {readFileSync, statSync, writeFileSync} from 'fs';
-import {readdir, writeFile} from 'fs/promises';
-import {basename, dirname, join} from 'path';
+import {readFileSync, statSync, writeFileSync} from 'node:fs';
+import {readdir, writeFile} from 'node:fs/promises';
+import {basename, dirname, join} from 'node:path';
 
 export function getFileModificationDateSync(path: string): Date | undefined {
   try {

@@ -83,7 +83,7 @@ const INITIAL_SESSION_LOCAL_STATE = {
 export function createEditSessionSlice<
   S extends EditSessionSlice & {graphData: UsecaseGraphData | null},
 >(set: SetState<S>, get: () => S, projectId: string): EditSessionSlice {
-  const setSlice = set as SetState<EditSessionSlice>;
+  const setSlice: SetState<EditSessionSlice> = set;
   const logSession = (message: string, action: string): void => {
     logger.debug(`editSessionSlice: ${message}`, {
       action,

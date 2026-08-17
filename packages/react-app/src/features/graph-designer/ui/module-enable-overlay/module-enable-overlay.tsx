@@ -94,7 +94,7 @@ export function ModuleEnableOverlay({
         aria-label="Module enable"
         checked={value}
         onCheckedChange={(isChecked) =>
-          setModuleEnable(moduleInstanceId, isChecked)
+          void setModuleEnable(moduleInstanceId, isChecked)
         }
         size="sm"
       />

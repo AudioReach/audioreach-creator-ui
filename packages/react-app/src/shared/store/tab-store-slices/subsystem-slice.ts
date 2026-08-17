@@ -92,12 +92,12 @@ function renameNodeInTree(
  * @param get - Zustand get function bound to the parent store state.
  * @returns The initial state and actions for the subsystem slice.
  */
-export function createSubsystemSlice<S extends SubsystemSlice>(
-  set: SetState<S>,
-  get: GetState<S>,
+export function createSubsystemSlice(
+  set: SetState<SubsystemSlice>,
+  get: GetState<SubsystemSlice>,
 ): SubsystemSlice {
-  const setSlice = set as SetState<SubsystemSlice>;
-  const getSlice = get as GetState<SubsystemSlice>;
+  const setSlice = set;
+  const getSlice = get;
   return {
     addSubsystem: (node: SubsystemBrowserTreeNode, parentId?: number) => {
       logger.debug('subsystemSlice: addSubsystem', {
@@ -114,7 +114,7 @@ export function createSubsystemSlice<S extends SubsystemSlice>(
       }
     },
 
-    loadSubsystems: async () => {
+    loadSubsystems: (): Promise<void> => {
       logger.debug(
         'subsystemSlice: loadSubsystems — no-op, data is loaded by loadGraphData',
         {
@@ -122,6 +122,7 @@ export function createSubsystemSlice<S extends SubsystemSlice>(
           component: 'subsystemSlice',
         },
       );
+      return Promise.resolve();
     },
 
     removeSubsystem: (id: number) => {

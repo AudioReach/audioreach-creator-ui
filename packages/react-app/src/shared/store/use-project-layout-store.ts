@@ -501,7 +501,9 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       });
       return true;
     } catch (error) {
-      logger.error(`Failed to create layout config from JSON:${error}`);
+      logger.error(
+        `Failed to create layout config from JSON:${error instanceof Error ? error.message : String(error)}`,
+      );
       return false;
     }
   },
@@ -1383,7 +1385,9 @@ export const useProjectLayoutStore = create<ProjectLayoutStore>((set, get) => ({
       });
       return true;
     } catch (error) {
-      logger.error(`Failed to save layout config:${error}`);
+      logger.error(
+        `Failed to save layout config:${error instanceof Error ? error.message : String(error)}`,
+      );
       return false;
     }
   },

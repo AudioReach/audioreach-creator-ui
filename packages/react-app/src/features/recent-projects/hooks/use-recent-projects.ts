@@ -183,7 +183,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @param projectId The ID of the project
    * @returns n/a
    */
-  async function removeFromRecent(projectId: string) {
+  const removeFromRecentAsync = useCallback(async (projectId: string) => {
     if (!window.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
@@ -203,7 +203,12 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }
+  }, [getRecentConfig]);
+
+  const removeFromRecent = useCallback(
+    (projectId: string): void => void removeFromRecentAsync(projectId),
+    [removeFromRecentAsync],
+  );
 
   /** Adds a new project to the recent files list. The project will be ignored
    * if its file path already exist in the recent file list
@@ -211,7 +216,7 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @param project The project to add to the recent files list
    * @returns n/a
    */
-  async function addToRecent(project: ProjectInfo) {
+  const addToRecentAsync = useCallback(async (project: ProjectInfo) => {
     if (!window.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
@@ -241,9 +246,14 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }
+  }, [getRecentConfig]);
 
-  async function updateImage(projectId: string, htmlElem: HTMLElement) {
+  const addToRecent = useCallback(
+    (project: ProjectInfo): void => void addToRecentAsync(project),
+    [addToRecentAsync],
+  );
+
+  const updateImageAsync = useCallback(async (projectId: string, htmlElem: HTMLElement) => {
     if (!window.mruStoreApi) {
       logger.error('MRU Store API not available', {
         component: 'useArcRecentProjects',
@@ -266,7 +276,13 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }
+  }, [getRecentConfig]);
+
+  const updateImage = useCallback(
+    (projectId: string, htmlElem: HTMLElement): void =>
+      void updateImageAsync(projectId, htmlElem),
+    [updateImageAsync],
+  );
 
   return {
     addToRecent,

@@ -39,7 +39,7 @@ export function createUsecaseSelectionSlice<S extends UsecaseSelectionSlice>(
       });
       set((state: S) => {
         if (state.selectedUsecases.includes(usecase)) {
-          return {} as Partial<S>;
+          return {};
         }
         return {
           selectedUsecases: [...state.selectedUsecases, usecase],

@@ -27,23 +27,23 @@ export type GlobalStore = AppSlice &
 export const useGlobalStore = create<GlobalStore>((set, get) => ({
   ...createAppSlice(
     (partial) => set(partial as Partial<GlobalStore>),
-    () => get() as AppSlice,
+    () => get(),
   ),
   ...createBackendConnectionSlice(
     (partial) => set(partial as Partial<GlobalStore>),
-    () => get() as BackendConnectionSlice,
+    () => get(),
   ),
   ...createRecentProjectsSlice(
     (partial) => set(partial as Partial<GlobalStore>),
-    () => get() as RecentProjectsSlice,
+    () => get(),
   ),
   ...createSessionSlice(
     (partial) => set(partial as Partial<GlobalStore>),
-    () => get() as SessionSlice,
+    () => get(),
   ),
   ...createProjectGroupSlice(
     (partial) => set(partial as Partial<GlobalStore>),
-    () => get() as ProjectGroupSlice,
-    () => get() as AppSlice,
+    () => get(),
+    () => get(),
   ),
 }));

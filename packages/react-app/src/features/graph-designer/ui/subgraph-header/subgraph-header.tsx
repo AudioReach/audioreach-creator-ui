@@ -52,7 +52,7 @@ export function SubgraphHeader({subgraphId}: SubgraphHeaderProps) {
     }
     const defaults: Record<string, string> = {};
     for (const key of keys) {
-      const [firstValue] = [...keyValues[key]!].sort();
+      const [firstValue] = [...keyValues[key]].sort();
       defaults[key] = firstValue!;
     }
     initializeHeaderSelection(subgraphId, defaults);
@@ -79,7 +79,7 @@ export function SubgraphHeader({subgraphId}: SubgraphHeaderProps) {
           onValueChange={(value) => setHeaderKeyValue(subgraphId, key, value)}
           value={headerSelection?.keyValues[key]}
           valueLabels={valueLabels[key] ?? {}}
-          values={keyValues[key]!}
+          values={keyValues[key]}
         />
       ))}
     </div>

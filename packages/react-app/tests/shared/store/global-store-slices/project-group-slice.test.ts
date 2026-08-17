@@ -16,7 +16,7 @@ describe('ProjectGroupSlice — updateProjectFilePath', () => {
       activeProjectId: null,
       nextColorId: 1,
       openProjects: [],
-    } as any);
+    });
 
     jest.clearAllMocks();
   });

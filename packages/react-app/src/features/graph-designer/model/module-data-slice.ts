@@ -202,7 +202,7 @@ export function createModuleDataSlice<
     set({
       moduleDataByInstanceId: {
         ...get().moduleDataByInstanceId,
-        [moduleInstanceId]: {...existing, ...patch} as ModuleDataEntry,
+        [moduleInstanceId]: {...existing, ...patch},
       },
     } as Partial<S>);
   };

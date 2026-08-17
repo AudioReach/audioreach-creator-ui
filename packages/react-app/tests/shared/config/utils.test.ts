@@ -77,7 +77,7 @@ function findTabset(result: IJsonModel, tabsetId: string): IJsonTabSetNode {
   while (stack.length > 0) {
     const node = stack.pop()!;
     if ('id' in node && node.id === tabsetId && node.type === 'tabset') {
-      return node as IJsonTabSetNode;
+      return node;
     }
     if ('children' in node) {
       stack.push(...node.children);

@@ -179,7 +179,7 @@ describe('PanelIconBar', () => {
       panelStates: {[PROJECT_ID]: {...DEFAULT_PANEL_STATE}},
       savedWeights: {},
       togglePanel,
-    } as any);
+    });
 
     render(<PanelIconBar />);
 

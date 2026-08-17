@@ -18,7 +18,6 @@ import {
 
 import {IconButton} from '@qualcomm-ui/react/button';
 import {Icon} from '@qualcomm-ui/react/icon';
-import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 import {Menu} from '@qualcomm-ui/react/menu';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
@@ -121,7 +120,9 @@ const ValidationResultToolbar: React.FC = () => {
     try {
       await navigator.clipboard.writeText(fullText);
     } catch (error) {
-      logger.error(`Failed to copy to clipboard: ${error}`);
+      logger.error(
+        `Failed to copy to clipboard: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
@@ -164,7 +165,9 @@ const ValidationResultToolbar: React.FC = () => {
         );
       }
     } catch (error) {
-      logger.error(`Failed to export validation results: ${error}`);
+      logger.error(
+        `Failed to export validation results: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
@@ -189,7 +192,7 @@ const ValidationResultToolbar: React.FC = () => {
                 trigger={
                   <span style={{display: 'inline-flex'}}>
                     <Menu.Trigger>
-                      <InlineIconButton
+                      <Menu.InlineIconButton
                         aria-label="Filter validation results"
                         icon={ListFilter}
                         size="sm"
@@ -305,7 +308,6 @@ const ValidationResultToolbar: React.FC = () => {
 
       {/* Copy Selected Result Button - only visible when a result is selected AND exists in filtered results */}
       {selectedRowId &&
-        filteredResults.length > 0 &&
         filteredResults.some(
           (result: ValidationResult) => result.id === selectedRowId,
         ) && (
@@ -315,7 +317,7 @@ const ValidationResultToolbar: React.FC = () => {
                 aria-label="Copy selected validation result"
                 emphasis="neutral"
                 icon={Copy}
-                onClick={copySelectedResult}
+                onClick={() => void copySelectedResult()}
                 size="sm"
                 variant="ghost"
               />
@@ -339,7 +341,7 @@ const ValidationResultToolbar: React.FC = () => {
             disabled={filteredResults.length === 0}
             emphasis="neutral"
             icon={Download}
-            onClick={exportAllResults}
+            onClick={() => void exportAllResults()}
             size="sm"
             variant="ghost"
           />

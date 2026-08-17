@@ -61,7 +61,7 @@ export class ProjectTabEntity {
       typeof panelLayoutOrComponent === 'object' &&
       'flexLayoutData' in panelLayoutOrComponent
     ) {
-      this.panelLayout = panelLayoutOrComponent as {flexLayoutData: IJsonModel};
+      this.panelLayout = panelLayoutOrComponent;
       this.component = undefined;
     } else {
       this.component = panelLayoutOrComponent as ReactNode;

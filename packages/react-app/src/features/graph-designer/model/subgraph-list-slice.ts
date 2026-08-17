@@ -75,12 +75,12 @@ function toSubgraphDefinition(dto: SubgraphResponseDto): SubgraphDefinition {
  * @param _get - Zustand get function bound to the parent store state.
  * @returns The initial state and actions for the subgraph-list slice.
  */
-export function createSubgraphListSlice<S extends SubgraphListSlice>(
-  set: SetState<S>,
-  _get: GetState<S>,
+export function createSubgraphListSlice(
+  set: SetState<SubgraphListSlice>,
+  _get: GetState<SubgraphListSlice>,
   projectId: string,
 ): SubgraphListSlice {
-  const setSlice = set as SetState<SubgraphListSlice>;
+  const setSlice = set;
   return {
     loadSubgraphList: async () => {
       logger.debug('subgraphListSlice: loadSubgraphList — starting', {

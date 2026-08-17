@@ -733,7 +733,7 @@ export const UsecaseSelectionControl: React.FC<
             isSearching={isSearching}
             onClose={() => setIsDropdownOpen(false)}
             onCollapseAll={handleCollapseAll}
-            onDeleteSelected={handleDeleteSelected}
+            onDeleteSelected={() => void handleDeleteSelected()}
             onExpandAll={handleExpandAll}
             selectedUsecases={selectedUsecases}
             toggleCategoryExpansion={toggleCategoryExpansion}

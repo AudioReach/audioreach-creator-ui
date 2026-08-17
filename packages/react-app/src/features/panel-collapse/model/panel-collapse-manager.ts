@@ -261,7 +261,6 @@ export const syncPanelStateFromModel = (
       nodes.length > 0 &&
       nodes.every((node) => (node.weight ?? 0) >= MINIMUM_VISIBLE_WEIGHT);
     const isEffectivelyHidden =
-      nodes.length === 0 ||
       nodes.every((node) => (node.weight ?? 0) < MINIMUM_VISIBLE_WEIGHT);
 
     // Toggle store if model and store disagree about panel visibility
