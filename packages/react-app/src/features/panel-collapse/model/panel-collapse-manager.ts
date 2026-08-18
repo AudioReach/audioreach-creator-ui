@@ -134,7 +134,11 @@ const ensureSidePlaceholder = (model: Model, side: Side): void => {
   if (side === 'bottom') {
     // Bottom sits directly under root, so docking BOTTOM onto root always recreates
     // it full-width.
-    targetNodeId = model.getRoot().getId();
+    const rootRow = model.getRootRow();
+    if (!rootRow) {
+      return;
+    }
+    targetNodeId = rootRow.getId();
     dockLocation = DockLocation.BOTTOM;
   } else {
     // Center can never move (drag/split/drop are all disabled on it), so it's

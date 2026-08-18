@@ -6,9 +6,8 @@
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {defineConfig} from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
-import pkg from './package.json';
+import pkg from './package.json' with {type: 'json'};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,12 +22,14 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: {
+      external: [
         ...Object.keys(pkg.dependencies ?? {}),
         ...Object.keys(pkg.devDependencies ?? {}),
-      },
+      ],
     },
     sourcemap: true,
   },
-  plugins: [tsconfigPaths()],
+  resolve: {
+    tsconfigPaths: true,
+  },
 });

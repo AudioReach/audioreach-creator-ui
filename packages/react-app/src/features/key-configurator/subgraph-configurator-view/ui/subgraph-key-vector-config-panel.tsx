@@ -587,9 +587,7 @@ export function SubgraphKeyVectorConfigPanel({
               aria-label="Select all keys"
               checked={allFilteredKeysSelected}
               indeterminate={someFilteredKeysSelected}
-              onChange={(e) =>
-                handleSelectAllKeys((e.target as HTMLInputElement).checked)
-              }
+              onCheckedChange={(checked) => handleSelectAllKeys(checked)}
               size="sm"
             />
             <button
@@ -668,12 +666,8 @@ export function SubgraphKeyVectorConfigPanel({
                       <Checkbox
                         aria-label={`Select ${keyName}`}
                         checked={isKeySelected}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleKeyCheckboxChange(
-                            key.id,
-                            (e.target as HTMLInputElement).checked,
-                          );
+                        onCheckedChange={(checked) => {
+                          handleKeyCheckboxChange(key.id, checked);
                         }}
                         onClick={(e) => e.stopPropagation()}
                         size="sm"

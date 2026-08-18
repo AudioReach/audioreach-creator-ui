@@ -261,6 +261,7 @@ class ProjectLayoutManager extends Component<
         tabEnableClose: true,
         tabEnableRename: false,
         tabSetEnableClose: false,
+        tabSetEnableCloseButton: false,
         tabSetEnableDrag: true,
         tabSetEnableDrop: true,
         tabSetEnableMaximize: true,
@@ -362,6 +363,7 @@ class ProjectLayoutManager extends Component<
           tabEnableClose: true,
           tabEnableRename: false,
           tabSetEnableClose: false,
+          tabSetEnableCloseButton: false,
           tabSetEnableDrag: true,
           tabSetEnableDrop: true,
           tabSetEnableMaximize: true,
@@ -388,6 +390,7 @@ class ProjectLayoutManager extends Component<
         tabEnableClose: true,
         tabEnableRename: false,
         tabSetEnableClose: false,
+        tabSetEnableCloseButton: false,
         tabSetEnableDrag: true,
         tabSetEnableDrop: true,
         tabSetEnableMaximize: true,
@@ -829,7 +832,10 @@ class ProjectLayoutManager extends Component<
       }
     };
 
-    fixSelectedTab(newModel.getRoot());
+    const rootRow = newModel.getRootRow();
+    if (rootRow) {
+      fixSelectedTab(rootRow);
+    }
     return newModel;
   };
 

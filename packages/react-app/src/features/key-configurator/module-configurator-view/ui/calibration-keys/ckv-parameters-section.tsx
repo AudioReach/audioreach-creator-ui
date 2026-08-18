@@ -107,9 +107,7 @@ export function CkvParametersSection({
                       checked={allChecked}
                       disabled={!isEditable}
                       indeterminate={someChecked}
-                      onChange={(e) =>
-                        handleSelectAll((e.target as HTMLInputElement).checked)
-                      }
+                      onCheckedChange={(checked) => handleSelectAll(checked)}
                       size="sm"
                       title="Select/Deselect All"
                     />
@@ -149,10 +147,10 @@ export function CkvParametersSection({
                         aria-label={`Select parameter ${param.name}`}
                         checked={param.checked}
                         disabled={!isEditable}
-                        onChange={(e) =>
+                        onCheckedChange={(checked) =>
                           handleParameterChange(
                             index,
-                            (e.target as HTMLInputElement).checked,
+                            checked,
                           )
                         }
                         size="sm"

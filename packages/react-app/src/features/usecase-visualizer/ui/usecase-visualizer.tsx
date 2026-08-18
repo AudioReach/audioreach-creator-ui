@@ -548,7 +548,7 @@ function VisualizerCanvas({
   );
 
   const handleNodeDragStop = useCallback(
-    (_e: ReactMouseEvent, node: Node) => {
+    (_e: MouseEvent | TouchEvent, node: Node) => {
       const rp = resizedParentsRef.current;
       store.getState().eventHandlers?.onNodeDragEnd?.({
         nodeId: node.id,

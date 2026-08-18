@@ -24,12 +24,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '~assets': resolve(__dirname, './src/assets'),
-      '~data': resolve(__dirname, './src/data'),
-      '~entities': resolve(__dirname, './src/entities'),
-      '~features': resolve(__dirname, './src/features'),
-      '~shared': resolve(__dirname, './src/shared'),
-      '~widgets': resolve(__dirname, './src/widgets'),
+      '~assets': resolve(import.meta.dirname, './src/assets'),
+      '~data': resolve(import.meta.dirname, './src/data'),
+      '~entities': resolve(import.meta.dirname, './src/entities'),
+      '~features': resolve(import.meta.dirname, './src/features'),
+      '~shared': resolve(import.meta.dirname, './src/shared'),
+      '~widgets': resolve(import.meta.dirname, './src/widgets'),
     },
   },
   server: {

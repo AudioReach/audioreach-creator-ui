@@ -262,9 +262,7 @@ export function SubsystemConfigPanel({
               aria-label="Select all keys"
               checked={allKeysSelected}
               indeterminate={someKeysSelected}
-              onChange={(e) =>
-                handleSelectAll((e.target as HTMLInputElement).checked)
-              }
+              onCheckedChange={(checked) => handleSelectAll(checked)}
               size="sm"
             />
             <button
@@ -312,11 +310,8 @@ export function SubsystemConfigPanel({
                     <Checkbox
                       aria-label={`Select ${key.name}`}
                       checked={isSelected}
-                      onChange={(e) =>
-                        handleKeySelection(
-                          key.id,
-                          (e.target as HTMLInputElement).checked,
-                        )
+                      onCheckedChange={(checked) =>
+                        handleKeySelection(key.id, checked)
                       }
                       size="sm"
                     />

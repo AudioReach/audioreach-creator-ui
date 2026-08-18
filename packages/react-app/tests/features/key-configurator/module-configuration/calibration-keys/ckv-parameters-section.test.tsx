@@ -13,7 +13,7 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
     checked,
     disabled,
     indeterminate,
-    onChange,
+    onCheckedChange,
     size,
     title,
   }: any) => (
@@ -29,11 +29,7 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
       disabled={disabled}
       onChange={(e) => {
         if (!disabled) {
-          const event = {
-            ...e,
-            target: {checked: e.target.checked},
-          };
-          onChange(event);
+          onCheckedChange(e.target.checked);
         }
       }}
       title={title}

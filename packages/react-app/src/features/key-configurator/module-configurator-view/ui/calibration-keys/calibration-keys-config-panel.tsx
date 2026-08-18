@@ -417,11 +417,7 @@ export function CalibrationKeysConfigPanel({
   }, []);
 
   const toggleValueSelection = useCallback(
-    (keyId: number, valueId: number, event?: React.MouseEvent) => {
-      if (event && (event.target as HTMLElement).tagName !== 'INPUT') {
-        return;
-      }
-
+    (keyId: number, valueId: number) => {
       setSelectedKeyValues((prev) => {
         const keySelections = prev[keyId] || {};
         return {
@@ -907,9 +903,7 @@ export function CalibrationKeysConfigPanel({
                 checked={allFilteredKeysSelected}
                 className="ml-3"
                 indeterminate={someFilteredKeysSelected}
-                onChange={(e) =>
-                  handleSelectAll((e.target as HTMLInputElement).checked)
-                }
+                onCheckedChange={(checked) => handleSelectAll(checked)}
                 size="sm"
               />
               <button
@@ -1045,12 +1039,8 @@ export function CalibrationKeysConfigPanel({
                                 <Checkbox
                                   aria-label={`Select ${value.name}`}
                                   checked={keySelections[value.id] || false}
-                                  onChange={(e) =>
-                                    toggleValueSelection(
-                                      key.id,
-                                      value.id,
-                                      e as any,
-                                    )
+                                  onCheckedChange={() =>
+                                    toggleValueSelection(key.id, value.id)
                                   }
                                   size="sm"
                                 />

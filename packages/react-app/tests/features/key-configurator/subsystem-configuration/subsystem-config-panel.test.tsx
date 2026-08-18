@@ -48,7 +48,7 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
     'aria-label': ariaLabel,
     checked,
     indeterminate,
-    onChange,
+    onCheckedChange,
     size,
   }: any) => (
     <input
@@ -56,7 +56,7 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
       checked={checked}
       data-indeterminate={indeterminate}
       data-size={size}
-      onChange={(e) => onChange({target: {checked: e.target.checked}})}
+      onChange={(e) => onCheckedChange(e.target.checked)}
       type="checkbox"
     />
   ),

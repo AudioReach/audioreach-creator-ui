@@ -199,7 +199,7 @@ function collectTabsets(node: LayoutTreeNode, into: IJsonTabSetNode[]): void {
     into.push(node);
     return;
   }
-  for (const child of node.children) {
+  for (const child of node.children ?? []) {
     collectTabsets(child, into);
   }
 }
@@ -208,7 +208,7 @@ function collectTabsets(node: LayoutTreeNode, into: IJsonTabSetNode[]): void {
 function collectTabIds(tabsets: IJsonTabSetNode[]): Set<string> {
   const ids = new Set<string>();
   for (const tabset of tabsets) {
-    for (const tab of tabset.children) {
+    for (const tab of tabset.children ?? []) {
       if (tab.id) {
         ids.add(tab.id);
       }
@@ -223,10 +223,10 @@ function findCenterParent(node: LayoutTreeNode): IJsonRowNode | null {
   if (isTabSet(node)) {
     return null;
   }
-  if (node.children.some((child) => child.id === CENTER_TABSET_ID)) {
+  if ((node.children ?? []).some((child) => child.id === CENTER_TABSET_ID)) {
     return node;
   }
-  for (const child of node.children) {
+  for (const child of node.children ?? []) {
     const found = findCenterParent(child);
     if (found) {
       return found;
@@ -242,9 +242,9 @@ function findTopAreaNode(root: IJsonRowNode): LayoutTreeNode | null {
     if (node.id === CENTER_TABSET_ID) {
       return true;
     }
-    return !isTabSet(node) && node.children.some(containsCenter);
+    return !isTabSet(node) && (node.children ?? []).some(containsCenter);
   };
-  return root.children.find(containsCenter) ?? null;
+  return (root.children ?? []).find(containsCenter) ?? null;
 }
 
 type TabPosition = 'bottom' | 'left' | 'right';
@@ -260,7 +260,7 @@ function getDefaultTabPositions(
     const tabsets: IJsonTabSetNode[] = [];
     nodes.forEach((node) => collectTabsets(node, tabsets));
     tabsets.forEach((tabset) =>
-      tabset.children.forEach((tab) => {
+      (tabset.children ?? []).forEach((tab) => {
         if (tab.id) {
           positions.set(tab.id, position);
         }
@@ -270,16 +270,22 @@ function getDefaultTabPositions(
 
   const centerParent = findCenterParent(defaultLayout);
   if (centerParent) {
-    const centerIndex = centerParent.children.findIndex(
+    const centerIndex = (centerParent.children ?? []).findIndex(
       (child) => child.id === CENTER_TABSET_ID,
     );
-    assignPositions(centerParent.children.slice(0, centerIndex), 'left');
-    assignPositions(centerParent.children.slice(centerIndex + 1), 'right');
+    assignPositions(
+      (centerParent.children ?? []).slice(0, centerIndex),
+      'left',
+    );
+    assignPositions(
+      (centerParent.children ?? []).slice(centerIndex + 1),
+      'right',
+    );
   }
 
   const topAreaNode = findTopAreaNode(defaultLayout);
   assignPositions(
-    defaultLayout.children.filter((child) => child !== topAreaNode),
+    (defaultLayout.children ?? []).filter((child) => child !== topAreaNode),
     'bottom',
   );
 
@@ -296,7 +302,7 @@ function insertIntoFirstTabsetOrCreate(
   const tabsets: IJsonTabSetNode[] = [];
   candidateNodes.forEach((node) => collectTabsets(node, tabsets));
   if (tabsets.length > 0) {
-    tabsets[0].children.push(tab);
+    (tabsets[0].children ??= []).push(tab);
   } else {
     insertFallback();
   }
@@ -312,9 +318,10 @@ function insertTabAtPosition(
   if (position === 'bottom') {
     const topAreaNode = findTopAreaNode(savedRoot);
     insertIntoFirstTabsetOrCreate(
-      savedRoot.children.filter((child) => child !== topAreaNode),
+      (savedRoot.children ?? []).filter((child) => child !== topAreaNode),
       tab,
-      () => savedRoot.children.push({children: [tab], type: 'tabset'}),
+      () =>
+        (savedRoot.children ??= []).push({children: [tab], type: 'tabset'}),
     );
     return;
   }
@@ -326,17 +333,17 @@ function insertTabAtPosition(
   if (!centerParent) {
     return;
   }
-  const centerIndex = centerParent.children.findIndex(
+  const centerIndex = (centerParent.children ?? []).findIndex(
     (child) => child.id === CENTER_TABSET_ID,
   );
   const siblingRange =
     position === 'left'
-      ? centerParent.children.slice(0, centerIndex)
-      : centerParent.children.slice(centerIndex + 1);
+      ? (centerParent.children ?? []).slice(0, centerIndex)
+      : (centerParent.children ?? []).slice(centerIndex + 1);
 
   insertIntoFirstTabsetOrCreate(siblingRange, tab, () => {
     const insertIndex = position === 'left' ? centerIndex : centerIndex + 1;
-    centerParent.children.splice(insertIndex, 0, {
+    (centerParent.children ??= []).splice(insertIndex, 0, {
       children: [tab],
       type: 'tabset',
     });
@@ -352,7 +359,7 @@ export function migrateFlexLayoutConfig(savedLayout: IJsonModel): IJsonModel {
 
   const defaultTabs: IJsonTabNode[] = [];
   defaultTabsets.forEach((tabset) =>
-    tabset.children.forEach((tab) => defaultTabs.push(tab)),
+    (tabset.children ?? []).forEach((tab) => defaultTabs.push(tab)),
   );
   const defaultTabIds = collectTabIds(defaultTabsets);
 
@@ -373,7 +380,7 @@ export function migrateFlexLayoutConfig(savedLayout: IJsonModel): IJsonModel {
     tab.component !== PLACEHOLDER_COMPONENT_NAME &&
     (!tab.id || !defaultTabIds.has(tab.id));
   const hasStaleTab = savedTabsets.some((tabset) =>
-    tabset.children.some(isStaleTab),
+    (tabset.children ?? []).some(isStaleTab),
   );
 
   if (missingTabs.length === 0 && !hasStaleTab) {
@@ -400,7 +407,9 @@ export function migrateFlexLayoutConfig(savedLayout: IJsonModel): IJsonModel {
     const migratedTabsets: IJsonTabSetNode[] = [];
     collectTabsets(migrated.layout, migratedTabsets);
     migratedTabsets.forEach((tabset) => {
-      tabset.children = tabset.children.filter((tab) => !isStaleTab(tab));
+      tabset.children = (tabset.children ?? []).filter(
+        (tab) => !isStaleTab(tab),
+      );
       // Removing the selected tab can leave `selected` invalid, showing a blank tab
       // area until the user clicks another tab.
       if (
