@@ -437,7 +437,7 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
     store.getState().applyDeletedCollection({
       controlLinks: [],
       dataLinks: [],
-      spfModules: [makeSpfModuleDto()],
+      spfModules: ['sys-mod-1'],
     });
 
     expect(
@@ -538,7 +538,7 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
 
     store.getState().applyDeletedCollection({
       controlLinks: [],
-      dataLinks: [makeDataLinkDto({systemId: 'link-1'})],
+      dataLinks: ['link-1'],
       spfModules: [],
     });
 
@@ -632,7 +632,7 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
       controlLinks: [],
       dataLinks: [],
       spfModules: [],
-      subsystems: [makeSubsystemDto()],
+      subsystems: ['sys-ss-1'],
     });
 
     expect(store.getState().graphData!.subsystems['sys-ss-1']).toBeUndefined();
@@ -871,11 +871,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
       },
     });
 
-    store.getState().pruneDeletedLinkBookkeeping({
-      controlLinks: [],
-      dataLinks: [makeDataLinkDto({systemId: 'link-deleted'})],
-      spfModules: [],
-    });
+    store.getState().pruneDeletedLinkBookkeeping(['link-deleted']);
 
     expect(store.getState().pairLinksById['sg-1:sg-2']).toBeUndefined();
     expect(store.getState().pairLinksById['sg-3:sg-4']?.dataLinks).toHaveLength(
@@ -902,11 +898,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
       },
     });
 
-    store.getState().pruneDeletedLinkBookkeeping({
-      controlLinks: [],
-      dataLinks: [makeDataLinkDto({systemId: 'link-deleted'})],
-      spfModules: [],
-    });
+    store.getState().pruneDeletedLinkBookkeeping(['link-deleted']);
 
     const pair = store.getState().pairLinksById['sg-1:sg-2'];
     expect(pair?.dataLinks.map((l) => l.systemId)).toEqual(['link-survivor']);
@@ -916,11 +908,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
     const store = makeStore();
     const before = store.getState();
 
-    store.getState().pruneDeletedLinkBookkeeping({
-      controlLinks: [],
-      dataLinks: [],
-      spfModules: [],
-    });
+    store.getState().pruneDeletedLinkBookkeeping([]);
 
     expect(store.getState().pairLinksById).toBe(before.pairLinksById);
     expect(store.getState().excludedLinks).toBe(before.excludedLinks);
@@ -1065,7 +1053,16 @@ describe('applyComponentCollection', () => {
         },
       ],
       graphData: {
-        connections: [],
+        connections: [
+          {
+            connectionId: 'old-link',
+            connectionType: 'data',
+            fromModuleId: 'mod-old-src',
+            fromPortId: '10',
+            toModuleId: 'mod-old-dst',
+            toPortId: '20',
+          },
+        ],
         containers: {},
         moduleInstances: {
           'mod-old-dst': moduleWithPort({
@@ -1109,16 +1106,9 @@ describe('applyComponentCollection', () => {
         ],
       },
       deleted: {
-        ...empty,
-        dataLinks: [
-          makeDataLinkDto({
-            destinationId: 'mod-old-dst',
-            destinationPortId: '20',
-            sourceId: 'mod-old-src',
-            sourcePortId: '10',
-            systemId: 'old-link',
-          }),
-        ],
+        controlLinks: [],
+        dataLinks: ['old-link'],
+        spfModules: [],
       },
       updated: empty,
     });

@@ -73,6 +73,30 @@ export interface Container {
   subgraphId: string;
 }
 
+/**
+ * The "deleted" bucket's contract for `applyComponentCollection`/
+ * `applyDeletedCollection`/`pruneDeletedLinkBookkeeping` — ids only, never
+ * full DTOs, matching the backend's actual deleted-entities responses (e.g.
+ * `RemoveSpfModuleResponseDto.deleted`). Omits `containers` — a container
+ * has no session-local map of its own and disappears automatically once
+ * `recomputeContainersAndSubgraphs` re-derives from surviving modules, so
+ * its own id needs no separate prune.
+ */
+export interface DeletedIdsCollection {
+  controlLinks: string[];
+  dataLinks: string[];
+  spfModules: string[];
+  subgraphs?: string[];
+  subsystems?: string[];
+}
+
+export interface LinkEndpoints {
+  destinationId: string;
+  destinationPortId: string;
+  sourceId: string;
+  sourcePortId: string;
+}
+
 export interface SubsystemPort {
   direction: 'input' | 'output';
   portId: string;
@@ -108,15 +132,15 @@ export interface UsecaseGraphData {
 export interface GraphDataSlice {
   adjustSurvivingPortCounts: (
     addedLinks: Array<ControlLinkDto | DataLinkDto>,
-    deletedLinks: Array<ControlLinkDto | DataLinkDto>,
+    deletedLinkEndpoints: LinkEndpoints[],
   ) => void;
   applyAddedCollection: (collection: ComponentCollectionDto) => void;
   applyComponentCollection: (collections: {
     added: ComponentCollectionDto;
-    deleted: ComponentCollectionDto;
+    deleted: DeletedIdsCollection;
     updated: ComponentCollectionDto;
   }) => Promise<void>;
-  applyDeletedCollection: (collection: ComponentCollectionDto) => void;
+  applyDeletedCollection: (collection: DeletedIdsCollection) => void;
   clearGraphData: () => void;
   graphData: UsecaseGraphData | null;
   graphDataError: string | null;
@@ -128,7 +152,7 @@ export interface GraphDataSlice {
   ) => Promise<void>;
   markClean: () => void;
   markDirty: () => void;
-  pruneDeletedLinkBookkeeping: (deleted: ComponentCollectionDto) => void;
+  pruneDeletedLinkBookkeeping: (deletedLinkIds: string[]) => void;
   recomputeContainersAndSubgraphs: () => Promise<void>;
 }
 
@@ -312,12 +336,12 @@ function upsertModule(
   };
 }
 
-function removeModule(
-  moduleInstances: Record<string, ModuleInstance>,
-  m: SpfModuleDto,
-): Record<string, ModuleInstance> {
-  const next = {...moduleInstances};
-  delete next[m.systemId];
+function removeById<T>(
+  record: Record<string, T>,
+  systemId: string,
+): Record<string, T> {
+  const next = {...record};
+  delete next[systemId];
   return next;
 }
 
@@ -340,11 +364,8 @@ function upsertLink(
   ];
 }
 
-function removeLink(
-  connections: Connection[],
-  link: ControlLinkDto | DataLinkDto,
-): Connection[] {
-  return connections.filter((c) => c.connectionId !== link.systemId);
+function removeLink(connections: Connection[], linkId: string): Connection[] {
+  return connections.filter((c) => c.connectionId !== linkId);
 }
 
 /**
@@ -387,15 +408,6 @@ function upsertSubsystem(
   };
 }
 
-function removeSubsystem(
-  subsystems: Record<string, Subsystem>,
-  ss: SubsystemDto,
-): Record<string, Subsystem> {
-  const next = {...subsystems};
-  delete next[ss.systemId];
-  return next;
-}
-
 /**
  * Returns `module` unchanged if it has no port matching `portId`;
  * otherwise returns a new `ModuleInstance` with that one port's
@@ -421,11 +433,15 @@ function withAdjustedPort(
 /**
  * Adjusts port counts for one link's endpoints. `sourceId`/`destinationId`
  * on the link are already the endpoint's `moduleInstanceId` (systemId), so
- * each endpoint is looked up directly in `next` by that key.
+ * each endpoint is looked up directly in `next` by that key. Takes the
+ * narrower `LinkEndpoints` shape rather than a full link DTO — the deleted
+ * side only has endpoint fields resolved from `graphData.connections`
+ * before removal (the backend's deleted bucket is id-only, see
+ * `DeletedIdsCollection`), not a full DTO.
  */
 function adjustModuleInstancesForLink(
   moduleInstances: Record<string, ModuleInstance>,
-  link: DataLinkDto | ControlLinkDto,
+  link: LinkEndpoints,
   delta: number,
 ): Record<string, ModuleInstance> {
   let next = moduleInstances;
@@ -450,6 +466,31 @@ function adjustModuleInstancesForLink(
 }
 
 /**
+ * Resolves a deleted link's endpoints (`sourceId`/`sourcePortId`/
+ * `destinationId`/`destinationPortId`) by looking it up in
+ * `graphData.connections` — the backend's deleted bucket only carries the
+ * link's id, not its endpoints, so this must run before the link's
+ * `Connection` entry is removed.
+ */
+function resolveLinkEndpoints(
+  connections: Connection[],
+  linkIds: string[],
+): LinkEndpoints[] {
+  if (linkIds.length === 0) {
+    return [];
+  }
+  const linkIdSet = new Set(linkIds);
+  return connections
+    .filter((c) => linkIdSet.has(c.connectionId))
+    .map((c) => ({
+      destinationId: c.toModuleId,
+      destinationPortId: c.toPortId,
+      sourceId: c.fromModuleId,
+      sourcePortId: c.fromPortId,
+    }));
+}
+
+/**
  * Creates the graph-data slice for composing into a tab store.
  *
  * @remarks The store type `S` must also compose `ModuleListSlice` — `loadGraphData`
@@ -470,7 +511,7 @@ export function createGraphDataSlice<
   return {
     adjustSurvivingPortCounts: (
       addedLinks: Array<ControlLinkDto | DataLinkDto>,
-      deletedLinks: Array<ControlLinkDto | DataLinkDto>,
+      deletedLinkEndpoints: LinkEndpoints[],
     ): void => {
       const {graphData} = get();
       if (!graphData) {
@@ -484,7 +525,7 @@ export function createGraphDataSlice<
           +1,
         );
       }
-      for (const link of deletedLinks) {
+      for (const link of deletedLinkEndpoints) {
         moduleInstances = adjustModuleInstancesForLink(
           moduleInstances,
           link,
@@ -492,7 +533,7 @@ export function createGraphDataSlice<
         );
       }
       logger.debug(
-        `graphDataSlice: adjustSurvivingPortCounts — added=${addedLinks.length}, deleted=${deletedLinks.length}`,
+        `graphDataSlice: adjustSurvivingPortCounts — added=${addedLinks.length}, deleted=${deletedLinkEndpoints.length}`,
         {
           action: 'adjustSurvivingPortCounts',
           component: 'graphDataSlice',
@@ -541,13 +582,26 @@ export function createGraphDataSlice<
 
     applyComponentCollection: async (collections: {
       added: ComponentCollectionDto;
-      deleted: ComponentCollectionDto;
+      deleted: DeletedIdsCollection;
       updated: ComponentCollectionDto;
     }): Promise<void> => {
       logger.debug('graphDataSlice: applyComponentCollection', {
         action: 'applyComponentCollection',
         component: 'graphDataSlice',
       });
+
+      const deletedLinkIds = [
+        ...collections.deleted.dataLinks,
+        ...collections.deleted.controlLinks,
+      ];
+      // The deleted bucket carries link ids only (design.md §6.3) — their
+      // endpoints must be resolved from the still-intact `graphData.connections`
+      // before applyDeletedCollection removes them below, since
+      // adjustSurvivingPortCounts needs each endpoint's moduleId/portId.
+      const deletedLinkEndpoints = resolveLinkEndpoints(
+        get().graphData?.connections ?? [],
+        deletedLinkIds,
+      );
 
       // 1. Merge every bucket into moduleInstances/subsystems/connections.
       //    "added" and "updated" are both pure upserts — only "deleted"
@@ -563,35 +617,35 @@ export function createGraphDataSlice<
 
       // 3. pairLinksById/excludedLinks — direct lookup against the
       //    deleted bucket's own link ids, no diffing needed.
-      get().pruneDeletedLinkBookkeeping(collections.deleted);
+      get().pruneDeletedLinkBookkeeping(deletedLinkIds);
 
       // 4. totalLinksAtPort — the response never includes the surviving
       //    sibling endpoint's updated count directly.
       get().adjustSurvivingPortCounts(
         [...collections.added.dataLinks, ...collections.added.controlLinks],
-        [...collections.deleted.dataLinks, ...collections.deleted.controlLinks],
+        deletedLinkEndpoints,
       );
     },
 
-    applyDeletedCollection: (collection: ComponentCollectionDto): void => {
+    applyDeletedCollection: (collection: DeletedIdsCollection): void => {
       const {graphData} = get();
       if (!graphData) {
         return;
       }
       let moduleInstances = graphData.moduleInstances;
-      for (const m of collection.spfModules) {
-        moduleInstances = removeModule(moduleInstances, m);
+      for (const systemId of collection.spfModules) {
+        moduleInstances = removeById(moduleInstances, systemId);
       }
       let subsystems = graphData.subsystems;
-      for (const ss of collection.subsystems ?? []) {
-        subsystems = removeSubsystem(subsystems, ss);
+      for (const systemId of collection.subsystems ?? []) {
+        subsystems = removeById(subsystems, systemId);
       }
       let connections = graphData.connections;
-      for (const l of collection.dataLinks) {
-        connections = removeLink(connections, l);
+      for (const linkId of collection.dataLinks) {
+        connections = removeLink(connections, linkId);
       }
-      for (const l of collection.controlLinks) {
-        connections = removeLink(connections, l);
+      for (const linkId of collection.controlLinks) {
+        connections = removeLink(connections, linkId);
       }
       logger.debug('graphDataSlice: applyDeletedCollection', {
         action: 'applyDeletedCollection',
@@ -817,16 +871,13 @@ export function createGraphDataSlice<
       set({isDirty: true} as Partial<S>);
     },
 
-    pruneDeletedLinkBookkeeping: (deleted: ComponentCollectionDto): void => {
-      const deletedLinkIds = new Set([
-        ...deleted.dataLinks.map((l) => l.systemId),
-        ...deleted.controlLinks.map((l) => l.systemId),
-      ]);
-      if (deletedLinkIds.size === 0) {
+    pruneDeletedLinkBookkeeping: (deletedLinkIds: string[]): void => {
+      const idSet = new Set(deletedLinkIds);
+      if (idSet.size === 0) {
         return;
       }
       logger.debug(
-        `graphDataSlice: pruneDeletedLinkBookkeeping — count=${deletedLinkIds.size}`,
+        `graphDataSlice: pruneDeletedLinkBookkeeping — count=${idSet.size}`,
         {
           action: 'pruneDeletedLinkBookkeeping',
           component: 'graphDataSlice',
@@ -835,11 +886,9 @@ export function createGraphDataSlice<
       const {excludedLinks, pairLinksById} = get();
       const nextPairLinksById: Record<string, SubgraphPairResponseDto> = {};
       for (const [pairKey, pair] of Object.entries(pairLinksById)) {
-        const dataLinks = pair.dataLinks.filter(
-          (l) => !deletedLinkIds.has(l.systemId),
-        );
+        const dataLinks = pair.dataLinks.filter((l) => !idSet.has(l.systemId));
         const controlLinks = pair.controlLinks.filter(
-          (l) => !deletedLinkIds.has(l.systemId),
+          (l) => !idSet.has(l.systemId),
         );
         if (dataLinks.length === 0 && controlLinks.length === 0) {
           continue;
@@ -847,9 +896,7 @@ export function createGraphDataSlice<
         nextPairLinksById[pairKey] = {...pair, controlLinks, dataLinks};
       }
       set({
-        excludedLinks: excludedLinks.filter(
-          (l) => !deletedLinkIds.has(l.connectionId),
-        ),
+        excludedLinks: excludedLinks.filter((l) => !idSet.has(l.connectionId)),
         pairLinksById: nextPairLinksById,
       } as unknown as Partial<S>);
     },

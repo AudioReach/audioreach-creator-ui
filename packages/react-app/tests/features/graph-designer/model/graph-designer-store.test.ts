@@ -35,7 +35,6 @@ import {projectStoreRegistry} from '~shared/store/project-store-registry';
 import {
   makeDataLinkDto,
   makeSpfModuleDto,
-  makeSubsystemDto,
 } from '../test-utils/component-dto-fixtures';
 
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
@@ -252,17 +251,10 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           ],
         },
         deleted: {
-          ...empty,
-          dataLinks: [
-            makeDataLinkDto({
-              destinationId: 'ss-1',
-              destinationPortId: '90',
-              sourceId: 'mod-A',
-              sourcePortId: '11',
-              systemId: 'link-old',
-            }),
-          ],
-          subsystems: [makeSubsystemDto({id: 50, systemId: 'ss-1'})],
+          controlLinks: [],
+          dataLinks: ['link-old'],
+          spfModules: [],
+          subsystems: ['ss-1'],
         },
         updated: empty,
       });

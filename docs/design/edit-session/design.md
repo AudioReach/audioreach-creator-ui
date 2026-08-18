@@ -364,11 +364,16 @@ interface MoveSubsystemComponentsResponseDto {
   removed: ComponentCollectionWithSubsystemsDto; // links invalidated by the move — not the moved components themselves
 }
 
-// 4. Module delete (DELETE /spf-modules/{id}) — a deleted-entities collection
+// 4. Module delete (DELETE /spf-modules/{id}) — a deleted-entities collection,
+//    ids only, nested under a `deleted` envelope
 interface RemoveSpfModuleResponseDto {
-  removedSpfModules: SpfModuleDto[];
-  removedDataLinks: DataLinkDto[];
-  removedControlLinks: ControlLinkDto[];
+  deleted: {
+    spfModules: string[];
+    subgraphs: string[];
+    containers: string[];
+    dataLinks: string[];
+    controlLinks: string[];
+  };
 }
 ```
 
@@ -379,10 +384,23 @@ module — the container/subgraph then disappears as the side effect of the
 containing module(s) being gone, once `recomputeContainersAndSubgraphs`
 re-derives from the surviving set. There is no `deleteContainer`/
 `deleteSubgraph` endpoint to call directly, and none is planned.
-`RemoveSpfModuleResponseDto` is a deleted-entities collection, the same
-shape family as `ComponentCollectionDto` — module delete's reconciliation
-uses the same `applyComponentCollection` path as every other multi-bucket
-case below, passing the response as the "deleted" bucket.
+`RemoveSpfModuleResponseDto.deleted` is an id-only deleted-entities
+collection — unlike `ComponentCollectionDto`, its entries are `string[]` of
+systemIds, not full DTOs, since the backend has already discarded the
+entities by response time. Module delete's reconciliation still uses the
+same `applyComponentCollection` path as every other multi-bucket case
+below, passing `deleted` as the "deleted" bucket; the reconciler resolves
+each deleted link's endpoints from its own already-loaded
+`graphData.connections` before removing it, since an id-only bucket carries
+no endpoint fields for the surviving-port-count adjustment (§6.3 point 4).
+`deleted.subgraphs`/`deleted.containers` are the ids of any subgraph/
+container that no longer has a surviving module after this delete — the
+reconciler prunes `subgraphProvenanceById`/`kvSelectionsById`/
+`pairLinksById` for each id in `deleted.subgraphs` directly (no diffing
+against a before/after snapshot needed); `deleted.containers` has no
+session-local map of its own, so it's accepted on the DTO but otherwise
+unused — a container disappears purely as a side effect of
+`recomputeContainersAndSubgraphs`.
 
 **Subsystem expand has no dedicated endpoint either.** FR-SUBSYS-06's "expand"
 is implemented client-side as: move every child out via
@@ -404,14 +422,20 @@ itself) and merges them into `GraphDataSlice`, then:
    (`recomputeContainersAndSubgraphs`) — containers/subgraphs are **never**
    first-class entities in the response; they disappear automatically when
    their last module does.
-2. Stamps `provenance`/`kvSelectionsById` (from session-local maps, since these
-   are frontend-only fields with no backend counterpart) onto each derived
-   `Subgraph`, and prunes both maps for any subgraph that no longer derives.
+2. Prunes `subgraphProvenanceById`/`kvSelectionsById`/`pairLinksById` (the
+   session-local maps, frontend-only fields with no backend counterpart)
+   for every id in the deleted bucket's own `subgraphs` list
+   (`pruneSessionLocalMapsForSubgraph`, called once per id) — driven
+   directly by the backend's own deleted-subgraph-ids list, not by
+   diffing a before/after snapshot.
 3. Prunes `pairLinksById`/`excludedLinks` for any link ID present in the
    removed/deleted bucket.
 4. Adjusts `totalLinksAtPort` on surviving endpoints for every added/deleted
    link (`adjustSurvivingPortCounts`) — the backend response never includes
-   the surviving sibling module's updated port count directly.
+   the surviving sibling module's updated port count directly. For an
+   id-only deleted bucket (shape 4 above), each deleted link's endpoints
+   are resolved from `graphData.connections` before the link's own entry
+   is removed, since the id alone carries no endpoint fields.
 
 Two narrow-response endpoint classes are **excluded** from this mechanism
 (no collection to reconcile): (a) actions that mutate exactly one
