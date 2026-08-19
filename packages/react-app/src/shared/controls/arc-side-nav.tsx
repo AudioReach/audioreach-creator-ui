@@ -326,11 +326,8 @@ export function ArcSideNav() {
       onSelectedValueChange={() => {}}
       open={open}
       selectedValue={[]}
-      style={{
-        backgroundColor: 'var(--color-surface-secondary)',
-        color: 'var(--color-text-neutral-primary)',
-        height: '100%',
-      }}
+      style={{height: '100%'}}
+      surface="secondary"
     >
       <SideNav.Header>
         <SideNav.HeaderTitle>Menu</SideNav.HeaderTitle>

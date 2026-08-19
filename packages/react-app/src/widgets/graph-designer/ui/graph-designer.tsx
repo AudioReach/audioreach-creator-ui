@@ -849,18 +849,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
                 'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
             }}
           >
-            <div
-              className="rounded-lg p-8 shadow-xl"
-              style={{backgroundColor: 'var(--color-surface-raised)'}}
-            >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   <ProgressRing />
                 </div>
-                <div
-                  className="mb-2 text-lg font-semibold"
-                  style={{color: 'var(--color-text-neutral-primary)'}}
-                >
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
                   {expandCollapseLabel}
                 </div>
               </div>
@@ -870,11 +864,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         )}
       {/* Usecase Selection Control at the top */}
       <div
-        className="flex-shrink-0 p-4"
-        style={{
-          backgroundColor: 'var(--color-surface-primary)',
-          borderBottom: '1px solid var(--color-border-neutral-02)',
-        }}
+        className="bg-primary border-neutral-02 flex-shrink-0 border-b p-4"
       >
         <div className="flex items-center gap-4">
           <div className="flex-1">
@@ -893,15 +883,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
       {/* Graph Visualizer below */}
       <div
-        className="flex-1 overflow-hidden"
-        style={{
-          backgroundColor: 'var(--color-surface-primary)',
-          position: 'relative',
-        }}
+        className="bg-primary relative flex-1 overflow-hidden"
       >
         {/* Search overlay – floats above the graph canvas at top-right */}
         <div
-          className={`absolute right-3 top-[5px] z-10 w-[380px] max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${
+          className={`absolute top-[5px] right-3 z-10 w-[380px] max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${
             isSearchVisible
               ? 'pointer-events-auto translate-y-0 opacity-100'
               : 'pointer-events-none -translate-y-2 opacity-0'
@@ -925,16 +911,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         {graphDataStatus === 'loading' ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div
-                className="mb-2 text-lg font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <div className="text-neutral-primary mb-2 text-lg font-semibold">
                 Loading graph...
               </div>
-              <div
-                className="text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
+              <div className="text-neutral-secondary text-sm">
                 Fetching usecase components
               </div>
             </div>
@@ -942,16 +922,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : graphDataStatus === 'error' ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div
-                className="mb-2 text-lg font-semibold"
-                style={{color: 'var(--color-border-support-danger)'}}
-              >
+              <div className="text-support-danger mb-2 text-lg font-semibold">
                 Error loading graph
               </div>
-              <div
-                className="mt-1 text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
+              <div className="text-neutral-secondary mt-1 text-sm">
                 {graphDataError ?? 'Unknown error'}
               </div>
             </div>
@@ -959,16 +933,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : selectedUsecases.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <div
-                className="mb-2 text-lg font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <div className="text-neutral-primary mb-2 text-lg font-semibold">
                 No usecases selected
               </div>
-              <div
-                className="text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
+              <div className="text-neutral-secondary text-sm">
                 Select usecases from the control above to view the graph
               </div>
             </div>

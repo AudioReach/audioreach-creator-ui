@@ -22,25 +22,18 @@ export function StatusStrip({
       : `${paramCount} params`;
 
   return (
-    <div
-      className="text-neutral-secondary flex shrink-0 items-center gap-2.5 border-t px-4 py-1.5 text-xs"
-      style={{backgroundColor: 'var(--color-background-neutral-01)'}}
-    >
+    <div className="text-neutral-secondary bg-neutral-01 flex shrink-0 items-center gap-2.5 border-t px-4 py-1.5 text-xs">
       <span>{countLabel}</span>
       {dirtyCount > 0 && (
         <>
           <span className="opacity-35">·</span>
-          <span style={{color: 'var(--color-text-support-warning)'}}>
-            {dirtyCount} dirty
-          </span>
+          <span className="text-icon-support-warning">{dirtyCount} dirty</span>
         </>
       )}
       {setCount > 0 && (
         <>
           <span className="opacity-35">·</span>
-          <span style={{color: 'var(--color-text-support-success)'}}>
-            {setCount} set
-          </span>
+          <span className="text-support-success">{setCount} set</span>
         </>
       )}
     </div>

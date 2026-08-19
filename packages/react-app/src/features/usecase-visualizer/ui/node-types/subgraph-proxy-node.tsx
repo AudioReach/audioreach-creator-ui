@@ -32,6 +32,15 @@ export function SubgraphProxyNode({
 
   const classNames = [
     'subgraph-proxy-node relative rounded-md border-2 border-dashed',
+    highlight.state === 'active'
+      ? 'bg-support-warning'
+      : 'bg-[var(--node-shade-subtle)]',
+    selected && highlight.state === 'none'
+      ? 'border-support-info'
+      : highlight.state !== 'none'
+        ? 'border-support-warning'
+        : 'border-neutral-10',
+    'h-full w-full',
     highlight.highlightMatchClass,
     highlight.highlightActiveClass,
     highlight.containsMatchClass,
@@ -39,26 +48,12 @@ export function SubgraphProxyNode({
     .filter(Boolean)
     .join(' ');
 
-  const borderColor =
-    selected && highlight.state === 'none'
-      ? 'var(--color-border-support-info)'
-      : highlight.borderColor;
-
   return (
     <div
       className={classNames}
       data-locked={isLocked || undefined}
       data-node-id={node.id}
       data-testid="subgraph-proxy-node"
-      style={{
-        backgroundColor:
-          highlight.state === 'active'
-            ? highlight.activeBackgroundColor
-            : 'var(--node-shade-subtle)',
-        borderColor,
-        height: '100%',
-        width: '100%',
-      }}
     >
       <div className="flex items-center justify-between gap-1 px-2 py-1">
         <span className="text-primary truncate text-xs font-semibold">

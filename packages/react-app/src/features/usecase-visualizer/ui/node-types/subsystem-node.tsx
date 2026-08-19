@@ -21,6 +21,13 @@ export function SubsystemNode({data: node, selected}: SubsystemNodeProps) {
 
   const classNames = [
     'subsystem-node relative rounded-md border',
+    selected || highlight.state === 'active'
+      ? 'bg-support-info-subtle'
+      : 'bg-[var(--node-shade-medium)]',
+    selected || highlight.state !== 'none'
+      ? 'border-support-info'
+      : 'border-neutral-10',
+    'h-full w-full',
     highlight.highlightMatchClass,
     highlight.highlightActiveClass,
     highlight.containsMatchClass,
@@ -34,18 +41,6 @@ export function SubsystemNode({data: node, selected}: SubsystemNodeProps) {
       data-locked={isLocked || undefined}
       data-node-id={node.id}
       data-testid="subsystem-node"
-      style={{
-        backgroundColor:
-          selected || highlight.state === 'active'
-            ? 'var(--color-background-support-info-subtle)'
-            : 'var(--node-shade-medium)',
-        borderColor:
-          selected || highlight.state !== 'none'
-            ? 'var(--color-border-support-info)'
-            : 'var(--color-border-neutral-10)',
-        height: '100%',
-        width: '100%',
-      }}
     >
       <span className="text-primary absolute inset-x-2 top-1 truncate text-sm font-semibold">
         {node.label}

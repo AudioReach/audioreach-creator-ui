@@ -12,8 +12,7 @@ import ArcProjectCard from '~shared/controls/arc-project-card';
 import type DeviceInfo from '~shared/types/device-info.types';
 
 type UnifiedItem =
-  | {data: ProjectInfo; type: 'project'}
-  | {data: DeviceInfo; type: 'device'};
+  {data: ProjectInfo; type: 'project'} | {data: DeviceInfo; type: 'device'};
 
 interface UnifiedGridViewProps {
   devices: DeviceInfo[];
@@ -61,10 +60,7 @@ export default function UnifiedGridView({
   // Empty state
   if (items.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center py-12"
-        style={{color: 'var(--color-text-neutral-secondary)'}}
-      >
+      <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
         <Database className="mb-4" size={48} />
         <p className="text-lg">No items</p>
       </div>

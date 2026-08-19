@@ -230,11 +230,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
   return (
     <div
       ref={containerRef}
-      className="flex items-center rounded border px-1"
-      style={{
-        backgroundColor: 'var(--color-surface-secondary)',
-        borderColor: 'var(--color-border-neutral-02)',
-      }}
+      className="bg-secondary border-neutral-02 flex items-center rounded border px-1"
     >
       {/* ── Search input with history toggle inside ── */}
       <div className="relative flex-1">
@@ -254,12 +250,10 @@ export const SearchComponent: FC<SearchComponentProps> = ({
             {/* Info icon — shows search syntax guide on hover */}
             <Tooltip
               arrowTipProps={{
-                className:
-                  '!bg-[var(--color-background-support-neutral-subtle)]',
+                className: '!bg-support-neutral-subtle',
               }}
               contentProps={{
-                className:
-                  'bg-[var(--color-background-support-neutral-subtle)]',
+                className: 'bg-support-neutral-subtle',
               }}
               positioning={{placement: 'bottom'}}
               trigger={
@@ -293,12 +287,9 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                   },
                   {example: 'cnt:0xE0000023', label: 'Search containers'},
                 ].map(({example, label}) => (
-                  <div
-                    key={label}
-                    className="mb-2 text-[var(--color-text-neutral-primary)]"
-                  >
+                  <div key={label} className="mb-2 text-neutral-primary">
                     <div className="mb-1">{label}</div>
-                    <code className="block rounded bg-[var(--color-background-neutral-03)] px-1.5 py-0.5 text-[var(--color-text-neutral-primary)]">
+                    <code className="block rounded bg-neutral-03 px-1.5 py-0.5 text-neutral-primary">
                       {example}
                     </code>
                   </div>
@@ -327,7 +318,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
         {/* ── History dropdown ── */}
         {isHistoryOpen && (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+1px)] z-[200] max-h-60 overflow-y-auto border border-[var(--color-border-neutral-02)] bg-[var(--color-surface-secondary)]"
+            className="absolute left-0 right-0 top-[calc(100%+1px)] z-[200] max-h-60 overflow-y-auto border border-neutral-02 bg-secondary"
             role="listbox"
           >
             {history.length > 0 ? (
@@ -338,18 +329,15 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                     historyItemRefs.current[index] = el;
                   }}
                   aria-selected={focusedHistoryIndex === index}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-neutral-primary)] hover:bg-[var(--color-background-neutral-03)] focus:bg-[var(--color-background-neutral-03)] focus:outline-none"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-neutral-primary hover:bg-neutral-03 focus:bg-neutral-03 focus:outline-none"
                   onClick={() => handleHistorySelect(term)}
                   onKeyDown={(e) => handleHistoryItemKeyDown(e, index, term)}
                   role="option"
                   tabIndex={0}
                 >
                   <History
+                    className="text-neutral-primary shrink-0"
                     size={14}
-                    style={{
-                      color: 'var(--color-text-neutral-primary)',
-                      flexShrink: 0,
-                    }}
                   />
                   <span
                     style={{
@@ -364,7 +352,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                 </div>
               ))
             ) : (
-              <div className="select-none p-3 text-center text-sm text-[var(--color-text-neutral-primary)]">
+              <div className="select-none p-3 text-center text-sm text-neutral-primary">
                 No search history
               </div>
             )}
@@ -374,7 +362,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
 
       {/* ── Match counter ── */}
       {showCounter && (
-        <span className="min-w-[52px] select-none whitespace-nowrap px-1 text-center text-xs text-[var(--color-text-neutral-primary)]">
+        <span className="min-w-[52px] select-none whitespace-nowrap px-1 text-center text-xs text-neutral-primary">
           {`${hasMatches ? (currentMatch ?? 0) : 0} / ${totalMatches ?? 0}`}
         </span>
       )}

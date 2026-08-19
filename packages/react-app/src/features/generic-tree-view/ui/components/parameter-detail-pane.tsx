@@ -174,10 +174,7 @@ export function ParameterDetailPane({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {selectedItems.length > 1 && (
-        <div
-          className="text-neutral-secondary flex shrink-0 items-center gap-2 border-b px-4 py-2.5 text-xs"
-          style={{backgroundColor: 'var(--color-background-neutral-01)'}}
-        >
+        <div className="text-neutral-secondary bg-neutral-01 flex shrink-0 items-center gap-2 border-b px-4 py-2.5 text-xs">
           <span>{selectedItems.length} parameters selected</span>
           <span className="opacity-30">·</span>
           <span>Ctrl+click to add/remove</span>
@@ -198,9 +195,8 @@ export function ParameterDetailPane({
             return (
               <div
                 key={item.id}
-                className="overflow-hidden rounded-md border shadow-sm"
+                className="bg-primary overflow-hidden rounded-md border shadow-sm"
                 data-item-id={item.id}
-                style={{backgroundColor: 'var(--color-surface-primary)'}}
               >
                 <Accordion.ItemRoot value={item.id}>
                   <Accordion.ItemTrigger>

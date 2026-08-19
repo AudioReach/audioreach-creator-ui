@@ -170,7 +170,7 @@ export function SubgraphList(): ReactElement {
               </div>
 
               {/* Divider */}
-              <div className="border-neutral-border my-0.5 border-t" />
+              <div className="border-neutral-02 my-0.5 border-t" />
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-0.5 px-0.5">

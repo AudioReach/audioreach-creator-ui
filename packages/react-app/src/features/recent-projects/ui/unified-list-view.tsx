@@ -13,8 +13,7 @@ import type {ProjectInfo} from '~entities/project';
 import type DeviceInfo from '~shared/types/device-info.types';
 
 type UnifiedItem =
-  | {data: ProjectInfo; type: 'project'}
-  | {data: DeviceInfo; type: 'device'};
+  {data: ProjectInfo; type: 'project'} | {data: DeviceInfo; type: 'device'};
 
 interface UnifiedListViewProps {
   devices: DeviceInfo[];
@@ -90,10 +89,7 @@ export default function UnifiedListView({
   // Empty state
   if (items.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center py-12"
-        style={{color: 'var(--color-text-neutral-secondary)'}}
-      >
+      <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
         <Database className="mb-4" size={48} />
         <p className="text-lg">No items</p>
       </div>
@@ -106,40 +102,24 @@ export default function UnifiedListView({
         item.type === 'project' ? (
           <div
             key={`project-${item.data.id}`}
-            className="flex cursor-pointer items-center gap-4 rounded p-3 transition-colors hover:bg-opacity-10"
+            className="bg-raised border-neutral-02 hover:bg-neutral-hover flex cursor-pointer items-center gap-4 rounded border p-3 transition-colors"
             onClick={() => onOpenProject(item.data)}
-            style={{
-              backgroundColor: 'var(--color-surface-raised)',
-              border: '1px solid var(--color-border-neutral-02)',
-            }}
           >
             {/* Icon */}
-            <Database
-              size={24}
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            />
+            <Database className="text-neutral-primary" size={24} />
 
             {/* Project Info */}
             <div className="min-w-0 flex-1">
-              <h3
-                className="truncate font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <h3 className="text-neutral-primary truncate font-semibold">
                 {item.data.name}
               </h3>
-              <p
-                className="truncate text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
+              <p className="text-neutral-secondary truncate text-sm">
                 {item.data.description || 'No description'}
               </p>
             </div>
 
             {/* Last Edited */}
-            <div
-              className="whitespace-nowrap text-sm"
-              style={{color: 'var(--color-text-neutral-secondary)'}}
-            >
+            <div className="text-neutral-secondary text-sm whitespace-nowrap">
               Edited {formatDate(item.data.lastModifiedDate)}
             </div>
 
@@ -174,31 +154,18 @@ export default function UnifiedListView({
         ) : (
           <div
             key={`device-${item.data.id}`}
-            className="flex cursor-pointer items-center gap-4 rounded p-3 transition-colors hover:bg-opacity-10"
+            className="bg-raised border-neutral-02 hover:bg-neutral-hover flex cursor-pointer items-center gap-4 rounded border p-3 transition-colors"
             onClick={() => onOpenDevice(item.data)}
-            style={{
-              backgroundColor: 'var(--color-surface-raised)',
-              border: '1px solid var(--color-border-neutral-02)',
-            }}
           >
             {/* Icon */}
-            <Smartphone
-              size={24}
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            />
+            <Smartphone className="text-neutral-primary" size={24} />
 
             {/* Device Info */}
             <div className="min-w-0 flex-1">
-              <h3
-                className="truncate font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <h3 className="text-neutral-primary truncate font-semibold">
                 {item.data.name}
               </h3>
-              <p
-                className="truncate text-sm"
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              >
+              <p className="text-neutral-secondary truncate text-sm">
                 {item.data.description || 'No description'}
               </p>
             </div>

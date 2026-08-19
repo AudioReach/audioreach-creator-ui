@@ -32,11 +32,9 @@ function Section({
 }) {
   return (
     <>
-      {divider && (
-        <div className="border-t border-[color:var(--color-border-neutral-01)]" />
-      )}
+      {divider && <div className="border-neutral-01 border-t" />}
       <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase text-[color:var(--color-text-neutral-secondary)]">
+        <h3 className="text-xs font-semibold uppercase text-neutral-secondary">
           {title}
         </h3>
         {children}

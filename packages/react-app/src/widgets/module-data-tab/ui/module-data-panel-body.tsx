@@ -46,10 +46,7 @@ function ModuleDataPanelBodyInner(
   return (
     <div className="min-h-0 flex-1">
       {status === 'error' ? (
-        <div
-          className="flex h-full items-center justify-center text-sm"
-          style={{color: 'var(--color-text-support-danger)'}}
-        >
+        <div className="text-support-danger flex h-full items-center justify-center text-sm">
           {error}
         </div>
       ) : data ? (
@@ -63,10 +60,7 @@ function ModuleDataPanelBodyInner(
           title={title}
         />
       ) : status === 'ready' ? (
-        <div
-          className="flex h-full items-center justify-center text-sm"
-          style={{color: 'var(--color-text-neutral-secondary)'}}
-        >
+        <div className="text-neutral-secondary flex h-full items-center justify-center text-sm">
           No data available for this module
         </div>
       ) : (

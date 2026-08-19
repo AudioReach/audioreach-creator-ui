@@ -39,36 +39,20 @@ const columnHelper = createColumnHelper<LogEntry>();
 const getLogIcon = (logType: LogType) => {
   switch (logType) {
     case 'info':
-      return (
-        <Icon
-          icon={Info}
-          size="xs"
-          style={{color: 'var(--color-icon-support-info)'}}
-        />
-      );
+      return <Icon className="text-icon-support-info" icon={Info} size="xs" />;
     case 'warn':
       return (
         <Icon
+          className="text-icon-support-warning"
           icon={TriangleAlert}
           size="xs"
-          style={{color: 'var(--color-icon-support-warning)'}}
         />
       );
     case 'error':
-      return (
-        <Icon
-          icon={X}
-          size="xs"
-          style={{color: 'var(--color-icon-support-danger)'}}
-        />
-      );
+      return <Icon className="text-icon-support-danger" icon={X} size="xs" />;
     default:
       return (
-        <Icon
-          icon={Info}
-          size="xs"
-          style={{color: 'var(--color-icon-neutral-secondary)'}}
-        />
+        <Icon className="text-icon-neutral-secondary" icon={Info} size="xs" />
       );
   }
 };
@@ -108,6 +92,11 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
       <div className="h-3 w-3 flex-shrink-0">
         {logEntry.detail !== undefined && (
           <Icon
+            className={
+              isExpanded
+                ? 'text-icon-brand-primary'
+                : 'text-icon-neutral-secondary'
+            }
             icon={MessageSquareText}
             onMouseDown={(e: React.MouseEvent) => {
               e.preventDefault();
@@ -115,11 +104,6 @@ function MessageCell({logEntry}: {logEntry: LogEntry}) {
               toggleLogExpansion(logEntry.id);
             }}
             size={12}
-            style={{
-              color: isExpanded
-                ? 'var(--color-icon-brand-primary)'
-                : 'var(--color-icon-neutral-secondary)',
-            }}
           />
         )}
       </div>
@@ -217,7 +201,7 @@ function LogViewTable({filteredLogs}: {filteredLogs: LogEntry[]}) {
                     (header: Header<LogEntry, string>, index: number) => (
                       <Table.HeaderCell
                         key={header.id}
-                        className={`relative select-none ${index !== 0 ? 'border-neutral-09 border-l-2' : ''}`}
+                        className={`relative select-none ${index !== 0 ? 'border-neutral-03 border-l-2' : ''}`}
                         style={{width: header.getSize()}}
                       >
                         <div className="inline-flex w-full items-center justify-between gap-2">
@@ -286,7 +270,7 @@ function LogViewTable({filteredLogs}: {filteredLogs: LogEntry[]}) {
                   {shouldShowDetails && (
                     <Table.Row>
                       <Table.Cell className="p-2" colSpan={3}>
-                        <div className="max-h-96 overflow-auto whitespace-pre-wrap font-mono text-[10px]">
+                        <div className="max-h-96 overflow-auto font-mono text-[10px] whitespace-pre-wrap">
                           {logEntry.detail ?? logEntry.message}
                         </div>
                       </Table.Cell>

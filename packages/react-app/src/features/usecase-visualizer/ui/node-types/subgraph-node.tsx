@@ -38,6 +38,13 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
 
   const classNames = [
     'subgraph-node rounded-md border',
+    selected || highlight.state === 'active'
+      ? 'bg-support-info-subtle'
+      : 'bg-transparent',
+    selected || highlight.state !== 'none'
+      ? 'border-support-info'
+      : 'border-neutral-10',
+    'h-full w-full',
     highlight.highlightMatchClass,
     highlight.highlightActiveClass,
     highlight.containsMatchClass,
@@ -51,18 +58,6 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
       data-locked={node.locked === true || undefined}
       data-node-id={node.id}
       data-testid="subgraph-node"
-      style={{
-        backgroundColor:
-          selected || highlight.state === 'active'
-            ? 'var(--color-background-support-info-subtle)'
-            : 'transparent',
-        borderColor:
-          selected || highlight.state !== 'none'
-            ? 'var(--color-border-support-info)'
-            : 'var(--color-border-neutral-10)',
-        height: '100%',
-        width: '100%',
-      }}
     >
       <div
         className="subgraph-header flex items-center justify-between gap-2 px-2 py-1"

@@ -18,10 +18,7 @@ export default function DevicesListView({
 }: DevicesListViewProps) {
   if (devices.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center py-12"
-        style={{color: 'var(--color-text-neutral-secondary)'}}
-      >
+      <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
         <Smartphone className="mb-4" size={48} />
         <p className="text-lg">No devices found</p>
       </div>
@@ -33,31 +30,18 @@ export default function DevicesListView({
       {devices.map((device) => (
         <div
           key={device.id}
-          className="flex cursor-pointer items-center gap-4 rounded p-3 transition-colors hover:bg-opacity-10"
+          className="bg-raised border-neutral-02 hover:bg-neutral-hover flex cursor-pointer items-center gap-4 rounded border p-3 transition-colors"
           onClick={() => onOpenDevice(device)}
-          style={{
-            backgroundColor: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border-neutral-02)',
-          }}
         >
           {/* Icon */}
-          <Smartphone
-            size={24}
-            style={{color: 'var(--color-text-neutral-primary)'}}
-          />
+          <Smartphone className="text-neutral-primary" size={24} />
 
           {/* Device Info */}
           <div className="min-w-0 flex-1">
-            <h3
-              className="truncate font-semibold"
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            >
+            <h3 className="text-neutral-primary truncate font-semibold">
               {device.name}
             </h3>
-            <p
-              className="truncate text-sm"
-              style={{color: 'var(--color-text-neutral-secondary)'}}
-            >
+            <p className="text-neutral-secondary truncate text-sm">
               {device.description || 'No description'}
             </p>
           </div>

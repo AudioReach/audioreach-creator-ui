@@ -252,9 +252,9 @@ export function ModuleTagKeysConfigPanel({
         return <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />;
       }
       return sortOrder === 'asc' ? (
-        <ArrowUp className="h-3.5 w-3.5 text-blue" />
+        <ArrowUp className="text-brand-primary h-3.5 w-3.5" />
       ) : (
-        <ArrowDown className="h-3.5 w-3.5 text-blue" />
+        <ArrowDown className="text-brand-primary h-3.5 w-3.5" />
       );
     },
     [sortColumn, sortOrder],
@@ -900,7 +900,7 @@ export function ModuleTagKeysConfigPanel({
   if (!availableModuleTags) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div style={{color: 'var(--color-text-neutral-tertiary)'}}>
+        <div className="text-neutral-secondary">
           No module tag keys available
         </div>
       </div>
@@ -912,20 +912,10 @@ export function ModuleTagKeysConfigPanel({
       {/* Configured TKVs Summary with Tag Groups */}
       <div
         ref={configSectionRef}
-        className="mb-2 overflow-hidden rounded-md border shadow-sm"
-        style={{
-          backgroundColor: 'var(--color-surface-primary)',
-          borderColor: 'var(--color-border-neutral-02)',
-        }}
+        className="bg-primary border-neutral-02 mb-2 overflow-hidden rounded-md border shadow-sm"
       >
         {/* Header */}
-        <div
-          className="flex items-center justify-between gap-2 border-b px-1 py-1"
-          style={{
-            backgroundColor: 'var(--color-surface-secondary)',
-            borderColor: 'var(--color-border-neutral-02)',
-          }}
-        >
+        <div className="bg-secondary border-neutral-02 flex items-center justify-between gap-2 border-b px-1 py-1">
           <div className="flex items-center gap-2">
             <IconButton
               aria-label="Toggle Configured TKVs section"
@@ -941,10 +931,7 @@ export function ModuleTagKeysConfigPanel({
               }
               variant="ghost"
             />
-            <h2
-              className="text-base font-semibold"
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            >
+            <h2 className="text-neutral-primary text-base font-semibold">
               Configured TKVs
             </h2>
           </div>
@@ -968,14 +955,6 @@ export function ModuleTagKeysConfigPanel({
                 className="flex items-center gap-1.5"
                 emphasis="danger"
                 onClick={handleDeleteFiltered}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor =
-                    'var(--color-surface-error-subtle)';
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
                 startIcon={Trash2}
                 title={`Delete ${Object.values(filteredGroupedTKVs).flat().length} filtered TKV(s)`}
                 variant="ghost"
@@ -1008,10 +987,7 @@ export function ModuleTagKeysConfigPanel({
         >
           <div className="p-4">
             {Object.keys(filteredGroupedTKVs).length === 0 ? (
-              <div
-                className="text-center"
-                style={{color: 'var(--color-text-neutral-tertiary)'}}
-              >
+              <div className="text-neutral-secondary text-center">
                 {configSearchTerm ? (
                   <>
                     <div className="mb-2 text-2xl">🔍</div>
@@ -1085,22 +1061,9 @@ export function ModuleTagKeysConfigPanel({
           </div>
 
           {/* List Container */}
-          <div
-            className="mt-4 overflow-hidden rounded border shadow-sm"
-            style={{
-              backgroundColor: 'var(--color-surface-primary)',
-              borderColor: 'var(--color-border-neutral-02)',
-            }}
-          >
+          <div className="bg-primary border-neutral-02 mt-4 overflow-hidden rounded border shadow-sm">
             {/* Header */}
-            <div
-              className="sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold"
-              style={{
-                backgroundColor: 'var(--color-surface-secondary)',
-                borderColor: 'var(--color-border-neutral-02)',
-                color: 'var(--color-text-neutral-primary)',
-              }}
-            >
+            <div className="bg-secondary border-neutral-02 text-neutral-primary sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold">
               <span className="w-3.5"></span>
               <Checkbox
                 aria-label="Select all tag groups"
@@ -1112,17 +1075,15 @@ export function ModuleTagKeysConfigPanel({
                 style={{visibility: 'hidden'}}
               />
               <button
-                className="ml-3 flex w-32 cursor-pointer select-none items-center gap-1 hover:text-blue"
+                className="hover:text-brand-primary text-neutral-primary ml-3 flex w-32 cursor-pointer items-center gap-1 select-none"
                 onClick={() => handleSort('id')}
-                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 <span>Tag ID</span>
                 {getSortIcon('id')}
               </button>
               <button
-                className="ml-3 flex flex-1 cursor-pointer select-none items-center gap-1 text-left hover:text-blue"
+                className="hover:text-brand-primary text-neutral-primary ml-3 flex flex-1 cursor-pointer items-center gap-1 text-left select-none"
                 onClick={() => handleSort('name')}
-                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 <span>Tag</span>
                 {getSortIcon('name')}
@@ -1132,10 +1093,7 @@ export function ModuleTagKeysConfigPanel({
             {/* Tag Groups List */}
             <div className="max-h-[50vh] overflow-y-auto">
               {filteredAndSortedTagGroups.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center py-12"
-                  style={{color: 'var(--color-text-neutral-tertiary)'}}
-                >
+                <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
                   <div className="mb-3 text-4xl">🔍</div>
                   <p>No module tag keys or values match your search</p>
                 </div>
@@ -1148,35 +1106,18 @@ export function ModuleTagKeysConfigPanel({
                   return (
                     <div
                       key={tagGroupName}
-                      className="border-b last:border-b-0"
-                      style={{borderColor: 'var(--color-border-neutral-02)'}}
+                      className="border-neutral-02 border-b last:border-b-0"
                     >
                       {/* Tag Group Header */}
                       <div
-                        className="flex cursor-pointer items-center px-3 py-2.5 transition-colors"
+                        className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
+                          isSelected
+                            ? 'bg-support-info-subtle'
+                            : 'bg-transparent hover:bg-neutral-03'
+                        }`}
                         onClick={() => toggleTagGroupExpansion(tagGroup.id)}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              'var(--color-surface-tertiary)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              'transparent';
-                          }
-                        }}
-                        style={{
-                          backgroundColor: isSelected
-                            ? 'var(--color-surface-info-subtle)'
-                            : 'transparent',
-                        }}
                       >
-                        <span
-                          className="w-3.5"
-                          style={{color: 'var(--color-text-neutral-secondary)'}}
-                        >
+                        <span className="text-neutral-secondary w-3.5">
                           {isExpanded ? (
                             <ChevronDown className="h-3.5 w-3.5" />
                           ) : (
@@ -1192,27 +1133,17 @@ export function ModuleTagKeysConfigPanel({
                           onClick={(e) => e.stopPropagation()}
                           type="radio"
                         />
-                        <div
-                          className="ml-3 w-32 font-mono text-sm"
-                          style={{color: 'var(--color-text-neutral-secondary)'}}
-                        >
+                        <div className="text-neutral-secondary ml-3 w-32 font-mono text-sm">
                           {ConvertNumberToHexString(tagGroup.id) || tagGroup.id}
                         </div>
-                        <div
-                          className="ml-3 flex-1 text-sm font-medium"
-                          style={{color: 'var(--color-text-neutral-primary)'}}
-                        >
+                        <div className="text-neutral-primary ml-3 flex-1 text-sm font-medium">
                           {tagGroupName}
                         </div>
                       </div>
 
                       {/* Module Keys Container */}
                       {isExpanded && (
-                        <div
-                          style={{
-                            backgroundColor: 'var(--color-surface-primary)',
-                          }}
-                        >
+                        <div className="bg-primary">
                           {Object.keys(tagGroup.keys).map((modKeyName) => {
                             const modKey = tagGroup.keys[modKeyName];
                             const isModKeyExpanded = expandedModKeys[modKey.id];
@@ -1227,37 +1158,16 @@ export function ModuleTagKeysConfigPanel({
                               <div key={modKeyName}>
                                 {/* Module Key Header */}
                                 <div
-                                  className="flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors"
+                                  className={`border-neutral-02 flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors ${
+                                    allValuesSelected
+                                      ? 'bg-support-info-subtle'
+                                      : 'bg-secondary hover:bg-neutral-03'
+                                  }`}
                                   onClick={() =>
                                     toggleModKeyExpansion(modKey.id)
                                   }
-                                  onMouseEnter={(e) => {
-                                    if (!allValuesSelected) {
-                                      e.currentTarget.style.backgroundColor =
-                                        'var(--color-surface-tertiary)';
-                                    }
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    if (!allValuesSelected) {
-                                      e.currentTarget.style.backgroundColor =
-                                        'var(--color-surface-secondary)';
-                                    }
-                                  }}
-                                  style={{
-                                    backgroundColor: allValuesSelected
-                                      ? 'var(--color-surface-info-subtle)'
-                                      : 'var(--color-surface-secondary)',
-                                    borderColor:
-                                      'var(--color-border-neutral-02)',
-                                  }}
                                 >
-                                  <span
-                                    className="w-3"
-                                    style={{
-                                      color:
-                                        'var(--color-text-neutral-secondary)',
-                                    }}
-                                  >
+                                  <span className="text-neutral-secondary w-3">
                                     {isModKeyExpanded ? (
                                       <ChevronDown className="h-3 w-3" />
                                     ) : (
@@ -1285,23 +1195,11 @@ export function ModuleTagKeysConfigPanel({
                                     onClick={(e) => e.stopPropagation()}
                                     type="checkbox"
                                   />
-                                  <span
-                                    className="ml-3 mr-2 w-32 font-mono text-sm"
-                                    style={{
-                                      color:
-                                        'var(--color-text-neutral-primary)',
-                                    }}
-                                  >
+                                  <span className="text-neutral-primary mr-2 ml-3 w-32 font-mono text-sm">
                                     {ConvertNumberToHexString(modKey.id) ||
                                       modKey.id}
                                   </span>
-                                  <span
-                                    className="text-sm font-medium"
-                                    style={{
-                                      color:
-                                        'var(--color-text-neutral-primary)',
-                                    }}
-                                  >
+                                  <span className="text-neutral-primary text-sm font-medium">
                                     {modKeyName}
                                   </span>
                                 </div>
@@ -1313,16 +1211,11 @@ export function ModuleTagKeysConfigPanel({
                                       (value: {id: number; name: string}) => (
                                         <div
                                           key={value.id}
-                                          className="flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors"
-                                          style={{
-                                            backgroundColor: selectedValues[
-                                              value.id
-                                            ]
-                                              ? 'var(--color-surface-info-subtle)'
-                                              : 'transparent',
-                                            borderColor:
-                                              'var(--color-border-neutral-03)',
-                                          }}
+                                          className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors ${
+                                            selectedValues[value.id]
+                                              ? 'bg-support-info-subtle'
+                                              : 'bg-transparent'
+                                          }`}
                                         >
                                           <Checkbox
                                             aria-label="Value Checkbox"
@@ -1339,24 +1232,12 @@ export function ModuleTagKeysConfigPanel({
                                             }
                                             size="sm"
                                           />
-                                          <div
-                                            className="w-32 font-mono text-sm"
-                                            style={{
-                                              color:
-                                                'var(--color-text-neutral-secondary)',
-                                            }}
-                                          >
+                                          <div className="text-neutral-secondary w-32 font-mono text-sm">
                                             {ConvertNumberToHexString(
                                               value.id,
                                             ) || value.id}
                                           </div>
-                                          <div
-                                            className="flex-1 text-sm"
-                                            style={{
-                                              color:
-                                                'var(--color-text-neutral-primary)',
-                                            }}
-                                          >
+                                          <div className="text-neutral-primary flex-1 text-sm">
                                             {value.name}
                                           </div>
                                         </div>

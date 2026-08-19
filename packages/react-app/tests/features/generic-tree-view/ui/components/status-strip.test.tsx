@@ -52,12 +52,10 @@ describe('StatusStrip', () => {
       expect(screen.getByText('3 dirty')).toBeInTheDocument();
     });
 
-    it('renders dirty label with warning color token', () => {
+    it('renders dirty label with the warning icon utility', () => {
       render(<StatusStrip dirtyCount={2} paramCount={5} setCount={0} />);
       const dirty = screen.getByText('2 dirty');
-      expect(dirty).toHaveStyle({
-        color: 'var(--color-text-support-warning)',
-      });
+      expect(dirty).toHaveClass('text-icon-support-warning');
     });
   });
 
@@ -72,12 +70,10 @@ describe('StatusStrip', () => {
       expect(screen.getByText('4 set')).toBeInTheDocument();
     });
 
-    it('renders set label with success color token', () => {
+    it('renders set label with the success utility', () => {
       render(<StatusStrip dirtyCount={0} paramCount={5} setCount={1} />);
       const set = screen.getByText('1 set');
-      expect(set).toHaveStyle({
-        color: 'var(--color-text-support-success)',
-      });
+      expect(set).toHaveClass('text-support-success');
     });
   });
 

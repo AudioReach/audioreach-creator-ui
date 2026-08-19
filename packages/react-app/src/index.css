@@ -6,44 +6,24 @@
 @import '@qualcomm-ui/qds-core/themes/snapdragon-light.css' layer(components);
 @import '@qualcomm-ui/qds-core/themes/snapdragon-dark.css' layer(components);
 
-@theme {
-  --color-blue: #4363d8;
-  --color-green: #3cb44b;
-  --color-grey: #929090;
-  --color-lavender: #bc89f6;
-  --color-lime: #bfef45;
-  --color-magenta: #ec1be2;
-  --color-mint: #8cfbad;
-  --color-navy: #070767;
-  --color-orange: #f58231;
-  --color-pink: #f995ba;
-  --color-purple: #911eb4;
-  --color-quartz: #7e5f77;
-  --color-queen: #f3bd86;
-  --color-quicksilver: #f57272;
-  --color-quincy: #6a5445;
-  --color-red: #e6194b;
-  --color-teal: #469990;
-  --color-yellow: #e8cb12;
-  --color-zinc: #8888da;
-  --color-zircon: #07f6f2;
-}
-
-@source inline(
-  'bg-blue bg-green bg-grey bg-lavender bg-lime bg-magenta bg-mint bg-navy bg-orange bg-pink bg-purple bg-quartz bg-queen bg-quicksilver bg-quincy bg-red bg-teal bg-yellow bg-zinc bg-zircon border-blue border-green border-grey border-lavender border-lime border-magenta border-mint border-navy border-orange border-pink border-purple border-quartz border-queen border-quicksilver border-quincy border-red border-teal border-yellow border-zinc border-zircon'
-);
-
-@layer components {
-  /* Make project tabs smaller */
-  .flexlayout__tab_button {
-    @apply h-5 min-h-5 text-xs leading-3;
-  }
-}
-
 /* flexlayout-react sets min-height: 1 on these elements, blocking true 0-weight collapse */
 .flexlayout__tabset_container,
 .flexlayout__row {
   min-height: 0 !important;
+}
+
+.flexlayout__layout .flexlayout__tabset_tabbar_outer {
+  align-items: stretch;
+  font-weight: inherit;
+  min-height: auto;
+}
+
+.flexlayout__layout .flexlayout__tabset_tabbar_inner_tab_container {
+  align-items: stretch;
+}
+
+.flexlayout__layout .flexlayout__tab_button {
+  font-weight: inherit;
 }
 
 @keyframes dirty-pulse {
@@ -64,11 +44,8 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: var(--q-text-1-primary);
-
-  --app-primary-background: var(--q-background-1);
-
-  background-color: var(--app-primary-background);
+  color: var(--color-text-neutral-primary);
+  background-color: var(--color-surface-primary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

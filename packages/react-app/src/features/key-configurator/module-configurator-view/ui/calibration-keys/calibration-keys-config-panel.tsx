@@ -402,9 +402,9 @@ export function CalibrationKeysConfigPanel({
         return <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />;
       }
       return sortOrder === 'asc' ? (
-        <ArrowUp className="h-3.5 w-3.5 text-blue" />
+        <ArrowUp className="text-brand-primary h-3.5 w-3.5" />
       ) : (
-        <ArrowDown className="h-3.5 w-3.5 text-blue" />
+        <ArrowDown className="text-brand-primary h-3.5 w-3.5" />
       );
     },
     [sortColumn, sortOrder],
@@ -416,21 +416,18 @@ export function CalibrationKeysConfigPanel({
     );
   }, []);
 
-  const toggleValueSelection = useCallback(
-    (keyId: number, valueId: number) => {
-      setSelectedKeyValues((prev) => {
-        const keySelections = prev[keyId] || {};
-        return {
-          ...prev,
-          [keyId]: {
-            ...keySelections,
-            [valueId]: !keySelections[valueId],
-          },
-        };
-      });
-    },
-    [],
-  );
+  const toggleValueSelection = useCallback((keyId: number, valueId: number) => {
+    setSelectedKeyValues((prev) => {
+      const keySelections = prev[keyId] || {};
+      return {
+        ...prev,
+        [keyId]: {
+          ...keySelections,
+          [valueId]: !keySelections[valueId],
+        },
+      };
+    });
+  }, []);
 
   const toggleKeySelection = useCallback(
     (keyId: number) => {
@@ -820,7 +817,7 @@ export function CalibrationKeysConfigPanel({
   if (!availableKeys) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div style={{color: 'var(--color-text-neutral-tertiary)'}}>
+        <div className="text-neutral-secondary">
           No calibration keys available
         </div>
       </div>
@@ -881,22 +878,9 @@ export function CalibrationKeysConfigPanel({
             </div>
           </div>
 
-          <div
-            className="overflow-hidden rounded border shadow-sm"
-            style={{
-              backgroundColor: 'var(--color-surface-primary)',
-              borderColor: 'var(--color-border-neutral-02)',
-            }}
-          >
+          <div className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm">
             {/* Header */}
-            <div
-              className="sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold"
-              style={{
-                backgroundColor: 'var(--color-surface-secondary)',
-                borderColor: 'var(--color-border-neutral-02)',
-                color: 'var(--color-text-neutral-primary)',
-              }}
-            >
+            <div className="bg-secondary border-neutral-02 text-neutral-primary sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold">
               <span className="w-3.5"></span>
               <Checkbox
                 aria-label="Select all keys"
@@ -907,17 +891,15 @@ export function CalibrationKeysConfigPanel({
                 size="sm"
               />
               <button
-                className="ml-3 flex w-32 cursor-pointer select-none items-center gap-1 hover:text-blue"
+                className="hover:text-brand-primary text-neutral-primary ml-3 flex w-32 cursor-pointer items-center gap-1 select-none"
                 onClick={() => handleSort('id')}
-                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 <span>Key ID</span>
                 {getSortIcon('id')}
               </button>
               <button
-                className="ml-3 flex flex-1 cursor-pointer select-none items-center gap-1 text-left hover:text-blue"
+                className="hover:text-brand-primary text-neutral-primary ml-3 flex flex-1 cursor-pointer items-center gap-1 text-left select-none"
                 onClick={() => handleSort('name')}
-                style={{color: 'var(--color-text-neutral-primary)'}}
               >
                 <span>Key Name</span>
                 {getSortIcon('name')}
@@ -927,10 +909,7 @@ export function CalibrationKeysConfigPanel({
             {/* Keys List */}
             <div className="max-h-[50vh] overflow-y-auto">
               {filteredAndSortedKeys.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center py-12"
-                  style={{color: 'var(--color-text-neutral-tertiary)'}}
-                >
+                <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
                   <div className="mb-3 text-4xl">🔍</div>
                   <p>No calibration keys or values match your search</p>
                 </div>
@@ -949,35 +928,18 @@ export function CalibrationKeysConfigPanel({
                   return (
                     <div
                       key={keyName}
-                      className="border-b last:border-b-0"
-                      style={{borderColor: 'var(--color-border-neutral-02)'}}
+                      className="border-neutral-02 border-b last:border-b-0"
                     >
                       {/* Key Header */}
                       <div
-                        className="flex cursor-pointer items-center px-3 py-2.5 transition-colors"
+                        className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
+                          allValuesSelected
+                            ? 'bg-support-info-subtle'
+                            : 'bg-transparent hover:bg-neutral-03'
+                        }`}
                         onClick={() => toggleKeyExpansion(key.id)}
-                        onMouseEnter={(e) => {
-                          if (!allValuesSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              'var(--color-surface-tertiary)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!allValuesSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              'transparent';
-                          }
-                        }}
-                        style={{
-                          backgroundColor: allValuesSelected
-                            ? 'var(--color-surface-info-subtle)'
-                            : 'transparent',
-                        }}
                       >
-                        <span
-                          className="w-3.5"
-                          style={{color: 'var(--color-text-neutral-secondary)'}}
-                        >
+                        <span className="text-neutral-secondary w-3.5">
                           {isExpanded ? (
                             <ChevronDown className="h-3.5 w-3.5" />
                           ) : (
@@ -1001,40 +963,28 @@ export function CalibrationKeysConfigPanel({
                           onClick={(e) => e.stopPropagation()}
                           type="checkbox"
                         />
-                        <div
-                          className="ml-3 w-32 font-mono text-sm"
-                          style={{color: 'var(--color-text-neutral-secondary)'}}
-                        >
+                        <div className="text-neutral-secondary ml-3 w-32 font-mono text-sm">
                           {ConvertNumberToHexString(key.id) || key.id}
                         </div>
-                        <div
-                          className="ml-3 flex-1 text-sm font-medium"
-                          style={{color: 'var(--color-text-neutral-primary)'}}
-                        >
+                        <div className="text-neutral-primary ml-3 flex-1 text-sm font-medium">
                           {keyName}
                         </div>
                       </div>
 
                       {/* Values Container */}
                       {isExpanded && (
-                        <div
-                          style={{
-                            backgroundColor: 'var(--color-surface-primary)',
-                          }}
-                        >
+                        <div className="bg-primary">
                           {sortedValues(key).map((value) => {
                             const keySelections =
                               selectedKeyValues[key.id] || {};
                             return (
                               <div
                                 key={value.id}
-                                className="flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors"
-                                style={{
-                                  backgroundColor: keySelections[value.id]
-                                    ? 'var(--color-surface-info-subtle)'
-                                    : 'transparent',
-                                  borderColor: 'var(--color-border-neutral-03)',
-                                }}
+                                className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors ${
+                                  keySelections[value.id]
+                                    ? 'bg-support-info-subtle'
+                                    : 'bg-transparent'
+                                }`}
                               >
                                 <Checkbox
                                   aria-label={`Select ${value.name}`}
@@ -1044,22 +994,11 @@ export function CalibrationKeysConfigPanel({
                                   }
                                   size="sm"
                                 />
-                                <div
-                                  className="w-32 font-mono text-sm"
-                                  style={{
-                                    color:
-                                      'var(--color-text-neutral-secondary)',
-                                  }}
-                                >
+                                <div className="text-neutral-secondary w-32 font-mono text-sm">
                                   {ConvertNumberToHexString(value.id) ||
                                     value.id}
                                 </div>
-                                <div
-                                  className="flex-1 text-sm"
-                                  style={{
-                                    color: 'var(--color-text-neutral-primary)',
-                                  }}
-                                >
+                                <div className="text-neutral-primary flex-1 text-sm">
                                   {value.name}
                                 </div>
                               </div>

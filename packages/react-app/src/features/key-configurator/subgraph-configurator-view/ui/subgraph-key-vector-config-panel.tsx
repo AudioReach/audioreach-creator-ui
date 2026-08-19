@@ -450,29 +450,15 @@ export function SubgraphKeyVectorConfigPanel({
       {/* Configuration Key Section */}
       <div
         ref={configSectionRef}
-        className="rounded border p-4"
-        style={{
-          backgroundColor: 'var(--color-surface-secondary)',
-          borderColor: 'var(--color-border-neutral-02)',
-        }}
+        className="bg-secondary border-neutral-02 rounded border p-4"
       >
-        <label
-          className="mb-2 block text-sm font-medium"
-          style={{color: 'var(--color-text-neutral-primary)'}}
-        >
+        <label className="text-neutral-primary mb-2 block text-sm font-medium">
           Subgraph Key Vector
         </label>
         <div className="flex items-center gap-2">
-          <div
-            className="min-h-[40px] flex-1 whitespace-pre-line rounded border p-3 text-left text-sm"
-            style={{
-              backgroundColor: 'var(--color-surface-primary)',
-              borderColor: 'var(--color-border-neutral-02)',
-              color: 'var(--color-text-neutral-primary)',
-            }}
-          >
+          <div className="bg-primary border-neutral-02 text-neutral-primary min-h-[40px] flex-1 rounded border p-3 text-left text-sm whitespace-pre-line">
             {configDisplayText || (
-              <span style={{color: 'var(--color-text-neutral-tertiary)'}}>
+              <span className="text-neutral-secondary">
                 Configure subgraph key vector
               </span>
             )}
@@ -495,19 +481,9 @@ export function SubgraphKeyVectorConfigPanel({
               {isEditable && (
                 <IconButton
                   aria-label="Edit"
+                  emphasis="primary"
                   icon={<Edit />}
                   onClick={handleEditClick}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor =
-                      'var(--color-border-info)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: 'var(--color-background-support-info)',
-                  }}
                   title="Edit configuration"
                   variant="ghost"
                 />
@@ -515,18 +491,9 @@ export function SubgraphKeyVectorConfigPanel({
               {isEditable && (
                 <IconButton
                   aria-label="Delete"
-                  icon={<Trash2 style={{color: 'red'}} />}
+                  emphasis="danger"
+                  icon={<Trash2 />}
                   onClick={handleDeleteClick}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'red';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: 'var(--color-text-info)',
-                  }}
                   title="Delete configuration"
                   variant="ghost"
                 />
@@ -567,22 +534,9 @@ export function SubgraphKeyVectorConfigPanel({
 
       {/* Keys List */}
       {showKeysList && (
-        <div
-          className="overflow-hidden rounded border shadow-sm"
-          style={{
-            backgroundColor: 'var(--color-surface-primary)',
-            borderColor: 'var(--color-border-neutral-02)',
-          }}
-        >
+        <div className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm">
           {/* List Header */}
-          <div
-            className="sticky top-0 z-10 flex items-center gap-3 border-b-2 px-3 py-2 text-sm font-semibold"
-            style={{
-              backgroundColor: 'var(--color-surface-secondary)',
-              borderColor: 'var(--color-border-neutral-02)',
-              color: 'var(--color-text-neutral-primary)',
-            }}
-          >
+          <div className="bg-secondary border-neutral-02 text-neutral-primary sticky top-0 z-10 flex items-center gap-3 border-b-2 px-3 py-2 text-sm font-semibold">
             <Checkbox
               aria-label="Select all keys"
               checked={allFilteredKeysSelected}
@@ -591,17 +545,15 @@ export function SubgraphKeyVectorConfigPanel({
               size="sm"
             />
             <button
-              className="flex w-32 cursor-pointer select-none items-center gap-1 hover:text-blue"
+              className="hover:text-brand-primary text-neutral-primary flex w-32 cursor-pointer items-center gap-1 select-none"
               onClick={() => handleSort('id')}
-              style={{color: 'var(--color-text-neutral-primary)'}}
             >
               <span>Key ID</span>
               {getSortIcon('id')}
             </button>
             <button
-              className="flex flex-1 cursor-pointer select-none items-center gap-1 text-left hover:text-blue"
+              className="hover:text-brand-primary text-neutral-primary flex flex-1 cursor-pointer items-center gap-1 text-left select-none"
               onClick={() => handleSort('name')}
-              style={{color: 'var(--color-text-neutral-primary)'}}
             >
               <span>Key Name</span>
               {getSortIcon('name')}
@@ -611,10 +563,7 @@ export function SubgraphKeyVectorConfigPanel({
           {/* List Content */}
           <div className="max-h-[50vh] overflow-y-auto">
             {sortedKeyNames.length === 0 ? (
-              <div
-                className="flex flex-col items-center justify-center py-12"
-                style={{color: 'var(--color-text-neutral-tertiary)'}}
-              >
+              <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
                 <div className="mb-3 text-4xl">🔍</div>
                 <p>No keys or values match your search</p>
               </div>
@@ -628,35 +577,18 @@ export function SubgraphKeyVectorConfigPanel({
                 return (
                   <div
                     key={keyName}
-                    className="border-b last:border-b-0"
-                    style={{borderColor: 'var(--color-border-neutral-01)'}}
+                    className="border-neutral-01 border-b last:border-b-0"
                   >
                     {/* Key Header */}
                     <div
-                      className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors"
+                      className={`border-neutral-01 flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors ${
+                        hasSelectedValue
+                          ? 'bg-secondary'
+                          : 'bg-transparent hover:bg-secondary'
+                      }`}
                       onClick={() => toggleKeyExpansion(key.id)}
-                      onMouseEnter={(e) => {
-                        if (!hasSelectedValue) {
-                          e.currentTarget.style.backgroundColor =
-                            'var(--color-surface-secondary)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!hasSelectedValue) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                      style={{
-                        backgroundColor: hasSelectedValue
-                          ? 'var(--color-surface-secondary)'
-                          : 'transparent',
-                        borderColor: 'var(--color-border-neutral-01)',
-                      }}
                     >
-                      <span
-                        className="w-3.5"
-                        style={{color: 'var(--color-text-neutral-secondary)'}}
-                      >
+                      <span className="text-neutral-secondary w-3.5">
                         {isExpanded ? (
                           <ChevronDown className="h-3.5 w-3.5" />
                         ) : (
@@ -672,16 +604,10 @@ export function SubgraphKeyVectorConfigPanel({
                         onClick={(e) => e.stopPropagation()}
                         size="sm"
                       />
-                      <div
-                        className="w-32 font-mono text-sm"
-                        style={{color: 'var(--color-text-neutral-secondary)'}}
-                      >
+                      <div className="text-neutral-secondary w-32 font-mono text-sm">
                         {ConvertNumberToHexString(key.id) || key.id}
                       </div>
-                      <div
-                        className="flex-1 text-sm font-medium"
-                        style={{color: 'var(--color-text-neutral-primary)'}}
-                      >
+                      <div className="text-neutral-primary flex-1 text-sm font-medium">
                         {keyName}
                       </div>
                     </div>
@@ -689,7 +615,7 @@ export function SubgraphKeyVectorConfigPanel({
                     {/* Values Container */}
                     {isExpanded && (
                       <RadioGroup
-                        className="w-full gap-0 [&>*]:!mb-0 [&>*]:!pb-0"
+                        className="bg-primary w-full gap-0 [&>*]:!mb-0 [&>*]:!pb-0"
                         onChange={(
                           event: React.FormEvent<HTMLFieldSetElement>,
                         ) => {
@@ -702,10 +628,7 @@ export function SubgraphKeyVectorConfigPanel({
                           }
                         }}
                         size="sm"
-                        style={{
-                          backgroundColor: 'var(--color-surface-primary)',
-                          gap: 0,
-                        }}
+                        style={{gap: 0}}
                         value={selectedValues[key.id]?.toString() || ''}
                       >
                         {/* Sort values: INITIAL selected values first when editing */}
@@ -731,35 +654,22 @@ export function SubgraphKeyVectorConfigPanel({
                             return (
                               <div
                                 key={value.id}
-                                className="flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors"
-                                style={{
-                                  backgroundColor: isValueSelected
-                                    ? 'var(--color-surface-secondary)'
-                                    : 'transparent',
-                                  borderColor: 'var(--color-border-neutral-01)',
-                                }}
+                                className={`border-neutral-01 flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors ${
+                                  isValueSelected
+                                    ? 'bg-secondary'
+                                    : 'bg-transparent'
+                                }`}
                               >
                                 <Radio
                                   aria-label={`Select ${value.name}`}
                                   style={{marginBottom: 0, paddingBottom: 0}}
                                   value={value.id.toString()}
                                 />
-                                <div
-                                  className="w-32 font-mono text-sm"
-                                  style={{
-                                    color:
-                                      'var(--color-text-neutral-secondary)',
-                                  }}
-                                >
+                                <div className="text-neutral-secondary w-32 font-mono text-sm">
                                   {ConvertNumberToHexString(value.id) ||
                                     value.id}
                                 </div>
-                                <div
-                                  className="flex-1 text-sm"
-                                  style={{
-                                    color: 'var(--color-text-neutral-primary)',
-                                  }}
-                                >
+                                <div className="text-neutral-primary flex-1 text-sm">
                                   {value.name}
                                 </div>
                               </div>

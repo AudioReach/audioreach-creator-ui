@@ -263,7 +263,7 @@ function ValidationResultTable() {
                       ) => (
                         <Table.HeaderCell
                           key={header.id}
-                          className={`relative select-none whitespace-nowrap ${index !== 0 ? 'border-neutral-09 border-l-2' : ''}`}
+                          className={`relative select-none whitespace-nowrap ${index !== 0 ? 'border-neutral-03 border-l-2' : ''}`}
                           style={{width: header.getSize()}}
                         >
                           <div className="inline-flex w-full items-center justify-between gap-2">

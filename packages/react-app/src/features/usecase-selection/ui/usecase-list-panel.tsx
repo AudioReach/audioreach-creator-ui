@@ -125,10 +125,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
               size="sm"
               variant="ghost"
             />
-            <label
-              className="flex cursor-pointer items-center text-sm font-medium"
-              style={{color: 'var(--color-text-neutral-secondary)'}}
-            >
+            <label className="text-neutral-secondary flex cursor-pointer items-center text-sm font-medium">
               <Checkbox
                 aria-label={`Select all in ${item.name}`}
                 checked={checkboxState.checked}
@@ -144,8 +141,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
           </div>
           {isExpanded && (
             <div
-              className="ml-8 pl-2"
-              style={{borderLeft: '1px solid var(--color-border-neutral-02)'}}
+              className="border-neutral-02 ml-8 border-l pl-2"
             >
               {item.children!.map((child) => (
                 <UsecaseItemRow
@@ -186,10 +182,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
         }}
         onMouseLeave={() => setHoveredItem(null)}
       >
-        <label
-          className="flex cursor-pointer items-center text-sm"
-          style={{color: 'var(--color-text-neutral-primary)'}}
-        >
+        <label className="text-neutral-primary flex cursor-pointer items-center text-sm">
           <Checkbox
             aria-label={`Select ${item.name}`}
             checked={selectedUsecasesSet.has(item.name)}
@@ -327,14 +320,10 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
     <div className="flex w-full flex-col">
       {/* Top controls - Sticky header */}
       <div
-        className="flex-shrink-0 px-3 py-2"
-        style={{borderBottom: '1px solid var(--color-border-neutral-02)'}}
+        className="border-neutral-02 flex-shrink-0 border-b px-3 py-2"
       >
         <div className="flex items-center justify-between">
-          <label
-            className="flex cursor-pointer items-center text-sm"
-            style={{color: 'var(--color-text-neutral-primary)'}}
-          >
+          <label className="text-neutral-primary flex cursor-pointer items-center text-sm">
             <Checkbox
               aria-label="Select all usecases"
               checked={selectAllState.checked}
@@ -424,28 +413,18 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
         {isSearching ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Loader2
-              className="mb-3 animate-spin opacity-60"
+              className="text-neutral-secondary mb-3 animate-spin opacity-60"
               size={28}
-              style={{color: 'var(--color-text-neutral-secondary)'}}
             />
-            <p
-              className="text-sm"
-              style={{color: 'var(--color-text-neutral-secondary)'}}
-            >
-              Searching...
-            </p>
+            <p className="text-neutral-secondary text-sm">Searching...</p>
           </div>
         ) : usecaseData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <SearchX
-              className="mb-3 opacity-40"
+              className="text-neutral-secondary mb-3 opacity-40"
               size={32}
-              style={{color: 'var(--color-text-neutral-secondary)'}}
             />
-            <p
-              className="text-sm font-medium"
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            >
+            <p className="text-neutral-primary text-sm font-medium">
               No usecases match
             </p>
           </div>
@@ -478,10 +457,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                     size="sm"
                     variant="ghost"
                   />
-                  <label
-                    className="flex cursor-pointer items-center text-sm font-semibold"
-                    style={{color: 'var(--color-text-neutral-primary)'}}
-                  >
+                  <label className="text-neutral-primary flex cursor-pointer items-center text-sm font-semibold">
                     <Checkbox
                       aria-label={`Select all usecases in ${category.name}`}
                       checked={categoryCheckboxState.checked}
@@ -501,10 +477,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                 {/* Category items — rendered recursively */}
                 {isCategoryExpanded && (
                   <div
-                    className="ml-10 pl-3"
-                    style={{
-                      borderLeft: '1px solid var(--color-border-neutral-02)',
-                    }}
+                    className="border-neutral-02 ml-10 border-l pl-3"
                   >
                     {category.items.map((item) => (
                       <UsecaseItemRow

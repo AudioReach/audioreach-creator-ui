@@ -66,10 +66,7 @@ export function Toolbar({
   viewMode,
 }: ToolbarProps) {
   return (
-    <div
-      className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-1"
-      style={{backgroundColor: 'var(--color-surface-primary)'}}
-    >
+    <div className="bg-primary flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-1">
       <TextInput
         aria-label="Search"
         className="w-64"

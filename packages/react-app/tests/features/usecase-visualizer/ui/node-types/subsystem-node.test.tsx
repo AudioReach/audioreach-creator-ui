@@ -94,10 +94,8 @@ describe('SubsystemNode — selection styling', () => {
     const node = container.querySelector(
       '[data-testid="subsystem-node"]',
     ) as HTMLElement;
-    expect(node.style.borderColor).toContain('--color-border-support-info');
-    expect(node.style.backgroundColor).toContain(
-      '--color-background-support-info-subtle',
-    );
+    expect(node).toHaveClass('border-support-info');
+    expect(node).toHaveClass('bg-support-info-subtle');
   });
 
   it('applies neutral border and background when not selected', () => {
@@ -105,8 +103,8 @@ describe('SubsystemNode — selection styling', () => {
     const node = container.querySelector(
       '[data-testid="subsystem-node"]',
     ) as HTMLElement;
-    expect(node.style.borderColor).toContain('--color-border-neutral-10');
-    expect(node.style.backgroundColor).toContain('--node-shade-medium');
+    expect(node).toHaveClass('border-neutral-10');
+    expect(node).toHaveClass('bg-[var(--node-shade-medium)]');
   });
 });
 

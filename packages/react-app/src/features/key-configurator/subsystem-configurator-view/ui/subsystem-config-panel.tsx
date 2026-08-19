@@ -243,21 +243,9 @@ export function SubsystemConfigPanel({
 
       {/* Keys List - shown when Add is clicked */}
       {showKeysList && (
-        <div
-          className="overflow-hidden rounded-md border shadow-sm"
-          style={{
-            backgroundColor: 'var(--color-surface-primary)',
-            borderColor: 'var(--color-border-neutral-02)',
-          }}
-        >
+        <div className="bg-primary border-neutral-02 overflow-hidden rounded-md border shadow-sm">
           {/* List Header with Sorting */}
-          <div
-            className="flex items-center gap-3 border-b px-3 py-2 text-sm font-semibold"
-            style={{
-              backgroundColor: 'var(--color-surface-secondary)',
-              borderColor: 'var(--color-border-neutral-02)',
-            }}
-          >
+          <div className="bg-secondary border-neutral-02 flex items-center gap-3 border-b px-3 py-2 text-sm font-semibold">
             <Checkbox
               aria-label="Select all keys"
               checked={allKeysSelected}
@@ -266,17 +254,15 @@ export function SubsystemConfigPanel({
               size="sm"
             />
             <button
-              className="flex w-32 items-center gap-1 transition-colors"
+              className="text-neutral-primary flex w-32 items-center gap-1 transition-colors"
               onClick={() => handleSort('id')}
-              style={{color: 'var(--color-text-neutral-primary)'}}
             >
               <span>Key ID</span>
               {getSortIcon('id')}
             </button>
             <button
-              className="flex flex-1 items-center gap-1 text-left transition-colors"
+              className="text-neutral-primary flex flex-1 items-center gap-1 text-left transition-colors"
               onClick={() => handleSort('name')}
-              style={{color: 'var(--color-text-neutral-primary)'}}
             >
               <span>Key Name</span>
               {getSortIcon('name')}
@@ -286,10 +272,7 @@ export function SubsystemConfigPanel({
           {/* List Content */}
           <div className="max-h-80 overflow-auto">
             {displayKeys.length === 0 ? (
-              <div
-                className="flex flex-col items-center justify-center py-12"
-                style={{color: 'var(--color-text-neutral-tertiary)'}}
-              >
+              <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
                 <div className="mb-2 text-2xl">🔍</div>
                 <p>No keys match your search</p>
               </div>
@@ -299,13 +282,9 @@ export function SubsystemConfigPanel({
                 return (
                   <div
                     key={key.id}
-                    className="flex items-center gap-3 border-b px-3 py-2.5 transition-colors"
-                    style={{
-                      backgroundColor: isSelected
-                        ? 'var(--color-surface-secondary)'
-                        : 'transparent',
-                      borderColor: 'var(--color-border-neutral-01)',
-                    }}
+                    className={`border-neutral-01 flex items-center gap-3 border-b px-3 py-2.5 transition-colors ${
+                      isSelected ? 'bg-secondary' : 'bg-transparent'
+                    }`}
                   >
                     <Checkbox
                       aria-label={`Select ${key.name}`}
@@ -315,16 +294,10 @@ export function SubsystemConfigPanel({
                       }
                       size="sm"
                     />
-                    <div
-                      className="w-32 font-mono text-sm"
-                      style={{color: 'var(--color-text-neutral-secondary)'}}
-                    >
+                    <div className="text-neutral-secondary w-32 font-mono text-sm">
                       {ConvertNumberToHexString(key.id)}
                     </div>
-                    <div
-                      className="flex flex-1 items-center gap-2 text-sm font-medium"
-                      style={{color: 'var(--color-text-neutral-primary)'}}
-                    >
+                    <div className="text-neutral-primary flex flex-1 items-center gap-2 text-sm font-medium">
                       {key.name}
                     </div>
                   </div>

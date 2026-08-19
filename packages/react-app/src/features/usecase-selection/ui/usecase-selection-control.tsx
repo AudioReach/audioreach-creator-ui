@@ -571,24 +571,15 @@ export const UsecaseSelectionControl: React.FC<
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
             }}
           >
-            <div
-              className="rounded-lg p-8 shadow-xl"
-              style={{backgroundColor: 'var(--color-surface-raised)'}}
-            >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   <ProgressRing />
                 </div>
-                <div
-                  className="mb-2 text-lg font-semibold"
-                  style={{color: 'var(--color-text-neutral-primary)'}}
-                >
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
                   {`Deleting Usecase${selectedUsecases.length > 1 ? 's' : ''}...`}
                 </div>
-                <div
-                  className="text-sm"
-                  style={{color: 'var(--color-text-neutral-secondary)'}}
-                >
+                <div className="text-neutral-secondary text-sm">
                   Please wait...
                 </div>
               </div>
@@ -642,12 +633,10 @@ export const UsecaseSelectionControl: React.FC<
               {isDropdownOpen && (
                 <Tooltip
                   arrowTipProps={{
-                    className:
-                      '!bg-[var(--color-background-support-neutral-subtle)]',
+                    className: '!bg-support-neutral-subtle',
                   }}
                   contentProps={{
-                    className:
-                      'bg-[var(--color-background-support-neutral-subtle)]',
+                    className: 'bg-support-neutral-subtle',
                   }}
                   positioning={{placement: 'bottom'}}
                   trigger={
@@ -683,10 +672,10 @@ export const UsecaseSelectionControl: React.FC<
                     ].map(({example, label}) => (
                       <div
                         key={label}
-                        className="mb-1 flex items-baseline gap-1 text-[var(--color-text-neutral-primary)]"
+                        className="text-neutral-primary mb-1 flex items-baseline gap-1"
                       >
                         <span className="shrink-0">{label}:</span>
-                        <code className="rounded bg-[var(--color-background-neutral-03)] px-1 py-0.5 text-[var(--color-text-neutral-primary)]">
+                        <code className="bg-neutral-03 text-neutral-primary rounded px-1 py-0.5">
                           {example}
                         </code>
                       </div>
@@ -718,11 +707,7 @@ export const UsecaseSelectionControl: React.FC<
       {/* Dropdown Content — suppressed when disabled */}
       {isDropdownOpen && !disabled && (
         <div
-          className="absolute left-0 right-0 top-full z-10 mt-1 flex max-h-96 rounded-md shadow-lg"
-          style={{
-            backgroundColor: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border-neutral-02)',
-          }}
+          className="bg-raised border-neutral-02 absolute top-full right-0 left-0 z-10 mt-1 flex max-h-96 rounded-md border shadow-lg"
         >
           <UsecaseListPanel
             allowDelete={allowDelete}
@@ -746,7 +731,7 @@ export const UsecaseSelectionControl: React.FC<
       {isSuggestionOpen && suggestions.length > 0 && popupPosition && (
         <Portal>
           <div
-            className="fixed max-h-[200px] overflow-y-auto rounded-md border border-[var(--color-border-neutral-02)] bg-[var(--color-surface-raised)] shadow-lg"
+            className="bg-raised border-neutral-02 fixed max-h-[200px] overflow-y-auto rounded-md border shadow-lg"
             data-suggestion-popup="true"
             style={{
               left: popupPosition.left,
@@ -758,30 +743,15 @@ export const UsecaseSelectionControl: React.FC<
             {suggestions.map((term, index) => (
               <Button
                 key={term}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                className={`text-neutral-primary flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left text-sm ${index === highlightedIndex ? 'bg-overlay' : 'bg-transparent'}`}
                 emphasis="neutral"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   applySuggestion(term);
                 }}
-                style={{
-                  backgroundColor:
-                    index === highlightedIndex
-                      ? 'var(--color-surface-overlay)'
-                      : 'transparent',
-                  color: 'var(--color-text-neutral-primary)',
-                  justifyContent: 'flex-start',
-                  width: '100%',
-                }}
                 variant="ghost"
               >
-                <Clock
-                  size={12}
-                  style={{
-                    color: 'var(--color-text-neutral-secondary)',
-                    flexShrink: 0,
-                  }}
-                />
+                <Clock className="text-neutral-secondary shrink-0" size={12} />
                 <span>{term}</span>
               </Button>
             ))}

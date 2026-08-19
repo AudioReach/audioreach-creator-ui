@@ -95,7 +95,7 @@ Zustand v5. One store per concern, scoped per project where state is per-project
 
 - **Tailwind classes are the default** — use them for layout, spacing, typography, and borders
 - **Inline `style` props** are only acceptable for values that cannot be expressed as static Tailwind classes (e.g. dynamic CSS variable references, calculated widths)
-- **All colors must use QUI design token CSS variables** (e.g. `var(--color-border-support-info)`, `var(--color-background-neutral-02)`). Hardcoded hex or RGB values are not allowed in component code
+- **All static colors must use semantic QUI Tailwind utility classes** (e.g. `border-support-info`, `bg-neutral-02`). Use CSS variables only for dynamic values that static utilities cannot express. Hardcoded hex or RGB values are not allowed in component code
 - Do not use raw Tailwind color utilities (e.g. `text-red-500`) when a semantic QUI token exists for that purpose. Exception: the project's per-group color legend system (`tailwind.config.js`) intentionally defines a fixed palette of raw colors for dynamic per-project group coloring, where no semantic QUI token applies — don't flag usages of that palette
 - Tailwind classes are auto-sorted by `prettier-plugin-tailwindcss` — do not manually reorder them
 

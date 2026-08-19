@@ -30,7 +30,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-lg border bg-card text-card-foreground',
+          'rounded-lg border bg-raised text-neutral-primary',
           elevationClass,
           alignmentClass,
           className,
@@ -114,7 +114,7 @@ const CardSubtitle = forwardRef<
 >(({className, ...props}, ref) => (
   <p
     ref={ref}
-    className={cn('text-sm font-medium text-muted-foreground', className)}
+    className={cn('text-sm font-medium text-neutral-secondary', className)}
     {...props}
   />
 ));
@@ -127,7 +127,7 @@ const CardDescription = forwardRef<
 >(({className, ...props}, ref) => (
   <p
     ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
+    className={cn('text-sm text-neutral-secondary', className)}
     {...props}
   />
 ));

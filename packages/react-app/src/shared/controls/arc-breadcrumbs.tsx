@@ -180,7 +180,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                         {(triggerProps) => (
                           <button
                             {...triggerProps}
-                            className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
+                            className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
                             onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                               handleBreadcrumbClick(event, item, index);
                               triggerProps.onClick?.(event);
@@ -191,7 +191,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                         )}
                       </Popover.Trigger>
                       <Popover.Content
-                        className="bg-background-1 border-border-1 z-[9999] min-w-[150px] rounded-md border p-2 shadow-lg"
+                        className="bg-primary border-neutral-02 z-[9999] min-w-[150px] rounded-md border p-2 shadow-lg"
                         data-dropdown-index={index}
                       >
                         <div className="flex flex-col gap-1">
@@ -201,8 +201,8 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                                 key={`dropdown-${dropdownIndex}`}
                                 className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
                                   dropdownItem.disabled
-                                    ? 'text-text-3 cursor-not-allowed opacity-50'
-                                    : 'text-text-1 hover:bg-background-3 cursor-pointer'
+                                    ? 'text-neutral-secondary cursor-not-allowed opacity-50'
+                                    : 'text-neutral-primary hover:bg-secondary cursor-pointer'
                                 }`}
                                 onClick={(
                                   event: React.MouseEvent<HTMLDivElement>,
@@ -239,7 +239,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                   ) : item.onClick || onItemClick ? (
                     // For clickable items without dropdown
                     <span
-                      className="font-body-md text-text-2 hover:bg-background-3 hover:text-text-1 focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
+                      className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
                       onClick={(event: React.MouseEvent<HTMLElement>) =>
                         handleBreadcrumbClick(event, item, index)
                       }
@@ -253,7 +253,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                     </span>
                   ) : (
                     // For non-clickable items
-                    <span className="font-body-md text-text-1 inline-flex items-center px-2 py-1">
+                    <span className="font-body-md text-neutral-primary inline-flex items-center px-2 py-1">
                       {item.label}
                     </span>
                   )}

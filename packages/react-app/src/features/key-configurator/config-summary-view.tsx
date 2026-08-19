@@ -90,21 +90,9 @@ export function ConfigSummaryView({
   };
 
   return (
-    <div
-      className="overflow-hidden rounded-md border shadow-sm"
-      style={{
-        backgroundColor: 'var(--color-surface-primary)',
-        borderColor: 'var(--color-border-neutral-02)',
-      }}
-    >
+    <div className="bg-primary border-neutral-02 overflow-hidden rounded-md border shadow-sm">
       {/* Header */}
-      <div
-        className="flex items-center justify-between gap-2 border-b px-1 py-1"
-        style={{
-          backgroundColor: 'var(--color-surface-secondary)',
-          borderColor: 'var(--color-border-neutral-02)',
-        }}
-      >
+      <div className="bg-secondary border-neutral-02 flex items-center justify-between gap-2 border-b px-1 py-1">
         <div className="flex items-center gap-2">
           <IconButton
             aria-label={`Toggle ${title} section`}
@@ -118,10 +106,7 @@ export function ConfigSummaryView({
             onClick={toggleCollapse}
             variant="ghost"
           />
-          <h2
-            className="text-base font-semibold"
-            style={{color: 'var(--color-text-neutral-primary)'}}
-          >
+          <h2 className="text-neutral-primary text-base font-semibold">
             {title}
           </h2>
         </div>
@@ -146,14 +131,6 @@ export function ConfigSummaryView({
               className="flex items-center gap-1.5"
               emphasis="danger"
               onClick={handleDeleteFiltered}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor =
-                  'var(--color-surface-error-subtle)';
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'transparent';
-              }}
               startIcon={Trash2}
               title={`Delete ${filteredItems.length} filtered key(s)`}
               variant="ghost"
@@ -184,17 +161,11 @@ export function ConfigSummaryView({
       >
         <div className="p-4">
           {items.length === 0 ? (
-            <div
-              className="text-center"
-              style={{color: 'var(--color-text-neutral-tertiary)'}}
-            >
+            <div className="text-neutral-secondary text-center">
               <p>No keys configured</p>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div
-              className="text-center"
-              style={{color: 'var(--color-text-neutral-tertiary)'}}
-            >
+            <div className="text-neutral-secondary text-center">
               <div className="mb-2 text-2xl">🔍</div>
               <p>No keys match your search</p>
             </div>
@@ -206,19 +177,9 @@ export function ConfigSummaryView({
                   {showEditIcon && onEditItem && isEditable && (
                     <IconButton
                       aria-label="Edit"
+                      emphasis="primary"
                       icon={<Edit className="h-3.5 w-3.5" />}
                       onClick={() => onEditItem(item.id)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor =
-                          'var(--color-border-info)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'transparent';
-                      }}
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: 'var(--color-background-support-info)',
-                      }}
                       title="Edit item"
                       variant="ghost"
                     />
@@ -228,25 +189,11 @@ export function ConfigSummaryView({
                   {onDeleteItem && isEditable && (
                     <IconButton
                       aria-label="Delete"
-                      icon={
-                        <Trash2
-                          className="h-3.5 w-3.5"
-                          style={{color: 'red'}}
-                        />
-                      }
+                      emphasis="danger"
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
                       onClick={() =>
                         handleDeleteClick(item.id /* , item.label, e */)
                       }
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'red';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'transparent';
-                      }}
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: 'var(--color-text-info)',
-                      }}
                       title="Delete item"
                       variant="ghost"
                     />
@@ -254,8 +201,7 @@ export function ConfigSummaryView({
 
                   {/* Item Label */}
                   <span
-                    className="inline-block cursor-default rounded-full px-3 py-1 text-sm font-medium"
-                    style={{color: 'var(--color-text-neutral-primary)'}}
+                    className="text-neutral-primary inline-block cursor-default rounded-full px-3 py-1 text-sm font-medium"
                     title={
                       item.keyValuePairs && item.keyValuePairs.length > 0
                         ? item.keyValuePairs

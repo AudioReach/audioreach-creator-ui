@@ -53,7 +53,7 @@ import {
   ProjectTabEntity,
   useProjectLayoutStore,
 } from '~shared/store/use-project-layout-store';
-import {getColorName} from '~shared/utils/color-utils';
+import {getGroupColorClasses} from '~shared/utils/color-utils';
 import {deepEqual} from '~shared/utils/deep-equality';
 
 import 'flexlayout-react/style/combined.css';
@@ -138,7 +138,7 @@ class ProjectLayoutManager extends Component<
 
       // Always add app group label (whether collapsed or not)
       const appGroupLabel = {
-        className: `group-label-tab bg-${getColorName(colorNumber)}`,
+        className: `group-label-tab text-persistent-white ${getGroupColorClasses(colorNumber).background}`,
         component: 'group-label',
         enableClose: false,
         enableDrag: false,
@@ -154,7 +154,7 @@ class ProjectLayoutManager extends Component<
         // Add all app tabs from the array
         appGroup.appTabs.forEach((appTab) => {
           children.push({
-            className: `border-t-2 border-${getColorName(colorNumber)}`,
+            className: `border-t-2 ${getGroupColorClasses(colorNumber).border}`,
             component: 'app-tab',
             enableClose: true,
             enableDrag: true,
@@ -178,7 +178,7 @@ class ProjectLayoutManager extends Component<
       // Add project group label
       // This creates the clickable group headers in the UI
       const groupLabel = {
-        className: `group-label-tab bg-${getColorName(colorNumber)}`,
+        className: `group-label-tab text-persistent-white ${getGroupColorClasses(colorNumber).background}`,
         component: 'group-label',
         enableClose: false,
         enableDrag: false,
@@ -193,7 +193,7 @@ class ProjectLayoutManager extends Component<
       if (!project.isCollapsed) {
         // Add main tab first
         const mainTabDef = {
-          className: `border-t-2 border-${getColorName(colorNumber)}`,
+          className: `border-t-2 ${getGroupColorClasses(colorNumber).border}`,
           component: 'project-tab',
           enableClose: true,
           enableDrag: false, // Main tab cannot be dragged (would empty group)
@@ -217,7 +217,7 @@ class ProjectLayoutManager extends Component<
         project.projectTabs.forEach((projectTab, _tabIndex) => {
           // This converts each project tab from  store into FlexLayout tab format
           const tabDef = {
-            className: `border-t-2 border-${getColorName(colorNumber)}`,
+            className: `border-t-2 ${getGroupColorClasses(colorNumber).border}`,
             component: 'project-tab',
             enableClose: true,
             enableDrag: true, // Project tabs can be dragged
@@ -741,15 +741,14 @@ class ProjectLayoutManager extends Component<
         }
       }
 
-      // Create the interactive group label content with Tailwind colors
+      // Create the interactive group label content with QUI category colors.
       const showTooltip = !this.store.showGroupTitle; // false = show tooltip, true = no tooltip
-      const bgColor = `bg-${getColorName(colorNumber)}`;
+      const colorClasses = getGroupColorClasses(colorNumber);
 
       renderValues.content = createElement(
         'div',
         {
-          className: `cursor-pointer px-0.5 py-0.5 rounded  inline-flex  gap-0.5 mb-0.1  text-xs  ${bgColor}`,
-          style: {color: 'white'},
+          className: `text-persistent-white cursor-pointer px-0.5 py-0.5 rounded inline-flex gap-0.5 mb-0.1 text-[12px] leading-4 ${colorClasses.background}`,
           ...(showTooltip && {title: groupName}), // Add tooltip only if showGroupTitle is false
           onClick: (e: MouseEvent) => {
             e.stopPropagation();

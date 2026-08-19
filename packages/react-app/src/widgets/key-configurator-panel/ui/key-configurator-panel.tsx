@@ -119,19 +119,11 @@ export const KeyConfiguratorPanel: React.FC = () => {
 
       default:
         return (
-          <div
-            className="p-4 text-center text-sm"
-            style={{color: 'var(--color-text-neutral-tertiary)'}}
-          >
-            <div
-              style={{
-                color: 'var(--color-text-neutral-tertiary)',
-                marginBottom: '0.5rem',
-              }}
-            >
+          <div className="text-neutral-secondary p-4 text-center text-sm">
+            <div className="text-neutral-secondary mb-2">
               ❓
             </div>
-            <div style={{color: 'var(--color-text-neutral-secondary)'}}>
+            <div className="text-neutral-secondary">
               Unknown configuration type: {item.type}
             </div>
           </div>

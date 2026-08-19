@@ -705,10 +705,9 @@ function GenericTreeViewInner(
 
   return (
     <div
-      className={['relative flex h-full w-full flex-col', className]
+      className={['bg-primary relative flex h-full w-full flex-col', className]
         .filter(Boolean)
         .join(' ')}
-      style={{backgroundColor: 'var(--color-surface-primary)'}}
     >
       <ViewSwitchOverlay active={isSwitchingView} switchingTo={switchingTo} />
 
@@ -769,11 +768,11 @@ function GenericTreeViewInner(
                 aria-valuemax={60}
                 aria-valuemin={20}
                 aria-valuenow={Math.round(panelSplitPct)}
-                className="relative w-[3px] shrink-0 cursor-col-resize"
+                className="bg-brand-primary relative w-[3px] shrink-0 cursor-col-resize"
                 onKeyDown={handleSplitterKeyDown}
                 onMouseDown={handleDragStart}
                 role="separator"
-                style={{backgroundColor: 'var(--color-border-brand-primary)'}}
+
                 tabIndex={0}
               />
               <div

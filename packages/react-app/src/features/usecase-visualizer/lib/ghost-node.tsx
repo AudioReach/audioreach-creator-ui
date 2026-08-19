@@ -54,6 +54,14 @@ export function GhostNode({node, selected}: GhostNodeProps) {
   // border / active-fill / contains-match treatment the full node components do.
   const classNames = [
     'ghost-node relative rounded border',
+    highlight.state === 'active'
+      ? 'bg-support-warning'
+      : 'bg-[var(--node-shade-subtle)]',
+    selected && highlight.state === 'none'
+      ? 'border-support-info'
+      : highlight.state !== 'none'
+        ? 'border-support-warning'
+        : 'border-neutral-10',
     highlight.highlightMatchClass,
     highlight.highlightActiveClass,
     highlight.containsMatchClass,
@@ -61,27 +69,13 @@ export function GhostNode({node, selected}: GhostNodeProps) {
     .filter(Boolean)
     .join(' ');
 
-  // Selection shows the info border like the full nodes; search state wins.
-  const borderColor =
-    selected && highlight.state === 'none'
-      ? 'var(--color-border-support-info)'
-      : highlight.borderColor;
-
   return (
     <div
       aria-label={node.label}
       className={classNames}
       data-node-id={node.id}
       data-testid="ghost-node"
-      style={{
-        backgroundColor:
-          highlight.state === 'active'
-            ? highlight.activeBackgroundColor
-            : 'var(--node-shade-subtle)',
-        borderColor,
-        height: node.height,
-        width: node.width,
-      }}
+      style={{height: node.height, width: node.width}}
     >
       <span className={labelClass} data-testid="ghost-node-label">
         {label}

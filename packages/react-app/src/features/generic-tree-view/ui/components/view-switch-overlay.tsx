@@ -63,10 +63,7 @@ export function ViewSwitchOverlay({
       : 'Switching to Modern view…';
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4"
-      style={{backgroundColor: 'var(--color-surface-overlay)'}}
-    >
+    <div className="bg-overlay absolute inset-0 z-50 flex flex-col items-center justify-center gap-4">
       <ProgressRing size="xl" value={progress} />
       <span className="text-neutral-secondary text-sm">{label}</span>
     </div>

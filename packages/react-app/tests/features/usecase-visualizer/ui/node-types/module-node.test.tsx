@@ -317,12 +317,8 @@ describe('ModuleNode — PP highlight', () => {
     ) as HTMLElement;
 
     expect(root.getAttribute('data-pp-module')).toBe('true');
-    expect(shapeLayer.style.backgroundColor).toBe(
-      'var(--color-background-support-success)',
-    );
-    expect(shapeLayer.style.borderColor).toBe(
-      'var(--color-border-support-success)',
-    );
+    expect(shapeLayer).toHaveClass('bg-support-success');
+    expect(shapeLayer).toHaveClass('border-support-success');
   });
 
   it('omits data-pp-module and uses default styling when isPpModule is absent', () => {
@@ -344,8 +340,6 @@ describe('ModuleNode — PP highlight', () => {
       '[data-testid="module-shape-layer"]',
     ) as HTMLElement;
 
-    expect(shapeLayer.style.backgroundColor).toBe(
-      'var(--color-background-support-warning)',
-    );
+    expect(shapeLayer).toHaveClass('bg-support-warning');
   });
 });

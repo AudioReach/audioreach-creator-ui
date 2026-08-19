@@ -105,7 +105,7 @@ function CategorySection({
   return (
     <div className="flex flex-col gap-2">
       {title && (
-        <h3 className="flex items-center gap-1 text-sm font-semibold text-[color:var(--color-text-neutral-primary)]">
+        <h3 className="text-neutral-primary flex items-center gap-1 text-sm font-semibold">
           {title}
           {readOnly && <DeletedInfoTooltip />}
         </h3>
@@ -230,10 +230,10 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
           {created.length > 0 && anyCreatedChecked && (
             <div className="flex flex-col gap-4">
               <Divider />
-              <h4 className="text-sm font-semibold text-[color:var(--color-text-neutral-primary)]">
+              <h4 className="text-sm font-semibold text-neutral-primary">
                 Navigation after applying changes
               </h4>
-              <p className="text-xs text-[color:var(--color-text-neutral-secondary)]">
+              <p className="text-xs text-neutral-secondary">
                 Choose how to navigate after applying the changes.
               </p>
               <RadioGroup.Root

@@ -49,20 +49,11 @@ function formatLogEntry(log: LogEntry): string {
 const getLogTypeIcon = (logType: LogType) => {
   switch (logType) {
     case 'info':
-      return (
-        <Info size={14} style={{color: 'var(--color-icon-support-info)'}} />
-      );
+      return <Info className="text-icon-support-info" size={14} />;
     case 'warn':
-      return (
-        <TriangleAlert
-          size={14}
-          style={{color: 'var(--color-icon-support-warning)'}}
-        />
-      );
+      return <TriangleAlert className="text-icon-support-warning" size={14} />;
     case 'error':
-      return (
-        <X size={14} style={{color: 'var(--color-icon-support-danger)'}} />
-      );
+      return <X className="text-icon-support-danger" size={14} />;
     default:
       return null;
   }
@@ -167,7 +158,7 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
   };
 
   return (
-    <div className="flex items-center gap-1 bg-grey px-1">
+    <div className="bg-neutral-02 flex items-center gap-1 px-1">
       <div className="max-w-48">
         <TextInput.Root
           onValueChange={setSearchLogQuery}
@@ -211,23 +202,11 @@ const LogViewToolbar: React.FC<{filteredLogs: LogEntry[]}> = ({
                         value={type}
                       >
                         {type === ALL_TYPES && allTypesState.indeterminate ? (
-                          <div
-                            className="mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2"
-                            style={{
-                              backgroundColor:
-                                'var(--color-background-brand-primary)',
-                              borderColor:
-                                'var(--color-background-brand-primary)',
-                              color: 'var(--color-text-neutral-inverse)',
-                            }}
-                          >
+                          <div className="bg-brand-primary border-brand-primary text-neutral-inverse mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2">
                             <Minus
+                              className="text-neutral-inverse"
                               size={10}
                               strokeWidth={4}
-                              style={{
-                                color: 'var(--color-text-neutral-inverse)',
-                                stroke: 'var(--color-text-neutral-inverse)',
-                              }}
                             />
                           </div>
                         ) : (

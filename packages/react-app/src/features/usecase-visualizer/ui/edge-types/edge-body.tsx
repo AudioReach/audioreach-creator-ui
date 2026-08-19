@@ -66,7 +66,7 @@ export function EdgeBody({
       {showLabel ? (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan text-primary text-xxs pointer-events-none absolute rounded-sm bg-[var(--color-background-neutral-02)] px-1"
+            className="nodrag nopan bg-neutral-02 text-primary text-xxs pointer-events-none absolute rounded-sm px-1"
             data-edge-id={edgeId}
             data-testid={`edge-label-${edgeId}`}
             style={{

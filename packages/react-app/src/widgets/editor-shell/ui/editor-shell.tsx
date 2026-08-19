@@ -41,32 +41,21 @@ const EditorShellContent: React.FC = () => {
 
   return (
     <div
-      className={`flex h-screen flex-col ${flexLayoutThemeClass}`}
-      style={{backgroundColor: 'var(--color-surface-primary)'}}
+      className={`flex h-screen flex-col ${flexLayoutThemeClass} bg-primary`}
     >
       <GlobalToaster />
       <div
-        className="flex items-center justify-between px-4 py-2"
-        style={{
-          borderBottom: '1px solid var(--color-border-neutral-02)',
-          color: 'var(--color-text-neutral-primary)',
-        }}
+        className="border-neutral-02 text-neutral-primary flex items-center justify-between border-b px-4 py-2"
       >
         <div className="flex items-center gap-4">
-          <div
-            className="text-lg font-semibold"
-            style={{color: 'var(--color-text-neutral-primary)'}}
-          >
+          <div className="text-neutral-primary text-lg font-semibold">
             AudioReach™ Creator
           </div>
         </div>
         <PanelIconBar />
       </div>
 
-      <div
-        className="relative flex flex-1"
-        style={{backgroundColor: 'var(--color-surface-primary)'}}
-      >
+      <div className="bg-primary relative flex flex-1">
         <div className="relative z-10">
           <ArcSideNav />
         </div>
@@ -233,24 +222,15 @@ export const EditorShell: React.FC = () => {
                 'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
             }}
           >
-            <div
-              className="rounded-lg p-8 shadow-xl"
-              style={{backgroundColor: 'var(--color-surface-raised)'}}
-            >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   <ProgressRing />
                 </div>
-                <div
-                  className="mb-2 text-lg font-semibold"
-                  style={{color: 'var(--color-text-neutral-primary)'}}
-                >
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
                   Saving...
                 </div>
-                <div
-                  className="text-sm"
-                  style={{color: 'var(--color-text-neutral-secondary)'}}
-                >
+                <div className="text-neutral-secondary text-sm">
                   Please wait...
                 </div>
               </div>

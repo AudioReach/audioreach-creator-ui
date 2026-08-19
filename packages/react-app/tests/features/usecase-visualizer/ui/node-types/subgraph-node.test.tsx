@@ -169,17 +169,13 @@ describe('SubgraphNode — selection styling', () => {
       </ReactFlowProvider>,
     );
     const node = getByTestId('subgraph-node');
-    expect(node.style.borderColor).toContain('--color-border-support-info');
-    expect(node.style.backgroundColor).toContain(
-      '--color-background-support-info-subtle',
-    );
+    expect(node).toHaveClass('border-support-info');
+    expect(node).toHaveClass('bg-support-info-subtle');
   });
 
   it('applies neutral border when not selected', () => {
     const {getByTestId} = renderSubgraphNode(makeSubgraph());
-    expect(getByTestId('subgraph-node').style.borderColor).toContain(
-      '--color-border-neutral-10',
-    );
+    expect(getByTestId('subgraph-node')).toHaveClass('border-neutral-10');
   });
 });
 

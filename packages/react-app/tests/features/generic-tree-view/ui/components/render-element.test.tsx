@@ -332,9 +332,7 @@ describe('renderElement dirty/set indicators', () => {
       elementValues: new Map([['pid1/dp', '0x1']]),
     });
     const {container} = render(<>{renderElement(elem, ctx, [0])}</>);
-    const bar = container.querySelector(
-      '[style*="--color-background-support-warning"]',
-    );
+    const bar = container.querySelector('.bg-support-warning');
     expect(bar).toBeInTheDocument();
   });
 
@@ -345,9 +343,7 @@ describe('renderElement dirty/set indicators', () => {
       setPaths: new Set(['pid1/sp']),
     });
     const {container} = render(<>{renderElement(elem, ctx, [0])}</>);
-    const bar = container.querySelector(
-      '[style*="--color-background-support-success"]',
-    );
+    const bar = container.querySelector('.bg-support-success');
     expect(bar).toBeInTheDocument();
   });
 });

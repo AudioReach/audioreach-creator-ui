@@ -340,10 +340,7 @@ function ModuleDataTabInner(
           )}
         </Tabs.Root>
       </div>
-      <div
-        className="flex shrink-0 items-center justify-center gap-3 border-t p-3"
-        style={{backgroundColor: 'var(--color-surface-primary)'}}
-      >
+      <div className="bg-primary flex shrink-0 items-center justify-center gap-3 border-t p-3">
         <Button onClick={handleGet} size="md" variant="outline">
           Get
         </Button>

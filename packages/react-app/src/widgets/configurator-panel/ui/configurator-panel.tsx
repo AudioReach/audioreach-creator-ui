@@ -118,32 +118,19 @@ const ConfigurationSection: React.FC<{
   }, [section.item.id, onRemove]);
 
   const defaultContent = (
-    <div
-      className="p-4 text-sm"
-      style={{color: 'var(--color-text-neutral-tertiary)'}}
-    >
+    <div className="text-neutral-secondary p-4 text-sm">
       Configuration view for {item.type}: {item.name}
-      <div
-        className="mt-2 text-xs"
-        style={{color: 'var(--color-text-neutral-tertiary)'}}
-      >
+      <div className="text-neutral-secondary mt-2 text-xs">
         No custom renderer provided for this item type.
       </div>
     </div>
   );
 
   return (
-    <div
-      className="overflow-hidden rounded-lg border"
-      style={{borderColor: 'var(--color-border-neutral-02)'}}
-    >
+    <div className="border-neutral-02 overflow-hidden rounded-lg border">
       {/* Header */}
       <div
-        className="flex items-center justify-between border-b px-4 py-3"
-        style={{
-          backgroundColor: 'var(--color-surface-secondary)',
-          borderColor: 'var(--color-border-neutral-02)',
-        }}
+        className="bg-secondary border-neutral-02 flex items-center justify-between border-b px-4 py-3"
       >
         <div className="flex items-center space-x-2">
           <IconButton
@@ -162,44 +149,26 @@ const ConfigurationSection: React.FC<{
             {/* <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
               {item.type.toUpperCase()}:
             </span> */}
-            <h3
-              className="text-m"
-              style={{color: 'var(--color-text-neutral-primary)'}}
-            >
+            <h3 className="text-m text-neutral-primary">
               {item.type}: {item.name}
             </h3>
           </div>
         </div>
 
         {showRemoveButton && (
-          <div
-            className="inline-flex"
-            onMouseEnter={(e) => {
-              const icon = e.currentTarget.querySelector('svg');
-              if (icon) {
-                icon.style.color = 'var(--color-icon-support-danger)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              const icon = e.currentTarget.querySelector('svg');
-              if (icon) {
-                icon.style.color = '';
-              }
-            }}
-          >
-            <IconButton
-              aria-label="Remove section"
-              icon={<X className="h-4 w-4" />}
-              onClick={handleRemove}
-              variant="ghost"
-            />
-          </div>
+          <IconButton
+            aria-label="Remove section"
+            emphasis="danger"
+            icon={<X className="h-4 w-4" />}
+            onClick={handleRemove}
+            variant="ghost"
+          />
         )}
       </div>
 
       {/* Content */}
       {isExpanded && (
-        <div style={{backgroundColor: 'var(--color-surface-primary)'}}>
+        <div className="bg-primary">
           {renderContent ? renderContent(item, isEditable) : defaultContent}
         </div>
       )}
@@ -265,16 +234,10 @@ export const ConfiguratorPanel: React.FC<ConfiguratorPanelProps> = ({
   if (sections.length === 0) {
     return (
       <div className="p-8 text-center">
-        <p
-          className="text-sm"
-          style={{color: 'var(--color-text-neutral-secondary)'}}
-        >
+        <p className="text-neutral-secondary text-sm">
           Select a module or subgraph or subsystem to configure.
         </p>
-        <p
-          className="mt-2 text-xs"
-          style={{color: 'var(--color-text-neutral-tertiary)'}}
-        >
+        <p className="text-neutral-secondary mt-2 text-xs">
           Hold Ctrl and click multiple items to configure them simultaneously.
         </p>
       </div>

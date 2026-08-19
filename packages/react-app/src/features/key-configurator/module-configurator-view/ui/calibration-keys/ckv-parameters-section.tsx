@@ -42,21 +42,9 @@ export function CkvParametersSection({
   const someChecked = parameters.some((p) => p.checked) && !allChecked;
 
   return (
-    <div
-      className="overflow-hidden rounded border shadow-sm"
-      style={{
-        backgroundColor: 'var(--color-surface-primary)',
-        borderColor: 'var(--color-border-neutral-02)',
-      }}
-    >
+    <div className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm">
       {/* Header */}
-      <div
-        className="flex items-center gap-2 border-b px-1 py-1"
-        style={{
-          backgroundColor: 'var(--color-surface-secondary)',
-          borderColor: 'var(--color-border-neutral-02)',
-        }}
-      >
+      <div className="bg-secondary border-neutral-02 flex items-center gap-2 border-b px-1 py-1">
         <IconButton
           aria-label="Toggle CKV parameters section"
           icon={
@@ -69,10 +57,7 @@ export function CkvParametersSection({
           onClick={() => setIsCollapsed(!isCollapsed)}
           variant="ghost"
         />
-        <h4
-          className="ml-2 text-base font-semibold"
-          style={{color: 'var(--color-text-neutral-primary)'}}
-        >
+        <h4 className="text-neutral-primary ml-2 text-base font-semibold">
           Configure PIDs for CKVs
         </h4>
       </div>
@@ -86,20 +71,10 @@ export function CkvParametersSection({
         }`}
       >
         <div className="p-4">
-          <table
-            className="w-4/5 border-collapse"
-            style={{backgroundColor: 'var(--color-surface-primary)'}}
-          >
+          <table className="bg-primary w-4/5 border-collapse">
             <thead>
               <tr>
-                <th
-                  className="w-32 border px-3 py-2 text-center font-semibold"
-                  style={{
-                    backgroundColor: 'var(--color-surface-secondary)',
-                    borderColor: 'var(--color-border-neutral-02)',
-                    color: 'var(--color-text-neutral-primary)',
-                  }}
-                >
+                <th className="bg-secondary border-neutral-02 text-neutral-primary w-32 border px-3 py-2 text-center font-semibold">
                   <div className="flex flex-col items-center gap-1">
                     <span>Support CKV</span>
                     <Checkbox
@@ -113,24 +88,10 @@ export function CkvParametersSection({
                     />
                   </div>
                 </th>
-                <th
-                  className="border px-3 py-2 text-left font-semibold"
-                  style={{
-                    backgroundColor: 'var(--color-surface-secondary)',
-                    borderColor: 'var(--color-border-neutral-02)',
-                    color: 'var(--color-text-neutral-primary)',
-                  }}
-                >
+                <th className="bg-secondary border-neutral-02 text-neutral-primary border px-3 py-2 text-left font-semibold">
                   PID
                 </th>
-                <th
-                  className="border px-3 py-2 text-left font-semibold"
-                  style={{
-                    backgroundColor: 'var(--color-surface-secondary)',
-                    borderColor: 'var(--color-border-neutral-02)',
-                    color: 'var(--color-text-neutral-primary)',
-                  }}
-                >
+                <th className="bg-secondary border-neutral-02 text-neutral-primary border px-3 py-2 text-left font-semibold">
                   Name
                 </th>
               </tr>
@@ -138,41 +99,23 @@ export function CkvParametersSection({
             <tbody>
               {parameters.map((param, index) => (
                 <tr key={param.pid}>
-                  <td
-                    className="border px-3 py-2"
-                    style={{borderColor: 'var(--color-border-neutral-02)'}}
-                  >
+                  <td className="border-neutral-02 border px-3 py-2">
                     <div className="flex justify-center">
                       <Checkbox
                         aria-label={`Select parameter ${param.name}`}
                         checked={param.checked}
                         disabled={!isEditable}
                         onCheckedChange={(checked) =>
-                          handleParameterChange(
-                            index,
-                            checked,
-                          )
+                          handleParameterChange(index, checked)
                         }
                         size="sm"
                       />
                     </div>
                   </td>
-                  <td
-                    className="border px-3 py-2 text-left font-mono text-sm"
-                    style={{
-                      borderColor: 'var(--color-border-neutral-02)',
-                      color: 'var(--color-text-neutral-secondary)',
-                    }}
-                  >
+                  <td className="border-neutral-02 text-neutral-secondary border px-3 py-2 text-left font-mono text-sm">
                     {ConvertNumberToHexString(param.pid) || param.pid}
                   </td>
-                  <td
-                    className="border px-3 py-2 text-left text-sm"
-                    style={{
-                      borderColor: 'var(--color-border-neutral-02)',
-                      color: 'var(--color-text-neutral-primary)',
-                    }}
-                  >
+                  <td className="border-neutral-02 text-neutral-primary border px-3 py-2 text-left text-sm">
                     {param.name}
                   </td>
                 </tr>

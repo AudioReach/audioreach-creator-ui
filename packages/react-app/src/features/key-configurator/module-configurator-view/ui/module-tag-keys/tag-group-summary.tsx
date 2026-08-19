@@ -68,16 +68,10 @@ export function TagGroupSummary({
   }));
 
   return (
-    <div
-      className="pt-0.5"
-      style={{borderColor: 'var(--color-border-neutral-02)'}}
-    >
+    <div className="border-neutral-02 pt-0.5">
       <div
-        className="flex cursor-pointer items-center justify-between rounded px-4 py-1.5 transition-colors"
+        className="bg-secondary flex cursor-pointer items-center justify-between rounded px-4 py-1.5 transition-colors"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        style={{
-          backgroundColor: 'var(--color-surface-secondary)',
-        }}
       >
         <div className="flex flex-1 items-center">
           <IconButton
@@ -95,13 +89,9 @@ export function TagGroupSummary({
             }}
             variant="ghost"
           />
-          <Tag
-            className="mr-2 h-3.5 w-3.5"
-            style={{color: 'var(--color-text-success)'}}
-          />
+          <Tag className="text-support-success mr-2 h-3.5 w-3.5" />
           <span
-            className="text-[15px] font-semibold"
-            style={{color: 'var(--color-text-success)'}}
+            className="text-support-success text-[15px] font-semibold"
             title={
               configurations.length > 0
                 ? `Tag Id: ${ConvertNumberToHexString(configurations[0].tagGroupId)}`
@@ -114,18 +104,12 @@ export function TagGroupSummary({
         {isEditable && (
           <IconButton
             aria-label="Delete tag group"
-            icon={<Trash2 className="h-3.5 w-3.5" style={{color: 'red'}} />}
+            emphasis="danger"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteTagGroup();
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'red';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'transparent';
-            }}
-            style={{backgroundColor: 'transparent'}}
             title={`Delete all configurations in ${tagGroupName}`}
             variant="ghost"
           />
@@ -136,10 +120,7 @@ export function TagGroupSummary({
       {!isCollapsed && (
         <div className="mt-1 pl-8">
           {items.length === 0 ? (
-            <div
-              className="py-2 text-center"
-              style={{color: 'var(--color-text-neutral-tertiary)'}}
-            >
+            <div className="text-neutral-secondary py-2 text-center">
               <p className="text-sm">No configurations in this tag group</p>
             </div>
           ) : (
@@ -150,6 +131,7 @@ export function TagGroupSummary({
                   {isEditable && (
                     <IconButton
                       aria-label="Edit"
+                      emphasis="primary"
                       icon={
                         <svg
                           className="h-3.5 w-3.5"
@@ -166,17 +148,6 @@ export function TagGroupSummary({
                         </svg>
                       }
                       onClick={() => onEditItem(item.id)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor =
-                          'var(--color-border-info)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'transparent';
-                      }}
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: 'var(--color-background-support-info)',
-                      }}
                       title="Edit item"
                       variant="ghost"
                     />
@@ -186,25 +157,11 @@ export function TagGroupSummary({
                   {isEditable && (
                     <IconButton
                       aria-label="Delete"
-                      icon={
-                        <Trash2
-                          className="h-3.5 w-3.5"
-                          style={{color: 'red'}}
-                        />
-                      }
+                      emphasis="danger"
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
                       onClick={() => {
                         // TODO: Notify and confirm from user
                         onDeleteItem(item.id);
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'red';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'transparent';
-                      }}
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: 'var(--color-text-info)',
                       }}
                       title="Delete item"
                       variant="ghost"
@@ -213,8 +170,7 @@ export function TagGroupSummary({
 
                   {/* Item Label */}
                   <span
-                    className="inline-block rounded-full px-3 py-1 text-sm font-medium"
-                    style={{color: 'var(--color-text-success)'}}
+                    className="text-support-success inline-block rounded-full px-3 py-1 text-sm font-medium"
                     title={
                       item.keyValuePairs && item.keyValuePairs.length > 0
                         ? item.keyValuePairs

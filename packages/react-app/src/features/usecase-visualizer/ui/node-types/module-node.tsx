@@ -71,10 +71,9 @@ function ShapeOutline({
 }): ReactNode {
   return (
     <svg
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 overflow-visible"
       data-testid="module-shape-svg"
       height={height}
-      style={{overflow: 'visible'}}
       width={width}
     >
       {shape === 'circle' ? (
@@ -160,6 +159,20 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
         : isPpModule
           ? 'var(--color-border-support-success)'
           : highlight.borderColor;
+  const backgroundClass =
+    highlight.state === 'active'
+      ? 'bg-support-warning'
+      : isPpModule
+        ? 'bg-support-success'
+        : 'bg-[var(--node-shade-medium)]';
+  const borderClass =
+    highlight.state !== 'none'
+      ? 'border-support-warning'
+      : selected
+        ? 'border-support-info'
+        : isPpModule
+          ? 'border-support-success'
+          : 'border-neutral-10';
 
   return (
     <div
@@ -174,6 +187,8 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
         className={[
           'module-node relative w-full',
           shape === 'rect' ? 'rounded border' : '',
+          shape === 'rect' ? backgroundClass : '',
+          shape === 'rect' ? borderClass : '',
           highlight.highlightMatchClass,
           highlight.highlightActiveClass,
           highlight.containsMatchClass,
@@ -182,12 +197,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
           .join(' ')}
         data-node-id={node.id}
         data-testid="module-shape-layer"
-        style={{
-          height: boxHeight,
-          ...(shape === 'rect'
-            ? {backgroundColor: background, borderColor}
-            : {}),
-        }}
+        style={{height: boxHeight}}
       >
         {shape !== 'rect' ? (
           <ShapeOutline

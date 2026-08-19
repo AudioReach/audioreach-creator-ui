@@ -172,7 +172,7 @@ const ValidationResultToolbar: React.FC = () => {
   };
 
   return (
-    <div className="flex w-full items-center gap-1 bg-grey px-1">
+    <div className="bg-neutral-02 flex w-full items-center gap-1 px-1">
       {/* Search and Filter Section */}
       <div className="max-w-48">
         <TextInput.Root
@@ -222,21 +222,11 @@ const ValidationResultToolbar: React.FC = () => {
                       >
                         {severity === ALL_SEVERITIES &&
                         allSeveritiesState.indeterminate ? (
-                          <div
-                            className="mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2"
-                            style={{
-                              backgroundColor:
-                                'var(--color-background-brand-primary)',
-                              borderColor:
-                                'var(--color-background-brand-primary)',
-                            }}
-                          >
+                          <div className="bg-brand-primary border-brand-primary mr-1.5 flex h-4 w-4 items-center justify-center rounded border-2">
                             <Minus
+                              className="text-neutral-inverse"
                               size={10}
                               strokeWidth={4}
-                              style={{
-                                stroke: 'var(--color-text-neutral-inverse)',
-                              }}
                             />
                           </div>
                         ) : (
@@ -274,33 +264,29 @@ const ValidationResultToolbar: React.FC = () => {
         {/* Critical Count with Icon */}
         <div className="flex items-center gap-1">
           <Icon
+            className="text-icon-support-danger"
             icon={TriangleAlert}
             size={12}
-            style={{color: 'var(--color-icon-support-danger)'}}
           />
-          <span className="text-red-500 font-medium">
+          <span className="font-medium text-red-500">
             {criticalCount} Critical Errors
           </span>
         </div>
 
         {/* Error Count with Icon */}
         <div className="flex items-center gap-1">
-          <Icon
-            icon={X}
-            size={12}
-            style={{color: 'var(--color-icon-support-danger)'}}
-          />
-          <span className="text-red-500 font-medium">{errorCount} Errors</span>
+          <Icon className="text-icon-support-danger" icon={X} size={12} />
+          <span className="font-medium text-red-500">{errorCount} Errors</span>
         </div>
 
         {/* Warning Count with Icon */}
         <div className="flex items-center gap-1">
           <Icon
+            className="text-icon-support-warning"
             icon={TriangleAlert}
             size={12}
-            style={{color: 'var(--color-icon-support-warning)'}}
           />
-          <span className="text-orange-500 font-medium">
+          <span className="font-medium text-orange-500">
             {warningCount} Warnings
           </span>
         </div>

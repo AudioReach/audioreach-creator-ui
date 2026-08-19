@@ -254,24 +254,15 @@ export default function ArcStartPage({
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
             }}
           >
-            <div
-              className="rounded-lg p-8 shadow-xl"
-              style={{backgroundColor: 'var(--color-surface-raised)'}}
-            >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   <ProgressRing />
                 </div>
-                <div
-                  className="mb-2 text-lg font-semibold"
-                  style={{color: 'var(--color-text-neutral-primary)'}}
-                >
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
                   {loadingState.message || 'Processing...'}
                 </div>
-                <div
-                  className="text-sm"
-                  style={{color: 'var(--color-text-neutral-secondary)'}}
-                >
+                <div className="text-neutral-secondary text-sm">
                   Please wait for the files to be processed ...
                 </div>
               </div>
@@ -283,8 +274,7 @@ export default function ArcStartPage({
       <div>
         {/* Top Navigation Bar */}
         <div
-          className="flex gap-2 p-2.5"
-          style={{borderBottom: '1px solid var(--color-border-neutral-02)'}}
+          className="border-neutral-02 flex gap-2 border-b p-2.5"
         >
           <Button
             emphasis={showProjects ? 'primary' : 'neutral'}
@@ -444,18 +434,11 @@ export default function ArcStartPage({
           {/* Release Notes Tab */}
           {activeTab === 'release-notes' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <FileText
-                className="mb-4"
-                size={48}
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              />
-              <h2
-                className="mb-2 text-xl font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <FileText className="text-neutral-secondary mb-4" size={48} />
+              <h2 className="text-neutral-primary mb-2 text-xl font-semibold">
                 Release Notes
               </h2>
-              <p style={{color: 'var(--color-text-neutral-secondary)'}}>
+              <p className="text-neutral-secondary">
                 Release notes content will be displayed here.
               </p>
             </div>
@@ -464,18 +447,11 @@ export default function ArcStartPage({
           {/* User Guide Tab */}
           {activeTab === 'user-guide' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <BookOpen
-                className="mb-4"
-                size={48}
-                style={{color: 'var(--color-text-neutral-secondary)'}}
-              />
-              <h2
-                className="mb-2 text-xl font-semibold"
-                style={{color: 'var(--color-text-neutral-primary)'}}
-              >
+              <BookOpen className="text-neutral-secondary mb-4" size={48} />
+              <h2 className="text-neutral-primary mb-2 text-xl font-semibold">
                 User Guide
               </h2>
-              <p style={{color: 'var(--color-text-neutral-secondary)'}}>
+              <p className="text-neutral-secondary">
                 User guide content will be displayed here.
               </p>
             </div>

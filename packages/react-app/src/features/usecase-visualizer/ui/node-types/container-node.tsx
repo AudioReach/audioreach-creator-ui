@@ -30,6 +30,13 @@ export function ContainerNode({data: node, selected}: ContainerNodeProps) {
 
   const classNames = [
     'container-node relative rounded-md border border-dotted',
+    highlight.state === 'active'
+      ? 'bg-support-warning'
+      : 'bg-neutral-02',
+    highlight.state !== 'none' || selected || isHighlighted
+      ? 'border-support-info'
+      : 'border-neutral-10',
+    'h-full w-full',
     isHighlighted ? 'container-hover-highlight' : '',
     highlight.highlightMatchClass,
     highlight.highlightActiveClass,
@@ -37,13 +44,6 @@ export function ContainerNode({data: node, selected}: ContainerNodeProps) {
   ]
     .filter(Boolean)
     .join(' ');
-
-  // Search highlight and selection both show the info border; search wins,
-  // then selection, then hover, then the neutral default.
-  const borderColor =
-    highlight.state !== 'none' || selected || isHighlighted
-      ? 'var(--color-border-support-info)'
-      : 'var(--color-border-neutral-10)';
 
   return (
     <div
@@ -54,15 +54,6 @@ export function ContainerNode({data: node, selected}: ContainerNodeProps) {
         setHoverState(node.id, node.logicalContainerId ?? null)
       }
       onMouseLeave={() => clearHoverStateIfNode(node.id)}
-      style={{
-        backgroundColor:
-          highlight.state === 'active'
-            ? highlight.activeBackgroundColor
-            : 'var(--color-background-neutral-02)',
-        borderColor,
-        height: '100%',
-        width: '100%',
-      }}
     >
       <div className="text-secondary text-xxs absolute left-2 top-2 font-semibold">
         {node.label}

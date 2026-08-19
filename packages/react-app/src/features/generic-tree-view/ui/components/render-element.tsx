@@ -120,9 +120,9 @@ function renderArray(
         ) ?? inst.value,
     }));
     const isTableDirty = rows.some((r, i) => r.value !== originalRows[i].value);
-    const barColor = isTableDirty
-      ? 'var(--color-background-support-warning)'
-      : 'transparent';
+    const barClassName = isTableDirty
+      ? 'bg-support-warning'
+      : 'bg-transparent';
 
     return (
       <Tree.NodeProvider
@@ -133,16 +133,10 @@ function renderArray(
         <Tree.LeafNode className="h-auto min-h-0 items-start">
           <Tree.NodeIndicator />
           <span
-            style={{
-              alignSelf: 'stretch',
-              backgroundColor: barColor,
-              borderRadius: '2px',
-              flexShrink: 0,
-              width: '4px',
-            }}
+            className={`self-stretch ${barClassName} w-1 shrink-0 rounded-[2px]`}
           />
           <div className="flex items-center gap-4 py-2">
-            <Tree.NodeText className="wrap-break-word w-60 shrink-0">
+            <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
               {elem.name}
             </Tree.NodeText>
             <div className="shrink-0">
@@ -233,21 +227,15 @@ function renderLeaf(
 
   const isDirty = ctx.dirtyPaths.has(key);
   const isSet = ctx.setPaths.has(key);
-  const barColor = isSet
-    ? 'var(--color-background-support-success)'
+  const barClassName = isSet
+    ? 'bg-support-success'
     : isDirty
-      ? 'var(--color-background-support-warning)'
-      : 'transparent';
+      ? 'bg-support-warning'
+      : 'bg-transparent';
 
   const dirtyBar = (
     <span
-      style={{
-        alignSelf: 'stretch',
-        backgroundColor: barColor,
-        borderRadius: '2px',
-        flexShrink: 0,
-        width: '4px',
-      }}
+      className={`self-stretch ${barClassName} w-1 shrink-0 rounded-[2px]`}
     />
   );
 
@@ -263,7 +251,7 @@ function renderLeaf(
   }
 
   const labelEl = (
-    <Tree.NodeText className="wrap-break-word w-60 shrink-0">
+    <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
       {elem.name}
     </Tree.NodeText>
   );
@@ -277,7 +265,7 @@ function renderLeaf(
             <Tooltip.Arrow>
               <Tooltip.ArrowTip />
             </Tooltip.Arrow>
-            <div className="whitespace-pre-line text-xs">
+            <div className="text-xs whitespace-pre-line">
               {tooltipLines.join('\n')}
             </div>
           </Tooltip.Content>
@@ -309,7 +297,7 @@ function renderLeaf(
             <Tree.BranchTrigger />
             {dirtyBar}
             <div className="flex items-center gap-4">
-              <Tree.NodeText className="wrap-break-word w-60 shrink-0">
+              <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
                 {elem.name}
               </Tree.NodeText>
               <span className="font-mono text-sm">{currentValue}</span>
@@ -387,10 +375,7 @@ function renderLeaf(
             </div>
           )}
           {isInvalid && elem.min !== undefined && elem.max !== undefined && (
-            <span
-              className="pl-64 text-xs"
-              style={{color: 'var(--color-text-support-danger)'}}
-            >
+            <span className="text-support-danger pl-64 text-xs">
               {`Must be between ${toHexString(elem.min)} and ${toHexString(elem.max)}`}
             </span>
           )}

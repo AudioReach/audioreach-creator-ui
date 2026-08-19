@@ -17,41 +17,33 @@ export const getSeverityIcon = (severity: string) => {
     case SeverityType.Critical:
       return (
         <Icon
+          className="text-icon-support-danger"
           icon={TriangleAlert}
           size="xs"
-          style={{
-            color: 'var(--color-icon-support-danger)',
-          }}
         />
       );
     case SeverityType.Error:
       return (
         <Icon
+          className="text-icon-support-danger"
           icon={X}
           size="xs"
-          style={{
-            color: 'var(--color-icon-support-danger)',
-          }}
         />
       );
     case SeverityType.Warning:
       return (
         <Icon
+          className="text-icon-support-warning"
           icon={TriangleAlert}
           size="xs"
-          style={{
-            color: 'var(--color-icon-support-warning)',
-          }}
         />
       );
     default:
       return (
         <Icon
+          className="text-icon-neutral-secondary"
           icon={Info}
           size="xs"
-          style={{
-            color: 'var(--color-icon-neutral-secondary)',
-          }}
         />
       );
   }
