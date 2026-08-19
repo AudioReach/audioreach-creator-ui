@@ -1,17 +1,42 @@
-@import '@qualcomm-ui/qds-core/styles/components.css';
-@import '@qualcomm-ui/qds-core/themes/qualcomm-dark.css';
-@import '@qualcomm-ui/qds-core/themes/qualcomm-light.css';
-@import '@qualcomm-ui/qds-core/themes/snapdragon-light.css';
-@import '@qualcomm-ui/qds-core/themes/snapdragon-dark.css';
+@import 'tailwindcss';
+@import '@qualcomm-ui/tailwind-plugin/qui.css';
+@import '@qualcomm-ui/qds-core/styles/components.css' layer(components);
+@import '@qualcomm-ui/qds-core/themes/qualcomm-dark.css' layer(components);
+@import '@qualcomm-ui/qds-core/themes/qualcomm-light.css' layer(components);
+@import '@qualcomm-ui/qds-core/themes/snapdragon-light.css' layer(components);
+@import '@qualcomm-ui/qds-core/themes/snapdragon-dark.css' layer(components);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-blue: #4363d8;
+  --color-green: #3cb44b;
+  --color-grey: #929090;
+  --color-lavender: #bc89f6;
+  --color-lime: #bfef45;
+  --color-magenta: #ec1be2;
+  --color-mint: #8cfbad;
+  --color-navy: #070767;
+  --color-orange: #f58231;
+  --color-pink: #f995ba;
+  --color-purple: #911eb4;
+  --color-quartz: #7e5f77;
+  --color-queen: #f3bd86;
+  --color-quicksilver: #f57272;
+  --color-quincy: #6a5445;
+  --color-red: #e6194b;
+  --color-teal: #469990;
+  --color-yellow: #e8cb12;
+  --color-zinc: #8888da;
+  --color-zircon: #07f6f2;
+}
+
+@source inline(
+  'bg-blue bg-green bg-grey bg-lavender bg-lime bg-magenta bg-mint bg-navy bg-orange bg-pink bg-purple bg-quartz bg-queen bg-quicksilver bg-quincy bg-red bg-teal bg-yellow bg-zinc bg-zircon border-blue border-green border-grey border-lavender border-lime border-magenta border-mint border-navy border-orange border-pink border-purple border-quartz border-queen border-quicksilver border-quincy border-red border-teal border-yellow border-zinc border-zircon'
+);
 
 @layer components {
   /* Make project tabs smaller */
   .flexlayout__tab_button {
-    @apply h-5·min-h-5·text-xs·leading-3;
+    @apply h-5 min-h-5 text-xs leading-3;
   }
 }
 
@@ -21,8 +46,18 @@
   min-height: 0 !important;
 }
 
-@keyframes dirty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-.dirty-pulse { animation: dirty-pulse 1.4s ease-in-out infinite; }
+@keyframes dirty-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.dirty-pulse {
+  animation: dirty-pulse 1.4s ease-in-out infinite;
+}
 
 :root {
   font-family: 'Roboto Flex', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -69,7 +104,6 @@
     var(--color-background-neutral-10) 26%
   );
 }
-
 
 body {
   margin: 0;
