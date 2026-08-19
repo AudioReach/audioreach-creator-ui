@@ -148,7 +148,10 @@ const createWindow = async () => {
     height: 800,
     title: 'AudioReach™ Creator',
     webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
       preload: resolve(__dirname, './preload.cjs'),
+      sandbox: true,
     },
     width: isDev ? 1550 : 1200,
   });
