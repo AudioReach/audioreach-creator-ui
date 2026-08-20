@@ -1,10 +1,13 @@
 export {
   deleteUsecases,
   getAllUsecases,
+  getSubgraphContents,
+  getSubgraphPairs,
   getSubgraphsByIds,
   getUsecaseComponents,
   getUsecasesFilteredBySubsystem,
   getUsecasesWithFilter,
+  renameSubgraph,
 } from './api/usecases-api';
 export type {
   KeyValueInfo as KeyValue,

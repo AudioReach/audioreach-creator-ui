@@ -39,6 +39,10 @@ import {
   createModuleOperations,
   type ModuleOperations,
 } from '../lib/module-operations';
+import {
+  createSubgraphOperations,
+  type SubgraphOperations,
+} from '../lib/subgraph-operations';
 
 import {
   createEditSessionSlice,
@@ -70,6 +74,7 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   ModuleOperations &
   SubgraphListSlice &
   SubgraphHeaderSelectionSlice &
+  SubgraphOperations &
   PropertiesViewSlice &
   PanelLayoutSlice &
   PanelTabRegistrySlice &
@@ -108,6 +113,7 @@ export function createGraphDesignerStore(
       projectId,
     ),
     ...createSubgraphHeaderSelectionSlice(set, get),
+    ...createSubgraphOperations(set, projectId),
     ...createPropertiesViewSlice((partial) =>
       set(partial as Partial<GraphDesignerStore>),
     ),

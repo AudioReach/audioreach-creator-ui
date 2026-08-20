@@ -11,6 +11,13 @@ import type {
 } from '~entities/usecases/model/usecase-component.dto';
 
 /**
+ * Patch subgraph request data transfer object
+ */
+export interface SetSubgraphNameRequestDto {
+  name: string;
+}
+
+/**
  * Subgraph response data transfer object
  */
 export interface SubgraphResponseDto {

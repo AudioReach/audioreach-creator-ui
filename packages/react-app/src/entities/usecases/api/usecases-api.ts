@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {SubgraphResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
+import type {
+  SetSubgraphNameRequestDto,
+  SubgraphPairResponseDto,
+  SubgraphResponseDto,
+} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {type ApiResult, httpClient} from '~shared/api';
 
 import type {ComponentCollectionDto} from '../model/usecase-component.dto';
@@ -102,5 +106,55 @@ export async function getSubgraphsByIds(
   return httpClient.post<SubgraphResponseDto[]>(
     `/projects/${projectId}/subgraphs/query`,
     {systemIds},
+  );
+}
+
+/**
+ * Fetch a subgraph's full component snapshot (modules + links) — used to
+ * render a palette-placed subgraph for the first time. Every entry's
+ * changeInfo.changeType is 'NONE': this is a snapshot, not a delta.
+ * @param projectId - The unique identifier of the project
+ * @param subgraphSystemId - The subgraph's systemId
+ */
+export async function getSubgraphContents(
+  projectId: string,
+  subgraphSystemId: string,
+): Promise<ApiResult<ComponentCollectionDto>> {
+  return httpClient.get<ComponentCollectionDto>(
+    `/projects/${projectId}/subgraphs/${subgraphSystemId}/components`,
+  );
+}
+
+/**
+ * Fetch every subgraph-pair link bundle involving the given subgraph, used
+ * to render cross-subgraph connections once both sides are on canvas.
+ * @param projectId - The unique identifier of the project
+ * @param subgraphSystemId - The subgraph's systemId
+ */
+export async function getSubgraphPairs(
+  projectId: string,
+  subgraphSystemId: string,
+): Promise<ApiResult<SubgraphPairResponseDto[]>> {
+  return httpClient.get<SubgraphPairResponseDto[]>(
+    `/projects/${projectId}/subgraphs/${subgraphSystemId}/subgraph-pairs`,
+  );
+}
+
+/**
+ * Rename a subgraph. Also the target of subgraph-proxy rename — both
+ * represent the same underlying subgraphId, so there is no separate
+ * proxy-rename endpoint.
+ * @param projectId - The unique identifier of the project
+ * @param subgraphSystemId - The subgraph's systemId
+ * @param request - The new name
+ */
+export async function renameSubgraph(
+  projectId: string,
+  subgraphSystemId: string,
+  request: SetSubgraphNameRequestDto,
+): Promise<ApiResult<SubgraphResponseDto>> {
+  return httpClient.patch<SubgraphResponseDto>(
+    `/projects/${projectId}/subgraphs/${subgraphSystemId}`,
+    request,
   );
 }

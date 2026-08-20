@@ -49,6 +49,10 @@ export {
   resolveModuleDropTarget,
 } from './lib/module-operations';
 export {
+  CAN_CONNECT_TO_PROXY_NODE,
+  parseSubgraphDropPayload,
+} from './lib/subgraph-operations';
+export {
   GraphDesignerStoreContext,
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
@@ -59,6 +63,10 @@ export type {
   ModuleDropResolution,
   ModuleOperations,
 } from './lib/module-operations';
+export type {
+  SubgraphDropPayload,
+  SubgraphOperations,
+} from './lib/subgraph-operations';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
 export {ApplyDiscardControls} from './ui/apply-discard-controls';
