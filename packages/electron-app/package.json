@@ -17,7 +17,7 @@
     "dev": "run-p watch:js watch:types",
     "watch:js": "cross-env DEV=1 tsx ./scripts/build.ts --mode development --watch",
     "watch:types": "tsc -b tsconfig.lib.json --force -w --preserveWatchOutput",
-    "package": "electron-builder --dir --config electron-builder.config.ts",
+    "package": "cross-env NODE_TLS_REJECT_UNAUTHORIZED= electron-builder --dir --config electron-builder.config.ts",
     "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"scripts/**/*.{ts,js}\" \"*.{ts,js}\" --quiet",
     "test": "cross-env DEBUG=pw:browser* playwright test",
     "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test",
