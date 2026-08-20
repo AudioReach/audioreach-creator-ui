@@ -132,30 +132,24 @@ export interface SubsystemDto {
 }
 
 export interface DataLinkDto {
-  changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
-  destinationId: string;
-  destinationPortId: string;
+  destinationPortSystemId: string;
+  destinationSystemId: string;
   isDangling: boolean;
-  name: string;
-  parentId?: number;
-  relatedEndPointLinks: EndPointLink[];
-  sourceId: string;
-  sourcePortId: string;
+  parentSystemId?: string;
+  sourcePortSystemId: string;
+  sourceSystemId: string;
   systemId: string;
 }
 
 export interface ControlLinkDto {
-  changeInfo: ChangeInfoDto;
   connectionType: ConnectionType;
-  destinationId: string;
-  destinationPortId: string;
+  destinationPortSystemId: string;
+  destinationSystemId: string;
   isDangling: boolean;
-  name: string;
-  parentId?: number;
-  relatedEndPointLinks: EndPointLink[];
-  sourceId: string;
-  sourcePortId: string;
+  parentSystemId?: string;
+  sourcePortSystemId: string;
+  sourceSystemId: string;
   systemId: string;
 }
 

@@ -103,6 +103,7 @@ describe('EditSessionSlice', () => {
           connectionType: 'data',
           fromModuleId: 'm1',
           fromPortId: 'p1',
+          isDangling: false,
           toModuleId: 'm2',
           toPortId: 'p2',
         },

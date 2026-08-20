@@ -55,15 +55,12 @@ export function makeDataLinkDto(
   overrides: Partial<DataLinkDto> = {},
 ): DataLinkDto {
   return {
-    changeInfo: {changeType: 'CREATE'},
     connectionType: 'MODULE_MODULE',
-    destinationId: '2',
-    destinationPortId: '20',
+    destinationPortSystemId: '20',
+    destinationSystemId: '2',
     isDangling: false,
-    name: 'link',
-    relatedEndPointLinks: [],
-    sourceId: '1',
-    sourcePortId: '10',
+    sourcePortSystemId: '10',
+    sourceSystemId: '1',
     systemId: 'link-1',
     ...overrides,
   };

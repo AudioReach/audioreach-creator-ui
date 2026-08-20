@@ -25,6 +25,7 @@ import {
   createGraphDataSlice,
   type GraphDataSlice,
   type ModuleInstance,
+  toConnection,
 } from '~features/graph-designer/model/graph-data-slice';
 import {
   createModuleListSlice,
@@ -109,6 +110,33 @@ const minimalDto = {
   ],
   subsystems: [],
 };
+
+describe('toConnection', () => {
+  it('maps a DataLinkDto to a Connection with connectionType "data"', () => {
+    const link = makeDataLinkDto({
+      destinationPortSystemId: 'port-2',
+      destinationSystemId: 'mod-2',
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'link-1',
+    });
+
+    expect(toConnection(link, 'data')).toEqual({
+      connectionId: 'link-1',
+      connectionType: 'data',
+      fromModuleId: 'mod-1',
+      fromPortId: 'port-1',
+      isDangling: false,
+      toModuleId: 'mod-2',
+      toPortId: 'port-2',
+    });
+  });
+
+  it('does not set diffState — callers that need it set it themselves', () => {
+    const link = makeDataLinkDto({systemId: 'link-2'});
+    expect(toConnection(link, 'data').diffState).toBeUndefined();
+  });
+});
 
 describe('createGraphDataSlice — moduleType resolution', () => {
   it('resolves moduleType from moduleList moduleType when a matching definition exists', async () => {
@@ -485,8 +513,8 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
       controlLinks: [],
       dataLinks: [
         makeDataLinkDto({
-          destinationId: 'sys-ss-1',
-          sourceId: 'sys-mod-1',
+          destinationSystemId: 'sys-ss-1',
+          sourceSystemId: 'sys-mod-1',
           systemId: 'link-1',
         }),
       ],
@@ -517,6 +545,7 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
             connectionType: 'data',
             fromModuleId: 'sys-mod-1',
             fromPortId: '10',
+            isDangling: false,
             toModuleId: 'sys-ss-1',
             toPortId: '20',
           },
@@ -525,6 +554,7 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
             connectionType: 'data',
             fromModuleId: 'sys-mod-2',
             fromPortId: '11',
+            isDangling: false,
             toModuleId: 'sys-mod-3',
             toPortId: '21',
           },
@@ -669,8 +699,8 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
       controlLinks: [],
       dataLinks: [
         makeDataLinkDto({
-          destinationId: 'sys-ss-1',
-          sourceId: 'sys-mod-1',
+          destinationSystemId: 'sys-ss-1',
+          sourceSystemId: 'sys-mod-1',
           systemId: 'link-1',
         }),
       ],
@@ -844,6 +874,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
           connectionType: 'data',
           fromModuleId: 'm1',
           fromPortId: 'p1',
+          isDangling: false,
           toModuleId: 'm2',
           toPortId: 'p2',
         },
@@ -852,6 +883,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
           connectionType: 'data',
           fromModuleId: 'm3',
           fromPortId: 'p3',
+          isDangling: false,
           toModuleId: 'm4',
           toPortId: 'p4',
         },
@@ -944,10 +976,10 @@ describe('adjustSurvivingPortCounts', () => {
     store.getState().adjustSurvivingPortCounts(
       [
         makeDataLinkDto({
-          destinationId: 'mod-dst',
-          destinationPortId: '20',
-          sourceId: 'mod-src',
-          sourcePortId: '10',
+          destinationPortSystemId: '20',
+          destinationSystemId: 'mod-dst',
+          sourcePortSystemId: '10',
+          sourceSystemId: 'mod-src',
         }),
       ],
       [],
@@ -986,10 +1018,10 @@ describe('adjustSurvivingPortCounts', () => {
       [],
       [
         makeDataLinkDto({
-          destinationId: 'mod-dst',
-          destinationPortId: '20',
-          sourceId: 'mod-src',
-          sourcePortId: '10',
+          destinationPortSystemId: '20',
+          destinationSystemId: 'mod-dst',
+          sourcePortSystemId: '10',
+          sourceSystemId: 'mod-src',
         }),
       ],
     );
@@ -1022,10 +1054,10 @@ describe('adjustSurvivingPortCounts', () => {
       store.getState().adjustSurvivingPortCounts(
         [
           makeDataLinkDto({
-            destinationId: 'mod-gone',
-            destinationPortId: '20',
-            sourceId: 'mod-src',
-            sourcePortId: '10',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'mod-gone',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'mod-src',
           }),
         ],
         [],
@@ -1049,6 +1081,7 @@ describe('applyComponentCollection', () => {
           connectionType: 'data',
           fromModuleId: 'mod-old-src',
           fromPortId: '10',
+          isDangling: false,
           toModuleId: 'mod-old-dst',
           toPortId: '20',
         },
@@ -1060,6 +1093,7 @@ describe('applyComponentCollection', () => {
             connectionType: 'data',
             fromModuleId: 'mod-old-src',
             fromPortId: '10',
+            isDangling: false,
             toModuleId: 'mod-old-dst',
             toPortId: '20',
           },
@@ -1098,10 +1132,10 @@ describe('applyComponentCollection', () => {
         ...empty,
         dataLinks: [
           makeDataLinkDto({
-            destinationId: 'mod-old-dst',
-            destinationPortId: '20',
-            sourceId: 'mod-old-src',
-            sourcePortId: '10',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'mod-old-dst',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'mod-old-src',
             systemId: 'new-link',
           }),
         ],

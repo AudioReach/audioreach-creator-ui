@@ -92,10 +92,10 @@ export interface DeletedIdsCollection {
 }
 
 export interface LinkEndpoints {
-  destinationId: string;
-  destinationPortId: string;
-  sourceId: string;
-  sourcePortId: string;
+  destinationPortSystemId: string;
+  destinationSystemId: string;
+  sourcePortSystemId: string;
+  sourceSystemId: string;
 }
 
 export interface SubsystemPort {
@@ -326,7 +326,7 @@ function toModuleInstance(
   };
 }
 
-function upsertModule(
+export function upsertModule(
   moduleInstances: Record<string, ModuleInstance>,
   m: SpfModuleDto,
   moduleType: string,
@@ -346,20 +346,27 @@ function removeById<T>(
   return next;
 }
 
-function upsertLink(
+export function toConnection(
+  link: ControlLinkDto | DataLinkDto,
+  connectionType: 'control' | 'data',
+): Connection {
+  return {
+    connectionId: link.systemId,
+    connectionType,
+    fromModuleId: link.sourceSystemId,
+    fromPortId: link.sourcePortSystemId,
+    isDangling: link.isDangling,
+    toModuleId: link.destinationSystemId,
+    toPortId: link.destinationPortSystemId,
+  };
+}
+
+export function upsertLink(
   connections: Connection[],
   link: ControlLinkDto | DataLinkDto,
   connectionType: 'control' | 'data',
 ): Connection[] {
-  const conn: Connection = {
-    connectionId: link.systemId,
-    connectionType,
-    fromModuleId: link.sourceId,
-    fromPortId: link.sourcePortId,
-    isDangling: link.isDangling,
-    toModuleId: link.destinationId,
-    toPortId: link.destinationPortId,
-  };
+  const conn = toConnection(link, connectionType);
   return [
     ...connections.filter((c) => c.connectionId !== conn.connectionId),
     conn,
@@ -433,7 +440,7 @@ function withAdjustedPort(
 }
 
 /**
- * Adjusts port counts for one link's endpoints. `sourceId`/`destinationId`
+ * Adjusts port counts for one link's endpoints. `sourceSystemId`/`destinationSystemId`
  * on the link are already the endpoint's `moduleInstanceId` (systemId), so
  * each endpoint is looked up directly in `next` by that key. Takes the
  * narrower `LinkEndpoints` shape rather than a full link DTO — the deleted
@@ -448,8 +455,8 @@ function adjustModuleInstancesForLink(
 ): Record<string, ModuleInstance> {
   let next = moduleInstances;
   for (const [instanceId, portId] of [
-    [link.sourceId, link.sourcePortId],
-    [link.destinationId, link.destinationPortId],
+    [link.sourceSystemId, link.sourcePortSystemId],
+    [link.destinationSystemId, link.destinationPortSystemId],
   ] as const) {
     // undefined here means either this endpoint was itself deleted in the
     // same response's module bucket, or it's a subsystem rather than a
@@ -468,8 +475,9 @@ function adjustModuleInstancesForLink(
 }
 
 /**
- * Resolves a deleted link's endpoints (`sourceId`/`sourcePortId`/
- * `destinationId`/`destinationPortId`) by looking it up in
+ * Resolves a deleted link's endpoints (`sourceSystemId`/
+ * `sourcePortSystemId`/`destinationSystemId`/`destinationPortSystemId`) by
+ * looking it up in
  * `graphData.connections` — the backend's deleted bucket only carries the
  * link's id, not its endpoints, so this must run before the link's
  * `Connection` entry is removed.
@@ -485,10 +493,10 @@ function resolveLinkEndpoints(
   return connections
     .filter((c) => linkIdSet.has(c.connectionId))
     .map((c) => ({
-      destinationId: c.toModuleId,
-      destinationPortId: c.toPortId,
-      sourceId: c.fromModuleId,
-      sourcePortId: c.fromPortId,
+      destinationPortSystemId: c.toPortId,
+      destinationSystemId: c.toModuleId,
+      sourcePortSystemId: c.fromPortId,
+      sourceSystemId: c.fromModuleId,
     }));
 }
 
@@ -806,35 +814,11 @@ export function createGraphDataSlice<
 
         const connections: Connection[] = [];
         for (const link of dto.dataLinks) {
-          const conn: Connection = {
-            connectionId: link.systemId,
-            connectionType: 'data',
-            fromModuleId: link.sourceId,
-            fromPortId: link.sourcePortId,
-            isDangling: link.isDangling,
-            toModuleId: link.destinationId,
-            toPortId: link.destinationPortId,
-          };
-          const diffState = toDiffState(link.changeInfo?.changeType);
-          if (diffState) {
-            conn.diffState = diffState;
-          }
+          const conn = toConnection(link, 'data');
           connections.push(conn);
         }
         for (const link of dto.controlLinks) {
-          const conn: Connection = {
-            connectionId: link.systemId,
-            connectionType: 'control',
-            fromModuleId: link.sourceId,
-            fromPortId: link.sourcePortId,
-            isDangling: link.isDangling,
-            toModuleId: link.destinationId,
-            toPortId: link.destinationPortId,
-          };
-          const diffState = toDiffState(link.changeInfo?.changeType);
-          if (diffState) {
-            conn.diffState = diffState;
-          }
+          const conn = toConnection(link, 'control');
           connections.push(conn);
         }
 
