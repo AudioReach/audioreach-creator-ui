@@ -38,6 +38,7 @@
     },
     "dev": {
       "cache": false,
+      "env": ["ELECTRON_NO_SANDBOX"],
       "persistent": true
     },
     "typecheck": {

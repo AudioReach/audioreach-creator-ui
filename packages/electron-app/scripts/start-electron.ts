@@ -4,8 +4,11 @@
  */
 
 import {type ChildProcess, spawn} from 'node:child_process';
+import {createRequire} from 'node:module';
 
 let electronProcess: ChildProcess | null = null;
+const require = createRequire(import.meta.url);
+const electronCli = require.resolve('electron/cli.js');
 
 export async function startElectron(mainDir: string): Promise<void> {
   try {
@@ -25,9 +28,16 @@ export async function startElectron(mainDir: string): Promise<void> {
 
     // Start new electron process
     console.log('[build.ts] starting electron app');
-    electronProcess = spawn('pnpm', ['electron', './dist/main.cjs'], {
+    const electronArgs = ['electron'];
+    if (process.env.ELECTRON_NO_SANDBOX === '1') {
+      electronArgs.push('--no-sandbox');
+    }
+    electronArgs.push('./dist/main.cjs');
+
+    console.log(`[build.ts] launching: electron ${electronArgs.join(' ')}`);
+    electronProcess = spawn(process.execPath, [electronCli, ...electronArgs], {
       cwd: mainDir,
-      shell: process.platform === 'win32',
+      shell: false,
       stdio: 'inherit',
     });
 

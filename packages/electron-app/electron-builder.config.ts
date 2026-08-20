@@ -1,15 +1,6 @@
 import type {Configuration} from 'electron-builder';
 
-import {removeBinaries} from './scripts/remove-binaries';
-
 const config: Configuration = {
-  afterPack: async () => {
-    if (process.env.DISABLE_BINARY_REMOVAL) {
-      console.log('Skipping binary removal');
-    } else {
-      await removeBinaries();
-    }
-  },
   appId: 'com.audioreach.creator',
 
   artifactName: '${productName}-${version}-${platform}-${arch}.${ext}',
