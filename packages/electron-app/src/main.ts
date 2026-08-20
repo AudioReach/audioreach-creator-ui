@@ -35,6 +35,10 @@ import {
 let win: BrowserWindow;
 const CONFIG_FILE = 'config.json';
 const MAX_RECENT_PROJECTS = 20;
+const APP_DATA_NAME = 'audioreach-creator-ui';
+
+app.setName(APP_DATA_NAME);
+app.setPath('userData', join(app.getPath('appData'), APP_DATA_NAME));
 
 let hasActiveProject = false;
 
