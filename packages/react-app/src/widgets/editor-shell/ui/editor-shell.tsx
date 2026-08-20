@@ -20,7 +20,8 @@ import {
 } from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {useKeyboardShortcuts} from '~shared/lib/side-nav';
-import {Theme, useTheme} from '~shared/providers/theme-provider';
+import {Theme} from '~entities/appearance';
+import {useTheme} from '~shared/providers/theme-provider';
 import {AppTabEntity, useProjectLayoutStore} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {TabGroupType} from '~shared/store/project-layout.types';
@@ -34,7 +35,7 @@ const EditorShellContent: React.FC = () => {
   const {keyboardShortcuts} = useSideNavContext();
   const [theme] = useTheme();
   const flexLayoutThemeClass =
-    theme === Theme.Dark ? 'flexlayout__theme_dark' : 'flexlayout__theme_light';
+    theme === Theme.DARK ? 'flexlayout__theme_dark' : 'flexlayout__theme_light';
 
   // Enable keyboard shortcuts for the active tab
   useKeyboardShortcuts(keyboardShortcuts, true);
@@ -44,9 +45,7 @@ const EditorShellContent: React.FC = () => {
       className={`flex h-screen flex-col ${flexLayoutThemeClass} bg-primary`}
     >
       <GlobalToaster />
-      <div
-        className="border-neutral-02 text-neutral-primary flex items-center justify-between border-b px-4 py-2"
-      >
+      <div className="border-neutral-02 text-neutral-primary flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-4">
           <div className="text-neutral-primary text-lg font-semibold">
             AudioReach™ Creator

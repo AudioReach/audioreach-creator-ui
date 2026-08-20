@@ -6,6 +6,7 @@
 import {logger} from '../lib/logger';
 import {deepEqual} from '../utils/deep-equality';
 
+import {Brand, Theme, type Appearance} from '~entities/appearance';
 import {
   DEFAULT_USER_PREFERENCES,
   type UserPreferences,
@@ -40,6 +41,15 @@ const USER_PREFERENCE_PATHS = new Set([
   'visualization.simplifySubsystems',
   'visualization.viewMode',
 ]);
+
+const BRANDS = Object.values(Brand) as Brand[];
+const THEMES = Object.values(Theme) as Theme[];
+
+const isBrand = (value: unknown): value is Brand =>
+  typeof value === 'string' && BRANDS.includes(value as Brand);
+
+const isTheme = (value: unknown): value is Theme =>
+  typeof value === 'string' && THEMES.includes(value as Theme);
 
 export class ConfigFileManager {
   private static _instance: ConfigFileManager;
@@ -100,25 +110,44 @@ export class ConfigFileManager {
     }
   }
 
-  /**
-   * Gets the global theme preference (not project-specific)
-   * @returns The theme value ('light' | 'dark') or default 'light'
-   */
-  getGlobalTheme(): 'light' | 'dark' {
+  /** Gets global appearance preferences, defaulting invalid values safely. */
+  getGlobalAppearance(): Appearance {
+    const brand = getConfigData(
+      this.configDataMap,
+      'globalPreferences.brand',
+      this.rootKey,
+    );
     const theme = getConfigData(
       this.configDataMap,
       'globalPreferences.theme',
       this.rootKey,
     );
-    // Validate and log if invalid value found
-    if (theme !== 'dark' && theme !== 'light' && theme !== undefined) {
-      logger.warn('Invalid theme value in config, defaulting to light', {
-        action: 'get_global_theme',
+
+    if (brand !== undefined && !isBrand(brand)) {
+      logger.warn('Invalid brand value in config, defaulting to Qualcomm', {
+        action: 'get_global_appearance',
         component: 'ConfigFileManager',
       });
     }
-    // Ensure only valid values are returned
-    return theme === 'dark' ? 'dark' : 'light';
+    if (theme !== undefined && !isTheme(theme)) {
+      logger.warn('Invalid theme value in config, defaulting to light', {
+        action: 'get_global_appearance',
+        component: 'ConfigFileManager',
+      });
+    }
+
+    return {
+      brand: isBrand(brand) ? brand : Brand.QUALCOMM,
+      theme: isTheme(theme) ? theme : Theme.LIGHT,
+    };
+  }
+
+  /**
+   * Gets the global theme preference (not project-specific).
+   * @returns The theme value ('light' | 'dark') or default 'light'.
+   */
+  getGlobalTheme(): Theme {
+    return this.getGlobalAppearance().theme;
   }
 
   /**
@@ -320,11 +349,53 @@ export class ConfigFileManager {
     }
   }
 
+  /** Sets global appearance preferences together. */
+  setGlobalAppearance(appearance: Appearance): void {
+    if (!isBrand(appearance.brand) || !isTheme(appearance.theme)) {
+      throw new Error(
+        'Global appearance contains an unsupported brand or theme',
+      );
+    }
+
+    if (!this.configDataMap[this.rootKey]) {
+      this.configDataMap[this.rootKey] = {};
+    }
+
+    const existingPreferences = getConfigData(
+      this.configDataMap,
+      'globalPreferences',
+      this.rootKey,
+    );
+    const globalPreferences =
+      typeof existingPreferences === 'object' && existingPreferences !== null
+        ? existingPreferences
+        : {};
+
+    setConfigData(
+      this.configDataMap,
+      'globalPreferences',
+      {...globalPreferences, ...appearance},
+      this.rootKey,
+    );
+
+    this.projectConfigMap.forEach((projectConfig) => {
+      if (!projectConfig[this.rootKey]) {
+        projectConfig[this.rootKey] = {};
+      }
+      setConfigData(
+        projectConfig,
+        'globalPreferences',
+        {...globalPreferences, ...appearance},
+        this.rootKey,
+      );
+    });
+  }
+
   /**
-   * Sets the global theme preference (not project-specific)
-   * @param theme - The theme to set ('light' | 'dark')
+   * Sets the global theme preference (not project-specific).
+   * @param theme - The theme to set ('light' | 'dark').
    */
-  setGlobalTheme(theme: 'light' | 'dark'): void {
+  setGlobalTheme(theme: Theme): void {
     setConfigData(
       this.configDataMap,
       'globalPreferences.theme',

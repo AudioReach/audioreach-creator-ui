@@ -6,101 +6,162 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 
+import {Brand, Theme, type Appearance} from '~entities/appearance';
 import {ConfigFileManager} from '~shared/config/config-manager';
+import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 
-export enum Theme {
-  Light = 'light',
-  Dark = 'dark',
-}
-
 interface ThemeContextType {
+  appearance: Appearance;
+  setAppearance: (appearance: Appearance) => void;
   setTheme: (theme: Theme) => void;
-  theme: Theme;
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
+const DEFAULT_APPEARANCE: Appearance = {
+  brand: Brand.QUALCOMM,
+  theme: Theme.LIGHT,
+};
+
+const applyAppearanceToDocument = ({brand, theme}: Appearance) => {
+  const html = document.documentElement;
+  html.setAttribute('data-brand', brand);
+  html.setAttribute('data-theme', theme);
+};
+
 /**
- * Hook to access and modify the current theme
- * @returns [currentTheme, setTheme] tuple
+ * Hook to access and modify the current appearance.
+ * @returns The current appearance and an appearance setter.
+ */
+export function useAppearance(): [
+  Appearance,
+  (appearance: Appearance) => void,
+] {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useAppearance must be used within ThemeProvider');
+  }
+  return [context.appearance, context.setAppearance];
+}
+
+/**
+ * Hook to access and modify the current theme.
+ * @returns [currentTheme, setTheme] tuple.
  */
 export function useTheme(): [Theme, (theme: Theme) => void] {
   const context = useContext(ThemeContext);
   if (!context) {
     throw new Error('useTheme must be used within ThemeProvider');
   }
-  return [context.theme, context.setTheme];
+  return [context.appearance.theme, context.setTheme];
 }
 
 interface ThemeProviderProps {
   children: ReactNode;
 }
 
-/**
- * ThemeProvider manages the application theme (light/dark mode)
- * - Initializes configuration on mount
- * - Persists theme preference to configuration file
- * - Updates HTML data-theme attribute for Qualcomm UI components
- * - Provides theme state and setter via useTheme hook
- */
+/** Provides global, persisted brand and theme preferences. */
 export function ThemeProvider({children}: ThemeProviderProps) {
+  const [appearance, setAppearanceState] =
+    useState<Appearance>(DEFAULT_APPEARANCE);
   const [configReady, setConfigReady] = useState(false);
-  const [theme, setThemeState] = useState<Theme>(Theme.Light);
+  const appearanceRef = useRef(appearance);
+  const saveRequestIdRef = useRef(0);
 
-  // Initialize configuration and load theme on mount
   useEffect(() => {
     const initConfig = async () => {
       try {
         await ConfigFileManager.instance.initializeConfig();
-        // Read theme from config file
-        const savedTheme = ConfigFileManager.instance.getGlobalTheme();
-        setThemeState(savedTheme === 'dark' ? Theme.Dark : Theme.Light);
-        setConfigReady(true);
+        const savedAppearance =
+          ConfigFileManager.instance.getGlobalAppearance();
+        const initialAppearance: Appearance = {
+          brand: savedAppearance.brand,
+          theme: savedAppearance.theme,
+        };
+        applyAppearanceToDocument(initialAppearance);
+        setAppearanceState(initialAppearance);
       } catch (error) {
         logger.error('Failed to initialize config in ThemeProvider', {
           action: 'initialize_config',
           component: 'ThemeProvider',
           error: error instanceof Error ? error.message : String(error),
         });
-        // On error, use default theme and continue
+        applyAppearanceToDocument(DEFAULT_APPEARANCE);
+      } finally {
         setConfigReady(true);
       }
     };
     void initConfig();
   }, []);
 
-  // Update HTML data-theme attribute when theme changes
   useEffect(() => {
     if (configReady) {
-      const html = document.documentElement;
-      html.setAttribute('data-theme', theme);
+      applyAppearanceToDocument(appearance);
     }
-  }, [theme, configReady]);
+  }, [appearance, configReady]);
 
-  const setTheme = async (newTheme: Theme) => {
-    setThemeState(newTheme);
-    // Save theme to config file
+  useEffect(() => {
+    appearanceRef.current = appearance;
+  }, [appearance]);
+
+  const setAppearance = useCallback(async (nextAppearance: Appearance) => {
+    const requestId = ++saveRequestIdRef.current;
+    const previousAppearance = appearanceRef.current;
+    appearanceRef.current = nextAppearance;
+    setAppearanceState(nextAppearance);
     try {
-      ConfigFileManager.instance.setGlobalTheme(newTheme);
-      await ConfigFileManager.instance.save();
+      ConfigFileManager.instance.setGlobalAppearance(nextAppearance);
+      const saved = await ConfigFileManager.instance.save();
+      if (requestId !== saveRequestIdRef.current) {
+        return;
+      }
+      if (!saved) {
+        throw new Error('Configuration could not be saved');
+      }
+      showToast('Appearance saved', 'success');
     } catch (error) {
-      logger.error('Failed to save theme to config', {
-        action: 'save_theme',
+      if (requestId !== saveRequestIdRef.current) {
+        return;
+      }
+      logger.error('Failed to save appearance', {
+        action: 'save_appearance',
         component: 'ThemeProvider',
         error: error instanceof Error ? error.message : String(error),
       });
-      // revert to previous theme on save failure
-      setThemeState(theme);
+      ConfigFileManager.instance.setGlobalAppearance(previousAppearance);
+      appearanceRef.current = previousAppearance;
+      setAppearanceState(previousAppearance);
+      showToast('Failed to save appearance', 'danger');
     }
-  };
+  }, []);
 
-  // Show loading state while config initializes
+  const setTheme = useCallback(
+    (theme: Theme) => {
+      void setAppearance({...appearance, theme});
+    },
+    [appearance, setAppearance],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      appearance,
+      setAppearance: (nextAppearance: Appearance) => {
+        void setAppearance(nextAppearance);
+      },
+      setTheme,
+    }),
+    [appearance, setAppearance, setTheme],
+  );
+
   if (!configReady) {
     return (
       <div
@@ -117,9 +178,7 @@ export function ThemeProvider({children}: ThemeProviderProps) {
   }
 
   return (
-    <ThemeContext.Provider
-      value={{setTheme: (newTheme: Theme) => void setTheme(newTheme), theme}}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

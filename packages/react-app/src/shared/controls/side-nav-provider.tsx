@@ -13,12 +13,12 @@ import {
   useState,
 } from 'react';
 
-import {Moon, Settings, Sun} from 'lucide-react';
+import {Settings} from 'lucide-react';
 
-import {showToast} from '~shared/controls/global-toaster';
-import {Theme, useTheme} from '~shared/providers/theme-provider';
 import {useProjectLayoutStore} from '~shared/store';
 import type {SideNavItem, TabWithSideNav} from '~shared/types/side-nav-types';
+
+import {AppearanceSettings} from './appearance-settings';
 
 interface SideNavContextType {
   items: SideNavItem[];
@@ -45,7 +45,6 @@ interface SideNavProviderProps {
 export function SideNavProvider({children}: SideNavProviderProps) {
   const [registry, setRegistry] = useState(new Map<string, TabWithSideNav>());
   const [activeTab, setActiveTab] = useState<any>(null);
-  const [theme, setTheme] = useTheme();
 
   // Subscribe to active tab changes
   useEffect(() => {
@@ -63,18 +62,13 @@ export function SideNavProvider({children}: SideNavProviderProps) {
   const defaultItems = useMemo(
     (): SideNavItem[] => [
       {
-        icon: theme === Theme.Light ? Moon : Sun,
-        id: '__default_theme_toggle',
-        label: theme === Theme.Light ? 'Dark Theme' : 'Light Theme',
-        // No group = ungrouped, will appear at bottom
-      },
-      {
         icon: Settings,
         id: '__default_settings',
         label: 'Settings',
+        popoverContent: <AppearanceSettings />,
       },
     ],
-    [theme],
+    [],
   );
 
   // Get items from registry based on active tab
@@ -104,23 +98,6 @@ export function SideNavProvider({children}: SideNavProviderProps) {
 
   const handleItemSelect = useCallback(
     (itemId: string) => {
-      // Handle default items first
-      if (itemId === '__default_theme_toggle') {
-        const newTheme = theme === Theme.Light ? Theme.Dark : Theme.Light;
-        setTheme(newTheme);
-        showToast(
-          `Switched to ${newTheme === Theme.Light ? 'light' : 'dark'} theme`,
-          'success',
-        );
-        return;
-      }
-
-      if (itemId === '__default_settings') {
-        showToast('Settings (coming soon)', 'info');
-        return;
-      }
-
-      // Handle widget-specific items
       if (!activeTab?.id) {
         return;
       }
@@ -130,7 +107,7 @@ export function SideNavProvider({children}: SideNavProviderProps) {
         impl.handleSideNavAction(itemId);
       }
     },
-    [activeTab?.id, registry, theme, setTheme],
+    [activeTab?.id, registry],
   );
 
   const register = useCallback((tabId: string, impl: TabWithSideNav) => {

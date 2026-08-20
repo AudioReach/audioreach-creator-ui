@@ -42,7 +42,8 @@ import {
   NODE_KIND,
   PORT_IO_TYPE,
 } from '~entities/graph';
-import {Theme, useTheme} from '~shared/providers/theme-provider';
+import {Theme} from '~entities/appearance';
+import {useTheme} from '~shared/providers/theme-provider';
 
 import '@xyflow/react/dist/style.css';
 
@@ -173,7 +174,7 @@ function VisualizerCanvas({
     rfInstance;
 
   const [theme] = useTheme();
-  const colorMode: ColorMode = theme === Theme.Dark ? 'dark' : 'light';
+  const colorMode: ColorMode = theme === Theme.DARK ? 'dark' : 'light';
 
   const [rfNodes, setRfNodes] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);

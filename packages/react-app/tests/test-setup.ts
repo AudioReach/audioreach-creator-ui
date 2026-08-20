@@ -756,8 +756,8 @@ jest.mock('~features/graph-designer/lib/dev-mode', () => ({
 }));
 
 jest.mock('~shared/providers/theme-provider', () => ({
-  Theme: {Dark: 'dark', Light: 'light'},
   ThemeProvider: ({children}: {children: React.ReactNode}) => children,
+  useAppearance: () => [{brand: 'qualcomm', theme: 'light'}, jest.fn()],
   useTheme: () => ['light', jest.fn()],
 }));
 
@@ -778,9 +778,7 @@ jest.mock('~features/usecase-visualizer/model/visualizer-store-context', () => {
       selector: (s: typeof defaultState) => unknown,
     ): unknown => {
       try {
-        return actual.useVisualizerStore(
-          selector,
-        );
+        return actual.useVisualizerStore(selector);
       } catch {
         return selector(defaultState);
       }

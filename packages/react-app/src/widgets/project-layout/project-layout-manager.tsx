@@ -134,11 +134,18 @@ class ProjectLayoutManager extends Component<
 
     // Add App Group tabs (if any)
     freshStore.appGroups.forEach((appGroup) => {
-      const colorNumber = appGroup.colorId; // Use stored colorId for App Groups
+      const appGroupColors = getGroupColorClasses(appGroup.colorId);
+      const isDefaultAppGroup = appGroup.id === 'default-app-group';
+      const appGroupLabelClassName = isDefaultAppGroup
+        ? 'group-label-tab !bg-brand-primary'
+        : `group-label-tab text-persistent-white ${appGroupColors.background}`;
+      const appTabClassName = isDefaultAppGroup
+        ? 'border-brand-primary'
+        : appGroupColors.border;
 
       // Always add app group label (whether collapsed or not)
       const appGroupLabel = {
-        className: `group-label-tab text-persistent-white ${getGroupColorClasses(colorNumber).background}`,
+        className: appGroupLabelClassName,
         component: 'group-label',
         enableClose: false,
         enableDrag: false,
@@ -154,7 +161,7 @@ class ProjectLayoutManager extends Component<
         // Add all app tabs from the array
         appGroup.appTabs.forEach((appTab) => {
           children.push({
-            className: `border-t-2 ${getGroupColorClasses(colorNumber).border}`,
+            className: `border-t-2 ${appTabClassName}`,
             component: 'app-tab',
             enableClose: true,
             enableDrag: true,
@@ -744,11 +751,15 @@ class ProjectLayoutManager extends Component<
       // Create the interactive group label content with QUI category colors.
       const showTooltip = !this.store.showGroupTitle; // false = show tooltip, true = no tooltip
       const colorClasses = getGroupColorClasses(colorNumber);
+      const isDefaultAppGroup = appGroup?.id === 'default-app-group';
+      const groupLabelClassName = isDefaultAppGroup
+        ? 'text-persistent-white cursor-pointer px-0.5 py-0.5 rounded inline-flex gap-0.5 mb-0.1 text-[12px] leading-4'
+        : `text-persistent-white cursor-pointer px-0.5 py-0.5 rounded inline-flex gap-0.5 mb-0.1 text-[12px] leading-4 ${colorClasses.background}`;
 
       renderValues.content = createElement(
         'div',
         {
-          className: `text-persistent-white cursor-pointer px-0.5 py-0.5 rounded inline-flex gap-0.5 mb-0.1 text-[12px] leading-4 ${colorClasses.background}`,
+          className: groupLabelClassName,
           ...(showTooltip && {title: groupName}), // Add tooltip only if showGroupTitle is false
           onClick: (e: MouseEvent) => {
             e.stopPropagation();

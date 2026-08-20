@@ -411,6 +411,89 @@ describe('project-layout-manager — save debounce', () => {
   });
 });
 
+describe('ProjectLayoutManager — group colors', () => {
+  it('uses brand colors for the default Start group only', () => {
+    (useProjectLayoutStore.getState as jest.Mock).mockReturnValue({
+      activeTab: {id: 'start-tab'},
+      activeTabGroup: null,
+      appGroups: [
+        {
+          appTabs: [{id: 'start-tab', title: 'Start'}],
+          colorId: 1,
+          id: 'default-app-group',
+          isCollapsed: false,
+          title: 'Application',
+        },
+        {
+          appTabs: [{id: 'other-tab', title: 'Other'}],
+          colorId: 2,
+          id: 'other-app-group',
+          isCollapsed: false,
+          title: 'Other',
+        },
+      ],
+      projectGroups: [],
+    });
+
+    const manager = new (ProjectLayoutManager as any)({});
+    const tabs =
+      manager.buildFlexLayoutModelFromStore().layout.children[0].children;
+
+    expect(tabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          className:
+            'group-label-tab !bg-brand-primary',
+          id: 'app-group-label-default-app-group',
+        }),
+        expect.objectContaining({
+          className:
+            'border-t-2 border-brand-primary',
+          id: 'start-tab',
+        }),
+        expect.objectContaining({
+          className:
+            'group-label-tab text-persistent-white !bg-category-green-strong',
+          id: 'app-group-label-other-app-group',
+        }),
+      ]),
+    );
+  });
+
+  it('does not paint the default Start label with a category color', () => {
+    (useProjectLayoutStore.getState as jest.Mock).mockReturnValue({
+      appGroups: [
+        {
+          colorId: 1,
+          id: 'default-app-group',
+          isCollapsed: false,
+        },
+      ],
+      expandTabGroup: jest.fn(),
+      projectGroups: [],
+      showGroupTitle: true,
+    });
+    const renderValues = {content: null};
+    const manager = new (ProjectLayoutManager as any)({});
+
+    manager.onRenderTab(
+      {
+        getComponent: () => 'group-label',
+        getId: () => 'app-group-label-default-app-group',
+        getName: () => 'Application',
+      },
+      renderValues,
+    );
+
+    expect(renderValues.content.props.className).not.toContain(
+      '!bg-category-blue-strong',
+    );
+    expect(renderValues.content.props.className).toContain(
+      'text-persistent-white',
+    );
+  });
+});
+
 describe('ProjectLayoutManager — onAction FlexLayout_DeleteTab', () => {
   const mockRemoveProjectTab = jest.fn(() => true);
 

@@ -9,6 +9,131 @@ import {ConfigFileManager} from '~shared/config/config-manager';
 import {DEFAULT_USER_PREFERENCES} from '~shared/config/user-preferences-types';
 import {GetFlexLayoutConfig, graphDesignerLayout} from '~shared/config/utils';
 
+describe('global appearance preferences', () => {
+  let configManager: ConfigFileManager;
+
+  beforeEach(() => {
+    // @ts-expect-error Resetting the singleton isolates persisted config state.
+    ConfigFileManager._instance = undefined;
+    configManager = ConfigFileManager.instance;
+  });
+
+  it('defaults absent appearance preferences to Qualcomm light', () => {
+    expect(configManager.getGlobalAppearance()).toEqual({
+      brand: 'qualcomm',
+      theme: 'light',
+    });
+  });
+
+  it('reads valid persisted appearance preferences', async () => {
+    mockLoadConfigData.mockResolvedValue({
+      data: JSON.stringify({
+        arcconfig: {
+          globalPreferences: {brand: 'snapdragon', theme: 'dark'},
+        },
+      }),
+      status: true,
+    });
+
+    await configManager.initializeConfig();
+
+    expect(configManager.getGlobalAppearance()).toEqual({
+      brand: 'snapdragon',
+      theme: 'dark',
+    });
+  });
+
+  it('keeps legacy theme-only preferences compatible', async () => {
+    mockLoadConfigData.mockResolvedValue({
+      data: JSON.stringify({
+        arcconfig: {globalPreferences: {theme: 'dark'}},
+      }),
+      status: true,
+    });
+
+    await configManager.initializeConfig();
+
+    expect(configManager.getGlobalAppearance()).toEqual({
+      brand: 'qualcomm',
+      theme: 'dark',
+    });
+  });
+
+  it('defaults invalid persisted appearance values', async () => {
+    mockLoadConfigData.mockResolvedValue({
+      data: JSON.stringify({
+        arcconfig: {
+          globalPreferences: {brand: 'unknown', theme: 'system'},
+        },
+      }),
+      status: true,
+    });
+
+    await configManager.initializeConfig();
+
+    expect(configManager.getGlobalAppearance()).toEqual({
+      brand: 'qualcomm',
+      theme: 'light',
+    });
+  });
+
+  it('persists the brand and theme together', async () => {
+    configManager.setGlobalAppearance({brand: 'dragonwing', theme: 'dark'});
+    mockSaveConfigData.mockResolvedValue({status: true});
+
+    await configManager.save();
+
+    expect(JSON.parse(mockSaveConfigData.mock.calls[0][0])).toMatchObject({
+      arcconfig: {
+        globalPreferences: {brand: 'dragonwing', theme: 'dark'},
+      },
+    });
+  });
+
+  it('retains unrelated global preferences when saving appearance', async () => {
+    mockLoadConfigData.mockResolvedValue({
+      data: JSON.stringify({
+        arcconfig: {globalPreferences: {locale: 'en-US', theme: 'light'}},
+      }),
+      status: true,
+    });
+    await configManager.initializeConfig();
+    configManager.setGlobalAppearance({brand: 'arduino', theme: 'dark'});
+    mockSaveConfigData.mockResolvedValue({status: true});
+
+    await configManager.save();
+
+    expect(JSON.parse(mockSaveConfigData.mock.calls[0][0])).toMatchObject({
+      arcconfig: {
+        globalPreferences: {
+          brand: 'arduino',
+          locale: 'en-US',
+          theme: 'dark',
+        },
+      },
+    });
+  });
+
+  it('persists appearance when a project configuration is active', async () => {
+    mockLoadConfigData.mockResolvedValue({
+      data: JSON.stringify({arcconfig: {project: {name: 'Demo'}}}),
+      status: true,
+    });
+    await configManager.initializeConfig();
+    configManager.getProjectConfigData('project-1', 'project.name');
+    configManager.setGlobalAppearance({brand: 'dragonfly', theme: 'dark'});
+    mockSaveConfigData.mockResolvedValue({status: true});
+
+    await configManager.save();
+
+    expect(JSON.parse(mockSaveConfigData.mock.calls[0][0])).toMatchObject({
+      arcconfig: {
+        globalPreferences: {brand: 'dragonfly', theme: 'dark'},
+      },
+    });
+  });
+});
+
 // Helper function to create expected default config for tests
 function getExpectedDefaultConfig() {
   return {
