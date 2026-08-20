@@ -2,7 +2,7 @@
 
 > Requirements: [requirements.md](requirements.md) §2–4, §6, §10, §13
 > (FR-MOD-01–FR-CONT-04, FR-SUBSYS-01–06, FR-CTXMENU-01, FR-PROXY-01–02) — FR-CTXMENU-01 only for the
-> per-node-type delete *dispatch logic* §4.5 needs to resolve FR-SG-06/FR-SG-07/FR-SG-08;
+> per-node-type delete _dispatch logic_ §4.5 needs to resolve FR-SG-06/FR-SG-07/FR-SG-08;
 > the context-menu wiring itself is Canvas UI Mechanics' per [§1](#1-scope)
 >
 > Parent LLD: [design.md](design.md) §2, §6.1–6.3, §7 (architecture,
@@ -44,7 +44,7 @@ operations (a thin alias over subgraph rename). It owns:
 
 - Backend orchestration for every add/delete/rename/move/expand (only for subsystem) action
   listed in requirements §2–4, §6, §16.
-- Module drop-target *resolution* (`resolveModuleDropTarget`, mapping a drop
+- Module drop-target _resolution_ (`resolveModuleDropTarget`, mapping a drop
   target to the placement action and backend call it implies, including the
   two remaining client-side rejections — proxy node, subsystem node),
   exported for reuse by Canvas UI Mechanics' drag-over indicator.
@@ -63,7 +63,7 @@ It does **not** own (per [design.md §6.4](design.md#64-feature-area-component-m
   (`applyComponentCollection`, `recomputeContainersAndSubgraphs`,
   `adjustSurvivingPortCounts`) — already specified in
   [design.md §6.3](design.md#63-response-reconciliation-shared-across-all-nodelinksubsystem-docs)
-  and implemented in `graph-data-slice.ts`. This doc is a *consumer* of
+  and implemented in `graph-data-slice.ts`. This doc is a _consumer_ of
   that orchestrator.
 
 ---
@@ -123,7 +123,9 @@ export function createModuleOperations(
       get: () => GraphDesignerStore,
       moduleInstanceId: string,
     ): Promise<boolean> =>
-      withMutationLock(get, () => deleteModuleInstanceInner(get, moduleInstanceId)),
+      withMutationLock(get, () =>
+        deleteModuleInstanceInner(get, moduleInstanceId),
+      ),
     // ...other action functions, same closure
   };
 
@@ -160,7 +162,7 @@ value, state mutation on success) is unchanged. This exists because
 [Canvas UI Mechanics' `deleteSelection`](canvas-ui-mechanics-design.md#41-deleteselection)
 (FR-CANVAS-02) shows exactly one aggregate "N of M deletions succeeded"
 toast for the whole batch — without suppression, a batch with failures
-would *also* show one raw per-entity toast per failed delete (each
+would _also_ show one raw per-entity toast per failed delete (each
 `*Inner`'s own `showToast` call firing independently), which restates the
 same failure less usefully than the one summary toast and is not the
 intended UX. Every exported wrapper (`deleteModuleInstance`, and its
@@ -191,7 +193,7 @@ thin exported wrapper that runs it under `withMutationLock`.** This split
 is driven by batch delete
 ([canvas-ui-mechanics-design.md §4](canvas-ui-mechanics-design.md#4-multi-select-and-batch-delete)):
 batch delete needs to run multiple deletes — of different entity kinds —
-under a *single* outer lock, and `withMutationLock` throws if called while
+under a _single_ outer lock, and `withMutationLock` throws if called while
 `isMutating` is already true, so the deletes it dispatches to must not
 each try to take the lock again. The `Inner` functions are exported
 alongside their wrapped counterparts specifically so batch delete can call
@@ -236,13 +238,13 @@ pruneSessionLocalMapsForSubgraph: (subgraphId: string) => void;
 
 `setSubgraphProvenance` is written at three call sites, all inside this
 doc's operations files (never inside `graph-data-slice.ts`'s reconciler,
-which only *reads*/*prunes* this map per `design.md` §6.3):
+which only _reads_/_prunes_ this map per `design.md` §6.3):
 
-| Call site | Provenance written | Requirement |
-| --- | --- | --- |
-| `enterEditMode` (existing function in `edit-session-slice.ts`, extended by this doc) | Every subgraph present in `graphData.subgraphs` at entry → `'pre-loaded'` | Baseline for FR-SG-07 |
-| `module-operations.ts`'s `addModuleToEmptyCanvas` | The subgraph derived from the new module's `subgraphId`, after `applyComponentCollection` resolves it → `'newly-created'` | FR-MOD-03, FR-SG-10 |
-| `subgraph-operations.ts`'s `placeSubgraphFromPalette` | The placed subgraph's own id → `'palette-placed'` | FR-SG-01 |
+| Call site                                                                            | Provenance written                                                                                                        | Requirement           |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `enterEditMode` (existing function in `edit-session-slice.ts`, extended by this doc) | Every subgraph present in `graphData.subgraphs` at entry → `'pre-loaded'`                                                 | Baseline for FR-SG-07 |
+| `module-operations.ts`'s `addModuleToEmptyCanvas`                                    | The subgraph derived from the new module's `subgraphId`, after `applyComponentCollection` resolves it → `'newly-created'` | FR-MOD-03, FR-SG-10   |
+| `subgraph-operations.ts`'s `placeSubgraphFromPalette`                                | The placed subgraph's own id → `'palette-placed'`                                                                         | FR-SG-01              |
 
 Pruning (removing an entry from `subgraphProvenanceById`/`kvSelectionsById`/
 `pairLinksById` when a subgraph no longer derives from surviving modules)
@@ -319,7 +321,7 @@ A module-on-module drop **resolves to the container underneath** — it
 resolves to the same placement as dropping onto that module's own container
 (FR-MOD-01), since a module dragged to reposition
 it already allows overlapping another module, and there's no UX reason to
-treat a *palette* drop differently. The module renders at the drop
+treat a _palette_ drop differently. The module renders at the drop
 coordinates and the user repositions afterward if the overlap is
 undesirable. Proxy-node and subsystem-node targets are **rejected** —
 neither has a container to resolve to (a proxy node represents a collapsed
@@ -342,7 +344,10 @@ export function resolveModuleDropTarget(
     case NODE_KIND.CONTAINER:
       return {kind: 'container', containerId: String(target.containerId)};
     case NODE_KIND.SUBGRAPH:
-      return {kind: 'subgraph-no-container', subgraphId: String(target.subgraphId)};
+      return {
+        kind: 'subgraph-no-container',
+        subgraphId: String(target.subgraphId),
+      };
     case NODE_KIND.MODULE:
       if (!target.parentId) {
         throw new Error(
@@ -462,11 +467,9 @@ async function renameModuleInstance(
   newAlias: string,
 ): Promise<void> {
   await withMutationLock(get, async () => {
-    const result = await patchSpfModuleApi(
-      projectId,
-      moduleInstanceId,
-      {alias: newAlias},
-    );
+    const result = await patchSpfModuleApi(projectId, moduleInstanceId, {
+      alias: newAlias,
+    });
     if (!result.success || !result.data) {
       showToast(result.message ?? 'Failed to rename module', 'danger');
       return;
@@ -523,7 +526,7 @@ with anything underneath, including a subgraph-proxy node (the placed
 subgraph's contents render overlapping the proxy; the proxy itself is
 unaffected). There is no `canDropSubgraphOn`/drop-resolution function for
 subgraphs — unlike modules, there is no case where the target underneath
-changes *which* backend call is made; `placeSubgraphFromPalette` always
+changes _which_ backend call is made; `placeSubgraphFromPalette` always
 does the same fetch-and-render regardless of target. See
 [requirements.md §3.3](requirements.md#33-subgraph-operations) for
 FR-SG-11's full text.
@@ -540,9 +543,13 @@ entirely (FR-PAL-01, Canvas UI Mechanics' concern, not this doc's).
    entry `changeType: 'NONE'` — a snapshot, not a delta). On failure, show
    an error toast ("Failed to load subgraph contents") and abort — steps
    2–4 do not run, and no placement occurs.
+   If the response succeeds but `spfModules` is empty, treat it as an invalid
+   backend response: show a danger toast, return `false`, and do not mutate
+   graph state or session-local subgraph maps. Persisted subgraphs are not
+   valid without at least one module.
 2. Merge into `graphData` via the reconciler's **leaf upsert helpers
    directly** (`upsertModule`, `upsertLink` from `graph-data-slice.ts`) —
-   *not* the full `applyComponentCollection` orchestrator. This is a
+   _not_ the full `applyComponentCollection` orchestrator. This is a
    snapshot merge of already-existing backend entities being surfaced for
    the first time, not a delta with a deletion bucket or port-count
    adjustment to reconcile; running it through the full orchestrator would
@@ -553,7 +560,7 @@ entirely (FR-PAL-01, Canvas UI Mechanics' concern, not this doc's).
 4. Independently (its own try/catch, no shared failure with steps 1–3 —
    see [design.md §11](design.md#11-error-handling)'s "independent failure
    domains"), call `getSubgraphPairs(subgraphId)` →
-   `SubgraphPairDto[]`. For each pair where the *other* subgraph in the pair
+   `SubgraphPairDto[]`. For each pair where the _other_ subgraph in the pair
    is already present in `graphData.subgraphs`:
    - Store the pair in `pairLinksById`, keyed by a synthetic id
      (`` `${sourceSubgraphSystemId}:${destinationSubgraphSystemId}` ``,
@@ -571,10 +578,7 @@ entirely (FR-PAL-01, Canvas UI Mechanics' concern, not this doc's).
 ### 4.3 Exclude / re-include (FR-SG-03, FR-SG-04, FR-SG-04a)
 
 ```typescript
-function excludeLink(
-  get: () => GraphDesignerStore,
-  connectionId: string,
-): void;
+function excludeLink(get: () => GraphDesignerStore, connectionId: string): void;
 function reincludeLink(
   get: () => GraphDesignerStore,
   connectionId: string,
@@ -641,13 +645,13 @@ async function deleteSubgraphInner(
   options?: InnerActionOptions,
 ): Promise<boolean> {
   const provenance = get().subgraphProvenanceById[subgraphId];
-  if (provenance === 'palette-placed' && !hasStagedChildEdits(get(), subgraphId)) {
+  if (provenance === 'palette-placed') {
     // FR-SG-06: UI-cache-only removal, no backend call, so no toast path to suppress.
     removeSubgraphFromUiCacheOnly(get, subgraphId);
     return true;
   }
-  // FR-SG-07 (pre-loaded) / FR-SG-08 (newly-created) / a palette-placed
-  // subgraph with staged child edits: delete every module in the subgraph.
+  // FR-SG-07 (pre-loaded) / FR-SG-08 (newly-created):
+  // delete every module in the subgraph.
   const moduleIds = Object.values(get().graphData!.moduleInstances)
     .filter((m) => m.subgraphId === subgraphId)
     .map((m) => m.moduleInstanceId);
@@ -692,16 +696,6 @@ applies here to an in-scope, must-have action rather than a deferred one.
 Flagged as a new open item in [§10](#10-open-items-inherited); the current
 design accepts the risk rather than adding client-side rollback logic for
 it.
-
-`hasStagedChildEdits(state, subgraphId)` checks whether any module or link
-currently grouped under `subgraphId` in `graphData` has
-`diffState === 'added'` — i.e. its last confirmed response this session
-carried `changeInfo.changeType === 'CREATE'`. This reuses the `diffState`
-field `graph-data-slice.ts` already computes on every module/connection; no
-new tracking is introduced. If true, a `palette-placed` subgraph falls back
-to the real per-module delete loop instead of cache-only removal — the
-already-committed module/link is cleaned up server-side by the same
-loop any other provenance uses, rather than being silently orphaned.
 
 `removeSubgraphFromUiCacheOnly(get, subgraphId)` removes the subgraph, its
 containers, and its modules/links from `graphData` directly via the
@@ -784,14 +778,14 @@ only as a side effect of `addModuleToEmptyCanvas`/
   ([design.md §7.1](design.md#71-confirmed-endpoints)), scoped to one
   module — there is no container-level rename endpoint since a container
   has no DTO of its own. This doc calls `PATCH /spf-modules/{id}
-  {containerId: newId}` for every module currently in `containerId`, same
+{containerId: newId}` for every module currently in `containerId`, same
   per-module-loop shape as container/subgraph delete. Each successful
   `PATCH` returns the full updated `SpfModuleDto`; this doc collects every
   loop iteration's returned `SpfModuleDto` into one array and, after the
   loop completes, wraps them as a single "updated" bucket
   (`{added: {spfModules: [], dataLinks: [], controlLinks: []}, updated:
-  {spfModules: updatedDtos, dataLinks: [], controlLinks: []}, deleted:
-  {spfModules: [], dataLinks: [], controlLinks: []}}`) passed to
+{spfModules: updatedDtos, dataLinks: [], controlLinks: []}, deleted:
+{spfModules: [], dataLinks: [], controlLinks: []}}`) passed to
   `get().applyComponentCollection(...)` — the same reconciliation call
   every other cascading action in this doc uses, per
   [§2.2](#22-the-mutation-wrapper-pattern)'s uniform call shape. This keeps
@@ -858,7 +852,7 @@ question — not re-solved here. The context-menu destination picker
     new-subsystem case's `SubsystemDto`.
 - `removeFromSubsystem(get, nodeId)` — FR-SUBSYS-05, same subgraph/subsystem-only
   scope as `moveToSubsystem` above. `POST
-  /subsystems/{id}/components/move-out {componentSystemIds: [nodeId]}`,
+/subsystems/{id}/components/move-out {componentSystemIds: [nodeId]}`,
   same `{added, updated, removed}` response shape. The now-possibly-empty
   subsystem is never deleted by this call (FR-SUBSYS-04) — `move-out`'s own
   response never includes a deleted-subsystem entry, so "not deleted" is
@@ -907,6 +901,7 @@ same narrow-write treatment as module/subgraph rename.
 `expandSubsystem(get, subsystemId)` — **no dedicated endpoint.** Per
 [design.md §7.2](design.md#72-deletemoveexpand-response-shapes-no-single-shared-envelope),
 this doc composes it from two calls:
+
 1. `POST /subsystems/{subsystemId}/components/move-out` with every direct
    child's `componentSystemId` — promotes every child up to the
    subsystem's own parent level. Response is
@@ -952,19 +947,19 @@ module/subsystem endpoints below, called once per affected module/child
 rather than through a single cascading call; see each operation's own
 section for the composition.
 
-| Function | Method | Path | Request | Response |
-| --- | --- | --- | --- | --- |
-| `createSpfModule` | POST | `/projects/{projectId}/spf-modules` | `CreateSpfModuleRequestDto {moduleDefinitionSystemId, processorSystemId, parentSystemId?, subgraphSystemId?, containerSystemId?}` — see below | `SpfModuleDto` |
-| `deleteSpfModule` | DELETE | `/projects/{projectId}/spf-modules/{id}` | — | `RemoveSpfModuleResponseDto {deleted: {spfModules, subgraphs, containers, dataLinks, controlLinks}}` — every array is `string[]` of systemIds, not full DTOs |
-| `patchSpfModule` | PATCH | `/projects/{projectId}/spf-modules/{id}` | `{alias?, containerSystemId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` — covers module rename (§3.4) and container-ID edit (§5) |
-| `getSubgraphContents` | GET | `/projects/{projectId}/subgraphs/{id}/components` | — | `ComponentCollectionDto` |
-| `getSubgraphPairs` | GET | `/projects/{projectId}/subgraphs/{id}/subgraph-pairs` | — | `SubgraphPairDto[]` |
-| `renameSubgraph` | PATCH | `/projects/{projectId}/subgraphs/{id}` | `{name: string}` | `SubgraphDto` — see [§4.6](#46-rename-req-017-req-057). **Endpoint not present in current swagger — backend-committed, not yet landed.** |
-| `createSubsystem` | POST | `/projects/{projectId}/subsystems` | `CreateSubsystemRequestDto {name, parentId?}` | `SubsystemDto` |
-| `deleteSubsystem` | DELETE | `/projects/{projectId}/subsystems/{id}` | — | `SubsystemDto` — **empty subsystem only**, no cascade |
-| `patchSubsystem` | PATCH | `/projects/{projectId}/subsystems/{id}` | `{name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}` | `SubsystemDto` — covers subsystem rename (§6.4) and subsystem port counts |
-| `moveSubsystemComponentsIn` | POST | `/projects/{projectId}/subsystems/{id}/components/move-in` | `MoveSubsystemComponentsRequestDto {componentSystemIds}` | `MoveSubsystemComponentsResponseDto {added, updated, removed}` |
-| `moveSubsystemComponentsOut` | POST | `/projects/{projectId}/subsystems/{id}/components/move-out` | `MoveSubsystemComponentsRequestDto {componentSystemIds}` | `MoveSubsystemComponentsResponseDto {added, updated, removed}` |
+| Function                     | Method | Path                                                        | Request                                                                                                                                       | Response                                                                                                                                                     |
+| ---------------------------- | ------ | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createSpfModule`            | POST   | `/projects/{projectId}/spf-modules`                         | `CreateSpfModuleRequestDto {moduleDefinitionSystemId, processorSystemId, parentSystemId?, subgraphSystemId?, containerSystemId?}` — see below | `SpfModuleDto`                                                                                                                                               |
+| `deleteSpfModule`            | DELETE | `/projects/{projectId}/spf-modules/{id}`                    | —                                                                                                                                             | `RemoveSpfModuleResponseDto {deleted: {spfModules, subgraphs, containers, dataLinks, controlLinks}}` — every array is `string[]` of systemIds, not full DTOs |
+| `patchSpfModule`             | PATCH  | `/projects/{projectId}/spf-modules/{id}`                    | `{alias?, containerSystemId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}`                                  | `SpfModuleDto` — covers module rename (§3.4) and container-ID edit (§5)                                                                                      |
+| `getSubgraphContents`        | GET    | `/projects/{projectId}/subgraphs/{id}/components`           | —                                                                                                                                             | `ComponentCollectionDto`                                                                                                                                     |
+| `getSubgraphPairs`           | GET    | `/projects/{projectId}/subgraphs/{id}/subgraph-pairs`       | —                                                                                                                                             | `SubgraphPairDto[]`                                                                                                                                          |
+| `renameSubgraph`             | PATCH  | `/projects/{projectId}/subgraphs/{id}`                      | `{name: string}`                                                                                                                              | `SubgraphDto` — see [§4.6](#46-rename-req-017-req-057). **Endpoint not present in current swagger — backend-committed, not yet landed.**                     |
+| `createSubsystem`            | POST   | `/projects/{projectId}/subsystems`                          | `CreateSubsystemRequestDto {name, parentId?}`                                                                                                 | `SubsystemDto`                                                                                                                                               |
+| `deleteSubsystem`            | DELETE | `/projects/{projectId}/subsystems/{id}`                     | —                                                                                                                                             | `SubsystemDto` — **empty subsystem only**, no cascade                                                                                                        |
+| `patchSubsystem`             | PATCH  | `/projects/{projectId}/subsystems/{id}`                     | `{name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}`                                               | `SubsystemDto` — covers subsystem rename (§6.4) and subsystem port counts                                                                                    |
+| `moveSubsystemComponentsIn`  | POST   | `/projects/{projectId}/subsystems/{id}/components/move-in`  | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                                      | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                                               |
+| `moveSubsystemComponentsOut` | POST   | `/projects/{projectId}/subsystems/{id}/components/move-out` | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                                      | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                                               |
 
 **`CreateSpfModuleRequestDto`'s full shape** (backend, per the current
 swagger export's `components.schemas.CreateSpfModuleRequestDto`):
@@ -1032,10 +1027,10 @@ sequenceDiagram
 
   U->>S: deleteSubgraph(get, subgraphId)
   S->>S: check provenance
-  alt palette-placed, no staged child edits
+  alt palette-placed
     S->>G: removeSubgraphFromUiCacheOnly (local only)
     S->>E: prune provenance/KV/pairLinks for subgraphId
-  else pre-loaded / newly-created / palette-placed-with-staged-edits
+  else pre-loaded / newly-created
     S->>S: withMutationLock — beginMutation
     loop for each module in the subgraph
       S->>B: DELETE /spf-modules/{moduleId}
@@ -1099,25 +1094,11 @@ strategy with the cases specific to this doc's logic:
   `'newly-created'` on the correct derived subgraph id;
   `placeSubgraphFromPalette` stamps `'palette-placed'`; `enterEditMode`
   seeds every pre-existing subgraph as `'pre-loaded'`.
-- **Unit — orphaned-staged-edits fallback**: `hasStagedChildEdits` true/false
-  cases; `deleteSubgraph` on a `palette-placed` subgraph with a
-  `diffState: 'added'` child module falls back to the real per-module
-  delete loop rather than cache-only removal; the equivalent subgraph with
-  no staged children takes the cache-only path with zero backend calls.
-  (`toDiffState`'s `'CREATE'` → `'added'` mapping has no dedicated unit test
-  today — `graph-data-slice.test.ts`'s existing suite covers `moduleType`
-  resolution and `Subsystem.subgraphs` population only, not `changeType`
-  mapping. `deleteSubgraph`'s own tests should exercise `hasStagedChildEdits`'
-  branch directly against a pre-seeded `diffState: 'added'` fixture rather
-  than depending on `toDiffState` coverage that doesn't yet exist. Note
-  `applyComponentCollection` itself — the reconciler this doc's cascading
-  actions hand responses to — is foundation-layer code owned outside this
-  doc; its own tests belong there, not here.)
 - **Unit — narrow-write renames**: `renameModuleInstance`/`renameSubsystem`/
   `renameSubgraph` each write only their own field, leaving the rest of the
   affected entity and all sibling entities unchanged.
 - **Unit — pair-link merge**: `placeSubgraphFromPalette`'s pairs step only
-  renders a pair when the *other* side is already on canvas; a
+  renders a pair when the _other_ side is already on canvas; a
   `getSubgraphPairs` failure leaves the subgraph itself placed
   (independent-failure-domain check).
 - **Unit — multi-call composition, partial failure**: `deleteSubgraph`/

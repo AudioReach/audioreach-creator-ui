@@ -144,6 +144,10 @@ disable only applies to the subgraph palette, not the module palette.)
 from the subgraph palette. On drop, the full subgraph contents (all containers,
 modules, and internal links) are fetched from the backend and rendered on
 canvas. This placement is **session-local** — it is not staged to the backend.
+Persisted subgraphs are valid only when they contain at least one SPF module;
+if the contents fetch succeeds but returns zero `spfModules`, the frontend
+must reject placement as an invalid backend response, show a danger toast, and
+leave graph state plus session-local subgraph maps unchanged.
 
 **FR-SG-02** When a subgraph is dropped onto the canvas, the tool calls the
 backend subgraph-pairs API to retrieve all known linked subgraph pairs. For
@@ -179,15 +183,10 @@ greyed-out in their existing list position rather than sorted to the bottom.
 
 **FR-SG-06** Removing a **palette-placed** subgraph (one placed in the current
 session via the subgraph palette) from the canvas is a UI cache delete only —
-no backend call is made — **provided no module or link inside it has already
-been staged to the backend this session** (e.g. a module added into it after
-placement, per FR-MOD-01/03/04). If any child has been staged, the subgraph
-delete falls back to the same backend cascade as FR-SG-07/FR-SG-08: the
-already-committed module/link content is not just a UI concern anymore and
-must be removed server-side too, not silently orphaned. The subgraph's own
-placement (the part that really was never staged) contributes nothing to that
-cascade — it is the *children's* staged state alone that decides which path
-this delete takes.
+no backend call is made. This remains true even when a child module or link
+inside the palette-placed subgraph was changed during the edit session;
+deleting the palette-placed subgraph removes that local canvas placement and
+any staged child UI state with it.
 
 **FR-SG-07** Removing a **pre-loaded** subgraph (one that was part of the
 selected use case when edit mode was entered) from the canvas stages a delete
@@ -440,8 +439,7 @@ Operations' concern (see
 the context menu itself — its presence, the Delete menu item, and wiring the
 click to the dispatch call below — is Canvas UI Mechanics' concern:
 - **Palette-placed subgraph**: removes from the UI cache only, no backend
-  call — unless it has staged child edits, in which case it falls back to
-  the same backend cascade as a pre-loaded/newly-created subgraph (see
+  call, including when child edits were made during the session (see
   FR-SG-06).
 - **Pre-loaded subgraph**: stages a delete to the backend.
 - **Newly created subgraph**: stages a delete and cascades to remove all
@@ -652,14 +650,11 @@ effect. Subsystem deletion is always a separate, explicit action
 (FR-SUBSYS-02) and only ever succeeds on an already-empty subsystem
 (FR-SUBSYS-04).
 
-**I4 — Provenance determines subgraph delete cost, except when staged child
-edits exist:** A subgraph's delete behavior (UI-cache-only vs. a staged
-backend cascade) is determined by its provenance — palette-placed,
-pre-loaded, or newly-created (FR-SG-06/07/08) — with one exception: a
-palette-placed subgraph with any staged child module/link falls back to the
-same backend cascade a pre-loaded/newly-created subgraph always uses (per
-FR-SG-06), since UI-cache-only removal would silently orphan
-already-committed backend state.
+**I4 — Provenance determines subgraph delete cost:** A subgraph's delete
+behavior (UI-cache-only vs. a staged backend cascade) is determined by its
+provenance — palette-placed, pre-loaded, or newly-created (FR-SG-06/07/08).
+Palette-placed subgraphs always use UI-cache-only removal for the current
+canvas session; pre-loaded and newly-created subgraphs use the backend cascade.
 
 ---
 
