@@ -58,6 +58,7 @@ export {
   useGraphDesignerStoreShallow,
 } from './model/graph-designer-store-context';
 export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
+export type {ContainerOperations} from './lib/container-operations';
 export type {
   ModuleDropPayload,
   ModuleDropResolution,

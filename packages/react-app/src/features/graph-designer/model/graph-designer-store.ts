@@ -36,6 +36,10 @@ import {
 } from '~shared/store/tab-store-slices/validation-result-slice';
 
 import {
+  createContainerOperations,
+  type ContainerOperations,
+} from '../lib/container-operations';
+import {
   createModuleOperations,
   type ModuleOperations,
 } from '../lib/module-operations';
@@ -71,6 +75,7 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   ValidationResultSlice &
   ModuleListSlice &
   ModuleDataSlice &
+  ContainerOperations &
   ModuleOperations &
   SubgraphListSlice &
   SubgraphHeaderSelectionSlice &
@@ -106,6 +111,7 @@ export function createGraphDesignerStore(
       projectId,
     ),
     ...createModuleDataSlice(set, get, projectId),
+    ...createContainerOperations(projectId),
     ...createModuleOperations(set, projectId),
     ...createSubgraphListSlice(
       (partial) => set(partial as Partial<GraphDesignerStore>),
