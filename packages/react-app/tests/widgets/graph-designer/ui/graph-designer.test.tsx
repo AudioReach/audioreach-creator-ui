@@ -10,6 +10,12 @@ let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
 
 interface MockUsecaseVisualizerProps {
   eventHandlers?: {
+    onNodeDropped?: (payload: {
+      dropData: string;
+      position: {x: number; y: number};
+      targetContainerId?: string;
+      targetSubgraphId?: string;
+    }) => void;
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
   };
 }
@@ -68,14 +74,15 @@ jest.mock('~features/usecase-selection', () => ({
 }));
 
 jest.mock('~features/usecase-visualizer', () => ({
+  NODE_DIMENSIONS: {
+    container: {headerHeight: 32, padding: 12},
+    subgraph: {headerHeight: 40, padding: 16},
+  },
   UsecaseVisualizer: (props: MockUsecaseVisualizerProps) => {
     mockVisualizerProps = props;
     return <div data-testid="usecase-visualizer" />;
   },
-  VISUALIZER_MODE: {
-    EDIT: 'edit',
-    READONLY: 'readonly',
-  },
+  VISUALIZER_MODE: {EDIT: 'edit', READONLY: 'readonly'},
 }));
 
 jest.mock('~features/search-component', () => ({
@@ -126,6 +133,7 @@ import {
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
+import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
 import GraphDesigner from '~widgets/graph-designer/ui/graph-designer';
 
@@ -133,6 +141,7 @@ const PROJECT_ID = 'proj-1';
 
 beforeEach(() => {
   mockVisualizerProps = null;
+  jest.clearAllMocks();
 });
 
 function makeGraphData(): UsecaseGraphData {
@@ -218,6 +227,64 @@ describe('GraphDesigner — top bar', () => {
     const applyDiscardControls = screen.getByTestId('apply-discard-controls');
     expect(applyDiscardControls).toBeInTheDocument();
     expect(applyDiscardControls).toHaveTextContent(PROJECT_ID);
+  });
+});
+
+describe('GraphDesigner — module drops', () => {
+  it('rejects container drops without a parent subgraph id', () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+    const addToContainerSpy = jest.spyOn(
+      graphDesignerStore.getState(),
+      'addModuleToContainer',
+    );
+    const addToEmptyCanvasSpy = jest.spyOn(
+      graphDesignerStore.getState(),
+      'addModuleToEmptyCanvas',
+    );
+    graphDesignerStore.setState({
+      levelView: {levelId: 'uc-1'},
+      selectedUsecases: ['uc-1'],
+    });
+    const projectStore = createProjectStore(PROJECT_ID);
+
+    render(
+      <SideNavProvider>
+        <ProjectStoreContext.Provider value={projectStore}>
+          <GraphDesignerStoreContext.Provider value={graphDesignerStore}>
+            <GraphDesigner
+              projectId={PROJECT_ID}
+              screenshotRegistry={new Map()}
+              tabId="tab-1"
+              usecaseData={[]}
+            />
+          </GraphDesignerStoreContext.Provider>
+        </ProjectStoreContext.Provider>
+      </SideNavProvider>,
+    );
+
+    expect(mockVisualizerProps).not.toBeNull();
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDropped?.({
+        dropData: JSON.stringify({
+          kind: 'module',
+          moduleDefinitionSystemId: 'module-definition-1',
+          processorSystemId: 'processor-1',
+        }),
+        position: {x: 10, y: 20},
+        targetContainerId: 'container-1',
+      });
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      'GraphDesigner: module drop on container missing parent subgraph id',
+      {
+        action: 'drop_module',
+        component: 'GraphDesigner',
+      },
+    );
+    expect(addToContainerSpy).not.toHaveBeenCalled();
+    expect(addToEmptyCanvasSpy).not.toHaveBeenCalled();
   });
 });
 

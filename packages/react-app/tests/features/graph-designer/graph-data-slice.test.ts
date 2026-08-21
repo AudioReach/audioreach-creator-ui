@@ -147,10 +147,12 @@ describe('createGraphDataSlice — moduleType resolution', () => {
         description: '',
         dspType: 'ADSP',
         inputPorts: [],
+        moduleDefinitionSystemId: 'mod-def-200',
         moduleId: '200',
         moduleName: 'AudioDecoder',
         moduleType: 'SOURCE',
         outputPorts: [],
+        processorSystemId: 'ADSP',
       },
     ]);
 
@@ -189,10 +191,12 @@ describe('createGraphDataSlice — moduleType resolution', () => {
         description: '',
         dspType: 'ADSP',
         inputPorts: [],
+        moduleDefinitionSystemId: 'mod-def-999',
         moduleId: '999', // different moduleId — won't match
         moduleName: 'SomeSink',
         moduleType: 'SINK',
         outputPorts: [],
+        processorSystemId: 'ADSP',
       },
     ]);
 
@@ -371,10 +375,12 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
         description: '',
         dspType: '',
         inputPorts: [],
+        moduleDefinitionSystemId: 'mod-def-200',
         moduleId: '200',
         moduleName: 'AudioDecoder',
         moduleType: 'SOURCE',
         outputPorts: [],
+        processorSystemId: '',
       },
     ]);
     store.setState({
@@ -1163,6 +1169,83 @@ describe('applyComponentCollection', () => {
     // dropped entirely since its only link was the one deleted:
     expect(state.pairLinksById['sg-1:sg-2']).toBeUndefined();
     expect(state.excludedLinks).toEqual([]);
+  });
+
+  it('reuses an existing subgraph when an added module references the same subgraph id', async () => {
+    const store = makeStore();
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {
+          'container-10': {
+            containerId: 'container-10',
+            moduleInstances: ['mod-existing'],
+            subgraphId: 'subgraph-1',
+          },
+        },
+        moduleInstances: {
+          'mod-existing': {
+            containerId: 'container-10',
+            displayName: 'Existing',
+            inputPorts: [],
+            moduleId: '100',
+            moduleInstanceId: 'mod-existing',
+            moduleName: 'Existing',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'subgraph-1',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {
+          'subgraph-1': {
+            containers: ['container-10'],
+            subgraphId: 'subgraph-1',
+            subgraphName: 'Existing Subgraph',
+            subgraphType: 'AUDIO_RECORD',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    await store.getState().applyComponentCollection({
+      added: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            containerId: 'container-10' as never,
+            subgraphId: 'subgraph-1',
+            systemId: 'mod-created',
+          }),
+        ],
+      },
+      deleted: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [],
+      },
+      updated: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [],
+      },
+    });
+
+    const state = store.getState();
+    expect(mockGetSubgraphsByIds).not.toHaveBeenCalled();
+    expect(Object.keys(state.graphData!.subgraphs)).toEqual(['subgraph-1']);
+    expect(state.graphData!.subgraphs['subgraph-1']).toEqual({
+      containers: ['container-10'],
+      subgraphId: 'subgraph-1',
+      subgraphName: 'Existing Subgraph',
+      subgraphType: 'AUDIO_RECORD',
+    });
+    expect(state.graphData!.containers['container-10'].moduleInstances).toEqual(
+      ['mod-existing', 'mod-created'],
+    );
   });
 });
 

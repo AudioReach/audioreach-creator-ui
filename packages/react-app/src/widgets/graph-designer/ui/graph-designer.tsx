@@ -40,6 +40,7 @@ import {
 import {
   ApplyDiscardControls,
   GraphDesignerStoreContext,
+  parseModuleDropPayload,
   type GraphDesignerStore,
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
@@ -51,6 +52,7 @@ import {
   useWorkflowUsecaseData,
 } from '~features/usecase-selection';
 import {
+  type NodeDropPayload,
   type SearchHighlights,
   UsecaseVisualizer,
   type ViewportState,
@@ -79,6 +81,10 @@ import {
   searchLevelView,
   type SearchMatch,
 } from '../lib/graph-search';
+import {
+  buildDroppedModulePositionOverrides,
+  type ModuleDropPlacement,
+} from '../lib/dropped-module-position-overrides';
 import {buildLevelViewFromGraphData} from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
 import {containerNodeId} from '../lib/node-id';
@@ -587,6 +593,22 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [projectId, store],
   );
 
+  const applyCreatedModuleDropPosition = useCallback(
+    (createdModuleId: string, position: XY, placement: ModuleDropPlacement) => {
+      const overrides = buildDroppedModulePositionOverrides(
+        store.getState().graphData,
+        createdModuleId,
+        position,
+        placement,
+      );
+      if (Object.keys(overrides).length === 0) {
+        return;
+      }
+      setPositionOverrides((previous) => ({...previous, ...overrides}));
+    },
+    [store],
+  );
+
   const deleteContainersByIds = useCallback(
     async (containerIds: string[]) => {
       await store.getState().deleteContainers(store.getState, containerIds);
@@ -647,6 +669,86 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           setParentSizes((p) => ({...p, ...resizedParents}));
         }
       },
+      onNodeDropped: ({
+        dropData,
+        position,
+        targetContainerId,
+        targetSubgraphId,
+      }: NodeDropPayload) => {
+        const modulePayload = parseModuleDropPayload(dropData);
+        if (!modulePayload) {
+          return;
+        }
+        const {moduleDefinitionSystemId, processorSystemId} = modulePayload;
+        if (targetContainerId && !targetSubgraphId) {
+          logger.warn(
+            'GraphDesigner: module drop on container missing parent subgraph id',
+            {
+              action: 'drop_module',
+              component: 'GraphDesigner',
+            },
+          );
+          return;
+        }
+        if (targetContainerId && targetSubgraphId) {
+          void store
+            .getState()
+            .addModuleToContainer(
+              store.getState,
+              targetContainerId,
+              targetSubgraphId,
+              moduleDefinitionSystemId,
+              position,
+              processorSystemId,
+            )
+            .then((createdModuleId) => {
+              if (createdModuleId) {
+                applyCreatedModuleDropPosition(
+                  createdModuleId,
+                  position,
+                  'container',
+                );
+              }
+            });
+        } else if (targetSubgraphId) {
+          void store
+            .getState()
+            .addModuleToSubgraphNoContainer(
+              store.getState,
+              targetSubgraphId,
+              moduleDefinitionSystemId,
+              position,
+              processorSystemId,
+            )
+            .then((createdModuleId) => {
+              if (createdModuleId) {
+                applyCreatedModuleDropPosition(
+                  createdModuleId,
+                  position,
+                  'subgraph',
+                );
+              }
+            });
+        } else {
+          void store
+            .getState()
+            .addModuleToEmptyCanvas(
+              store.getState,
+              moduleDefinitionSystemId,
+              position,
+              processorSystemId,
+            )
+            .then((createdModuleId) => {
+              if (createdModuleId) {
+                applyCreatedModuleDropPosition(
+                  createdModuleId,
+                  position,
+                  'empty-canvas',
+                );
+              }
+            });
+        }
+      },
       onNodesDeleted: handleNodesDeleted,
       onSubgraphCollapse: (subgraphId: number) => {
         setCollapseByLevel((prev) => ({
@@ -668,7 +770,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         setViewportByLevel((p) => ({...p, [levelId]: viewport}));
       },
     }),
-    [handleModuleDoubleClick, handleNodesDeleted, levelId],
+    [
+      applyCreatedModuleDropPosition,
+      handleModuleDoubleClick,
+      handleNodesDeleted,
+      levelId,
+      store,
+    ],
   );
 
   const displayOptionsContent = useMemo(

@@ -28,13 +28,14 @@ export interface ModuleDefinition {
   builtIn: boolean;
   category: string;
   description: string;
-  /** DSP processor type, sourced from dto.processorInfo.name */
   dspType: string;
   inputPorts: Port[];
+  moduleDefinitionSystemId: string;
   moduleId: string;
   moduleName: string;
   moduleType: string;
   outputPorts: Port[];
+  processorSystemId: string;
 }
 
 export interface ModuleListSlice {
@@ -106,10 +107,12 @@ function toModuleDefinition(
     description: dto.description,
     dspType: dto.processorInfo?.name ?? '',
     inputPorts,
+    moduleDefinitionSystemId: dto.systemId,
     moduleId: String(dto.moduleId),
     moduleName: dto.name,
     moduleType: dto.moduleDirectionType,
     outputPorts,
+    processorSystemId: dto.processorInfo?.systemId ?? '',
   };
 }
 

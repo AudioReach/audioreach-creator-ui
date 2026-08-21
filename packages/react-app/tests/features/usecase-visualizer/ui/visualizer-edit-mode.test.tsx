@@ -66,14 +66,29 @@ function makeModule(
 
 function makeContainer(
   id: string,
-  opts: {height?: number; width?: number; x?: number; y?: number} = {},
+  opts: {
+    containerId?: number;
+    containerSystemId?: string;
+    height?: number;
+    parentId?: string;
+    subgraphSystemId?: string;
+    width?: number;
+    x?: number;
+    y?: number;
+  } = {},
 ): ContainerNode {
   return {
-    containerId: 1,
+    containerId: opts.containerId ?? 1,
     height: opts.height ?? 200,
     id,
     label: id,
+    meta: {
+      containerSystemId:
+        opts.containerSystemId ?? String(opts.containerId ?? 1),
+      subgraphSystemId: opts.subgraphSystemId ?? '1',
+    },
     nodeKind: 'container',
+    parentId: opts.parentId,
     width: opts.width ?? 300,
     x: opts.x ?? 0,
     y: opts.y ?? 0,
@@ -82,14 +97,26 @@ function makeContainer(
 
 function makeSubgraph(
   id: string,
-  opts: {height?: number; width?: number; x?: number; y?: number} = {},
+  opts: {
+    height?: number;
+    parentId?: string;
+    subgraphId?: number;
+    subgraphSystemId?: string;
+    width?: number;
+    x?: number;
+    y?: number;
+  } = {},
 ): SubgraphNode {
   return {
     height: opts.height ?? 200,
     id,
     label: id,
+    meta: {
+      subgraphSystemId: opts.subgraphSystemId ?? String(opts.subgraphId ?? 1),
+    },
     nodeKind: 'subgraph',
-    subgraphId: 1,
+    parentId: opts.parentId,
+    subgraphId: opts.subgraphId ?? 1,
     width: opts.width ?? 300,
     x: opts.x ?? 0,
     y: opts.y ?? 0,
@@ -209,34 +236,50 @@ describe('palette drop', () => {
 
   it('drop over container area fires onNodeDropped with targetContainerId', () => {
     const onNodeDropped = jest.fn();
-    const container = makeContainer('c1', {
-      height: 200,
-      width: 300,
+    const subgraph = makeSubgraph('sg1', {
+      height: 300,
+      subgraphId: 5,
+      width: 400,
       x: 0,
       y: 0,
+    });
+    const container = makeContainer('c1', {
+      containerId: 10,
+      height: 200,
+      parentId: 'sg1',
+      subgraphSystemId: '5',
+      width: 300,
+      x: 20,
+      y: 30,
     });
     render(
       <UsecaseVisualizer
         eventHandlers={{onNodeDropped}}
-        graph={makeGraph({containers: [container]})}
+        graph={makeGraph({containers: [container], subgraphs: [subgraph]})}
         mode={VISUALIZER_MODE.EDIT}
       />,
     );
-    // screenToFlowPosition stub returns coords as-is: (100,100) is inside container
-    // (0,0,300,200)
     act(() => {
       latestReactFlowProps.current?.onDrop?.(
         fakeDropEvent(100, 100, '{"type":"GAIN"}'),
       );
     });
     expect(onNodeDropped).toHaveBeenCalledTimes(1);
-    expect(onNodeDropped.mock.calls[0][0].targetContainerId).toBe('c1');
-    expect(onNodeDropped.mock.calls[0][0].targetSubgraphId).toBeUndefined();
+    const payload = onNodeDropped.mock.calls[0][0];
+    expect(payload.position).toEqual({x: 80, y: 70});
+    expect(payload.targetContainerId).toBe('10');
+    expect(payload.targetSubgraphId).toBe('5');
   });
 
   it('drop over subgraph area (not a container) fires onNodeDropped with targetSubgraphId', () => {
     const onNodeDropped = jest.fn();
-    const subgraph = makeSubgraph('sg1', {height: 200, width: 300, x: 0, y: 0});
+    const subgraph = makeSubgraph('sg1', {
+      height: 200,
+      subgraphId: 5,
+      width: 300,
+      x: 50,
+      y: 70,
+    });
     render(
       <UsecaseVisualizer
         eventHandlers={{onNodeDropped}}
@@ -250,8 +293,110 @@ describe('palette drop', () => {
       );
     });
     expect(onNodeDropped).toHaveBeenCalledTimes(1);
-    expect(onNodeDropped.mock.calls[0][0].targetSubgraphId).toBe('sg1');
-    expect(onNodeDropped.mock.calls[0][0].targetContainerId).toBeUndefined();
+    const payload = onNodeDropped.mock.calls[0][0];
+    expect(payload.position).toEqual({x: 50, y: 30});
+    expect(payload.targetSubgraphId).toBe('5');
+    expect(payload.targetContainerId).toBeUndefined();
+  });
+
+  it('drop over nested container uses absolute bounds and relative position', () => {
+    const onNodeDropped = jest.fn();
+    const subgraph = makeSubgraph('sg1', {
+      height: 300,
+      subgraphId: 5,
+      width: 400,
+      x: 100,
+      y: 200,
+    });
+    const container = makeContainer('c1', {
+      containerId: 10,
+      height: 200,
+      parentId: 'sg1',
+      subgraphSystemId: '5',
+      width: 300,
+      x: 30,
+      y: 40,
+    });
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodeDropped}}
+        graph={makeGraph({containers: [container], subgraphs: [subgraph]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    act(() => {
+      latestReactFlowProps.current?.onDrop?.(
+        fakeDropEvent(150, 260, '{"type":"GAIN"}'),
+      );
+    });
+    expect(onNodeDropped).toHaveBeenCalledTimes(1);
+    const payload = onNodeDropped.mock.calls[0][0];
+    expect(payload.position).toEqual({x: 20, y: 20});
+    expect(payload.targetContainerId).toBe('10');
+    expect(payload.targetSubgraphId).toBe('5');
+  });
+
+  it('drop over generated container uses domain ids from node metadata', () => {
+    const onNodeDropped = jest.fn();
+    const subgraph = makeSubgraph('subgraph-sg-1', {
+      height: 300,
+      subgraphId: Number.NaN,
+      subgraphSystemId: 'sg-1',
+      width: 400,
+      x: 0,
+      y: 0,
+    });
+    const container = makeContainer('container-cont-new-1:sg-1', {
+      containerId: Number.NaN,
+      containerSystemId: 'cont-new-1',
+      height: 200,
+      parentId: 'subgraph-sg-1',
+      subgraphSystemId: 'sg-1',
+      width: 300,
+      x: 20,
+      y: 30,
+    });
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodeDropped}}
+        graph={makeGraph({containers: [container], subgraphs: [subgraph]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    act(() => {
+      latestReactFlowProps.current?.onDrop?.(
+        fakeDropEvent(100, 100, '{"type":"GAIN"}'),
+      );
+    });
+    expect(onNodeDropped).toHaveBeenCalledTimes(1);
+    expect(onNodeDropped.mock.calls[0][0].targetContainerId).toBe('cont-new-1');
+    expect(onNodeDropped.mock.calls[0][0].targetSubgraphId).toBe('sg-1');
+  });
+
+  it('drop over generated subgraph uses the domain id from node metadata', () => {
+    const onNodeDropped = jest.fn();
+    const subgraph = makeSubgraph('subgraph-sg-new-1', {
+      height: 200,
+      subgraphId: Number.NaN,
+      subgraphSystemId: 'sg-new-1',
+      width: 300,
+      x: 50,
+      y: 70,
+    });
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodeDropped}}
+        graph={makeGraph({subgraphs: [subgraph]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    act(() => {
+      latestReactFlowProps.current?.onDrop?.(
+        fakeDropEvent(100, 100, '{"type":"GAIN"}'),
+      );
+    });
+    expect(onNodeDropped).toHaveBeenCalledTimes(1);
+    expect(onNodeDropped.mock.calls[0][0].targetSubgraphId).toBe('sg-new-1');
   });
 
   it('dragover with subgraph MIME hint over a subgraph: preventDefault NOT called', () => {

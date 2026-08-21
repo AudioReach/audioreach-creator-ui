@@ -65,7 +65,7 @@ export function resolveModuleDropTarget(
 
 export interface ModuleDropPayload {
   kind: 'module';
-  moduleId: string;
+  moduleDefinitionSystemId: string;
   processorSystemId: string;
 }
 
@@ -78,7 +78,8 @@ export function parseModuleDropPayload(
       typeof parsed === 'object' &&
       parsed !== null &&
       (parsed as {kind?: unknown}).kind === 'module' &&
-      typeof (parsed as {moduleId?: unknown}).moduleId === 'string' &&
+      typeof (parsed as {moduleDefinitionSystemId?: unknown})
+        .moduleDefinitionSystemId === 'string' &&
       typeof (parsed as {processorSystemId?: unknown}).processorSystemId ===
         'string'
     ) {
@@ -94,23 +95,24 @@ export interface ModuleOperations {
   addModuleToContainer: (
     get: () => GraphDesignerStore,
     containerId: string,
-    moduleId: string,
+    subgraphId: string,
+    moduleDefinitionSystemId: string,
     position: {x: number; y: number},
     processorSystemId: string,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   addModuleToEmptyCanvas: (
     get: () => GraphDesignerStore,
-    moduleId: string,
+    moduleDefinitionSystemId: string,
     position: {x: number; y: number},
     processorSystemId: string,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   addModuleToSubgraphNoContainer: (
     get: () => GraphDesignerStore,
     subgraphId: string,
-    moduleId: string,
+    moduleDefinitionSystemId: string,
     position: {x: number; y: number},
     processorSystemId: string,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   deleteModuleInstance: (
     get: () => GraphDesignerStore,
     moduleInstanceId: string,
@@ -200,7 +202,8 @@ export function createModuleOperations(
     addModuleToContainer: (
       get,
       containerId,
-      moduleId,
+      subgraphId,
+      moduleDefinitionSystemId,
       position,
       processorSystemId,
     ) =>
@@ -209,37 +212,18 @@ export function createModuleOperations(
           get,
           {
             containerSystemId: containerId,
-            moduleDefinitionSystemId: moduleId,
+            moduleDefinitionSystemId,
             processorSystemId,
+            subgraphSystemId: subgraphId,
           },
           position,
         );
-        return newModuleId !== null;
+        return newModuleId;
       }),
 
-    addModuleToEmptyCanvas: (get, moduleId, position, processorSystemId) =>
-      withMutationLock(get, async () => {
-        const newModuleId = await addModuleInner(
-          get,
-          {
-            moduleDefinitionSystemId: moduleId,
-            processorSystemId,
-          },
-          position,
-        );
-        if (newModuleId === null) {
-          return false;
-        }
-        const subgraphId =
-          get().graphData!.moduleInstances[newModuleId].subgraphId;
-        get().setSubgraphProvenance(subgraphId, 'newly-created');
-        return true;
-      }),
-
-    addModuleToSubgraphNoContainer: (
+    addModuleToEmptyCanvas: (
       get,
-      subgraphId,
-      moduleId,
+      moduleDefinitionSystemId,
       position,
       processorSystemId,
     ) =>
@@ -247,13 +231,38 @@ export function createModuleOperations(
         const newModuleId = await addModuleInner(
           get,
           {
-            moduleDefinitionSystemId: moduleId,
+            moduleDefinitionSystemId,
+            processorSystemId,
+          },
+          position,
+        );
+        if (newModuleId === null) {
+          return null;
+        }
+        const subgraphId =
+          get().graphData!.moduleInstances[newModuleId].subgraphId;
+        get().setSubgraphProvenance(subgraphId, 'newly-created');
+        return newModuleId;
+      }),
+
+    addModuleToSubgraphNoContainer: (
+      get,
+      subgraphId,
+      moduleDefinitionSystemId,
+      position,
+      processorSystemId,
+    ) =>
+      withMutationLock(get, async () => {
+        const newModuleId = await addModuleInner(
+          get,
+          {
+            moduleDefinitionSystemId,
             processorSystemId,
             subgraphSystemId: subgraphId,
           },
           position,
         );
-        return newModuleId !== null;
+        return newModuleId;
       }),
 
     deleteModuleInstance: (get, moduleInstanceId) =>

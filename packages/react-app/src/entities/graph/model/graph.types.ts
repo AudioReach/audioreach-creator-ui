@@ -68,6 +68,15 @@ export interface NodeBase {
   y: number;
 }
 
+export interface ContainerNodeMeta extends Record<string, unknown> {
+  containerSystemId: string;
+  subgraphSystemId: string;
+}
+
+export interface SubgraphNodeMeta extends Record<string, unknown> {
+  subgraphSystemId: string;
+}
+
 export interface SubsystemNode extends NodeBase {
   nodeKind: 'subsystem';
   ports: Port[];
@@ -75,6 +84,7 @@ export interface SubsystemNode extends NodeBase {
 }
 
 export interface SubgraphNode extends NodeBase {
+  meta?: SubgraphNodeMeta;
   nodeKind: 'subgraph';
   subgraphId: number;
 }
@@ -82,6 +92,7 @@ export interface SubgraphNode extends NodeBase {
 export interface ContainerNode extends NodeBase {
   containerId: number;
   logicalContainerId?: string;
+  meta?: ContainerNodeMeta;
   nodeKind: 'container';
 }
 
@@ -121,11 +132,7 @@ export interface SubgraphProxyNode extends NodeBase {
 }
 
 export type AnyNode =
-  | ContainerNode
-  | ModuleNode
-  | SubgraphNode
-  | SubgraphProxyNode
-  | SubsystemNode;
+  ContainerNode | ModuleNode | SubgraphNode | SubgraphProxyNode | SubsystemNode;
 
 export type AnyEdge = ControlLink | DataLink | ProxyControlLink | ProxyDataLink;
 

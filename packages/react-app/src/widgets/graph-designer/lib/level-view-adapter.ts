@@ -5,6 +5,7 @@
 
 import {
   type ContainerNode,
+  type ContainerNodeMeta,
   type ControlLink,
   type DataLink,
   EDGE_KIND,
@@ -15,6 +16,7 @@ import {
   type Port,
   PORT_IO_TYPE,
   type SubgraphNode,
+  type SubgraphNodeMeta,
   type SubsystemNode,
 } from '~entities/graph';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
@@ -49,31 +51,25 @@ export function buildLevelViewFromGraphData(
     const ports: Port[] = [
       ...m.inputPorts
         .filter((p) => p.portType === 'data')
-        .map(
-          (p): Port => ({
-            id: p.portId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.INPUT,
-          }),
-        ),
+        .map((p): Port => ({
+          id: p.portId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.INPUT,
+        })),
       ...m.outputPorts
         .filter((p) => p.portType === 'data')
-        .map(
-          (p): Port => ({
-            id: p.portId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.OUTPUT,
-          }),
-        ),
+        .map((p): Port => ({
+          id: p.portId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.OUTPUT,
+        })),
       ...m.inputPorts
         .filter((p) => p.portType === 'control')
-        .map(
-          (p): Port => ({
-            id: p.portId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.CONTROL,
-          }),
-        ),
+        .map((p): Port => ({
+          id: p.portId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.CONTROL,
+        })),
     ];
 
     return {
@@ -120,6 +116,10 @@ export function buildLevelViewFromGraphData(
       height: 0,
       id: key,
       label: `Container ${m.containerId}`,
+      meta: {
+        containerSystemId: m.containerId,
+        subgraphSystemId: m.subgraphId,
+      } satisfies ContainerNodeMeta,
       nodeKind: NODE_KIND.CONTAINER,
       parentId: subgraphNodeId(m.subgraphId),
       width: 0,
@@ -139,6 +139,7 @@ export function buildLevelViewFromGraphData(
     height: 0,
     id: subgraphNodeId(sg.subgraphId),
     label: sg.subgraphName,
+    meta: {subgraphSystemId: sg.subgraphId} satisfies SubgraphNodeMeta,
     nodeKind: NODE_KIND.SUBGRAPH,
     parentId: subgraphToSubsystemId.get(sg.subgraphId),
     subgraphId: Number(sg.subgraphId),
@@ -152,29 +153,23 @@ export function buildLevelViewFromGraphData(
       const ports: Port[] = [
         ...ss.dataPorts
           .filter((p) => p.direction === 'input')
-          .map(
-            (p): Port => ({
-              id: p.portId,
-              name: p.portName,
-              portIoType: PORT_IO_TYPE.INPUT,
-            }),
-          ),
-        ...ss.dataPorts
-          .filter((p) => p.direction === 'output')
-          .map(
-            (p): Port => ({
-              id: p.portId,
-              name: p.portName,
-              portIoType: PORT_IO_TYPE.OUTPUT,
-            }),
-          ),
-        ...ss.controlPorts.map(
-          (p): Port => ({
+          .map((p): Port => ({
             id: p.portId,
             name: p.portName,
-            portIoType: PORT_IO_TYPE.CONTROL,
-          }),
-        ),
+            portIoType: PORT_IO_TYPE.INPUT,
+          })),
+        ...ss.dataPorts
+          .filter((p) => p.direction === 'output')
+          .map((p): Port => ({
+            id: p.portId,
+            name: p.portName,
+            portIoType: PORT_IO_TYPE.OUTPUT,
+          })),
+        ...ss.controlPorts.map((p): Port => ({
+          id: p.portId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.CONTROL,
+        })),
       ];
 
       return {

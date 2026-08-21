@@ -19,14 +19,30 @@ import {logger} from '~shared/lib/logger';
 import {useProjectStoreShallow} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {searchItems} from '~shared/utils/search-utils';
+import type {ModuleDefinition} from '~features/graph-designer/model/module-list-slice';
+
+function handleDragStart(
+  module: ModuleDefinition,
+  event: React.DragEvent,
+): void {
+  const draggedModuleInfo = {
+    kind: 'module',
+    moduleDefinitionSystemId: module.moduleDefinitionSystemId,
+    processorSystemId: module.processorSystemId,
+  };
+
+  event.dataTransfer.setData(
+    'application/json',
+    JSON.stringify(draggedModuleInfo),
+  );
+  event.dataTransfer.effectAllowed = 'copy';
+  logger.info('Module drag started');
+}
 
 export function ModuleList(): ReactElement {
   // Get the active project ID from the global store
   const projectId = useGlobalStore((s) => s.activeProjectId);
 
-  // No editable actions exist in this palette yet (browse/filter only) — read
-  // for when drag-to-canvas placement lands, so this stays wired to the same
-  // source every other panel already reads.
   const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   // Get module list state from tab store via hook
@@ -242,7 +258,7 @@ export function ModuleList(): ReactElement {
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-0.5 px-0.5">
                 <Button
-                  className="whitespace-nowrap text-[10px]"
+                  className="text-[10px] whitespace-nowrap"
                   emphasis="neutral"
                   onClick={handleClearFilters}
                   size="sm"
@@ -251,7 +267,7 @@ export function ModuleList(): ReactElement {
                   Clear Filters
                 </Button>
                 <Button
-                  className="whitespace-nowrap text-[10px]"
+                  className="text-[10px] whitespace-nowrap"
                   emphasis="neutral"
                   onClick={handleUnselectAll}
                   size="sm"
@@ -276,7 +292,11 @@ export function ModuleList(): ReactElement {
               <Tooltip
                 key={module.moduleId}
                 trigger={
-                  <li className="flex cursor-default items-center gap-3">
+                  <li
+                    className="flex cursor-default items-center gap-3"
+                    draggable={isEditable}
+                    onDragStart={(e) => handleDragStart(module, e)}
+                  >
                     {module.builtIn ? (
                       <Box className="h-4 w-4 shrink-0" />
                     ) : (

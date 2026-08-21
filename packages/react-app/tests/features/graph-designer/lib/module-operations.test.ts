@@ -117,10 +117,7 @@ function makeTestStore(projectId = 'proj-mod-ops-1') {
   }));
   store.setState({graphData: EMPTY_GRAPH_DATA});
 
-  const moduleOperations = createModuleOperations(
-    store.setState,
-    projectId,
-  );
+  const moduleOperations = createModuleOperations(store.setState, projectId);
   const get = store.getState as unknown as () => GraphDesignerStore;
 
   return {get, moduleOperations, store};
@@ -208,12 +205,12 @@ describe('parseModuleDropPayload', () => {
   it('parses a well-formed module drop payload', () => {
     const payload = JSON.stringify({
       kind: 'module',
-      moduleId: 'mod-200',
+      moduleDefinitionSystemId: 'mod-def-200',
       processorSystemId: '5',
     });
     expect(parseModuleDropPayload(payload)).toEqual({
       kind: 'module',
-      moduleId: 'mod-200',
+      moduleDefinitionSystemId: 'mod-def-200',
       processorSystemId: '5',
     });
   });
@@ -225,7 +222,7 @@ describe('parseModuleDropPayload', () => {
   it('returns null when kind does not match', () => {
     const payload = JSON.stringify({
       kind: 'subgraph',
-      moduleId: 'mod-200',
+      moduleDefinitionSystemId: 'mod-def-200',
       processorSystemId: '5',
     });
     expect(parseModuleDropPayload(payload)).toBeNull();
@@ -259,7 +256,7 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
       '7',
     );
 
-    expect(result).toBe(true);
+    expect(result).toBe('sys-mod-1');
     expect(mockCreateSpfModule).toHaveBeenCalledWith('proj-mod-ops-1', {
       moduleDefinitionSystemId: '200',
       processorSystemId: '7',
@@ -288,7 +285,7 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
       '7',
     );
 
-    expect(result).toBe(false);
+    expect(result).toBeNull();
     expect(mockShowToast).toHaveBeenCalledWith(
       'backend rejected the request',
       'danger',
@@ -321,16 +318,18 @@ describe('createModuleOperations — addModuleToContainer', () => {
     const result = await moduleOperations.addModuleToContainer(
       get,
       '10',
+      '5',
       '200',
       {x: 1, y: 2},
       '7',
     );
 
-    expect(result).toBe(true);
+    expect(result).toBe('sys-mod-2');
     expect(mockCreateSpfModule).toHaveBeenCalledWith('proj-mod-ops-1', {
       containerSystemId: '10',
       moduleDefinitionSystemId: '200',
       processorSystemId: '7',
+      subgraphSystemId: '5',
     });
     expect(store.getState().subgraphProvenanceById).toEqual({});
   });
@@ -364,7 +363,7 @@ describe('createModuleOperations — addModuleToSubgraphNoContainer', () => {
       '7',
     );
 
-    expect(result).toBe(true);
+    expect(result).toBe('sys-mod-3');
     expect(mockCreateSpfModule).toHaveBeenCalledWith('proj-mod-ops-1', {
       moduleDefinitionSystemId: '200',
       processorSystemId: '7',

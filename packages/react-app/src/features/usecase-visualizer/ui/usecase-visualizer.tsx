@@ -47,6 +47,7 @@ import {Theme, useTheme} from '~shared/providers/theme-provider';
 import '@xyflow/react/dist/style.css';
 
 import {captureScreenshot} from '../lib/capture-screenshot';
+import {isPositionInsideNode, resolveDropTarget} from '../lib/drop-target';
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
 import {parsePortIdFromHandleId} from '../lib/port-geometry';
 import {recalculateParentSizes} from '../lib/recalculate-parent-sizes';
@@ -142,10 +143,6 @@ function renderMenuItems(
   ));
 }
 
-function isDropTarget(kind: AnyNode['nodeKind']): boolean {
-  return kind === NODE_KIND.CONTAINER || kind === NODE_KIND.SUBGRAPH;
-}
-
 interface CanvasProps {
   contextMenu: UsecaseVisualizerProps['contextMenu'];
   eventHandlers: UsecaseVisualizerProps['eventHandlers'];
@@ -205,6 +202,12 @@ function VisualizerCanvas({
   // once) and drag handlers can read current state without stale closures.
   const rfNodesRef = useRef(rfNodes);
   rfNodesRef.current = rfNodes;
+  const rfNodesById = useMemo(
+    () => new Map(rfNodes.map((n) => [n.id, n])),
+    [rfNodes],
+  );
+  const rfNodesByIdRef = useRef<ReadonlyMap<string, Node>>(rfNodesById);
+  rfNodesByIdRef.current = rfNodesById;
   const rfEdgesRef = useRef(rfEdges);
   rfEdgesRef.current = rfEdges;
 
@@ -412,14 +415,14 @@ function VisualizerCanvas({
           x: event.clientX,
           y: event.clientY,
         });
-        const overSubgraph = rfNodesRef.current.some(
-          (n) =>
-            (n.data as unknown as AnyNode).nodeKind === NODE_KIND.SUBGRAPH &&
-            pos.x >= n.position.x &&
-            pos.x <= n.position.x + (n.width ?? 0) &&
-            pos.y >= n.position.y &&
-            pos.y <= n.position.y + (n.height ?? 0),
-        );
+        const nodesById = rfNodesByIdRef.current;
+        const overSubgraph = rfNodesRef.current.some((n) => {
+          const nodeData = n.data as unknown as AnyNode;
+          return (
+            nodeData.nodeKind === NODE_KIND.SUBGRAPH &&
+            isPositionInsideNode(pos, n, nodesById)
+          );
+        });
         if (!overSubgraph) {
           event.preventDefault();
         }
@@ -443,31 +446,10 @@ function VisualizerCanvas({
         x: event.clientX,
         y: event.clientY,
       });
-      let targetContainerId: string | undefined;
-      let targetSubgraphId: string | undefined;
-      // Container nodes take absolute priority — break on first hit.
-      // Subgraph nodes are kept as fallback (last writer wins, no break).
-      for (const n of rfNodesRef.current) {
-        const nodeData = n.data as unknown as AnyNode;
-        const inBounds =
-          position.x >= n.position.x &&
-          position.x <= n.position.x + (n.width ?? 0) &&
-          position.y >= n.position.y &&
-          position.y <= n.position.y + (n.height ?? 0);
-        if (inBounds && isDropTarget(nodeData.nodeKind)) {
-          if (nodeData.nodeKind === NODE_KIND.CONTAINER) {
-            targetContainerId = n.id;
-            targetSubgraphId = undefined;
-            break;
-          }
-          targetSubgraphId = n.id;
-        }
-      }
+      const dropTarget = resolveDropTarget(position, rfNodesRef.current);
       store.getState().eventHandlers?.onNodeDropped?.({
         dropData,
-        position,
-        ...(targetContainerId !== undefined ? {targetContainerId} : {}),
-        ...(targetSubgraphId !== undefined ? {targetSubgraphId} : {}),
+        ...dropTarget,
       });
     },
     [screenToFlowPosition, store],

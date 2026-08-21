@@ -97,6 +97,30 @@ describe('createModuleListSlice — loadModuleList', () => {
     expect(store.getState().moduleDefinitionsById['200']).toEqual(dto);
   });
 
+  it('keeps natural module IDs and processor labels separate from system IDs', async () => {
+    const dto = makeModuleDefinitionDto({
+      moduleId: 200,
+      processorInfo: {name: 'ADSP', processorId: 1, systemId: 'proc-1'},
+      systemId: 'mod-def-200',
+    });
+    mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
+      data: [dto],
+      message: undefined,
+      success: true,
+    });
+
+    const store = makeStore();
+    await store.getState().loadModuleList();
+
+    expect(store.getState().moduleList[0]).toMatchObject({
+      dspType: 'ADSP',
+      moduleDefinitionSystemId: 'mod-def-200',
+      moduleId: '200',
+      processorSystemId: 'proc-1',
+    });
+    expect(store.getState().selectedDspTypes).toEqual(['ADSP']);
+  });
+
   it('leaves moduleDefinitionsById empty when the API call fails', async () => {
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
       data: undefined,

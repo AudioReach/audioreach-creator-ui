@@ -193,10 +193,12 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           description: '',
           dspType: '',
           inputPorts: [],
+          moduleDefinitionSystemId: 'mod-def-300',
           moduleId: '300',
           moduleName: 'Mod B',
           moduleType: 'SINK',
           outputPorts: [],
+          processorSystemId: '',
         },
       ],
       pairLinksById: {
