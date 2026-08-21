@@ -1,14 +1,15 @@
 # LLD: Usecase Designer — Edit Feature
 
-| | |
-| --- | --- |
-| **Epic Link** | `<Epic link to related JIRA/epic — TBD>` |
-| **Document status** | DRAFT |
-| **Document owner** | `<TBD>` |
-| **Target release** | `<Milestone — TBD>` |
-| **Stakeholders** | Module owner, reviewers, backend API team, other developers impacted (Discovery Wizard, Diff/Merge, Key Configurator) |
+|                     |                                                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Epic Link**       | `<Epic link to related JIRA/epic — TBD>`                                                                              |
+| **Document status** | DRAFT                                                                                                                 |
+| **Document owner**  | `<TBD>`                                                                                                               |
+| **Target release**  | `<Milestone — TBD>`                                                                                                   |
+| **Stakeholders**    | Module owner, reviewers, backend API team, other developers impacted (Discovery Wizard, Diff/Merge, Key Configurator) |
 
 Source documents (this LLD synthesizes, and defers to for full detail):
+
 - [Requirements](requirements.md) — FR-MODE-01 to FR-ENH-05
 - [Node Operations Design](node-operations-design.md)
 - [Link and Port Design](link-and-port-design.md)
@@ -88,13 +89,13 @@ Impacts on existing architecture:
   regardless of which panel originated it, must flow back through one
   reconciliation path so `GraphDataSlice`/`EditSessionSlice` — and therefore
   every UI component reading them — reflects the latest backend state.**
-  This explicitly includes properties-panel edits (rename, port count,
-  container ID) and Key Configurator edits (CKV/TKV, Subsystem Keys), not
+  This explicitly includes properties-panel edits (rename, port count) and
+  Key Configurator edits (CKV/TKV, Subsystem Keys), not
   only the canvas/palette/context-menu actions. Concretely:
   - Structural, multi-bucket edits use `applyComponentCollection` as designed.
   - Narrow single-entity edits (rename, port-count fields on
     `PATCH /spf-modules/{id}`/`PATCH /subsystems/{id}`, `PUT
-    /subsystems/{id}/filtered-keys`) update the one affected
+/subsystems/{id}/filtered-keys`) update the one affected
     entity's field(s) directly in `GraphDataSlice`/its owning map on
     backend confirmation — no polling, no separate re-fetch needed, but
     also no edit that only updates a component-local or feature-local store
@@ -139,25 +140,25 @@ Impacts on existing architecture:
 Full itemized requirements: [requirements.md](requirements.md)
 (FR-MODE-01–FR-MDF-03). Condensed by section:
 
-| # | Section | Summary | Importance | Type | Notes |
-| - | --- | --- | --- | --- | --- |
-| 1 | Canvas modes (FR-MODE-01–05) | View/Edit mode toggle; View mode shows palettes/Key Configurator/properties panel read-only, plus double-click-to-tune; Edit mode makes them editable and adds context menus/inline connection creation | Must have | Functional | Foundation for every other section |
-| 2 | Module operations (FR-MOD-01–08) | Add module (to container / empty space / subgraph-no-container), delete (cascades to links, and to the container/subgraph if it was their last module), rename; module-on-module drop resolves to container underneath, proxy/subsystem drop still rejected | Must have | Functional | `POST /spf-modules` confirmed; `DELETE /spf-modules/{id}` confirmed, returns a deleted-entities collection (see [§6.3](#63-response-reconciliation-shared-across-all-nodelinksubsystem-docs)) |
-| 3 | Subgraph operations (FR-SG-01–11) | Palette placement (session-local; allowed to overlap any existing node including a proxy), pair-link auto-render + exclude, duplicate-placement guard, provenance-based delete, rename | Must have | Functional | 3 provenances drive delete behavior; delete has no dedicated endpoint — achieved by deleting every module in the subgraph, cascading per row 2; rename via `PATCH /subgraphs/{id}` |
-| 4 | Container operations (FR-CONT-01–04) | Delete (cascades), no rename, implicit creation only, edit container ID | Must have | Functional | Containers are derived, not first-class; delete has no dedicated endpoint — achieved by deleting every module in the container, cascading per row 2; container ID edit is the `containerId` field on `PATCH /spf-modules/{id}` |
-| 5 | Link operations (FR-LINK-01–07) | Right-click-to-connect, Escape-cancel, cross-subsystem bridging, control-port limit warning, server as final arbiter, delete | Must have | Functional | No client-side `maxConnections` gate |
-| 6 | Subsystem operations (FR-SUBSYS-01–06) | Move into / remove from subsystem, delete, rename, expand (promotes contents) | Must have | Functional | Move-out never deletes the subsystem; expand = move-out every child + delete the now-empty subsystem; backend `DELETE` only removes an **empty** subsystem — confirmed correct backend behavior, not a gap; Delete is disabled/rejected on a non-empty subsystem (FR-SUBSYS-02), Expand is the promote-then-delete path |
-| 7 | Port operations (FR-PORT-01–06) | Data/control port count inc/dec on modules & subsystems, backend-arbitrated decrease, port context menu | Must have | Functional | Confirmed: `maxInputPortsSupported`/`maxOutputPortsSupported`/`maxControlPortsSupported` are fields on `PATCH /spf-modules/{id}` (`PatchSpfModuleRequestDto`); `maxInputDataPortsSupported`/`maxOutputDataPortsSupported`/`maxControlPortsSupported` on `PATCH /subsystems/{id}` (`PatchSubsystemRequestDto`) — no dedicated `updatePortCount` endpoint |
-| 8 | Apply Changes (FR-APPLY-01–03) | Disabled while mutating/in-flight; sends use cases + excluded links; summary view on success/failure | Must have | Functional | `POST /projects/{id}/create-usecases` confirmed |
-| 9 | Palettes (FR-PAL-01) | Subgraph palette disabled in subsystem level | Must have | Functional | Depends on out-of-scope toggle |
-| 10 | Context menus (FR-CTXMENU-01–03) | Node/edge Delete dispatch by type; Delete key parity with menu | Must have | Functional | Shared `deleteSelection` dispatcher |
-| 11 | Properties panel (FR-PROP-01) | Editable fields per node type incl. port-count controls | Must have | Functional | Reuses existing panel widget |
-| 12 | MDF use cases (FR-MDF-02–03) | Expanded/virtual bridge display modes; Offload to other DSP | Must have | Functional | MDF is UI-computed, not backend field; **Offload to other DSP (FR-MDF-03) is not scoped — no `offloadModuleToDsp`-equivalent endpoint exists in swagger, and none is being requested** — see [§16](#16-not-doing) |
-| 13 | Subgraph proxy nodes (FR-PROXY-01–02) | No connections to/from proxy nodes; rename proxy (renames underlying subgraph) | Must have | Functional | A subgraph *can* be dropped onto a proxy node (renders overlapping) — only connections are restricted |
-| 14 | Positioning (FR-POS-01–02) | Exact drop coordinates, no auto-layout snap-back; drag-to-reposition in both modes, not staged as an edit | Must have | Functional | Backend persistence TBD |
-| 15 | Edit mode lifecycle (FR-LIFECYCLE-01–03) | Exclusive lock vs. Discovery Wizard/Diff-Merge, per project; Discard with confirmation, incl. project-close | Must have | Functional | `POST /projects/{id}/discard-changes` confirmed |
-| 16 | Canvas interaction (FR-CANVAS-01) | Multi-select in both modes with cascade-aware batch delete | Must have | Functional | Copy/paste (FR-ENH-04/FR-ENH-05) deferred, see row 17 |
-| 17 | Enhancements (FR-ENH-01–05) | `changeId` per staged edit (satisfied already); undo/redo, quick actions, and copy/paste all deferred | Deferred | Functional | Explicitly out of scope |
+| #   | Section                                  | Summary                                                                                                                                                                                                                                                     | Importance | Type       | Notes                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Canvas modes (FR-MODE-01–05)             | View/Edit mode toggle; View mode shows palettes/Key Configurator/properties panel read-only, plus double-click-to-tune; Edit mode makes them editable and adds context menus/inline connection creation                                                     | Must have  | Functional | Foundation for every other section                                                                                                                                                                                                                                                                                                                      |
+| 2   | Module operations (FR-MOD-01–08)         | Add module (to container / empty space / subgraph-no-container), delete (cascades to links, and to the container/subgraph if it was their last module), rename; module-on-module drop resolves to container underneath, proxy/subsystem drop still rejected | Must have  | Functional | `POST /spf-modules` confirmed; `DELETE /spf-modules/{id}` confirmed, returns a deleted-entities collection (see [§6.3](#63-response-reconciliation-shared-across-all-nodelinksubsystem-docs))                                                                                                                                                           |
+| 3   | Subgraph operations (FR-SG-01–11)        | Palette placement (session-local; allowed to overlap any existing node including a proxy), pair-link auto-render + exclude, duplicate-placement guard, provenance-based delete, rename                                                                      | Must have  | Functional | 3 provenances drive delete behavior; delete has no dedicated endpoint — achieved by deleting every module in the subgraph, cascading per row 2; rename via `PATCH /subgraphs/{id}`                                                                                                                                                                      |
+| 4   | Container operations (FR-CONT-01–03)     | Delete (cascades), no rename, implicit creation only                                                                                                                                                                                                        | Must have  | Functional | Containers are derived, not first-class; delete has no dedicated endpoint — achieved by deleting every module in the container, cascading per row 2                                                                                                                                                                                                     |
+| 5   | Link operations (FR-LINK-01–07)          | Right-click-to-connect, Escape-cancel, cross-subsystem bridging, control-port limit warning, server as final arbiter, delete                                                                                                                                | Must have  | Functional | No client-side `maxConnections` gate                                                                                                                                                                                                                                                                                                                    |
+| 6   | Subsystem operations (FR-SUBSYS-01–06)   | Move into / remove from subsystem, delete, rename, expand (promotes contents)                                                                                                                                                                               | Must have  | Functional | Move-out never deletes the subsystem; expand = move-out every child + delete the now-empty subsystem; backend `DELETE` only removes an **empty** subsystem — confirmed correct backend behavior, not a gap; Delete is disabled/rejected on a non-empty subsystem (FR-SUBSYS-02), Expand is the promote-then-delete path                                 |
+| 7   | Port operations (FR-PORT-01–06)          | Data/control port count inc/dec on modules & subsystems, backend-arbitrated decrease, port context menu                                                                                                                                                     | Must have  | Functional | Confirmed: `maxInputPortsSupported`/`maxOutputPortsSupported`/`maxControlPortsSupported` are fields on `PATCH /spf-modules/{id}` (`PatchSpfModuleRequestDto`); `maxInputDataPortsSupported`/`maxOutputDataPortsSupported`/`maxControlPortsSupported` on `PATCH /subsystems/{id}` (`PatchSubsystemRequestDto`) — no dedicated `updatePortCount` endpoint |
+| 8   | Apply Changes (FR-APPLY-01–03)           | Disabled while mutating/in-flight; sends use cases + excluded links; summary view on success/failure                                                                                                                                                        | Must have  | Functional | `POST /projects/{id}/create-usecases` confirmed                                                                                                                                                                                                                                                                                                         |
+| 9   | Palettes (FR-PAL-01)                     | Subgraph palette disabled in subsystem level                                                                                                                                                                                                                | Must have  | Functional | Depends on out-of-scope toggle                                                                                                                                                                                                                                                                                                                          |
+| 10  | Context menus (FR-CTXMENU-01–03)         | Node/edge Delete dispatch by type; Delete key parity with menu                                                                                                                                                                                              | Must have  | Functional | Shared `deleteSelection` dispatcher                                                                                                                                                                                                                                                                                                                     |
+| 11  | Properties panel (FR-PROP-01)            | Editable fields per node type incl. port-count controls                                                                                                                                                                                                     | Must have  | Functional | Reuses existing panel widget                                                                                                                                                                                                                                                                                                                            |
+| 12  | MDF use cases (FR-MDF-02–03)             | Expanded/virtual bridge display modes; Offload to other DSP                                                                                                                                                                                                 | Must have  | Functional | MDF is UI-computed, not backend field; **Offload to other DSP (FR-MDF-03) is not scoped — no `offloadModuleToDsp`-equivalent endpoint exists in swagger, and none is being requested** — see [§16](#16-not-doing)                                                                                                                                       |
+| 13  | Subgraph proxy nodes (FR-PROXY-01–02)    | No connections to/from proxy nodes; rename proxy (renames underlying subgraph)                                                                                                                                                                              | Must have  | Functional | A subgraph _can_ be dropped onto a proxy node (renders overlapping) — only connections are restricted                                                                                                                                                                                                                                                   |
+| 14  | Positioning (FR-POS-01–02)               | Exact drop coordinates, no auto-layout snap-back; drag-to-reposition in both modes, not staged as an edit                                                                                                                                                   | Must have  | Functional | Backend persistence TBD                                                                                                                                                                                                                                                                                                                                 |
+| 15  | Edit mode lifecycle (FR-LIFECYCLE-01–03) | Exclusive lock vs. Discovery Wizard/Diff-Merge, per project; Discard with confirmation, incl. project-close                                                                                                                                                 | Must have  | Functional | `POST /projects/{id}/discard-changes` confirmed                                                                                                                                                                                                                                                                                                         |
+| 16  | Canvas interaction (FR-CANVAS-01)        | Multi-select in both modes with cascade-aware batch delete                                                                                                                                                                                                  | Must have  | Functional | Copy/paste (FR-ENH-04/FR-ENH-05) deferred, see row 17                                                                                                                                                                                                                                                                                                   |
+| 17  | Enhancements (FR-ENH-01–05)              | `changeId` per staged edit (satisfied already); undo/redo, quick actions, and copy/paste all deferred                                                                                                                                                       | Deferred   | Functional | Explicitly out of scope                                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -183,18 +184,18 @@ specifications. (If Figma/mockups are produced separately, link them here.)
 
 ### 5.2 Structural editing surfaces
 
-| Surface | Interaction |
-| --- | --- |
-| Module palette | Drag a module onto any target (container, subgraph, empty canvas space, or another module — resolves to the container underneath); rejected only on a subgraph-proxy node or a subsystem node |
-| Subgraph palette | Drag an existing subgraph anywhere on canvas — placement renders at the drop point regardless of what's underneath, including overlapping a subgraph-proxy node; disabled (greyed, tooltipped) for subgraphs already placed, or entirely in subsystem level |
-| Context menu (node) | Delete; "Move to Subsystem"; "Remove from Subsystem" (only if parent is a subsystem); "Expand" (subsystem nodes only, FR-SUBSYS-06) — "Offload to other DSP" (FR-MDF-03) deferred, see [§16](#16-not-doing) |
-| Context menu (edge) | Delete, or "Exclude Link" for pair-derived edges |
-| Delete key | Same dispatch as context-menu Delete, for the current selection (single or multi) |
-| Port handle (drag) | Drag directly from a source port to a target port — native connection gesture, for ports both visible in the current view |
-| Right-click port | "Start connection" / "End connection" (two-click flow) — required when the target port isn't yet rendered (e.g. into a collapsed subsystem) |
-| Escape | Cancels an in-progress connection |
-| Properties panel | Rename, port count +/-, container ID edit — depending on node type |
-| Multi-select | Shift+click or rubber-band drag; batch Delete respects cascade ordering |
+| Surface             | Interaction                                                                                                                                                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module palette      | Drag a module onto any target (container, subgraph, empty canvas space, or another module — resolves to the container underneath); rejected only on a subgraph-proxy node or a subsystem node                                                               |
+| Subgraph palette    | Drag an existing subgraph anywhere on canvas — placement renders at the drop point regardless of what's underneath, including overlapping a subgraph-proxy node; disabled (greyed, tooltipped) for subgraphs already placed, or entirely in subsystem level |
+| Context menu (node) | Delete; "Move to Subsystem"; "Remove from Subsystem" (only if parent is a subsystem); "Expand" (subsystem nodes only, FR-SUBSYS-06) — "Offload to other DSP" (FR-MDF-03) deferred, see [§16](#16-not-doing)                                                 |
+| Context menu (edge) | Delete, or "Exclude Link" for pair-derived edges                                                                                                                                                                                                            |
+| Delete key          | Same dispatch as context-menu Delete, for the current selection (single or multi)                                                                                                                                                                           |
+| Port handle (drag)  | Drag directly from a source port to a target port — native connection gesture, for ports both visible in the current view                                                                                                                                   |
+| Right-click port    | "Start connection" / "End connection" (two-click flow) — required when the target port isn't yet rendered (e.g. into a collapsed subsystem)                                                                                                                 |
+| Escape              | Cancels an in-progress connection                                                                                                                                                                                                                           |
+| Properties panel    | Rename and port count +/- depending on node type                                                                                                                                                                                                            |
+| Multi-select        | Shift+click or rubber-band drag; batch Delete respects cascade ordering                                                                                                                                                                                     |
 
 Copy/Paste (FR-ENH-04/FR-ENH-05) is deferred — see [§16](#16-not-doing).
 
@@ -264,14 +265,14 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
 ```typescript
 interface EditSessionSlice {
   mode: 'view' | 'edit';
-  enterEditMode: () => boolean;   // false if exclusive lock unavailable
+  enterEditMode: () => boolean; // false if exclusive lock unavailable
   exitEditMode: () => void;
 
-  isMutating: boolean;            // single serial mutation lock
+  isMutating: boolean; // single serial mutation lock
   beginMutation: () => void;
   endMutation: () => void;
 
-  usesSubsystemVariant: boolean;  // fixed for the session, set in enterEditMode()
+  usesSubsystemVariant: boolean; // fixed for the session, set in enterEditMode()
 
   // Session-local maps — cleared and/or reseeded on every '→ view' transition
   subgraphProvenanceById: Record<string, SubgraphProvenance>;
@@ -291,8 +292,8 @@ failure. `EditSessionSlice` never holds graph data itself.
 
 **This "merge on success" rule applies uniformly to every backend-confirmed
 edit in the feature, not only canvas/palette/context-menu actions.**
-Properties-panel edits (rename, port count, container ID) are held to the
-same standard: their confirmed response must land back in
+Properties-panel edits (rename, port count) are held to the same standard:
+their confirmed response must land back in
 `GraphDataSlice`/the relevant `EditSessionSlice` map, not only in a
 panel-local or feature-local store, so that any other component reading
 shared state (canvas, a different open panel) sees the change too. See
@@ -311,10 +312,11 @@ isolation falls out of that existing scoping for free; a second
 `Record<projectId, ...>` map on `global-store.ts` would only duplicate it.
 `shared/store/` is still the right layer (FSD forbids Usecase Edit from
 importing Discovery Wizard/Diff-Merge directly), it just doesn't need to be
-the *global* store specifically:
+the _global_ store specifically:
 
 ```typescript
-type ExclusiveSessionMode = 'none' | 'usecase-edit' | 'discovery-wizard' | 'diff-merge';
+type ExclusiveSessionMode =
+  'none' | 'usecase-edit' | 'discovery-wizard' | 'diff-merge';
 
 interface ExclusiveLockSlice {
   activeExclusiveMode: ExclusiveSessionMode;
@@ -359,7 +361,7 @@ interface ComponentCollectionWithSubsystemsDto extends ComponentCollectionDto {
 
 // 3. Subsystem move-in/move-out (POST .../components/move-in, /move-out) — a genuine 3-bucket delta
 interface MoveSubsystemComponentsResponseDto {
-  added: ComponentCollectionWithSubsystemsDto;   // moved components + any newly constructed links
+  added: ComponentCollectionWithSubsystemsDto; // moved components + any newly constructed links
   updated: ComponentCollectionWithSubsystemsDto; // pre-existing entities modified by the move
   removed: ComponentCollectionWithSubsystemsDto; // links invalidated by the move — not the moved components themselves
 }
@@ -382,8 +384,8 @@ Deleting a container or subgraph is achieved client-side by deleting every
 `SpfModuleDto` inside it via `DELETE /spf-modules/{id}`, one call per
 module — the container/subgraph then disappears as the side effect of the
 containing module(s) being gone, once `recomputeContainersAndSubgraphs`
-re-derives from the surviving set. There is no `deleteContainer`/
-`deleteSubgraph` endpoint to call directly, and none is planned.
+re-derives from the surviving set. There is no container-delete or
+subgraph-delete endpoint to call directly, and none is planned.
 `RemoveSpfModuleResponseDto.deleted` is an id-only deleted-entities
 collection — unlike `ComponentCollectionDto`, its entries are `string[]` of
 systemIds, not full DTOs, since the backend has already discarded the
@@ -418,6 +420,7 @@ A single shared reconciler (`applyComponentCollection`) accepts one or more
 entire response is passed as a single "added" or "updated" bucket
 depending on the calling action, since the endpoint doesn't split them
 itself) and merges them into `GraphDataSlice`, then:
+
 1. Re-derives containers/subgraphs by grouping surviving modules
    (`recomputeContainersAndSubgraphs`) — containers/subgraphs are **never**
    first-class entities in the response; they disappear automatically when
@@ -452,12 +455,12 @@ since they're snapshots, not deltas.
 
 ### 6.4 Feature-area component map
 
-| Design doc | Owns | Key state | Key backend calls |
-| --- | --- | --- | --- |
-| Core Edit Session | Mode switch, exclusive lock, `isMutating`, Apply, Discard | `EditSessionSlice` core fields | `POST /projects/{id}/create-usecases`, `POST /projects/{id}/discard-changes` |
-| Node Operations | Module/container/subgraph/subsystem CRUD, provenance | `subgraphProvenanceById` | `POST /spf-modules`, `DELETE /spf-modules/{id}` (cascading container/subgraph delete achieved via repeated calls, no dedicated endpoint), `PATCH /subgraphs/{id}` (rename), `POST /subsystems`, `DELETE /subsystems/{id}` (empty only), `PATCH /subsystems/{id}` (rename/port counts), `.../components/move-in`, `.../components/move-out` (move-out × all children + delete = expand), `GET /subgraphs/{id}/components`, `GET /subgraphs/{id}/subgraph-pairs` |
-| Link & Port | Connections, port counts | Visualizer-internal `connectionInProgress` | `POST /data-links`/`/control-links`(`/with-subsystems`), `DELETE /data-links/{id}`/`/control-links/{id}`, port-count fields on `PATCH /spf-modules/{id}`/`PATCH /subsystems/{id}` |
-| Canvas UI Mechanics | Drop-target routing (no client-side rejection except proxy/subsystem module drops), palettes, context menus, properties panel, positioning, multi-select | Reads Visualizer-internal `selectedNodeIds`/`selectedEdgeIds` ([`SelectionChangePayload`](../../../packages/react-app/src/features/usecase-visualizer/model/visualizer.types.ts)) — owns no state of its own | — (all mutating calls are Node Operations'/Link & Port's) |
+| Design doc          | Owns                                                                                                                                                     | Key state                                                                                                                                                                                                    | Key backend calls                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core Edit Session   | Mode switch, exclusive lock, `isMutating`, Apply, Discard                                                                                                | `EditSessionSlice` core fields                                                                                                                                                                               | `POST /projects/{id}/create-usecases`, `POST /projects/{id}/discard-changes`                                                                                                                                                                                                                                                                                                                                                                                   |
+| Node Operations     | Module/container/subgraph/subsystem CRUD, provenance                                                                                                     | `subgraphProvenanceById`                                                                                                                                                                                     | `POST /spf-modules`, `DELETE /spf-modules/{id}` (cascading container/subgraph delete achieved via repeated calls, no dedicated endpoint), `PATCH /subgraphs/{id}` (rename), `POST /subsystems`, `DELETE /subsystems/{id}` (empty only), `PATCH /subsystems/{id}` (rename/port counts), `.../components/move-in`, `.../components/move-out` (move-out × all children + delete = expand), `GET /subgraphs/{id}/components`, `GET /subgraphs/{id}/subgraph-pairs` |
+| Link & Port         | Connections, port counts                                                                                                                                 | Visualizer-internal `connectionInProgress`                                                                                                                                                                   | `POST /data-links`/`/control-links`(`/with-subsystems`), `DELETE /data-links/{id}`/`/control-links/{id}`, port-count fields on `PATCH /spf-modules/{id}`/`PATCH /subsystems/{id}`                                                                                                                                                                                                                                                                              |
+| Canvas UI Mechanics | Drop-target routing (no client-side rejection except proxy/subsystem module drops), palettes, context menus, properties panel, positioning, multi-select | Reads Visualizer-internal `selectedNodeIds`/`selectedEdgeIds` ([`SelectionChangePayload`](../../../packages/react-app/src/features/usecase-visualizer/model/visualizer.types.ts)) — owns no state of its own | — (all mutating calls are Node Operations'/Link & Port's)                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ---
 
@@ -469,26 +472,26 @@ open-item list.
 
 ### 7.1 Confirmed endpoints
 
-| Endpoint | Method | Request | Response |
-| --- | --- | --- | --- |
-| `/spf-modules` | POST | `CreateSpfModuleRequestDto` | `SpfModuleDto` |
-| `/spf-modules/{id}` | PATCH | `PatchSpfModuleRequestDto {alias?, containerId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` — covers rename, container-ID edit, and module port-count changes |
-| `/spf-modules/{id}` | DELETE | — | `RemoveSpfModuleResponseDto {removedSpfModules, removedDataLinks, removedControlLinks}` |
-| `/subgraphs/{id}/components` | GET | — | `ComponentCollectionDto` (snapshot, not a delta) |
-| `/subgraphs/{id}/subgraph-pairs` | GET | — | `SubgraphPairDto[]` — `{sourceSubgraphSystemId, destinationSubgraphSystemId, dataLinks: DataLinkDto[], controlLinks: ControlLinkDto[]}` |
-| `/subgraphs/{id}` | PATCH | `{name: string}` | `SubgraphDto` — covers subgraph rename, also used for subgraph-proxy rename (FR-PROXY-02) |
-| `/subgraphs/{id}/properties` | GET | — | `SubgraphPropertiesDto` |
-| `/containers/{id}/properties` | GET | — | `ContainerPropertiesDto` |
-| `/data-links`, `/data-links/with-subsystems` | POST | `CreateDataLinkRequest` | `ComponentCollectionDto` / `ComponentCollectionWithSubsystemsDto` |
-| `/control-links`, `/control-links/with-subsystems` | POST | `CreateControlLinkRequest` | `ComponentCollectionDto` / `ComponentCollectionWithSubsystemsDto` |
-| `/data-links/{id}`, `/control-links/{id}` | DELETE | — | The deleted link's own DTO |
-| `/subsystems` | POST | `CreateSubsystemRequestDto {name, parentId?}` | `SubsystemDto` |
-| `/subsystems/{id}` | PATCH | `PatchSubsystemRequestDto {name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}` | `SubsystemDto` — covers rename and subsystem port-count changes |
-| `/subsystems/{id}` | DELETE | — | `SubsystemDto` — **removes an empty subsystem only**, no cascade |
-| `/subsystems/{id}/components/move-in` | POST | `MoveSubsystemComponentsRequestDto {componentSystemIds}` | `MoveSubsystemComponentsResponseDto {added, updated, removed}` |
-| `/subsystems/{id}/components/move-out` | POST | `MoveSubsystemComponentsRequestDto {componentSystemIds}` | `MoveSubsystemComponentsResponseDto {added, updated, removed}` |
-| `/projects/{projectId}/create-usecases` | POST | `CreateUsecasesRequestDto` (below) | `CreateUsecasesResponseDto` (below) |
-| `/projects/{projectId}/discard-changes` | POST | `DiscardChangesRequestDto {changeIds?}` | `DiscardChangesResponseDto` |
+| Endpoint                                           | Method | Request                                                                                                                               | Response                                                                                                                                |
+| -------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `/spf-modules`                                     | POST   | `CreateSpfModuleRequestDto`                                                                                                           | `SpfModuleDto`                                                                                                                          |
+| `/spf-modules/{id}`                                | PATCH  | `PatchSpfModuleRequestDto {alias?, containerSystemId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` — covers rename and module port-count changes                                                                            |
+| `/spf-modules/{id}`                                | DELETE | —                                                                                                                                     | `RemoveSpfModuleResponseDto {removedSpfModules, removedDataLinks, removedControlLinks}`                                                 |
+| `/subgraphs/{id}/components`                       | GET    | —                                                                                                                                     | `ComponentCollectionDto` (snapshot, not a delta)                                                                                        |
+| `/subgraphs/{id}/subgraph-pairs`                   | GET    | —                                                                                                                                     | `SubgraphPairDto[]` — `{sourceSubgraphSystemId, destinationSubgraphSystemId, dataLinks: DataLinkDto[], controlLinks: ControlLinkDto[]}` |
+| `/subgraphs/{id}`                                  | PATCH  | `{name: string}`                                                                                                                      | `SubgraphDto` — covers subgraph rename, also used for subgraph-proxy rename (FR-PROXY-02)                                               |
+| `/subgraphs/{id}/properties`                       | GET    | —                                                                                                                                     | `SubgraphPropertiesDto`                                                                                                                 |
+| `/containers/{id}/properties`                      | GET    | —                                                                                                                                     | `ContainerPropertiesDto`                                                                                                                |
+| `/data-links`, `/data-links/with-subsystems`       | POST   | `CreateDataLinkRequest`                                                                                                               | `ComponentCollectionDto` / `ComponentCollectionWithSubsystemsDto`                                                                       |
+| `/control-links`, `/control-links/with-subsystems` | POST   | `CreateControlLinkRequest`                                                                                                            | `ComponentCollectionDto` / `ComponentCollectionWithSubsystemsDto`                                                                       |
+| `/data-links/{id}`, `/control-links/{id}`          | DELETE | —                                                                                                                                     | The deleted link's own DTO                                                                                                              |
+| `/subsystems`                                      | POST   | `CreateSubsystemRequestDto {name, parentId?}`                                                                                         | `SubsystemDto`                                                                                                                          |
+| `/subsystems/{id}`                                 | PATCH  | `PatchSubsystemRequestDto {name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}`              | `SubsystemDto` — covers rename and subsystem port-count changes                                                                         |
+| `/subsystems/{id}`                                 | DELETE | —                                                                                                                                     | `SubsystemDto` — **removes an empty subsystem only**, no cascade                                                                        |
+| `/subsystems/{id}/components/move-in`              | POST   | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                              | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                          |
+| `/subsystems/{id}/components/move-out`             | POST   | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                              | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                          |
+| `/projects/{projectId}/create-usecases`            | POST   | `CreateUsecasesRequestDto` (below)                                                                                                    | `CreateUsecasesResponseDto` (below)                                                                                                     |
+| `/projects/{projectId}/discard-changes`            | POST   | `DiscardChangesRequestDto {changeIds?}`                                                                                               | `DiscardChangesResponseDto`                                                                                                             |
 
 ### 7.2 Delete/move/expand response shapes (no single shared envelope)
 
@@ -497,23 +500,23 @@ envelope — each has its own confirmed shape:
 
 ```typescript
 // Module delete
-Promise<RemoveSpfModuleResponseDto> // {removedSpfModules, removedDataLinks, removedControlLinks}
+Promise<RemoveSpfModuleResponseDto>; // {removedSpfModules, removedDataLinks, removedControlLinks}
 
 // Subsystem move-in / move-out
-Promise<MoveSubsystemComponentsResponseDto> // {added, updated, removed} of ComponentCollectionWithSubsystemsDto
+Promise<MoveSubsystemComponentsResponseDto>; // {added, updated, removed} of ComponentCollectionWithSubsystemsDto
 
 // Subsystem delete (empty only)
-Promise<SubsystemDto>
+Promise<SubsystemDto>;
 ```
 
-| Action | Client-side composition | Backend calls | Added | Updated | Removed |
-| --- | --- | --- | --- | --- | --- |
-| Module delete | Single call | `DELETE /spf-modules/{id}` | — | — | The module plus every data/control link that referenced it (`removedSpfModules`/`removedDataLinks`/`removedControlLinks`); the container/subgraph disappear as the side effect of `recomputeContainersAndSubgraphs` once re-derived from the surviving set |
-| Container delete | Delete every module inside | `DELETE /spf-modules/{id}` × N | — | — | Every module in the container plus their links; container disappears as the side effect of the last one |
-| Subgraph delete | Delete every module inside | `DELETE /spf-modules/{id}` × N | — | — | Every module in the subgraph plus their links; subgraph disappears as the side effect of the last one |
-| Move into subsystem | Single call | `POST /subsystems/{id}/components/move-in` | Moved components + any newly constructed links | Pre-existing entities modified by the move | Links invalidated by the move |
-| Move out of subsystem | Single call | `POST /subsystems/{id}/components/move-out` | Moved components + any newly constructed links | Pre-existing entities modified by the move | Links invalidated by the move (subsystem itself never deleted) |
-| Expand subsystem | Move every child out, then delete the now-empty shell | `POST .../move-out` (all children) → `DELETE /subsystems/{id}` | Per move-out response | Per move-out response | Per move-out response, plus the subsystem itself from the final `DELETE` |
+| Action                | Client-side composition                               | Backend calls                                                  | Added                                          | Updated                                    | Removed                                                                                                                                                                                                                                                    |
+| --------------------- | ----------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module delete         | Single call                                           | `DELETE /spf-modules/{id}`                                     | —                                              | —                                          | The module plus every data/control link that referenced it (`removedSpfModules`/`removedDataLinks`/`removedControlLinks`); the container/subgraph disappear as the side effect of `recomputeContainersAndSubgraphs` once re-derived from the surviving set |
+| Container delete      | Delete every module inside                            | `DELETE /spf-modules/{id}` × N                                 | —                                              | —                                          | Every module in the container plus their links; container disappears as the side effect of the last one                                                                                                                                                    |
+| Subgraph delete       | Delete every module inside                            | `DELETE /spf-modules/{id}` × N                                 | —                                              | —                                          | Every module in the subgraph plus their links; subgraph disappears as the side effect of the last one                                                                                                                                                      |
+| Move into subsystem   | Single call                                           | `POST /subsystems/{id}/components/move-in`                     | Moved components + any newly constructed links | Pre-existing entities modified by the move | Links invalidated by the move                                                                                                                                                                                                                              |
+| Move out of subsystem | Single call                                           | `POST /subsystems/{id}/components/move-out`                    | Moved components + any newly constructed links | Pre-existing entities modified by the move | Links invalidated by the move (subsystem itself never deleted)                                                                                                                                                                                             |
+| Expand subsystem      | Move every child out, then delete the now-empty shell | `POST .../move-out` (all children) → `DELETE /subsystems/{id}` | Per move-out response                          | Per move-out response                      | Per move-out response, plus the subsystem itself from the final `DELETE`                                                                                                                                                                                   |
 
 (A `pasteSubgraphFromSnapshot`-style row would apply once copy/paste,
 FR-ENH-04/FR-ENH-05, is picked up — deferred, see [§16](#16-not-doing). Offload to
@@ -523,7 +526,7 @@ exists and none is planned yet.)
 ### 7.3 Non-cascading narrow-response endpoints
 
 ```typescript
-patchSpfModule(id, {alias?, containerId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}): Promise<SpfModuleDto> // rename, container-ID edit, and module port counts all go through this one PATCH
+patchSpfModule(id, {alias?, containerSystemId?, maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}): Promise<SpfModuleDto> // rename and module port counts go through this one PATCH
 patchSubsystem(id, {name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}): Promise<SubsystemDto> // rename and subsystem port counts
 renameSubgraph(id, newName): Promise<SubgraphDto> // PATCH /subgraphs/{id} {name}; also handles subgraph-proxy rename (FR-PROXY-02), no separate renameSubgraphProxy function, per node-operations-design.md §4.6
 ```
@@ -549,7 +552,8 @@ is:
 
 ## 9. Open Questions
 
-*(TBD with backend team, unless noted)*
+_(TBD with backend team, unless noted)_
+
 - **Position/layout-override persistence mechanism** (FR-POS-02) — explicitly
   unspecified; no candidate endpoint proposed by design.
 - **Direct subsystem-port-to-subsystem-port connections** — FR-LINK-03/FR-LINK-04
@@ -596,10 +600,10 @@ of this document instead:
 - **Module delete cascade** — [node-operations-design.md § Sequence: Delete Subgraph](node-operations-design.md#sequence-delete-subgraph--cascading-to-containersubgraph-req-016bc)
 - **Exclude Link / reversal** — [node-operations-design.md § 4.3 Exclude / re-include](node-operations-design.md#43-exclude--re-include-fr-sg-03-fr-sg-04-fr-sg-04a)
 - **Connection creation (two-click flow)** — [link-and-port-design.md § Sequence: Two-Click Connection](link-and-port-design.md#sequence-two-click-connection-into-a-collapsed-subsystem-fr-link-01)
-Copy/paste is deferred (FR-ENH-04/FR-ENH-05, [§16](#16-not-doing)) — no sequence
-diagram exists for it. Offload to other DSP is likewise deferred
-(FR-MDF-03, [§16](#16-not-doing)) — no endpoint exists yet, no sequence
-diagram is defined for it.
+  Copy/paste is deferred (FR-ENH-04/FR-ENH-05, [§16](#16-not-doing)) — no sequence
+  diagram exists for it. Offload to other DSP is likewise deferred
+  (FR-MDF-03, [§16](#16-not-doing)) — no endpoint exists yet, no sequence
+  diagram is defined for it.
 
 Class-level shapes of the entities this feature depends on
 (`ComponentCollectionDto`, `SpfModuleDto`, `Connection`, `KvSelection`,
@@ -624,12 +628,13 @@ severities, and Discard failure/transport-failure handling).
 — this signals a bug in the caller (every legitimate call site is already
 UI-gated to Edit mode only), not a user-facing failure. The one exception,
 `deleteSelection` (reachable via a global `keydown` listener with no
-render-layer gate), checks `mode` itself *before* calling `withMutationLock`
+render-layer gate), checks `mode` itself _before_ calling `withMutationLock`
 and no-ops silently — a Delete keypress in View mode is an expected, normal
 user action, not a bug. (`pasteSelection` does not exist
 — copy/paste is deferred, FR-ENH-04/FR-ENH-05.)
 
 **Partial-failure handling:**
+
 - `getSubgraphContents`/`getSubgraphPairs` (subgraph placement) are
   independent failure domains — a pairs-fetch failure only costs missing
   auto-rendered connections, the subgraph itself still lands.
@@ -643,7 +648,7 @@ user action, not a bug. (`pasteSelection` does not exist
   surfacing as `issues` if the backend rejects it.
 
 **Control-port `maxConnections` warning** is the one **non-blocking**
-signal in the feature — shown only *after* the backend confirms a control
+signal in the feature — shown only _after_ the backend confirms a control
 link was created and its target port's on-canvas count now exceeds
 `maxConnections`; the connection is never undone or blocked.
 
@@ -689,7 +694,7 @@ link was created and its target port's on-canvas count now exceeds
 - **Batch delete concurrency is scoped, not unlimited.** `deleteSelection`
   ([canvas-ui-mechanics-design.md §4.1](canvas-ui-mechanics-design.md#41-deleteselection))
   takes `isMutating`'s single outer lock once for the whole batch, then runs
-  every surviving root/edge delete concurrently *inside* that one lock via
+  every surviving root/edge delete concurrently _inside_ that one lock via
   `Promise.allSettled` over each entity's lock-free `*Inner` function — real
   concurrency within one user action, not a second, separate acquisition of
   `isMutating` per entity. Each entity's delete must go through its

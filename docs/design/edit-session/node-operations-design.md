@@ -1,7 +1,7 @@
 # Node Operations — Design
 
 > Requirements: [requirements.md](requirements.md) §2–4, §6, §10, §13
-> (FR-MOD-01–FR-CONT-04, FR-SUBSYS-01–06, FR-CTXMENU-01, FR-PROXY-01–02) — FR-CTXMENU-01 only for the
+> (FR-MOD-01–FR-CONT-03, FR-SUBSYS-01–06, FR-CTXMENU-01, FR-PROXY-01–02) — FR-CTXMENU-01 only for the
 > per-node-type delete _dispatch logic_ §4.5 needs to resolve FR-SG-06/FR-SG-07/FR-SG-08;
 > the context-menu wiring itself is Canvas UI Mechanics' per [§1](#1-scope)
 >
@@ -758,47 +758,20 @@ only as a side effect of `addModuleToEmptyCanvas`/
 `addModuleToSubgraphNoContainer` in Module Operations) and no rename
 (FR-CONT-02). This file is correspondingly thin:
 
-- `deleteContainer(get, containerId)` — FR-CONT-01. **No dedicated
+- `deleteContainers(get, containerIds)` — FR-CONT-01. **No dedicated
   endpoint** — per
   [design.md §7.2](design.md#72-deletemoveexpand-response-shapes-no-single-shared-envelope),
-  achieved by calling `DELETE /spf-modules/{id}` for every module in the
+  achieved by calling `DELETE /spf-modules/{id}` for every module in each
   container, same composition as subgraph delete
-  ([§4.5](#45-delete-req-016a-req-016b-req-016c-req-048)); the container
-  disappears as the side effect of its last module going. Same
-  `deleteContainerInner(get, containerId, options?: InnerActionOptions): Promise<boolean>` /
-  `deleteContainer` split as `deleteSubgraph`/`deleteSubgraphInner`
-  ([§4.5](#45-delete-req-016a-req-016b-req-016c-req-048)) and per
-  [§2.2](#22-the-mutation-wrapper-pattern) — `deleteContainerInner` returns
-  `false` on the same mid-loop failure this section's partial-failure
-  caveat describes, `true` otherwise, honors `options?.suppressToast` the
-  same as every other `*Inner` function, and is what batch delete calls
-  directly.
-- `updateContainerId(get, containerId, newId)` — FR-CONT-04. `containerId` is
-  a field on `PatchSpfModuleRequestDto`
-  ([design.md §7.1](design.md#71-confirmed-endpoints)), scoped to one
-  module — there is no container-level rename endpoint since a container
-  has no DTO of its own. This doc calls `PATCH /spf-modules/{id}
-{containerId: newId}` for every module currently in `containerId`, same
-  per-module-loop shape as container/subgraph delete. Each successful
-  `PATCH` returns the full updated `SpfModuleDto`; this doc collects every
-  loop iteration's returned `SpfModuleDto` into one array and, after the
-  loop completes, wraps them as a single "updated" bucket
-  (`{added: {spfModules: [], dataLinks: [], controlLinks: []}, updated:
-{spfModules: updatedDtos, dataLinks: [], controlLinks: []}, deleted:
-{spfModules: [], dataLinks: [], controlLinks: []}}`) passed to
-  `get().applyComponentCollection(...)` — the same reconciliation call
-  every other cascading action in this doc uses, per
-  [§2.2](#22-the-mutation-wrapper-pattern)'s uniform call shape. This keeps
-  `createContainerOperations(projectId)`'s factory signature accurate as
-  written in [§2.2](#22-the-mutation-wrapper-pattern) — no `set` parameter,
-  since this file has no narrow direct write of its own; the reconciler's
-  own `recomputeContainersAndSubgraphs` step already picks up every
-  affected module's new `containerId` on the way in, so no separate
-  container-rename logic is needed on the frontend at all — the "rename"
-  is really "every affected module got a new `containerId`, re-derive."
-  Same partial-failure caveat as
-  [§4.5](#45-delete-req-016a-req-016b-req-016c-req-048) applies to a
-  mid-loop failure — flagged in [§10](#10-open-items-inherited).
+  ([§4.5](#45-delete-req-016a-req-016b-req-016c-req-048)); each container
+  disappears
+  as the side effect of its last module going. The public `deleteContainers`
+  wrapper takes the mutation lock once for the whole container batch and calls
+  `deleteContainerInner(get, containerId, options?: InnerActionOptions): Promise<boolean>`
+  for each deduped container id. `deleteContainerInner` returns `false` on
+  the same mid-loop failure this section's partial-failure caveat describes,
+  `true` otherwise, honors `options?.suppressToast` the same as every other
+  `*Inner` function, and is what broader batch delete calls directly.
 
 ---
 
@@ -1101,11 +1074,11 @@ strategy with the cases specific to this doc's logic:
   renders a pair when the _other_ side is already on canvas; a
   `getSubgraphPairs` failure leaves the subgraph itself placed
   (independent-failure-domain check).
-- **Unit — multi-call composition, partial failure**: `deleteSubgraph`/
-  `deleteContainer`/`updateContainerId`'s per-module loops stop and toast
-  on the first failed call, leaving earlier-in-loop deletes/updates already
-  applied — assert the loop does not attempt rollback and does not
-  continue past the first failure. `moveToSubsystem`'s new-subsystem path:
+- **Unit — multi-call composition, partial failure**: `deleteSubgraph` and
+  `deleteContainers` per-module delete loops stop and toast on the first
+  failed call, leaving earlier-in-loop deletes already applied — assert the
+  loop does not attempt rollback and does not continue past the first
+  failure. `moveToSubsystem`'s new-subsystem path:
   assert behavior when `POST /subsystems` succeeds but the subsequent
   `move-in` fails (empty subsystem left behind, no rollback).
   `expandSubsystem`: assert behavior when `move-out` succeeds but the
@@ -1126,17 +1099,14 @@ doc (either backend-owned or explicitly deferred):
 
 - **New: partial-failure risk in every multi-call composition this doc
   introduces** to work around the lack of dedicated cascading endpoints —
-  `deleteSubgraph`/`deleteContainer`'s per-module delete loops
+  `deleteSubgraph` and `deleteContainers` per-module delete loops
   ([§4.5](#45-delete-req-016a-req-016b-req-016c-req-048),
-  [§5](#5-container-operations)), `updateContainerId`'s per-module PATCH
-  loop ([§5](#5-container-operations)), `moveToSubsystem`'s
-  create-then-move-in for a new subsystem, and `expandSubsystem`'s
+  [§5](#5-container-operations)), `moveToSubsystem`'s create-then-move-in
+  for a new subsystem, and `expandSubsystem`'s
   move-out-then-delete ([§6.2](#62-move--remove-req-031a-req-031d-req-031e)/[§6.5](#65-expand-req-032)).
   None of these have client-side rollback; a mid-sequence failure leaves a
   partially-applied result. Accepted risk, not solved here.
 - Whether `move-in` rejects a descendant-nesting cycle
   (client-side guard here only excludes direct self-nesting).
 - Whether a port-count decrease can sever links as a side effect —
-  not this doc's concern (Link & Port), noted here only because it would
-  affect whether `updateContainerId`-style narrow responses need
-  broadening the same way.
+  not this doc's concern (Link & Port).

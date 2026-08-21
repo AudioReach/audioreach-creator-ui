@@ -41,13 +41,13 @@ the primary authoring surface for use-case graphs.
 
 ## 2. Definitions
 
-| Term | Definition |
-|------|------------|
-| Subgraph provenance | One of three states tracked per subgraph for the current edit session: **palette-placed** (placed via the subgraph palette, FR-SG-01), **pre-loaded** (part of the selected use case when Edit mode was entered), or **newly-created** (created this session, e.g. via drag-to-empty-space, FR-MOD-03). Provenance determines delete behavior (FR-SG-06/07/08). |
-| Session-local | Tracked only in frontend state for the current edit session, not staged to or persisted by the backend until Apply Changes (or, for provenance/pair-link data, never sent to the backend at all). |
-| MDF (Multi DSP Framework) | A use-case category spanning multiple DSPs, whose cross-DSP connections render via the Expanded/Virtual display modes (FR-MDF-02). |
-| Subgraph proxy node | The collapsed on-canvas representation of a subgraph. Cannot be a connection endpoint (FR-PROXY-01); renaming it renames the underlying subgraph (FR-PROXY-02). |
-| Excluded link | A pair-auto-rendered connection (FR-SG-02) the user has chosen to hide from routing via "Exclude Link" (FR-SG-03). It still exists in the backend; only its on-canvas rendering and routing-time use are affected. |
+| Term                      | Definition                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subgraph provenance       | One of three states tracked per subgraph for the current edit session: **palette-placed** (placed via the subgraph palette, FR-SG-01), **pre-loaded** (part of the selected use case when Edit mode was entered), or **newly-created** (created this session, e.g. via drag-to-empty-space, FR-MOD-03). Provenance determines delete behavior (FR-SG-06/07/08). |
+| Session-local             | Tracked only in frontend state for the current edit session, not staged to or persisted by the backend until Apply Changes (or, for provenance/pair-link data, never sent to the backend at all).                                                                                                                                                               |
+| MDF (Multi DSP Framework) | A use-case category spanning multiple DSPs, whose cross-DSP connections render via the Expanded/Virtual display modes (FR-MDF-02).                                                                                                                                                                                                                              |
+| Subgraph proxy node       | The collapsed on-canvas representation of a subgraph. Cannot be a connection endpoint (FR-PROXY-01); renaming it renames the underlying subgraph (FR-PROXY-02).                                                                                                                                                                                                 |
+| Excluded link             | A pair-auto-rendered connection (FR-SG-02) the user has chosen to hide from routing via "Exclude Link" (FR-SG-03). It still exists in the backend; only its on-canvas rendering and routing-time use are affected.                                                                                                                                              |
 
 ---
 
@@ -232,8 +232,11 @@ in subsystem level.)
 
 **FR-CONT-01** User can delete a container via context menu or the **Delete key**.
 Deleting a container cascades to delete all module instances within it and all
-links connected to those modules. The canvas is updated only after the backend
-confirms the entire deletion. On failure, an error toast is shown.
+links connected to those modules. Because the backend has no container-delete
+endpoint, this is implemented as one confirmed module delete at a time; each
+successful module delete is reconciled immediately, so a later failure can
+leave earlier module deletes already reflected on the canvas. On failure, an
+error toast is shown.
 
 **FR-CONT-02** Containers do not have names. No rename operation is available for
 containers.
@@ -242,10 +245,6 @@ containers.
 module inside a subgraph outside any existing container) or via FR-MOD-03
 (dragging a module to empty canvas space). There is no explicit standalone
 "add container" action.
-
-**FR-CONT-04** User can edit the container ID from the properties panel. The
-change is confirmed by the backend before the canvas reflects the update. On
-failure, an error toast is shown.
 
 ---
 
@@ -376,6 +375,7 @@ backend confirms. Newly added ports become available for connection.
 
 **FR-PORT-06** In Edit mode, right-clicking a port shows a context menu with two
 options:
+
 - **Start connection**: begins a connection operation from this port.
 - **End connection**: completes an in-progress connection at this port. This
   option is shown only when a connection is already in progress.
@@ -438,6 +438,7 @@ Operations' concern (see
 [node-operations-design.md §4.5](node-operations-design.md#45-delete-req-016a-req-016b-req-016c-req-048));
 the context menu itself — its presence, the Delete menu item, and wiring the
 click to the dispatch call below — is Canvas UI Mechanics' concern:
+
 - **Palette-placed subgraph**: removes from the UI cache only, no backend
   call, including when child edits were made during the session (see
   FR-SG-06).
@@ -469,18 +470,20 @@ fields are shown where renaming is supported.
 different DSPs, the backend inserts additional bridge modules and connections to
 represent the cross-DSP path. The UI must support two display modes for this,
 controlled by user preference:
+
 - **Expanded view**: shows the backend-generated bridge modules and connections
   explicitly on the canvas.
 - **Virtual connection view**: shows a single logical connection line hiding
   the intermediate complexity.
 
-**FR-MDF-03** *(Deferred to a future enhancement, same treatment as
+**FR-MDF-03** _(Deferred to a future enhancement, same treatment as
 FR-ENH-02/FR-ENH-03/FR-ENH-04/FR-ENH-05. No backend endpoint for this exists
 today and none is currently planned — see
-[design.md §16](design.md#16-not-doing).)*
+[design.md §16](design.md#16-not-doing).)_
 User can right-click any module and select **"Offload to other
 DSP"** from the context menu, then choose the target DSP from a list of
 available DSPs. The tool calls a new backend API for this operation:
+
 - **First offload of this module**: the backend inserts a new IPC TX module
   (before the offloaded module, on its original DSP) and a new IPC RX module
   (after it, on the target DSP), reassigns the offloaded module's container
@@ -586,8 +589,8 @@ rolled back for the roots that did succeed.
 **FR-ENH-01** The backend returns a `changeId` with each successful staged edit
 response.
 
-**FR-ENH-02** *(Deferred to a future enhancement once its own requirements
-are defined.)* The frontend
+**FR-ENH-02** _(Deferred to a future enhancement once its own requirements
+are defined.)_ The frontend
 maintains a `changeId` stack and exposes undo/redo via a change history
 panel in edit mode.
 
@@ -596,21 +599,21 @@ panel in edit mode.
 > client-side undo layer or staging palette drops to the backend on drop. This
 > must be resolved before the undo/redo milestone is planned.
 
-**FR-ENH-03** *(Deferred to a future enhancement, same treatment as
-FR-ENH-02.)* Context menus on nodes and
+**FR-ENH-03** _(Deferred to a future enhancement, same treatment as
+FR-ENH-02.)_ Context menus on nodes and
 edges can be replaced with inline **quick actions** — icon buttons that
 appear on hover or selection — to reduce the number of right-click
 interactions required for common operations.
 
-**FR-ENH-04** *(Deferred to a future enhancement, same treatment as
-FR-ENH-02/FR-ENH-03.)* User can copy and paste
+**FR-ENH-04** _(Deferred to a future enhancement, same treatment as
+FR-ENH-02/FR-ENH-03.)_ User can copy and paste
 one or more components at the same hierarchy level. When multiple components
 are selected, all connections between the selected components are
 automatically included in the paste. Pasted components are placed at the
 current canvas viewport center or cursor position.
 
-**FR-ENH-05** *(Deferred alongside
-FR-ENH-04.)* User can copy components from one hierarchy level (e.g., inside a
+**FR-ENH-05** _(Deferred alongside
+FR-ENH-04.)_ User can copy components from one hierarchy level (e.g., inside a
 subsystem) and paste them at a different level (e.g., outside the subsystem or
 into a different subsystem). Connections between the copied components are
 replicated in the target context where valid. Connections to components outside
@@ -622,7 +625,7 @@ the copied selection are not carried over.
 > modules, internal links) — it does not reference or alias the original
 > subgraph. The pasted subgraph has the same provenance as any other
 > session-created subgraph (see FR-MOD-03/FR-SG-10). Subsystems are not a
-> copyable unit — they only appear in these requirements as the *context*
+> copyable unit — they only appear in these requirements as the _context_
 > pasted into or out of. Paste-target validation is not defined by this
 > document: FR-MOD-08/FR-SG-11 do not reject drops based on the target
 > underneath, and whichever future pass picks up copy/paste needs to decide
@@ -635,8 +638,11 @@ the copied selection are not carried over.
 **I1 — No optimistic mutation:** No structural mutation (module/subgraph/
 container/subsystem/link add, delete, rename, port-count change, move) is
 ever reflected on the canvas before the backend confirms it. Failure always
-leaves the canvas unchanged and shows an error toast. (See FR-MOD-02,
-FR-SG-07/08, FR-CONT-01, FR-LINK-01, FR-SUBSYS-01/02/06, FR-PORT-01–05.)
+leaves unconfirmed work unchanged and shows an error toast. Cascading deletes
+composed from repeated module deletes can partially succeed: each confirmed
+module delete remains reconciled even if a later module delete in the same
+cascade fails. (See FR-MOD-02, FR-SG-07/08, FR-CONT-01, FR-LINK-01,
+FR-SUBSYS-01/02/06, FR-PORT-01–05.)
 
 **I2 — Server as final arbiter of structural validity:** Client-side checks
 (port-type compatibility, self-nesting exclusion) are eager conveniences, not

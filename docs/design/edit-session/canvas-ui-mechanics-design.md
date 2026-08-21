@@ -70,16 +70,16 @@ access to `get` to read current selection/mode state and dispatch mutations.
 
 Dispatches on `target.kind`:
 
-| `target.kind` | Items |
-| --- | --- |
-| `'module'` | Delete only — "Offload to other DSP" (FR-MDF-03) deferred, see [design.md §16](design.md#16-not-doing) |
-| `'subgraph'` | Delete; "Move to Subsystem"; "Remove from Subsystem" (if parented) |
-| `'subsystem'` | Delete (disabled, tooltipped, when the subsystem still has any children — subgraphs, modules, containers, or links; per FR-SUBSYS-02/[node-operations-design.md §6.3](node-operations-design.md#63-delete-req-031b) the backend only removes an empty subsystem); "Move to Subsystem" (destination list filtered through Node Operations' `canMoveToSubsystem`, excluding this subsystem itself); "Remove from Subsystem" (if parented); "Rename"; "Expand" (FR-SUBSYS-06, dispatches to `expandSubsystem`) |
-| `'container'` | Delete only — no rename item (FR-CONT-02) |
-| `'subgraph-proxy'` | Delete; Rename (dispatches to `renameSubgraph`, same underlying subgraph — FR-PROXY-02) |
-| `'port'` | "Start connection" always shown; "End connection" shown only when `target.connectionInProgress` is `true` (FR-PORT-06) — see [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal) for why this field is populated by the Visualizer itself rather than read from its store here |
-| `'data-link'` / `'control-link'` | Delete; "Exclude Link" shown only if `target.edge.id` is a key in `pairLinksById` (FR-SG-03 — only pair-derived edges are excludable) |
-| `'proxy-data-link'` / `'proxy-control-link'` | Same as the plain link kinds — a proxy edge is the display-collapsed form of a real link (FR-MDF-02), not a distinct excludable entity |
+| `target.kind`                                | Items                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'module'`                                   | Delete only — "Offload to other DSP" (FR-MDF-03) deferred, see [design.md §16](design.md#16-not-doing)                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `'subgraph'`                                 | Delete; "Move to Subsystem"; "Remove from Subsystem" (if parented)                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `'subsystem'`                                | Delete (disabled, tooltipped, when the subsystem still has any children — subgraphs, modules, containers, or links; per FR-SUBSYS-02/[node-operations-design.md §6.3](node-operations-design.md#63-delete-req-031b) the backend only removes an empty subsystem); "Move to Subsystem" (destination list filtered through Node Operations' `canMoveToSubsystem`, excluding this subsystem itself); "Remove from Subsystem" (if parented); "Rename"; "Expand" (FR-SUBSYS-06, dispatches to `expandSubsystem`) |
+| `'container'`                                | Delete only — no rename item (FR-CONT-02)                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `'subgraph-proxy'`                           | Delete; Rename (dispatches to `renameSubgraph`, same underlying subgraph — FR-PROXY-02)                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `'port'`                                     | "Start connection" always shown; "End connection" shown only when `target.connectionInProgress` is `true` (FR-PORT-06) — see [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal) for why this field is populated by the Visualizer itself rather than read from its store here                                                                                                                                                                                   |
+| `'data-link'` / `'control-link'`             | Delete; "Exclude Link" shown only if `target.edge.id` is a key in `pairLinksById` (FR-SG-03 — only pair-derived edges are excludable)                                                                                                                                                                                                                                                                                                                                                                       |
+| `'proxy-data-link'` / `'proxy-control-link'` | Same as the plain link kinds — a proxy edge is the display-collapsed form of a real link (FR-MDF-02), not a distinct excludable entity                                                                                                                                                                                                                                                                                                                                                                      |
 
 All items are omitted (empty array — the Visualizer treats this as "no
 menu") when `get().mode !== 'edit'`, since every item above is a Edit-mode
@@ -97,7 +97,7 @@ const DELETE_HANDLERS: Record<
   AnyNode['nodeKind'],
   (get: () => GraphDesignerStore, id: string) => Promise<boolean>
 > = {
-  container: (get, id) => containerOperations.deleteContainer(get, id),
+  container: (get, id) => containerOperations.deleteContainers(get, [id]),
   module: (get, id) => moduleOperations.deleteModuleInstance(get, id),
   subgraph: (get, id) => subgraphOperations.deleteSubgraph(get, id),
   'subgraph-proxy': (get, id) => subgraphOperations.deleteSubgraph(get, id),
@@ -116,7 +116,8 @@ const DELETE_HANDLERS_INNER: Record<
   container: (get, id) => containerOperations.deleteContainerInner(get, id),
   module: (get, id) => moduleOperations.deleteModuleInstanceInner(get, id),
   subgraph: (get, id) => subgraphOperations.deleteSubgraphInner(get, id),
-  'subgraph-proxy': (get, id) => subgraphOperations.deleteSubgraphInner(get, id),
+  'subgraph-proxy': (get, id) =>
+    subgraphOperations.deleteSubgraphInner(get, id),
   subsystem: (get, id) => subsystemOperations.deleteSubsystemInner(get, id),
 };
 ```
@@ -156,7 +157,7 @@ export async function deleteSelection(
   get: () => GraphDesignerStore,
   selectedNodeIds: string[],
   selectedEdgeIds: string[],
-): Promise<void>
+): Promise<void>;
 ```
 
 1. **Mode self-check, before any dispatch.** If `get().mode !== 'edit'`,
@@ -167,14 +168,24 @@ export async function deleteSelection(
    `withMutationLock` throw.
 2. **Cascade-aware root filtering (FR-CANVAS-01).** Build the set of surviving
    node roots by excluding any selected node whose ancestor — walked via
-   `graphData`'s container→subgraph→subsystem parent chain — is *also*
+   `graphData`'s container→subgraph→subsystem parent chain — is _also_
    selected. A selected module inside a selected container is dropped from
    the root list; only the container issues a delete call, and the
    module's removal happens as part of that cascade.
    ```typescript
-   function isAncestorOf(graphData: UsecaseGraphData, ancestorId: string, nodeId: string): boolean;
-   function filterCascadeRoots(graphData: UsecaseGraphData, selectedIds: string[]): string[];
-   function resolveNodeKind(graphData: UsecaseGraphData, nodeId: string): AnyNode['nodeKind'];
+   function isAncestorOf(
+     graphData: UsecaseGraphData,
+     ancestorId: string,
+     nodeId: string,
+   ): boolean;
+   function filterCascadeRoots(
+     graphData: UsecaseGraphData,
+     selectedIds: string[],
+   ): string[];
+   function resolveNodeKind(
+     graphData: UsecaseGraphData,
+     nodeId: string,
+   ): AnyNode['nodeKind'];
    ```
 3. **Edge filtering.** A selected edge is dropped from the delete list if
    either of its endpoint nodes is covered by a surviving root's cascade
@@ -192,9 +203,14 @@ export async function deleteSelection(
          ),
        ),
        ...survivingEdges.map((connectionId) =>
-         linkOperations.deleteLinkInner(get, connectionId, edgeLinkType(connectionId), {
-           suppressToast: true,
-         }),
+         linkOperations.deleteLinkInner(
+           get,
+           connectionId,
+           edgeLinkType(connectionId),
+           {
+             suppressToast: true,
+           },
+         ),
        ),
      ]),
    );
@@ -209,17 +225,17 @@ export async function deleteSelection(
    batch re-enters the lock `deleteSelection`'s own `withMutationLock` call
    is already holding. This replaces the earlier "concurrent dispatch, no
    shared lock" design: that version had each `*Inner`'s wrapped
-   counterpart (e.g. `deleteContainer`) call `withMutationLock`
-   independently, so the *second* concurrent root's call would hit
+   counterpart (e.g. `deleteContainers`) call `withMutationLock`
+   independently, so the _second_ concurrent root's call would hit
    `isMutating` already `true` and throw synchronously before ever
    reaching the backend — a real bug this doc's `Promise.allSettled`-based
    partial-success reporting (step 5) depended on not happening. Dispatch
-   is still concurrent *within* the one lock (`Promise.allSettled`, not a
+   is still concurrent _within_ the one lock (`Promise.allSettled`, not a
    sequential loop) — only the lock acquisition changed, not the
    concurrency. Every call also passes `{suppressToast: true}`
    ([node-operations-design.md §2.2](node-operations-design.md#22-the-mutation-wrapper-pattern)'s
    `InnerActionOptions`) — without it, a batch with any failures would show
-   both each failed entity's own raw toast *and* this step's aggregate "N of
+   both each failed entity's own raw toast _and_ this step's aggregate "N of
    M" summary toast, which is redundant and not the UX FR-CANVAS-02
    describes (a single toast, with per-entity detail going to the log
    instead).
@@ -283,12 +299,12 @@ on `mode` for open/close, only the panel's own field-editability does
 same store-context pattern `usecase-visualizer.tsx` itself uses, resolves
 the selected id against `graphData`, and dispatches on kind:
 
-| Kind | Fields | Write function |
-| --- | --- | --- |
-| Module | Name (alias); data/control port count +/- | `renameModuleInstance` (Node Ops); `updatePortCount` (Link & Port) |
-| Subsystem | Name; data/control port count +/- | `renameSubsystem` (Node Ops); `updatePortCount` (Link & Port) |
-| Subgraph / subgraph-proxy | Name | `renameSubgraph` (Node Ops) — both kinds call the same function, FR-PROXY-02 |
-| Container | Container ID | `updateContainerId` (Node Ops) |
+| Kind                           | Fields                                                       | Write function                                                               |
+| ------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Module                         | Name (alias); data/control port count +/-                    | `renameModuleInstance` (Node Ops); `updatePortCount` (Link & Port)           |
+| Subsystem                      | Name; data/control port count +/-                            | `renameSubsystem` (Node Ops); `updatePortCount` (Link & Port)                |
+| Subgraph / subgraph-proxy      | Name                                                         | `renameSubgraph` (Node Ops) — both kinds call the same function, FR-PROXY-02 |
+| Container                      | Container ID                                                 | `updateContainerId` (Node Ops)                                               |
 | Edge (any of the 4 edge kinds) | Read-only endpoint summary (source/target node + port names) | — (no editable fields; FR-PROP-01 does not specify an edge property to edit) |
 
 Each field's write action follows the same call-then-wait-for-confirmation
@@ -359,7 +375,7 @@ satisfies. (A drag-over cursor change is a reasonable future enhancement
 but not required by the requirement.)
 
 **FR-PAL-01 (subgraph palette disabled in subsystem level)** is a palette
-*rendering* concern — the subgraph palette component itself reads
+_rendering_ concern — the subgraph palette component itself reads
 `usesSubsystemVariant` and disables its drag source entirely — not
 something `onNodeDropped` needs to check, since a disabled drag source
 never fires a drop event.
@@ -379,7 +395,7 @@ duplicated:
   store, specified in
   [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal).
   This doc's port context menu ([§2.1](#21-getitemstarget-contextmenutarget-contextmenuitem))
-  only *reads* `target.connectionInProgress`, a plain boolean field the
+  only _reads_ `target.connectionInProgress`, a plain boolean field the
   Visualizer itself populates on the target before this doc's `getItems`
   ever sees it — this doc never reaches into `VisualizerInternalStore`
   directly, since it has no access to it (FSD).
