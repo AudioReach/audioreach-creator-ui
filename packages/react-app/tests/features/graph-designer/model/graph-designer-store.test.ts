@@ -74,6 +74,8 @@ describe('GraphDesignerStore — EditSessionSlice composition', () => {
     expect(typeof state.endMutation).toBe('function');
     expect(typeof state.enterEditMode).toBe('function');
     expect(typeof state.exitEditMode).toBe('function');
+    expect(typeof state.renameSubsystem).toBe('function');
+    expect(typeof state.renameSubsystemNode).toBe('function');
     expect(typeof state.resetSessionLocalMaps).toBe('function');
   });
 });
@@ -178,6 +180,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
         subgraphs: {},
         subsystems: {
           'ss-1': {
+            childSubsystemIds: [],
             controlPorts: [],
             dataPorts: [],
             subgraphs: ['sg-1'],

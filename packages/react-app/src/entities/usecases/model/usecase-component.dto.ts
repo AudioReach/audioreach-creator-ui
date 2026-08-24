@@ -126,7 +126,7 @@ export interface SubsystemDto {
   filteredKeys: KeyInfo[];
   id: number;
   name: string;
-  parentId?: number;
+  parentSystemId?: string;
   relatedEndPointLinks: EndPointLink[];
   systemId: string;
 }

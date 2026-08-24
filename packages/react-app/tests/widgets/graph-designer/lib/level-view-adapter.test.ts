@@ -42,6 +42,7 @@ const baseData: UsecaseGraphData = {
   },
   subsystems: {
     'sys-ss-20': {
+      childSubsystemIds: [],
       controlPorts: [],
       dataPorts: [],
       subgraphs: ['5'],

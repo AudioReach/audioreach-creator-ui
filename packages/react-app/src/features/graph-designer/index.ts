@@ -52,6 +52,7 @@ export {
   CAN_CONNECT_TO_PROXY_NODE,
   parseSubgraphDropPayload,
 } from './lib/subgraph-operations';
+export {canMoveToSubsystem} from './lib/subsystem-operations';
 export {
   GraphDesignerStoreContext,
   useGraphDesignerStore,
@@ -68,6 +69,10 @@ export type {
   SubgraphDropPayload,
   SubgraphOperations,
 } from './lib/subgraph-operations';
+export type {
+  MoveDestination,
+  SubsystemOperations,
+} from './lib/subsystem-operations';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
 export {ApplyDiscardControls} from './ui/apply-discard-controls';

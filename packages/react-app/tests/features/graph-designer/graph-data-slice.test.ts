@@ -364,6 +364,41 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     const subsystem = store.getState().graphData?.subsystems['sys-ss-20'];
     expect(subsystem?.subgraphs).toHaveLength(0);
   });
+
+  it('populates childSubsystemIds from subsystem parentSystemId values', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        ...dtoWithSubsystem,
+        subsystems: [
+          makeSubsystemDto({
+            id: 20,
+            name: 'Parent',
+            systemId: 'sys-ss-parent',
+          }),
+          makeSubsystemDto({
+            id: 21,
+            name: 'Child',
+            parentSystemId: 'sys-ss-parent',
+            systemId: 'sys-ss-child',
+          }),
+        ],
+      },
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const graphData = store.getState().graphData!;
+    expect(graphData.subsystems['sys-ss-parent'].childSubsystemIds).toEqual([
+      'sys-ss-child',
+    ]);
+    expect(graphData.subsystems['sys-ss-child'].childSubsystemIds).toEqual([]);
+    expect(graphData.subsystems['sys-ss-child'].parentSubsystemId).toBe(
+      'sys-ss-parent',
+    );
+  });
 });
 
 describe('applyAddedCollection / applyDeletedCollection — modules', () => {
@@ -505,6 +540,7 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
         subgraphs: {},
         subsystems: {
           'sys-ss-1': {
+            childSubsystemIds: [],
             controlPorts: [],
             dataPorts: [],
             subgraphs: [],
@@ -608,7 +644,39 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
 
     const ss = store.getState().graphData!.subsystems['sys-ss-1'];
     expect(ss).toBeDefined();
+    expect(ss.childSubsystemIds).toEqual([]);
     expect(ss.subgraphs).toEqual([]);
+  });
+
+  it('defaults childSubsystemIds to an empty array on both initial load and incremental upsert', async () => {
+    const store = makeStore();
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [],
+        subsystems: [makeSubsystemDto()],
+      },
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(
+      store.getState().graphData!.subsystems['sys-ss-1'].childSubsystemIds,
+    ).toEqual([]);
+
+    store.getState().applyAddedCollection({
+      controlLinks: [],
+      dataLinks: [],
+      spfModules: [],
+      subsystems: [makeSubsystemDto({name: 'Subsystem A Renamed'})],
+    });
+
+    expect(
+      store.getState().graphData!.subsystems['sys-ss-1'].childSubsystemIds,
+    ).toEqual([]);
   });
 
   it('preserves the existing subgraphs membership list when a subsystem is upserted again', () => {
@@ -622,6 +690,7 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
         subgraphs: {},
         subsystems: {
           'sys-ss-1': {
+            childSubsystemIds: ['sys-ss-2'],
             controlPorts: [],
             dataPorts: [],
             subgraphs: ['subgraph-1', 'subgraph-2'],
@@ -641,6 +710,7 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
 
     const ss = store.getState().graphData!.subsystems['sys-ss-1'];
     expect(ss.subsystemName).toBe('Subsystem A Renamed');
+    expect(ss.childSubsystemIds).toEqual(['sys-ss-2']);
     expect(ss.subgraphs).toEqual(['subgraph-1', 'subgraph-2']);
   });
 
@@ -655,6 +725,7 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
         subgraphs: {},
         subsystems: {
           'sys-ss-1': {
+            childSubsystemIds: [],
             controlPorts: [],
             dataPorts: [],
             subgraphs: [],

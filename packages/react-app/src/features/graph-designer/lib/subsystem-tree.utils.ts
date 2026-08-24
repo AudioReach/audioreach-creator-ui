@@ -12,7 +12,7 @@ import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subs
 /**
  * Builds a hierarchical subsystem tree from a flat SubsystemDto array.
  *
- * - Parent–child relationships are wired via SubsystemDto.parentId.
+ * - Parent-child relationships are wired via SubsystemDto.parentSystemId.
  * - subgraphIds per node are derived from SpfModuleDto.parentId: when a
  *   module's parentId points to a subsystem, its subgraphId belongs to that
  *   subsystem.
@@ -22,6 +22,9 @@ export function buildSubsystemTree(
   spfModules: SpfModuleDto[],
 ): SubsystemBrowserTreeNode[] {
   const subsystemIdSet = new Set(subsystemDtos.map((s) => s.id));
+  const systemIdToId = new Map(
+    subsystemDtos.map((s) => [s.systemId, s.id] as const),
+  );
 
   // Derive which subgraph IDs belong to each subsystem via module parentId.
   const subsystemSubgraphIds = new Map<number, Set<string>>();
@@ -49,8 +52,12 @@ export function buildSubsystemTree(
   const roots: SubsystemBrowserTreeNode[] = [];
   for (const ss of subsystemDtos) {
     const node = nodeMap.get(ss.id)!;
-    if (ss.parentId != null && subsystemIdSet.has(ss.parentId)) {
-      nodeMap.get(ss.parentId)!.children.push(node);
+    const parentId =
+      ss.parentSystemId === undefined
+        ? undefined
+        : systemIdToId.get(ss.parentSystemId);
+    if (parentId !== undefined && subsystemIdSet.has(parentId)) {
+      nodeMap.get(parentId)!.children.push(node);
     } else {
       roots.push(node);
     }

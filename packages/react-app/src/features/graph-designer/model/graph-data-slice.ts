@@ -106,8 +106,10 @@ export interface SubsystemPort {
 }
 
 export interface Subsystem {
+  childSubsystemIds: string[];
   controlPorts: SubsystemPort[];
   dataPorts: SubsystemPort[];
+  parentSubsystemId?: string;
   subgraphs: string[];
   /** Always a stringified integer from the backend (e.g. `'42'`). */
   subsystemId: string;
@@ -378,17 +380,17 @@ function removeLink(connections: Connection[], linkId: string): Connection[] {
 }
 
 /**
- * Maps one `SubsystemDto` to a `Subsystem`. `subgraphs` (the derived
- * membership list `loadGraphData` computes from a full `spfModules`
- * grouping this incremental path has no equivalent input for) is carried
- * forward from `existing` rather than recomputed, defaulting to `[]` only
- * for a subsystem that didn't previously exist.
+ * Maps one `SubsystemDto` to a `Subsystem`. Membership lists this
+ * incremental path has no equivalent input for are carried forward from
+ * `existing` rather than recomputed, defaulting to `[]` only for a
+ * subsystem that didn't previously exist.
  */
 function toSubsystem(
   ss: SubsystemDto,
   existing: Subsystem | undefined,
 ): Subsystem {
   return {
+    childSubsystemIds: existing?.childSubsystemIds ?? [],
     controlPorts: (ss.controlPorts ?? []).map((p) => ({
       direction: 'input' as const,
       portId: p.systemId,
@@ -401,6 +403,7 @@ function toSubsystem(
       portName: p.name,
       portType: 'data' as const,
     })),
+    parentSubsystemId: ss.parentSystemId,
     subgraphs: existing?.subgraphs ?? [],
     subsystemId: ss.systemId,
     subsystemName: ss.name,
@@ -791,9 +794,26 @@ export function createGraphDataSlice<
           deriveContainersAndSubgraphs(moduleInstances);
         await applyRealSubgraphNames(projectId, newSubgraphs);
 
+        const subsystemIdToChildSubsystemIds = new Map<string, string[]>();
+        for (const ss of subsystemDtos) {
+          if (ss.parentSystemId === undefined) {
+            continue;
+          }
+          const list = subsystemIdToChildSubsystemIds.get(ss.parentSystemId);
+          if (list) {
+            list.push(ss.systemId);
+          } else {
+            subsystemIdToChildSubsystemIds.set(ss.parentSystemId, [
+              ss.systemId,
+            ]);
+          }
+        }
+
         const subsystems: Record<string, Subsystem> = {};
         for (const ss of subsystemDtos) {
           subsystems[ss.systemId] = {
+            childSubsystemIds:
+              subsystemIdToChildSubsystemIds.get(ss.systemId) ?? [],
             controlPorts: (ss.controlPorts ?? []).map((p) => ({
               direction: 'input' as const,
               portId: p.systemId,
@@ -806,6 +826,7 @@ export function createGraphDataSlice<
               portName: p.name,
               portType: 'data' as const,
             })),
+            parentSubsystemId: ss.parentSystemId,
             subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,
             subsystemName: ss.name,
