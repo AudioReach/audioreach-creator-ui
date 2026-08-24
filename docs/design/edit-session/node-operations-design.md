@@ -14,8 +14,8 @@
 > `PATCH /spf-modules/{id}` (rename, container-ID edit, module port counts),
 > `POST /subsystems`, `DELETE /subsystems/{id}` (empty only),
 > `PATCH /subsystems/{id}` (rename, subsystem port counts),
-> `.../subsystems/{id}/components/move-in`,
-> `.../subsystems/{id}/components/move-out` — container/subgraph delete and
+> `POST /subsystems/components/move` (move in, move out, and re-parent) —
+> container/subgraph delete and
 > subsystem expand have no dedicated endpoint; each is a client-side
 > composition of the above — see [§7](#7-api-surface)
 
@@ -180,10 +180,12 @@ This is the same call shape for every cascading action in this doc:
 validate (if applicable) → `withMutationLock` → API call → on failure, toast
 (unless suppressed) and return `false` with no state change → on success,
 hand the response to `applyComponentCollection` (every endpoint in this doc
-returns a component collection — link create, subsystem move-in/move-out,
-and module delete's deleted-entities collection alike) or a narrow direct
-write via the factory's own closed-over `set` (single-field
-rename/port-count), then return `true`. No optimistic update, ever — this
+returns either a component collection, a deleted-ids collection, or one of
+the subsystem CRUD/move response DTOs described in [§7](#7-api-surface)),
+then reconciles through either `applyComponentCollection`, a subsystem-move
+adapter, or a narrow direct write via the factory's own closed-over `set`
+(single-field rename/port-count), then return `true`. No optimistic update,
+ever — this
 is the uniform pattern `design.md` §11 requires across the whole feature,
 not a per-entity choice.
 
@@ -288,11 +290,11 @@ carries. This doc fixes it, since `module-operations.ts`/
 `subgraph-operations.ts` are the first consumers:
 
 - Module palette drag sets `dataTransfer` MIME type `application/json` with
-  body `{kind: 'module', moduleId: string, processorSystemId: number}` —
+  body `{kind: 'module', moduleId: string, processorSystemId: string}` —
   consistent with `usecase-visualizer.tsx`'s existing `handleDrop` already
   reading `application/json` generically (see `NodeDropPayload.dropData`).
   `processorSystemId` is the backend's `CreateSpfModuleRequestDto.processorSystemId`
-  (required, per [§7](#7-api-surface)) — the module palette (Canvas UI
+  string field (required, per [§7](#7-api-surface)) — the module palette (Canvas UI
   Mechanics) resolves it from the dragged module definition's own processor
   info at drag-start and carries it in the payload verbatim; this doc's
   `parseModuleDropPayload` only validates/decodes it, never derives it.
@@ -411,10 +413,13 @@ through unchanged; none of these functions derive it themselves.
   existed, already has a provenance entry).
 
 Each function builds its own `CreateSpfModuleRequestDto` from its
-arguments — `moduleDefinitionId: Number(moduleId)`, `processorSystemId`, and exactly
-one of `containerSystemId`/`subgraphSystemId` set depending on which
+arguments — `moduleDefinitionSystemId: moduleId`, `processorSystemId`, and
+exactly one of `containerSystemId`/`subgraphSystemId` set depending on which
 function it is (`addModuleToEmptyCanvas` sets neither, letting the backend
-create both a new subgraph and a new container per §7's DTO notes).
+create both a new subgraph and a new container per §7's DTO notes). The
+current backend contract uses string system IDs for module definition,
+processor, parent subsystem, subgraph, and container references; no numeric
+conversion is performed by these operation functions.
 
 `EMPTY_COLLECTION` is a shared `const: ComponentCollectionDto = {spfModules: [], dataLinks: [], controlLinks: []}`
 module-level constant in `module-operations.ts`, reused by all three
@@ -807,29 +812,40 @@ question — not re-solved here. The context-menu destination picker
   `'module'` row); a module moves indirectly whenever its containing
   subgraph moves. Two cases:
   - **Existing subsystem**: single call,
-    `POST /subsystems/{id}/components/move-in {componentSystemIds: [nodeId]}`,
-    returning `MoveSubsystemComponentsResponseDto {added, updated, removed}`
-    per [design.md §7.1](design.md#71-confirmed-endpoints).
+    `POST /subsystems/components/move` with
+    `{subgraphSystemIds?: string[], subsystemSystemIds?: string[], targetSubsystemSystemId: destinationId}`,
+    returning `MoveSubsystemComponentsResponseDto` per
+    [§7](#7-api-surface).
   - **New subsystem**: two sequential calls — `POST /subsystems {name}`
-    (`CreateSubsystemRequestDto`, returns `SubsystemDto`) to create the
-    shell, then `POST /subsystems/{newSubsystemId}/components/move-in`
-    with the same request/response shape as the existing-subsystem case.
+    (`CreateSubsystemRequestDto`, returns `CreateSubsystemResponseDto`) to
+    create the shell, then `POST /subsystems/components/move` with
+    `targetSubsystemSystemId: newSubsystemId`.
     If the first call succeeds but the second fails, the empty subsystem
     is left behind server-side with nothing moved into it — flagged as an
     open item in [§10](#10-open-items-inherited), no client-side
     rollback (delete-the-just-created-subsystem-on-failure) is built.
-  - Both cases funnel their `move-in` response through one
-    `applyComponentCollection` call — `added`/`updated`/`removed` map onto
-    the reconciler's existing added/updated/deleted bucket handling
-    one-to-one, including its `subsystems` bucket support for the
-    new-subsystem case's `SubsystemDto`.
-- `removeFromSubsystem(get, nodeId)` — FR-SUBSYS-05, same subgraph/subsystem-only
-  scope as `moveToSubsystem` above. `POST
-/subsystems/{id}/components/move-out {componentSystemIds: [nodeId]}`,
-  same `{added, updated, removed}` response shape. The now-possibly-empty
-  subsystem is never deleted by this call (FR-SUBSYS-04) — `move-out`'s own
-  response never includes a deleted-subsystem entry, so "not deleted" is
-  the response's default behavior, not something this doc has to suppress.
+  - Both cases feed the move response to `applySubsystemMoveResponse`, a
+    subsystem-operations helper that maps the backend's delta fields
+    (`updatedModules`, `updatedSubsystems`, `addedDataLinks`,
+    `removedDataLinks`, `addedControlLinks`, `removedControlLinks`,
+    `subsystemPortChanges`) onto the store's connection, port, and
+    subsystem-membership state. It does **not** call
+    `applyComponentCollection`, because the move response is no longer a
+    `{added, updated, removed}` component collection.
+- `removeFromSubsystem(get, nodeId, sourceSubsystemId)` — FR-SUBSYS-05, same
+  subgraph/subsystem-only scope as `moveToSubsystem` above. Calls
+  `POST /subsystems/components/move` with the moved node id in the correct
+  `subgraphSystemIds` or `subsystemSystemIds` array and
+  `targetSubsystemSystemId` set to `sourceSubsystemId`'s own parent
+  subsystem id, or `null` only when the source subsystem is already
+  top-level. The now-possibly-empty source subsystem is never deleted by
+  this call (FR-SUBSYS-04); deletion remains a separate
+  `DELETE /subsystems/{id}` call.
+
+The one-level-up behavior requires the local `Subsystem` model to preserve
+each subsystem's parent subsystem id from backend `parentSystemId` fields.
+`undefined`/`null` means top-level and maps to
+`targetSubsystemSystemId: null` in `MoveSubsystemComponentsRequestDto`.
 
 ### 6.3 Delete (FR-SUBSYS-02)
 
@@ -841,7 +857,7 @@ the context-menu Delete item is only enabled when the subsystem has no
 remaining children (subgraphs, modules, containers, or links); a
 non-empty subsystem's own Delete item is disabled, with a tooltip pointing
 the user at Expand ([§6.5](#65-expand-req-032)) instead. This doc does
-**not** have `deleteSubsystem` itself compose a move-out-then-delete
+**not** have `deleteSubsystem` itself compose a move-to-parent-then-delete
 sequence — that composition already exists as Expand, a distinct
 user-facing action with its own requirement (FR-SUBSYS-06); `deleteSubsystem`
 only ever calls `DELETE /subsystems/{id}` directly. If it is somehow
@@ -849,10 +865,10 @@ invoked on a non-empty subsystem regardless (e.g. a stale menu state, or
 via the Delete key which has no per-target enablement gate), the backend
 rejects the call and this doc treats that rejection as an ordinary
 toast-and-no-change failure per this doc's uniform error pattern; on
-success it writes the returned `SubsystemDto`'s removal directly (removing
-`graphData.subsystems[subsystemId]`) — no
+success it writes the returned `DeleteSubsystemResponseDto`'s removal
+directly (removing `graphData.subsystems[subsystemId]`) — no
 `applyComponentCollection` call, since the response carries only the one
-deleted `SubsystemDto`, not a collection. Same `deleteSubsystemInner(get,
+deleted subsystem, not a collection. Same `deleteSubsystemInner(get,
 subsystemId, options?: InnerActionOptions): Promise<boolean>` / `deleteSubsystem`
 split as the other three delete actions ([§2.2](#22-the-mutation-wrapper-pattern)) —
 `false` on the toasted-rejection path above (suppressible via
@@ -863,9 +879,9 @@ success; `deleteSubsystemInner` is what batch delete calls directly.
 
 `renameSubsystem(get, subsystemId, newName)` — `PATCH /subsystems/{id}`
 with `{name: newName}` (`PatchSubsystemRequestDto`), returning the full
-`SubsystemDto` — the same endpoint subsystem port-count changes use, per
-[design.md §7.1](design.md#71-confirmed-endpoints). On success, writes
-`result.data.name` onto `graphData.subsystems[subsystemId].subsystemName`
+`UpdateSubsystemResponseDto` — the same endpoint subsystem port-count
+changes use, per [§7](#7-api-surface). On success, writes
+`result.data.name ?? newName` onto `graphData.subsystems[subsystemId].subsystemName`
 via `createSubsystemOperations(set, projectId)`'s own closed-over `set`,
 same narrow-write treatment as module/subgraph rename.
 
@@ -875,11 +891,13 @@ same narrow-write treatment as module/subgraph rename.
 [design.md §7.2](design.md#72-deletemoveexpand-response-shapes-no-single-shared-envelope),
 this doc composes it from two calls:
 
-1. `POST /subsystems/{subsystemId}/components/move-out` with every direct
-   child's `componentSystemId` — promotes every child up to the
-   subsystem's own parent level. Response is
-   `MoveSubsystemComponentsResponseDto {added, updated, removed}`,
-   reconciled via `applyComponentCollection` same as
+1. `POST /subsystems/components/move` with every direct child split into
+   `subgraphSystemIds` and `subsystemSystemIds`, and
+   `targetSubsystemSystemId` set to the expanded subsystem's own parent
+   subsystem id, or `null` only when the expanded subsystem is already
+   top-level — promotes every child one level up. Response is
+   `MoveSubsystemComponentsResponseDto`, applied via
+   `applySubsystemMoveResponse` same as
    [§6.2](#62-move--remove-req-031a-req-031d-req-031e).
 2. `DELETE /subsystems/{subsystemId}` — now empty after step 1, so this
    succeeds per [§6.3](#63-delete-req-031b)'s empty-only contract. On
@@ -928,34 +946,29 @@ section for the composition.
 | `getSubgraphContents`        | GET    | `/projects/{projectId}/subgraphs/{id}/components`           | —                                                                                                                                             | `ComponentCollectionDto`                                                                                                                                     |
 | `getSubgraphPairs`           | GET    | `/projects/{projectId}/subgraphs/{id}/subgraph-pairs`       | —                                                                                                                                             | `SubgraphPairDto[]`                                                                                                                                          |
 | `renameSubgraph`             | PATCH  | `/projects/{projectId}/subgraphs/{id}`                      | `{name: string}`                                                                                                                              | `SubgraphDto` — see [§4.6](#46-rename-req-017-req-057). **Endpoint not present in current swagger — backend-committed, not yet landed.**                     |
-| `createSubsystem`            | POST   | `/projects/{projectId}/subsystems`                          | `CreateSubsystemRequestDto {name, parentId?}`                                                                                                 | `SubsystemDto`                                                                                                                                               |
-| `deleteSubsystem`            | DELETE | `/projects/{projectId}/subsystems/{id}`                     | —                                                                                                                                             | `SubsystemDto` — **empty subsystem only**, no cascade                                                                                                        |
-| `patchSubsystem`             | PATCH  | `/projects/{projectId}/subsystems/{id}`                     | `{name?, maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}`                                               | `SubsystemDto` — covers subsystem rename (§6.4) and subsystem port counts                                                                                    |
-| `moveSubsystemComponentsIn`  | POST   | `/projects/{projectId}/subsystems/{id}/components/move-in`  | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                                      | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                                               |
-| `moveSubsystemComponentsOut` | POST   | `/projects/{projectId}/subsystems/{id}/components/move-out` | `MoveSubsystemComponentsRequestDto {componentSystemIds}`                                                                                      | `MoveSubsystemComponentsResponseDto {added, updated, removed}`                                                                                               |
+| `createSubsystem`            | POST   | `/projects/{projectId}/subsystems`                          | `CreateSubsystemRequestDto {name?, parentSystemId?}`                                                                                          | `CreateSubsystemResponseDto {systemId, naturalId, name, parentSystemId?}`                                                                                    |
+| `deleteSubsystem`            | DELETE | `/projects/{projectId}/subsystems/{id}`                     | —                                                                                                                                             | `DeleteSubsystemResponseDto {systemId, naturalId, name, parentSystemId?}` — **empty subsystem only**, no cascade                                             |
+| `patchSubsystem`             | PATCH  | `/projects/{projectId}/subsystems/{id}`                     | `PatchSubsystemRequestDto {name?, inputDataPortCount?, outputDataPortCount?, controlPortCount?}`                                             | `UpdateSubsystemResponseDto {systemId, naturalId, name?, parentSystemId?, dataPorts, controlPorts, filteredKeys}` — covers subsystem rename and port counts |
+| `moveSubsystemComponents`    | POST   | `/projects/{projectId}/subsystems/components/move`          | `MoveSubsystemComponentsRequestDto {subgraphSystemIds?, subsystemSystemIds?, targetSubsystemSystemId: string \| null}`                       | `MoveSubsystemComponentsResponseDto {updatedModules, updatedSubsystems, addedDataLinks, removedDataLinks, addedControlLinks, removedControlLinks, subsystemPortChanges}` |
 
 **`CreateSpfModuleRequestDto`'s full shape** (backend, per the current
 swagger export's `components.schemas.CreateSpfModuleRequestDto`):
 
 ```typescript
 interface CreateSpfModuleRequestDto {
-  moduleDefinitionId: number; // the module definition's numeric id — NOT the string `systemId` this doc's `moduleId` params carry elsewhere; see the construction note below
-  processorSystemId: number; // required — the target processor's numeric id, carried in the drop payload per §2.5, not derived here
-  parentSystemId?: number;
-  subgraphSystemId?: number; // omitted → backend creates a new subgraph
-  containerSystemId?: number; // omitted → backend creates a new container
+  moduleDefinitionSystemId: string; // required — the module definition's systemId, carried by this doc's `moduleId` parameter
+  processorSystemId: string; // required — the target processor's systemId, carried in the drop payload per §2.5, not derived here
+  parentSystemId?: string;
+  subgraphSystemId?: string; // omitted → backend creates a new subgraph
+  containerSystemId?: string; // omitted → backend creates a new container
 }
 ```
 
-`moduleId` (the string parameter every `add*` function in §3.2 takes) is
-`ModuleDefinition.moduleId` (`module-list-slice.ts`, itself
-`String(dto.moduleId)`) — this doc's construction sites convert it back to
-a number (`Number(moduleId)`) for the `moduleDefinitionId` field, since the
-wire DTO's numeric type is the backend module definition's own primary
-key, unrelated to any entity's `systemId` string. This is the same
-already-established string/numeric split every other DTO in this feature
-carries (`SpfModuleDto.moduleId: number` vs. `SpfModuleDto.systemId:
-string`) — not a new convention.
+`moduleId` (the string parameter every `add*` function in §3.2 takes) must
+therefore carry the module definition's `systemId`, not its numeric natural
+id. If the palette currently exposes only a numeric `ModuleDefinition.moduleId`,
+Canvas UI Mechanics must add the module definition system id to the drag
+payload before these operations are implemented.
 
 ---
 
@@ -974,7 +987,7 @@ sequenceDiagram
   U->>V: drag module from palette, drop on empty canvas
   V->>M: addModuleToEmptyCanvas(get, moduleId, position, processorSystemId)
   M->>M: withMutationLock — beginMutation
-  M->>B: POST /projects/{projectId}/spf-modules {moduleDefinitionId, processorSystemId, no parent/subgraph/container}
+  M->>B: POST /projects/{projectId}/spf-modules {moduleDefinitionSystemId, processorSystemId, no parent/subgraph/container}
   alt success
     B-->>M: SpfModuleDto (new subgraphId, containerId)
     M->>G: applyComponentCollection(wrapped as added bucket)
@@ -1079,10 +1092,10 @@ strategy with the cases specific to this doc's logic:
   failed call, leaving earlier-in-loop deletes already applied — assert the
   loop does not attempt rollback and does not continue past the first
   failure. `moveToSubsystem`'s new-subsystem path:
-  assert behavior when `POST /subsystems` succeeds but the subsequent
-  `move-in` fails (empty subsystem left behind, no rollback).
-  `expandSubsystem`: assert behavior when `move-out` succeeds but the
-  final `DELETE /subsystems/{id}` fails (children already promoted,
+  assert behavior when `POST /subsystems` succeeds but the subsequent move
+  call fails (empty subsystem left behind, no rollback).
+  `expandSubsystem`: assert behavior when the move-to-parent call succeeds
+  but the final `DELETE /subsystems/{id}` fails (children already promoted,
   subsystem shell left behind).
 - **Integration**: full `addModuleToContainer`/`deleteModuleInstance`/
   `moveToSubsystem`/`expandSubsystem` round-trips against a mocked backend,
@@ -1101,12 +1114,13 @@ doc (either backend-owned or explicitly deferred):
   introduces** to work around the lack of dedicated cascading endpoints —
   `deleteSubgraph` and `deleteContainers` per-module delete loops
   ([§4.5](#45-delete-req-016a-req-016b-req-016c-req-048),
-  [§5](#5-container-operations)), `moveToSubsystem`'s create-then-move-in
-  for a new subsystem, and `expandSubsystem`'s
-  move-out-then-delete ([§6.2](#62-move--remove-req-031a-req-031d-req-031e)/[§6.5](#65-expand-req-032)).
+  [§5](#5-container-operations)), `updateContainerId`'s per-module PATCH
+  loop ([§5](#5-container-operations)), `moveToSubsystem`'s
+  create-then-move for a new subsystem, and `expandSubsystem`'s
+  move-to-parent-then-delete ([§6.2](#62-move--remove-req-031a-req-031d-req-031e)/[§6.5](#65-expand-req-032)).
   None of these have client-side rollback; a mid-sequence failure leaves a
   partially-applied result. Accepted risk, not solved here.
-- Whether `move-in` rejects a descendant-nesting cycle
+- Whether the subsystem move endpoint rejects a descendant-nesting cycle
   (client-side guard here only excludes direct self-nesting).
 - Whether a port-count decrease can sever links as a side effect —
   not this doc's concern (Link & Port).

@@ -328,7 +328,9 @@ is confirmed by the backend before the canvas reflects the change.
 
 **FR-SUBSYS-04** User can update a subsystem by adding subgraphs or subsystems into
 it (FR-SUBSYS-01), or removing subgraphs or subsystems from it (FR-SUBSYS-05). Removing
-a subgraph or subsystem re-parents it one level up; the subsystem itself is
+a subgraph or subsystem re-parents it one level up (to the removed-from
+subsystem's parent, or to the root subsystem level if the removed-from
+subsystem was already top-level); the subsystem it was removed from is
 **not** deleted, even if this empties it of all contents — confirmed with the
 backend team. Each change is confirmed by the backend before the canvas
 reflects the update.
@@ -336,18 +338,23 @@ reflects the update.
 **FR-SUBSYS-05** User can remove a subgraph or subsystem from its parent subsystem
 via a **"Remove from Subsystem"** context-menu action — the symmetric
 counterpart to FR-SUBSYS-01's "Move to Subsystem." The backend re-parents the
-moved node one level up. The now-possibly-empty subsystem is **not** deleted
-by this action. The canvas is updated only after the backend confirms. On
-failure, an error toast is shown.
+moved node one level up, using the parent of the removed-from subsystem as
+the target. The now-possibly-empty subsystem is **not** deleted by this
+action. The canvas is updated only after the backend confirms. On failure,
+an error toast is shown.
 
-**FR-SUBSYS-06** User can **expand** a subsystem. Expanding a subsystem deletes the
-subsystem container and moves all its components (subgraphs, modules,
-containers, and internal links) one hierarchy level up. The backend deletes all
-connections to the subsystem's external ports and returns the list of deleted
-connections in the API response. The UI must remove those connections from the
-canvas in the same response cycle. The canvas is updated only after the backend
-confirms the entire expand operation. On failure, an error toast is shown and
-no change is applied.
+**FR-SUBSYS-06** User can **expand** a subsystem. Expanding a subsystem first moves
+all its contents one hierarchy level up (concretely, direct child subgraphs
+and nested subsystems are re-parented to the expanded subsystem's parent, or
+to the root subsystem level if the expanded subsystem was already top-level),
+then deletes the now-empty subsystem shell. The backend move response may add
+or remove links and subsystem ports as part of this promotion; the UI must
+reconcile every returned link and port delta in the same response cycle. The
+canvas is updated only after the backend confirms each step. If the move step
+fails, no delete is attempted and no change is applied. If the move succeeds
+but the final delete fails, the promoted children remain one level up and the
+empty subsystem shell remains on canvas; the UI shows an error toast for the
+failed delete.
 
 ---
 
