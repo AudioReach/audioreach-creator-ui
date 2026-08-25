@@ -33,6 +33,7 @@ import {
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {
   CENTER_TABSET_ID,
+  getFlexLayoutGlobalConfig,
   PLACEHOLDER_COMPONENT_NAME,
   ROOT_LAYOUT_ID,
 } from '~shared/config/utils';
@@ -262,17 +263,15 @@ class ProjectLayoutManager extends Component<
     // recreates the FlexLayout configuration structure that tells FlexLayout how to
     // display tabs like horizontal
     const modelJson = {
-      global: {
+      global: getFlexLayoutGlobalConfig({
         borderEnableAutoHide: true,
         enableEdgeDock: false,
         tabEnableClose: true,
         tabEnableRename: false,
-        tabSetEnableClose: false,
-        tabSetEnableCloseButton: false,
         tabSetEnableDrag: true,
         tabSetEnableDrop: true,
         tabSetEnableMaximize: true,
-      },
+      }),
       layout: {
         children: [
           {
@@ -364,18 +363,16 @@ class ProjectLayoutManager extends Component<
           flexLayoutData.global = {};
         }
 
-        flexLayoutData.global = {
+        flexLayoutData.global = getFlexLayoutGlobalConfig({
+          ...flexLayoutData.global,
           borderEnableAutoHide: true,
           enableEdgeDock: false,
           tabEnableClose: true,
           tabEnableRename: false,
-          tabSetEnableClose: false,
-          tabSetEnableCloseButton: false,
           tabSetEnableDrag: true,
           tabSetEnableDrop: true,
           tabSetEnableMaximize: true,
-          ...flexLayoutData.global,
-        };
+        });
 
         const model = Model.fromJson(flexLayoutData);
         // Clean up any leftover placeholder now that a real tab has been
@@ -391,17 +388,15 @@ class ProjectLayoutManager extends Component<
 
     // Return empty model if no layout found
     return Model.fromJson({
-      global: {
+      global: getFlexLayoutGlobalConfig({
         borderEnableAutoHide: true,
         enableEdgeDock: false,
         tabEnableClose: true,
         tabEnableRename: false,
-        tabSetEnableClose: false,
-        tabSetEnableCloseButton: false,
         tabSetEnableDrag: true,
         tabSetEnableDrop: true,
         tabSetEnableMaximize: true,
-      },
+      }),
       layout: {children: [], type: 'row'},
     });
   };

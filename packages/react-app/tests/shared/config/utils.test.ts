@@ -3,11 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {IJsonModel, IJsonTabNode, IJsonTabSetNode} from 'flexlayout-react';
+import {
+  Actions,
+  DockLocation,
+  Model,
+  type IJsonModel,
+  type IJsonTabNode,
+  type IJsonTabSetNode,
+} from 'flexlayout-react';
 
 import {
   BOTTOM_TABSET_ID,
   CENTER_TABSET_ID,
+  getFlexLayoutGlobalConfig,
   KEY_CONFIGURATOR_COMPONENT_NAME,
   LEFT_TABSET_ID,
   LOG_VIEW_COMPONENT_NAME,
@@ -87,6 +95,55 @@ function findTabset(result: IJsonModel, tabsetId: string): IJsonTabSetNode {
 }
 
 describe('migrateFlexLayoutConfig', () => {
+  it('removes a tabset when its last tab is moved to another tabset', () => {
+    const savedLayout = layout();
+    const topRow = savedLayout.layout.children[0];
+    if (topRow.type !== 'row') {
+      throw new Error('expected top row');
+    }
+    topRow.children = [
+      {
+        children: [tab(MODULE_LIST_COMPONENT_NAME, MODULE_LIST_COMPONENT_NAME)],
+        id: LEFT_TABSET_ID,
+        type: 'tabset',
+      },
+      {
+        children: [tab(SUBGRAPH_LIST_COMPONENT_NAME, SUBGRAPH_LIST_COMPONENT_NAME)],
+        type: 'tabset',
+      },
+      ...topRow.children.slice(1),
+    ];
+    const model = Model.fromJson({
+      ...savedLayout,
+      global: getFlexLayoutGlobalConfig({tabSetEnableClose: false}),
+    });
+
+    model.doAction(
+      Actions.moveNode(
+        SUBGRAPH_LIST_COMPONENT_NAME,
+        RIGHT_TABSET_ID,
+        DockLocation.CENTER,
+        -1,
+        true,
+      ),
+    );
+
+    const result = model.toJson();
+    const updatedTopRow = result.layout.children[0];
+    if (updatedTopRow.type !== 'row') {
+      throw new Error('expected top row');
+    }
+    const leftTabsets = updatedTopRow.children
+      .filter((node) => node.type === 'tabset' && node.id !== CENTER_TABSET_ID);
+
+    expect(leftTabsets).toHaveLength(2);
+    expect(
+      leftTabsets.some(
+        (node) => node.type === 'tabset' && node.children?.length === 0,
+      ),
+    ).toBe(false);
+  });
+
   // No-op when the saved layout already has every default tab.
   it('returns the same object reference when the saved layout already matches the default', () => {
     const savedLayout = layout();

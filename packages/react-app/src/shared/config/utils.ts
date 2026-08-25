@@ -41,6 +41,17 @@ export const BOTTOM_ROW_ID = 'bottom-row';
  */
 export const INVALID_PROJECT_ID = 'project_undefined';
 
+export function getFlexLayoutGlobalConfig(
+  global: IJsonModel['global'] = {},
+): NonNullable<IJsonModel['global']> {
+  return {
+    ...global,
+    tabSetEnableClose: true,
+    tabSetEnableCloseButton: false,
+    tabSetEnableDeleteWhenEmpty: true,
+  };
+}
+
 /**
  * Check if a project ID is valid
  * @param projectId - The project ID to validate
@@ -175,9 +186,9 @@ export function GetFlexLayoutConfig(): IJsonModel {
 
   const flexLayoutConfig: IJsonModel = {
     borders: [],
-    global: {
+    global: getFlexLayoutGlobalConfig({
       rootOrientationVertical: true,
-    },
+    }),
     layout: {
       children: [topRow, bottomRow],
       id: ROOT_LAYOUT_ID,
