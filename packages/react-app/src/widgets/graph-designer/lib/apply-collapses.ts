@@ -25,7 +25,7 @@ import type {
 } from '~entities/graph';
 import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
 
-const subgraphProxyId = (sgId: number): string => `subgraph-proxy-${sgId}`;
+import {subgraphProxyNodeId} from './node-id';
 
 interface CollapseContext {
   /** node id → collapsed subgraphId that contains it (proxy target). */
@@ -149,7 +149,7 @@ export function applyCollapses(
         'output',
         lookupPortName(e.sourceNodeId, e.sourcePortId),
       );
-      sourceNodeId = subgraphProxyId(srcSg);
+      sourceNodeId = subgraphProxyNodeId(srcSg);
     }
     if (dstSg !== undefined) {
       targetPortId = ensureProxyPort(
@@ -159,7 +159,7 @@ export function applyCollapses(
         'input',
         lookupPortName(e.targetNodeId, e.targetPortId),
       );
-      targetNodeId = subgraphProxyId(dstSg);
+      targetNodeId = subgraphProxyNodeId(dstSg);
     }
     proxyDataLinks.push({
       edgeKind: 'proxy-data',
@@ -195,7 +195,7 @@ export function applyCollapses(
         'control',
         lookupPortName(e.sourceNodeId, e.sourcePortId),
       );
-      sourceNodeId = subgraphProxyId(srcSg);
+      sourceNodeId = subgraphProxyNodeId(srcSg);
     }
     if (dstSg !== undefined) {
       targetPortId = ensureProxyPort(
@@ -205,7 +205,7 @@ export function applyCollapses(
         'control',
         lookupPortName(e.targetNodeId, e.targetPortId),
       );
-      targetNodeId = subgraphProxyId(dstSg);
+      targetNodeId = subgraphProxyNodeId(dstSg);
     }
     proxyControlLinks.push({
       edgeKind: 'proxy-control',
@@ -228,7 +228,7 @@ export function applyCollapses(
   );
   const newProxies: SubgraphProxyNode[] = collapsedSubgraphs.map((sg) => ({
     height: NODE_DIMENSIONS.subgraphProxy.height,
-    id: subgraphProxyId(sg.subgraphId),
+    id: subgraphProxyNodeId(sg.subgraphId),
     label: sg.label,
     nodeKind: 'subgraph-proxy',
     parentId: sg.parentId,

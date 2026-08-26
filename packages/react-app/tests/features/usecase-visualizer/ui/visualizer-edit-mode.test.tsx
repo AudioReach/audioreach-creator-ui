@@ -186,12 +186,14 @@ function fakeDropEvent(
   clientX: number,
   clientY: number,
   data: string,
+  types: string[] = ['application/json'],
 ): ReactDragEvent {
   return {
     clientX,
     clientY,
     dataTransfer: {
       getData: (type: string) => (type === 'application/json' ? data : ''),
+      types,
     } as unknown as DataTransfer,
     preventDefault: jest.fn(),
   } as unknown as ReactDragEvent;
@@ -267,6 +269,49 @@ describe('palette drop', () => {
     expect(onNodeDropped).toHaveBeenCalledTimes(1);
     const payload = onNodeDropped.mock.calls[0][0];
     expect(payload.position).toEqual({x: 80, y: 70});
+    expect(payload.targetContainerId).toBe('10');
+    expect(payload.targetSubgraphId).toBe('5');
+  });
+
+  it('subgraph drop over container area keeps canvas position', () => {
+    const onNodeDropped = jest.fn();
+    const subgraph = makeSubgraph('sg1', {
+      height: 300,
+      subgraphId: 5,
+      width: 400,
+      x: 0,
+      y: 0,
+    });
+    const container = makeContainer('c1', {
+      containerId: 10,
+      height: 200,
+      parentId: 'sg1',
+      subgraphSystemId: '5',
+      width: 300,
+      x: 20,
+      y: 30,
+    });
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodeDropped}}
+        graph={makeGraph({containers: [container], subgraphs: [subgraph]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    act(() => {
+      latestReactFlowProps.current?.onDrop?.(
+        fakeDropEvent(
+          100,
+          100,
+          JSON.stringify({kind: 'subgraph', subgraphId: 'sg-2'}),
+          ['application/json', 'application/x-audioreach-node-type-subgraph'],
+        ),
+      );
+    });
+
+    expect(onNodeDropped).toHaveBeenCalledTimes(1);
+    const payload = onNodeDropped.mock.calls[0][0];
+    expect(payload.position).toEqual({x: 100, y: 100});
     expect(payload.targetContainerId).toBe('10');
     expect(payload.targetSubgraphId).toBe('5');
   });
@@ -399,7 +444,7 @@ describe('palette drop', () => {
     expect(onNodeDropped.mock.calls[0][0].targetSubgraphId).toBe('sg-new-1');
   });
 
-  it('dragover with subgraph MIME hint over a subgraph: preventDefault NOT called', () => {
+  it('dragover with subgraph MIME hint over a subgraph calls preventDefault', () => {
     const subgraph = makeSubgraph('sg1', {height: 200, width: 300, x: 0, y: 0});
     render(
       <UsecaseVisualizer
@@ -413,15 +458,29 @@ describe('palette drop', () => {
     act(() => {
       latestReactFlowProps.current?.onDragOver?.(evt);
     });
-    expect(evt.preventDefault).not.toHaveBeenCalled();
+    expect(evt.preventDefault).toHaveBeenCalledTimes(1);
   });
 
-  it('dragover with subgraph MIME hint NOT over a subgraph: preventDefault called', () => {
+  it('dragover with subgraph MIME hint over empty canvas calls preventDefault', () => {
     render(
       <UsecaseVisualizer graph={makeGraph()} mode={VISUALIZER_MODE.EDIT} />,
     );
     const evt = fakeDragOverEvent(999, 999, [
       'application/x-audioreach-node-type-subgraph',
+    ]);
+    act(() => {
+      latestReactFlowProps.current?.onDragOver?.(evt);
+    });
+    expect(evt.preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('dragover with subgraph MIME hint and JSON calls preventDefault once', () => {
+    render(
+      <UsecaseVisualizer graph={makeGraph()} mode={VISUALIZER_MODE.EDIT} />,
+    );
+    const evt = fakeDragOverEvent(100, 100, [
+      'application/x-audioreach-node-type-subgraph',
+      'application/json',
     ]);
     act(() => {
       latestReactFlowProps.current?.onDragOver?.(evt);

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ReactElement, useEffect, useMemo} from 'react';
+import {type DragEvent, type ReactElement, useEffect, useMemo} from 'react';
 
 import {Check, Cuboid, ListFilter, Search} from 'lucide-react';
 
@@ -14,24 +14,52 @@ import {TextInput} from '@qualcomm-ui/react/text-input';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import {useSubgraphList} from '~features/graph-designer';
+import {useUserPreferences} from '~shared/config/hooks';
+import {
+  WORKFLOW_LEVELS,
+  WORKFLOW_TYPES,
+} from '~shared/config/user-preferences-types';
 import {isValidProjectId} from '~shared/config/utils';
 import {logger} from '~shared/lib/logger';
 import {useProjectStoreShallow} from '~shared/store';
 import {useGlobalStore} from '~shared/store/global-store';
 import {searchItems} from '~shared/utils/search-utils';
 
+const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
+
+function handleDragStart(
+  subgraph: {subgraphId: string},
+  event: DragEvent,
+): void {
+  const draggedSubgraphInfo = {
+    kind: 'subgraph',
+    subgraphId: subgraph.subgraphId,
+  };
+
+  event.dataTransfer.setData(
+    'application/json',
+    JSON.stringify(draggedSubgraphInfo),
+  );
+  event.dataTransfer.setData(SUBGRAPH_DRAG_MIME, '');
+  event.dataTransfer.effectAllowed = 'copy';
+  logger.info('Subgraph drag started');
+}
+
 export function SubgraphList(): ReactElement {
   // Get the active project ID from the global store
   const projectId = useGlobalStore((s) => s.activeProjectId);
+  const {preferences} = useUserPreferences();
 
-  // No editable actions exist in this palette yet (browse/filter only) — read
-  // for when drag-to-canvas placement lands, so this stays wired to the same
-  // source every other panel already reads.
   const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
+  const isSystemWorkflow =
+    preferences.usecases.workflowType === WORKFLOW_TYPES.SYSTEM;
+  const isSubsystemLevel =
+    preferences.usecases.workflowLevel === WORKFLOW_LEVELS.SUBSYSTEM;
 
   // Get subgraph list state from tab store via hook
   const {
     loadSubgraphList,
+    presentSubgraphIds,
     selectedSubgraphTypes,
     setSelectedSubgraphTypes,
     setSubgraphListSearchQuery,
@@ -55,6 +83,11 @@ export function SubgraphList(): ReactElement {
   }, [projectId, subgraphListStatus, loadSubgraphList, isEditable]);
 
   const isLoading = subgraphListStatus === 'loading';
+
+  const presentSubgraphIdSet = useMemo(
+    () => new Set(presentSubgraphIds),
+    [presentSubgraphIds],
+  );
 
   // Extract unique subgraph types from data
   const uniqueSubgraphTypes = useMemo(() => {
@@ -175,7 +208,7 @@ export function SubgraphList(): ReactElement {
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-0.5 px-0.5">
                 <Button
-                  className="whitespace-nowrap text-[10px]"
+                  className="text-[10px] whitespace-nowrap"
                   emphasis="neutral"
                   onClick={handleClearFilters}
                   size="sm"
@@ -184,7 +217,7 @@ export function SubgraphList(): ReactElement {
                   Clear Filters
                 </Button>
                 <Button
-                  className="whitespace-nowrap text-[10px]"
+                  className="text-[10px] whitespace-nowrap"
                   emphasis="neutral"
                   onClick={handleUnselectAll}
                   size="sm"
@@ -205,26 +238,57 @@ export function SubgraphList(): ReactElement {
       ) : (
         <>
           <ul className="flex flex-col gap-1">
-            {filteredSubgraphs.map((subgraph) => (
-              <Tooltip
-                key={subgraph.subgraphId}
-                trigger={
-                  <li className="flex cursor-default items-center gap-3">
-                    <Cuboid className="h-4 w-4 shrink-0" />
-                    <div className="flex flex-col gap-0">
-                      <span className="text-[11px] font-semibold">
-                        {subgraph.subgraphName}
-                      </span>
-                      <span className="text-neutral-secondary text-[10px]">
-                        {subgraph.subgraphType.toUpperCase()}
-                      </span>
-                    </div>
-                  </li>
-                }
-              >
-                {subgraph.description || 'No description available'}
-              </Tooltip>
-            ))}
+            {filteredSubgraphs.map((subgraph) => {
+              const isAlreadyPresent = presentSubgraphIdSet.has(
+                subgraph.subgraphId,
+              );
+              const disabledReason = !isEditable
+                ? 'Switch to edit mode to drag subgraphs'
+                : isSystemWorkflow
+                  ? 'Subgraphs cannot be dragged in system workflow'
+                  : isSubsystemLevel
+                    ? 'Subgraphs cannot be dragged in subsystem level'
+                    : isAlreadyPresent
+                      ? 'Already present on the canvas'
+                      : null;
+              const canDragSubgraph = isEditable && disabledReason === null;
+
+              return (
+                <Tooltip
+                  key={subgraph.subgraphId}
+                  trigger={
+                    <li
+                      aria-disabled={disabledReason !== null}
+                      className={`flex cursor-default items-center gap-3 ${
+                        disabledReason ? 'opacity-50' : ''
+                      }`}
+                      draggable={canDragSubgraph}
+                      onDragStart={(event) => {
+                        if (!canDragSubgraph) {
+                          event.preventDefault();
+                          return;
+                        }
+                        handleDragStart(subgraph, event);
+                      }}
+                    >
+                      <Cuboid className="h-4 w-4 shrink-0" />
+                      <div className="flex flex-col gap-0">
+                        <span className="text-[11px] font-semibold">
+                          {subgraph.subgraphName}
+                        </span>
+                        <span className="text-neutral-secondary text-[10px]">
+                          {subgraph.subgraphType.toUpperCase()}
+                        </span>
+                      </div>
+                    </li>
+                  }
+                >
+                  {disabledReason
+                    ? disabledReason
+                    : subgraph.description || 'No description available'}
+                </Tooltip>
+              );
+            })}
           </ul>
 
           {filteredSubgraphs.length === 0 && (

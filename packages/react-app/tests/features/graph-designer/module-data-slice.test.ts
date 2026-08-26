@@ -87,6 +87,7 @@ function makeWidenedStore(options: {
     },
     graphDataError: null,
     graphDataStatus: 'ready',
+    initializeEmptyGraphData: () => {},
     isDirty: false,
     loadGraphData: async () => {},
     loadModuleList: async () => {},

@@ -269,6 +269,36 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
+  it('creates the module after empty graph data has been initialized', async () => {
+    const {get, moduleOperations, store} = makeTestStore();
+    await store.getState().enterEditMode();
+    store.getState().initializeEmptyGraphData();
+
+    mockCreateSpfModule.mockResolvedValueOnce({
+      data: makeSpfModuleDto({
+        containerId: 10,
+        subgraphId: '5',
+        systemId: 'sys-mod-1',
+      }),
+      message: 'ok',
+      success: true,
+    });
+
+    const result = await moduleOperations.addModuleToEmptyCanvas(
+      get,
+      '200',
+      {x: 33, y: 44},
+      '7',
+    );
+
+    expect(result).toBe('sys-mod-1');
+    expect(store.getState().graphDataStatus).toBe('ready');
+    expect(
+      store.getState().graphData!.moduleInstances['sys-mod-1'].position,
+    ).toEqual({x: 33, y: 44});
+    expect(store.getState().graphData!.selectedUsecases).toEqual([]);
+  });
+
   it('toasts and makes no state change on failure', async () => {
     const {get, moduleOperations, store} = makeTestStore();
     await store.getState().enterEditMode();

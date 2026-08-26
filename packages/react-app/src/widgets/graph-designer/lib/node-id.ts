@@ -7,6 +7,10 @@ export function subgraphNodeId(subgraphId: string): string {
   return `subgraph-${subgraphId}`;
 }
 
+export function subgraphProxyNodeId(subgraphId: string | number): string {
+  return `subgraph-proxy-${subgraphId}`;
+}
+
 export function containerNodeId(
   containerId: string,
   subgraphId: string,

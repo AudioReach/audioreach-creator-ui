@@ -48,7 +48,7 @@ import {useTheme} from '~shared/providers/theme-provider';
 import '@xyflow/react/dist/style.css';
 
 import {captureScreenshot} from '../lib/capture-screenshot';
-import {isPositionInsideNode, resolveDropTarget} from '../lib/drop-target';
+import {resolveDropTarget} from '../lib/drop-target';
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
 import {parsePortIdFromHandleId} from '../lib/port-geometry';
 import {recalculateParentSizes} from '../lib/recalculate-parent-sizes';
@@ -82,6 +82,7 @@ const nodeTypes = {
   'subgraph-proxy': withGhostFallback(SubgraphProxyNode),
   subsystem: withGhostFallback(SubsystemNode),
 };
+const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
 
 const edgeTypes = {
   'control-link': ControlLinkEdge,
@@ -203,12 +204,6 @@ function VisualizerCanvas({
   // once) and drag handlers can read current state without stale closures.
   const rfNodesRef = useRef(rfNodes);
   rfNodesRef.current = rfNodes;
-  const rfNodesById = useMemo(
-    () => new Map(rfNodes.map((n) => [n.id, n])),
-    [rfNodes],
-  );
-  const rfNodesByIdRef = useRef<ReadonlyMap<string, Node>>(rfNodesById);
-  rfNodesByIdRef.current = rfNodesById;
   const rfEdgesRef = useRef(rfEdges);
   rfEdgesRef.current = rfEdges;
 
@@ -408,33 +403,15 @@ function VisualizerCanvas({
     return () => el.removeEventListener('keydown', handleKeyDown);
   }, [store]);
 
-  const handleDragOver = useCallback(
-    (event: ReactDragEvent) => {
-      const types = event.dataTransfer.types;
-      if (types.includes('application/x-audioreach-node-type-subgraph')) {
-        const pos = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
-        const nodesById = rfNodesByIdRef.current;
-        const overSubgraph = rfNodesRef.current.some((n) => {
-          const nodeData = n.data as unknown as AnyNode;
-          return (
-            nodeData.nodeKind === NODE_KIND.SUBGRAPH &&
-            isPositionInsideNode(pos, n, nodesById)
-          );
-        });
-        if (!overSubgraph) {
-          event.preventDefault();
-        }
-        return;
-      }
-      if (types.includes('application/json')) {
-        event.preventDefault();
-      }
-    },
-    [screenToFlowPosition],
-  );
+  const handleDragOver = useCallback((event: ReactDragEvent) => {
+    const types = event.dataTransfer.types;
+    if (
+      types.includes('application/json') ||
+      types.includes('application/x-audioreach-node-type-subgraph')
+    ) {
+      event.preventDefault();
+    }
+  }, []);
 
   const handleDrop = useCallback(
     (event: ReactDragEvent) => {
@@ -448,9 +425,12 @@ function VisualizerCanvas({
         y: event.clientY,
       });
       const dropTarget = resolveDropTarget(position, rfNodesRef.current);
+      const isSubgraphDrop =
+        event.dataTransfer.types.includes(SUBGRAPH_DRAG_MIME);
       store.getState().eventHandlers?.onNodeDropped?.({
         dropData,
         ...dropTarget,
+        position: isSubgraphDrop ? position : dropTarget.position,
       });
     },
     [screenToFlowPosition, store],

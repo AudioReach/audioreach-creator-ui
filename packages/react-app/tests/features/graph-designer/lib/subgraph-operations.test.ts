@@ -199,6 +199,52 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
     );
   });
 
+  it('places a subgraph after empty graph data has been initialized', async () => {
+    const {get, store, subgraphOperations} = makeTestStore();
+    await store.getState().enterEditMode();
+    store.getState().initializeEmptyGraphData();
+    mockGetSubgraphContents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            containerId: 10,
+            subgraphId: 'sg-1',
+            systemId: 'mod-1',
+          }),
+        ],
+      },
+      message: 'ok',
+      success: true,
+    });
+    mockGetSubgraphPairs.mockResolvedValueOnce({
+      data: [],
+      message: 'ok',
+      success: true,
+    });
+
+    const ok = await subgraphOperations.placeSubgraphFromPalette(get, 'sg-1', {
+      x: 12,
+      y: 34,
+    });
+
+    expect(ok).toBe(true);
+    expect(store.getState().graphDataStatus).toBe('ready');
+    expect(store.getState().graphData).toEqual(
+      expect.objectContaining({
+        selectedUsecases: [],
+      }),
+    );
+    expect(store.getState().graphData!.moduleInstances['mod-1']).toEqual(
+      expect.objectContaining({
+        position: {x: 12, y: 34},
+        subgraphId: 'sg-1',
+      }),
+    );
+    expect(store.getState().graphData!.subgraphs['sg-1']).toBeDefined();
+  });
+
   it('applies the drop position to every newly-fetched module, without clobbering a module already on canvas', async () => {
     const {get, store, subgraphOperations} = makeTestStore();
     await store.getState().enterEditMode();

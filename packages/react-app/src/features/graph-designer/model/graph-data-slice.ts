@@ -148,6 +148,7 @@ export interface GraphDataSlice {
   graphData: UsecaseGraphData | null;
   graphDataError: string | null;
   graphDataStatus: SliceStatus;
+  initializeEmptyGraphData: () => void;
   isDirty: boolean;
   loadGraphData: (
     usecases: string[],
@@ -700,6 +701,26 @@ export function createGraphDataSlice<
     graphDataError: null,
 
     graphDataStatus: 'uninitialized',
+
+    initializeEmptyGraphData: () => {
+      logger.debug('graphDataSlice: initializeEmptyGraphData', {
+        action: 'initializeEmptyGraphData',
+        component: 'graphDataSlice',
+      });
+      set({
+        graphData: {
+          connections: [],
+          containers: {},
+          moduleInstances: {},
+          selectedUsecases: [],
+          subgraphs: {},
+          subsystems: {},
+        },
+        graphDataError: null,
+        graphDataStatus: 'ready',
+        isDirty: false,
+      } as unknown as Partial<S>);
+    },
 
     isDirty: false,
 

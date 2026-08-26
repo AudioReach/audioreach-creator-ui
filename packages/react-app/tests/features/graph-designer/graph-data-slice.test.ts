@@ -138,6 +138,26 @@ describe('toConnection', () => {
   });
 });
 
+describe('createGraphDataSlice — initializeEmptyGraphData', () => {
+  it('sets an empty ready graph snapshot', () => {
+    const store = makeStore();
+
+    store.getState().initializeEmptyGraphData();
+
+    expect(store.getState().graphData).toEqual({
+      connections: [],
+      containers: {},
+      moduleInstances: {},
+      selectedUsecases: [],
+      subgraphs: {},
+      subsystems: {},
+    });
+    expect(store.getState().graphDataError).toBeNull();
+    expect(store.getState().graphDataStatus).toBe('ready');
+    expect(store.getState().isDirty).toBe(false);
+  });
+});
+
 describe('createGraphDataSlice — moduleType resolution', () => {
   it('resolves moduleType from moduleList moduleType when a matching definition exists', async () => {
     const store = makeStore([

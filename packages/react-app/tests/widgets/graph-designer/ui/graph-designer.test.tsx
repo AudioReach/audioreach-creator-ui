@@ -5,6 +5,8 @@
 
 jest.mock('~shared/lib/logger');
 
+import {NODE_KIND, type LevelView} from '~entities/graph';
+
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
 
@@ -18,6 +20,7 @@ interface MockUsecaseVisualizerProps {
     }) => void;
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
   };
+  graph?: LevelView;
 }
 
 jest.mock('@qualcomm-ui/react/button', () => {
@@ -77,6 +80,7 @@ jest.mock('~features/usecase-visualizer', () => ({
   NODE_DIMENSIONS: {
     container: {headerHeight: 32, padding: 12},
     subgraph: {headerHeight: 40, padding: 16},
+    subgraphProxy: {height: 72, width: 160},
   },
   UsecaseVisualizer: (props: MockUsecaseVisualizerProps) => {
     mockVisualizerProps = props;
@@ -135,6 +139,7 @@ import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-s
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
+import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
 import GraphDesigner from '~widgets/graph-designer/ui/graph-designer';
 
 const PROJECT_ID = 'proj-1';
@@ -182,8 +187,10 @@ function makeGraphData(): UsecaseGraphData {
 }
 
 function renderGraphDesigner(options?: {
+  addModuleToEmptyCanvas?: GraphDesignerStore['addModuleToEmptyCanvas'];
   deleteContainers?: GraphDesignerStore['deleteContainers'];
   graphData?: UsecaseGraphData;
+  placeSubgraphFromPalette?: GraphDesignerStore['placeSubgraphFromPalette'];
   subgraphProvenanceById?: GraphDesignerStore['subgraphProvenanceById'];
 }) {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
@@ -199,6 +206,12 @@ function renderGraphDesigner(options?: {
       : {}),
     ...(options?.deleteContainers
       ? {deleteContainers: options.deleteContainers}
+      : {}),
+    ...(options?.addModuleToEmptyCanvas
+      ? {addModuleToEmptyCanvas: options.addModuleToEmptyCanvas}
+      : {}),
+    ...(options?.placeSubgraphFromPalette
+      ? {placeSubgraphFromPalette: options.placeSubgraphFromPalette}
       : {}),
   });
 
@@ -231,6 +244,41 @@ describe('GraphDesigner — top bar', () => {
 });
 
 describe('GraphDesigner — module drops', () => {
+  it('routes module drops to the editable empty canvas when no usecase is selected', async () => {
+    const addModuleToEmptyCanvas = jest
+      .fn<
+        ReturnType<GraphDesignerStore['addModuleToEmptyCanvas']>,
+        Parameters<GraphDesignerStore['addModuleToEmptyCanvas']>
+      >()
+      .mockResolvedValue('mod-1');
+    await act(async () => {
+      renderGraphDesigner({addModuleToEmptyCanvas});
+      await Promise.resolve();
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+    expect(screen.getByText('No usecases selected')).toBeInTheDocument();
+
+    await act(async () => {
+      mockVisualizerProps?.eventHandlers?.onNodeDropped?.({
+        dropData: JSON.stringify({
+          kind: 'module',
+          moduleDefinitionSystemId: 'module-definition-1',
+          processorSystemId: 'processor-1',
+        }),
+        position: {x: 10, y: 20},
+      });
+      await Promise.resolve();
+    });
+
+    expect(addModuleToEmptyCanvas).toHaveBeenCalledWith(
+      expect.any(Function),
+      'module-definition-1',
+      {x: 10, y: 20},
+      'processor-1',
+    );
+  });
+
   it('rejects container drops without a parent subgraph id', () => {
     const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
     const addToContainerSpy = jest.spyOn(
@@ -285,6 +333,120 @@ describe('GraphDesigner — module drops', () => {
     );
     expect(addToContainerSpy).not.toHaveBeenCalled();
     expect(addToEmptyCanvasSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('GraphDesigner - subgraph drops', () => {
+  it('mounts an editable drop canvas when no usecase is selected', async () => {
+    const placeSubgraphFromPalette = jest
+      .fn<
+        ReturnType<GraphDesignerStore['placeSubgraphFromPalette']>,
+        Parameters<GraphDesignerStore['placeSubgraphFromPalette']>
+      >()
+      .mockResolvedValue(true);
+    await act(async () => {
+      renderGraphDesigner({placeSubgraphFromPalette});
+      await Promise.resolve();
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+    expect(screen.getByText('No usecases selected')).toBeInTheDocument();
+
+    await act(async () => {
+      mockVisualizerProps?.eventHandlers?.onNodeDropped?.({
+        dropData: JSON.stringify({
+          kind: 'subgraph',
+          subgraphId: '2',
+        }),
+        position: {x: 35, y: 45},
+      });
+      await Promise.resolve();
+    });
+
+    expect(placeSubgraphFromPalette).toHaveBeenCalledWith(
+      expect.any(Function),
+      '2',
+      {x: 35, y: 45},
+    );
+  });
+
+  it('places a subgraph from a subgraph drop payload', async () => {
+    jest.mocked(layoutLevelView).mockResolvedValueOnce({
+      levelId: 'uc-1',
+      subgraphs: [
+        {
+          height: 120,
+          id: 'subgraph-2',
+          label: 'Subgraph 2',
+          nodeKind: NODE_KIND.SUBGRAPH,
+          subgraphId: 2,
+          width: 240,
+          x: 0,
+          y: 0,
+        },
+      ],
+    });
+    const placeSubgraphFromPalette = jest
+      .fn<
+        ReturnType<GraphDesignerStore['placeSubgraphFromPalette']>,
+        Parameters<GraphDesignerStore['placeSubgraphFromPalette']>
+      >()
+      .mockResolvedValue(true);
+    renderGraphDesigner({
+      graphData: makeGraphData(),
+      placeSubgraphFromPalette,
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+    expect(mockVisualizerProps).not.toBeNull();
+
+    await act(async () => {
+      mockVisualizerProps?.eventHandlers?.onNodeDropped?.({
+        dropData: JSON.stringify({
+          kind: 'subgraph',
+          subgraphId: '2',
+        }),
+        position: {x: 35, y: 45},
+      });
+      await Promise.resolve();
+    });
+
+    expect(placeSubgraphFromPalette).toHaveBeenCalledWith(
+      expect.any(Function),
+      '2',
+      {x: 35, y: 45},
+    );
+    await waitFor(() => {
+      expect(
+        mockVisualizerProps?.graph?.subgraphProxies?.find(
+          (subgraph) => subgraph.id === 'subgraph-proxy-2',
+        ),
+      ).toEqual(expect.objectContaining({x: 35, y: 45}));
+    });
+  });
+
+  it('ignores malformed subgraph drop payloads', async () => {
+    const placeSubgraphFromPalette = jest
+      .fn<
+        ReturnType<GraphDesignerStore['placeSubgraphFromPalette']>,
+        Parameters<GraphDesignerStore['placeSubgraphFromPalette']>
+      >()
+      .mockResolvedValue(true);
+    renderGraphDesigner({
+      graphData: makeGraphData(),
+      placeSubgraphFromPalette,
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDropped?.({
+        dropData: JSON.stringify({kind: 'subgraph'}),
+        position: {x: 35, y: 45},
+      });
+    });
+
+    expect(placeSubgraphFromPalette).not.toHaveBeenCalled();
   });
 });
 
