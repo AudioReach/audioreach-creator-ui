@@ -22,6 +22,7 @@ export interface SubgraphDefinition {
   subgraphId: string;
   subgraphName: string;
   subgraphType: string;
+  systemId: string;
 }
 
 export interface SubgraphListSlice {
@@ -57,6 +58,7 @@ function toSubgraphDefinition(dto: SubgraphResponseDto): SubgraphDefinition {
     subgraphId: String(dto.id),
     subgraphName: dto.name,
     subgraphType: dto.subGraphSharedType,
+    systemId: dto.systemId,
   };
 }
 

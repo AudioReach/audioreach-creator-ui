@@ -17,6 +17,9 @@ import type {
   CreateDataLinkRequest,
   DataLinkDto,
   LinkOperationResult,
+  ControlLinkWithUsecasesDto,
+  DataLinkWithUsecasesDto,
+  SpfModuleDto,
 } from '../model/usecase-component.dto';
 import type {
   SubsystemFilteredUsecasesDto,
@@ -133,6 +136,25 @@ export async function getSubgraphContents(
 }
 
 /**
+ * Fetch every data-link connection at a port, each paired with the
+ * usecases it belongs to.
+ * @param projectId - The unique identifier of the project
+ * @param componentSystemId - The systemId of the module owning the port
+ * @param portSystemId - The systemId of the port being queried
+ * @returns Array of DataLinkWithUsecasesDto for the given port
+ */
+export async function getDataLinkWithUsecases(
+  projectId: string,
+  componentSystemId: string,
+  portSystemId: string,
+): Promise<ApiResult<DataLinkWithUsecasesDto[]>> {
+  const params = new URLSearchParams({componentSystemId, portSystemId});
+  return httpClient.get<DataLinkWithUsecasesDto[]>(
+    `/projects/${projectId}/usecases/data-link?${params.toString()}`,
+  );
+}
+
+/**
  * Fetch every subgraph-pair link bundle involving the given subgraph, used
  * to render cross-subgraph connections once both sides are on canvas.
  * @param projectId - The unique identifier of the project
@@ -144,6 +166,25 @@ export async function getSubgraphPairs(
 ): Promise<ApiResult<SubgraphPairResponseDto[]>> {
   return httpClient.get<SubgraphPairResponseDto[]>(
     `/projects/${projectId}/subgraphs/${subgraphSystemId}/subgraph-pairs`,
+  );
+}
+
+/**
+ * Fetch every control-link connection at a port, each paired with the
+ * usecases it belongs to.
+ * @param projectId - The unique identifier of the project
+ * @param componentSystemId - The systemId of the module owning the port
+ * @param portSystemId - The systemId of the port being queried
+ * @returns Array of ControlLinkWithUsecasesDto for the given port
+ */
+export async function getControlLinkWithUsecases(
+  projectId: string,
+  componentSystemId: string,
+  portSystemId: string,
+): Promise<ApiResult<ControlLinkWithUsecasesDto[]>> {
+  const params = new URLSearchParams({componentSystemId, portSystemId});
+  return httpClient.get<ControlLinkWithUsecasesDto[]>(
+    `/projects/${projectId}/usecases/control-link?${params.toString()}`,
   );
 }
 
@@ -261,5 +302,21 @@ export async function deleteControlLink(
 ): Promise<ApiResult<ControlLinkDto>> {
   return httpClient.delete<ControlLinkDto>(
     `/projects/${projectId}/control-links/${connectionId}`,
+  );
+}
+
+/**
+ * Batched lookup of modules by systemId
+ * @param projectId - The unique identifier of the project
+ * @param systemIds - Array of module system identifiers to resolve
+ * @returns Array of SpfModuleDto matching the given system IDs
+ */
+export async function getModulesBySystemIds(
+  projectId: string,
+  systemIds: string[],
+): Promise<ApiResult<SpfModuleDto[]>> {
+  return httpClient.post<SpfModuleDto[]>(
+    `/projects/${projectId}/spf-modules/query`,
+    {systemIds},
   );
 }

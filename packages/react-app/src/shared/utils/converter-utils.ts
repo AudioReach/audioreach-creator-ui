@@ -49,3 +49,20 @@ export function ConvertNumberToHexString(id: number): string | null {
   // Convert to hex string with proper formatting
   return `0x${id.toString(16).toUpperCase().padStart(8, '0')}`;
 }
+
+// Converts a number to a minimal-width hex string (0x1, 0x14, …) with no
+// zero-padding — used for ids like port numbers where the padded 8-digit
+// format used for module ids would be misleadingly wide.
+export function ConvertNumberToMinimalHexString(id: number): string | null {
+  if (
+    typeof id !== 'number' ||
+    isNaN(id) ||
+    !isFinite(id) ||
+    !Number.isSafeInteger(id) ||
+    id < 0
+  ) {
+    return null;
+  }
+
+  return `0x${id.toString(16).toUpperCase()}`;
+}

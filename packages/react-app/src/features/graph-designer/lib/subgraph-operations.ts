@@ -115,11 +115,11 @@ export function createSubgraphOperations(
     const touchesDroppedModule = (
       c: GraphDesignerStore['excludedLinks'][number],
     ): boolean =>
-      droppedModuleIds.has(c.fromModuleId) || droppedModuleIds.has(c.toModuleId);
+      droppedModuleIds.has(c.fromModuleId) ||
+      droppedModuleIds.has(c.toModuleId);
 
-    const removedConnections = graphData.connections.filter(
-      touchesDroppedModule,
-    );
+    const removedConnections =
+      graphData.connections.filter(touchesDroppedModule);
     const connections = graphData.connections.filter(
       (c) => !touchesDroppedModule(c),
     );
@@ -156,8 +156,9 @@ export function createSubgraphOperations(
       [...removedConnections, ...removedExcludedLinks]
         .filter(
           (connection, index, self) =>
-            self.findIndex((c) => c.connectionId === connection.connectionId) ===
-            index,
+            self.findIndex(
+              (c) => c.connectionId === connection.connectionId,
+            ) === index,
         )
         .map(connectionToLinkEndpoints),
     );
@@ -312,12 +313,22 @@ export function createSubgraphOperations(
             return {};
           }
           let moduleInstances = s.graphData.moduleInstances;
+          // Connections must be merged before modules are upserted below —
+          // upsertModule recomputes activeLinks from this same list
+          let connections = s.graphData.connections;
+          for (const l of contents.dataLinks) {
+            connections = upsertLink(connections, l, 'data');
+          }
+          for (const l of contents.controlLinks) {
+            connections = upsertLink(connections, l, 'control');
+          }
           for (const m of contents.spfModules) {
             const isNewModule = !(m.systemId in moduleInstances);
             moduleInstances = upsertModule(
               moduleInstances,
               m,
               defModuleTypeById.get(String(m.moduleId)) ?? '',
+              connections,
             );
             // A module already on canvas keeps its dragged position;
             // toModuleInstance only defaults to {x: 0, y: 0} for a module
@@ -328,13 +339,6 @@ export function createSubgraphOperations(
                 [m.systemId]: {...moduleInstances[m.systemId], position},
               };
             }
-          }
-          let connections = s.graphData.connections;
-          for (const l of contents.dataLinks) {
-            connections = upsertLink(connections, l, 'data');
-          }
-          for (const l of contents.controlLinks) {
-            connections = upsertLink(connections, l, 'control');
           }
           return {
             graphData: {...s.graphData, connections, moduleInstances},

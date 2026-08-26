@@ -237,7 +237,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
         ))}
       </div>
 
-      <PortHandles anchorHeight={boxHeight} node={node} />
+      <PortHandles anchorHeight={boxHeight} node={node} showLinkCountColor />
 
       {/* Footer sits in the reserved strip below the box with a small gap so
           it doesn't hug the module core. */}

@@ -42,18 +42,24 @@ const graphData: UsecaseGraphData = {
       displayName: 'Decoder',
       inputPorts: [
         {
+          activeLinks: 1,
           direction: 'input',
           isStatic: false,
           portId: '10',
           portName: 'in1',
+          portSystemId: 'sys-port-10',
           portType: 'data',
+          totalLinksAtPort: 2,
         },
         {
+          activeLinks: 1,
           direction: 'input',
           isStatic: false,
           portId: '30',
           portName: 'ctrl1',
+          portSystemId: 'sys-port-30',
           portType: 'control',
+          totalLinksAtPort: 1,
         },
       ],
       moduleId: '100',
@@ -62,11 +68,14 @@ const graphData: UsecaseGraphData = {
       moduleType: 'Decoder',
       outputPorts: [
         {
+          activeLinks: 0,
           direction: 'output',
           isStatic: false,
           portId: '11',
           portName: 'out1',
+          portSystemId: 'sys-port-11',
           portType: 'data',
+          totalLinksAtPort: 0,
         },
       ],
       position: {x: 0, y: 0},
@@ -77,18 +86,24 @@ const graphData: UsecaseGraphData = {
       displayName: 'Encoder',
       inputPorts: [
         {
+          activeLinks: 1,
           direction: 'input',
           isStatic: false,
           portId: '20',
           portName: 'in2',
+          portSystemId: 'sys-port-20',
           portType: 'data',
+          totalLinksAtPort: 1,
         },
         {
+          activeLinks: 1,
           direction: 'input',
           isStatic: false,
           portId: '40',
           portName: 'ctrl2',
+          portSystemId: 'sys-port-40',
           portType: 'control',
+          totalLinksAtPort: 1,
         },
       ],
       moduleId: '101',
@@ -145,9 +160,9 @@ describe('buildLevelViewFromGraphData', () => {
     expect(outputPorts).toHaveLength(1);
     expect(controlPorts).toHaveLength(1);
 
-    expect(inputPorts[0].id).toBe('10');
-    expect(outputPorts[0].id).toBe('11');
-    expect(controlPorts[0].id).toBe('30');
+    expect(inputPorts[0].id).toBe('sys-port-10');
+    expect(outputPorts[0].id).toBe('sys-port-11');
+    expect(controlPorts[0].id).toBe('sys-port-30');
   });
 
   it('produces one data link with edgeKind "data", sourceNodeId "sys-mod-1" and sourcePortId "10"', () => {
@@ -187,5 +202,22 @@ describe('buildLevelViewFromGraphData', () => {
     for (const mod of view.modules ?? []) {
       expect(mod.parentId).toBe('container-5:1');
     }
+  });
+});
+
+describe('buildLevelViewFromGraphData — port id/coverage mapping', () => {
+  it('sets view-model Port.id to the intermediate Port.portSystemId, not portId', () => {
+    const view = buildLevelViewFromGraphData(graphData, 'L');
+    const mod1 = (view.modules ?? []).find((m) => m.id === 'sys-mod-1')!;
+    const inPort = mod1.ports.find((p) => p.portIoType === 'input')!;
+    expect(inPort.id).toBe('sys-port-10');
+  });
+
+  it('carries activeLinks and totalLinks through onto the view-model Port', () => {
+    const view = buildLevelViewFromGraphData(graphData, 'L');
+    const mod1 = (view.modules ?? []).find((m) => m.id === 'sys-mod-1')!;
+    const inPort = mod1.ports.find((p) => p.portIoType === 'input')!;
+    expect(inPort.activeLinks).toBe(1);
+    expect(inPort.totalLinks).toBe(2);
   });
 });

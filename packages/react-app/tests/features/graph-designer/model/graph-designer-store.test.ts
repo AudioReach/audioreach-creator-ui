@@ -156,18 +156,22 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
             moduleType: 'SOURCE',
             outputPorts: [
               {
+                activeLinks: 1,
                 direction: 'output',
                 isStatic: false,
                 portId: '11',
                 portName: 'out1',
+                portSystemId: '11',
                 portType: 'data',
                 totalLinksAtPort: 1,
               },
               {
+                activeLinks: 0,
                 direction: 'output',
                 isStatic: false,
                 portId: '12',
                 portName: 'out2',
+                portSystemId: '12',
                 portType: 'data',
                 totalLinksAtPort: 0,
               },
@@ -242,6 +246,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
               containerId: 20,
               dataPorts: [
                 {
+                  id: 21,
                   name: 'in1',
                   portIoType: 'Input',
                   portType: 'Dynamic',

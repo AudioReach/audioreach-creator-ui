@@ -420,10 +420,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
 
     await flushPromises(8);
 
-    expect(mockGetSubgraphPairs).toHaveBeenCalledWith(
-      'proj-sg-ops-1',
-      'sg-1',
-    );
+    expect(mockGetSubgraphPairs).toHaveBeenCalledWith('proj-sg-ops-1', 'sg-1');
     expect(settled).toBe(false);
 
     resolvePairs({data: [], message: 'ok', success: true});
@@ -450,10 +447,12 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
             containerId: 'cnt-2',
             inputPorts: [
               {
+                activeLinks: 0,
                 direction: 'input',
                 isStatic: false,
                 portId: 'port-b',
                 portName: 'B',
+                portSystemId: 'port-b',
                 portType: 'data',
                 totalLinksAtPort: 0,
               },
@@ -560,10 +559,12 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
             displayName: 'Mod B',
             inputPorts: [
               {
+                activeLinks: 0,
                 direction: 'input',
                 isStatic: false,
                 portId: 'port-b',
                 portName: 'B',
+                portSystemId: 'port-b',
                 portType: 'data',
                 totalLinksAtPort: 0,
               },
@@ -941,10 +942,12 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
             containerId: 'cnt-2',
             inputPorts: [
               {
+                activeLinks: 1,
                 direction: 'input',
                 isStatic: false,
                 portId: 'port-2',
                 portName: 'B',
+                portSystemId: 'port-2',
                 portType: 'data',
                 totalLinksAtPort: 1,
               },
