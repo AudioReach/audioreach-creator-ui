@@ -118,6 +118,7 @@ export interface ModuleNode extends NodeBase {
  * (ports) filter by portIoType for handle placement.
  */
 export interface Port {
+  activeLinks?: number;
   id: string;
   /** Prevents new connections and hides context menu for this port. */
   locked?: boolean;
@@ -127,6 +128,7 @@ export interface Port {
   portIoType: PortIoType;
   /** Consumer-settable. Absent means no status indicator is shown. */
   portStatus?: PortStatus;
+  totalLinks?: number;
 }
 
 export interface SubgraphProxyNode extends NodeBase {

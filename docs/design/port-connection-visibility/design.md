@@ -68,9 +68,11 @@ visually unchanged.
    - **Navigate to selected usecases** — replaces the graph's existing
      selection with just those checked usecases.
    - **Cancel** — closes without any state change.
-8. Add/Navigate are enabled only when the visualizer is in **Readonly**
-   mode; in **Edit** mode only Cancel is enabled. Both are also disabled
-   whenever the fetch is not in a `ready` state.
+8. Add is enabled whenever the popup is in the ready state.
+   Navigate is enabled only when the visualizer is in Readonly mode and the
+   popup is in the ready state. Both Add and Navigate are disabled while data
+   is loading or when an error occurs. In Edit mode, Navigate is disabled,
+   but Add remains available when the popup is ready.
 
 **Popup layout:**
 
@@ -100,7 +102,7 @@ visually unchanged.
 │                                                                        │
 │  ┌─Add to selected usecases─┐ ┌─Navigate to selected usecases─┐ ┌Cancel┐│
 │  └───────────────────────────┘ └───────────────────────────────┘ └─────┘│
-│   enabled: Readonly && ready    enabled: Readonly && ready      always │
+│   enabled: ready                enabled: Readonly && ready      always │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -128,9 +130,13 @@ export interface ControlPortDto {
 ```
 
 **`graph-data-slice.ts`** — the module-scoped intermediate `Port` type
-gains `activeLinks`, `totalLinks`, and `portSystemId`; its existing
-`portId` field is corrected to hold the numeric-derived id instead of the
-systemId it confusingly held before:
+gains `activeLinks` and `portSystemId`; its existing `portId` field is
+corrected to hold the numeric-derived id instead of the systemId it
+confusingly held before. `totalLinksAtPort` keeps its existing name here
+— it is not renamed, so `toModuleInstance` and `withAdjustedPort` (the
+edit-session mutation-reconciliation code in
+`adjustModuleInstancesForLink`/`adjustSurvivingPortCounts`) need no
+change beyond what's described below:
 
 ```ts
 export interface Port {
@@ -141,7 +147,7 @@ export interface Port {
   portName: string;
   portSystemId: string;
   portType: 'control' | 'data';
-  totalLinks: number;
+  totalLinksAtPort: number;
 }
 ```
 
@@ -163,7 +169,8 @@ for (const c of connections) {
 ```
 
 `moduleInstances`'s port-mapping blocks now populate `portId`,
-`portSystemId`, `activeLinks`, and `totalLinks`, e.g. input data ports:
+`portSystemId`, and `activeLinks` in addition to the existing
+`totalLinksAtPort`, e.g. input data ports:
 
 ```ts
 const inputPorts: Port[] = (m.dataPorts ?? [])
@@ -176,9 +183,14 @@ const inputPorts: Port[] = (m.dataPorts ?? [])
     portName: p.name,
     portSystemId: p.systemId,
     portType: 'data' as const,
-    totalLinks: p.totalLinksAtPort ?? 0,
+    totalLinksAtPort: p.totalLinksAtPort ?? 0,
   }));
 ```
+
+The view-model `Port` in `graph.types.ts` (below) is where the field is
+actually named `totalLinks` — that rename happens once, at the
+`level-view-adapter.ts` translation boundary, not in the intermediate
+type above.
 
 **`graph.types.ts`** — the view-model `Port` gains two optional fields:
 
@@ -725,16 +737,20 @@ const subgraphBySystemId = useMemo(
 **Add / Navigate / Cancel wiring (inside `port-connections-info-popup.tsx`):**
 
 ```ts
-const isReadonly = currentVisualizerMode === VISUALIZER_MODE.READONLY;
 const isReady = state.status === 'ready';
+const canMutateSelection = isReadonly && isReady;
 
-<Button disabled={!isReadonly || !isReady} onClick={handleAdd}>
-  Add to selected usecases
-</Button>
-<Button disabled={!isReadonly || !isReady} onClick={handleNavigate}>
-  Navigate to selected usecases
-</Button>
-<Button onClick={onClose}>Cancel</Button>
+{isReady && (
+  <Button onClick={handleAdd}>
+    Add to selected usecases
+  </Button>
+)}
+{canMutateSelection && (
+  <Button onClick={handleNavigate}>
+    Navigate to selected usecases
+  </Button>
+)}
+<Button onClick={handleCancel}>Cancel</Button>
 ```
 
 `handleAdd`/`handleNavigate` flatten and dedupe (by usecase id) every
@@ -802,16 +818,21 @@ fromPortId`/`toPortId` directly against the new `portId` field.
     ports are constructed.
   - New `activeLinksByPortId` map, derived from `connections` in a single
     pass.
-  - The intermediate `Port` interface gains `activeLinks: number` and
-    `totalLinks: number`. Every
-    port-mapping block populates them inline with an explicit `?? 0`
+  - The intermediate `Port` interface gains `activeLinks: number`. Every
+    port-mapping block populates it inline with an explicit `?? 0`
     default, so no consumer of this intermediate type ever needs to
-    null-check them.
+    null-check it. `totalLinksAtPort` keeps its existing name on this
+    intermediate type — not renamed to `totalLinks` — so `toModuleInstance`
+    and `withAdjustedPort` (read/written by
+    `adjustModuleInstancesForLink`/`adjustSurvivingPortCounts` during
+    edit-session mutation-response reconciliation) require no change.
 - `widgets/graph-designer/lib/level-view-adapter.ts` — module-port
   mapping's existing `id: p.portId` becomes `id: p.portSystemId`, so the
   view-model `Port.id` continues to be the port's systemId, unchanged
   from today's actual behavior. The mapping also carries `activeLinks`
-  and `totalLinks` through. Subsystem-port mapping is untouched.
+  through, and maps `totalLinksAtPort` to the view-model's `totalLinks` —
+  this is the one place the field is renamed. Subsystem-port mapping is
+  untouched.
 - `entities/graph/model/graph.types.ts` — view-model `Port` gains
   `activeLinks?: number` and `totalLinks?: number`. Optional here, unlike
   the intermediate `Port` above, because this view-model type is shared

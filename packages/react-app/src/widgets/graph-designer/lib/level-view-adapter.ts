@@ -51,25 +51,37 @@ export function buildLevelViewFromGraphData(
     const ports: Port[] = [
       ...m.inputPorts
         .filter((p) => p.portType === 'data')
-        .map((p): Port => ({
-          id: p.portId,
-          name: p.portName,
-          portIoType: PORT_IO_TYPE.INPUT,
-        })),
+        .map(
+          (p): Port => ({
+            activeLinks: p.activeLinks,
+            id: p.portSystemId,
+            name: p.portName,
+            portIoType: PORT_IO_TYPE.INPUT,
+            totalLinks: p.totalLinksAtPort,
+          }),
+        ),
       ...m.outputPorts
         .filter((p) => p.portType === 'data')
-        .map((p): Port => ({
-          id: p.portId,
-          name: p.portName,
-          portIoType: PORT_IO_TYPE.OUTPUT,
-        })),
+        .map(
+          (p): Port => ({
+            activeLinks: p.activeLinks,
+            id: p.portSystemId,
+            name: p.portName,
+            portIoType: PORT_IO_TYPE.OUTPUT,
+            totalLinks: p.totalLinksAtPort,
+          }),
+        ),
       ...m.inputPorts
         .filter((p) => p.portType === 'control')
-        .map((p): Port => ({
-          id: p.portId,
-          name: p.portName,
-          portIoType: PORT_IO_TYPE.CONTROL,
-        })),
+        .map(
+          (p): Port => ({
+            activeLinks: p.activeLinks,
+            id: p.portSystemId,
+            name: p.portName,
+            portIoType: PORT_IO_TYPE.CONTROL,
+            totalLinks: p.totalLinksAtPort,
+          }),
+        ),
     ];
 
     return {

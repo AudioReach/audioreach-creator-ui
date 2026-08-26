@@ -702,10 +702,12 @@ describe('createSubsystemOperations - move response adapter', () => {
             moduleInstanceId: 'mod-a',
             outputPorts: [
               {
+                activeLinks: 0,
                 direction: 'output',
                 isStatic: false,
                 portId: 'data-out',
                 portName: 'data-out',
+                portSystemId: 'data-out',
                 portType: 'data',
                 totalLinksAtPort: 0,
               },
@@ -714,10 +716,12 @@ describe('createSubsystemOperations - move response adapter', () => {
           'mod-b': makeModuleInstance({
             inputPorts: [
               {
+                activeLinks: 0,
                 direction: 'input',
                 isStatic: false,
                 portId: 'data-in',
                 portName: 'data-in',
+                portSystemId: 'data-in',
                 portType: 'data',
                 totalLinksAtPort: 0,
               },
@@ -728,10 +732,12 @@ describe('createSubsystemOperations - move response adapter', () => {
             moduleInstanceId: 'mod-c',
             outputPorts: [
               {
+                activeLinks: 1,
                 direction: 'output',
                 isStatic: false,
                 portId: 'out-c',
                 portName: 'out-c',
+                portSystemId: 'out-c',
                 portType: 'data',
                 totalLinksAtPort: 1,
               },
@@ -740,10 +746,12 @@ describe('createSubsystemOperations - move response adapter', () => {
           'mod-d': makeModuleInstance({
             inputPorts: [
               {
+                activeLinks: 1,
                 direction: 'input',
                 isStatic: false,
                 portId: 'in-d',
                 portName: 'in-d',
+                portSystemId: 'in-d',
                 portType: 'data',
                 totalLinksAtPort: 1,
               },

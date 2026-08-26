@@ -34,8 +34,10 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 
 import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {
+  formatUsecaseDisplay,
   getSystemIdsFromFormattedUsecases,
   type UsecaseCategory,
+  type UsecaseDto,
 } from '~entities/usecases';
 import {
   ApplyDiscardControls,
@@ -48,12 +50,17 @@ import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
+import {
+  PortConnectionsInfoPopup,
+  usePortConnectionsInfo,
+} from '~features/port-connections-info';
 import {SearchComponent} from '~features/search-component';
 import {
   UsecaseSelectionControl,
   useWorkflowUsecaseData,
 } from '~features/usecase-selection';
 import {
+  type ContextMenuTarget,
   type EdgeConnectPayload,
   type NodeDropPayload,
   type SearchHighlights,
@@ -61,6 +68,7 @@ import {
   UsecaseVisualizer,
   type ViewportState,
   VISUALIZER_MODE,
+  type VisualizerContextMenuConfig,
   type XY,
 } from '~features/usecase-visualizer';
 import {useUserPreferences} from '~shared/config/hooks';
@@ -614,6 +622,69 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
+  const subgraphList = useGraphDesignerStoreShallow((s) => s.subgraphList);
+
+  const {close, open, state} = usePortConnectionsInfo(projectId);
+
+  const contextMenu = useMemo<VisualizerContextMenuConfig>(() => {
+    const baseContextMenu = buildContextMenuConfig(store.getState);
+    return {
+      getItems: (target: ContextMenuTarget) => {
+        const baseItems = baseContextMenu.getItems(target);
+        if (target.kind !== 'port') {
+          return baseItems;
+        }
+        const activeLinks = target.port.activeLinks ?? 0;
+        const totalLinks = target.port.totalLinks ?? 0;
+        if (activeLinks >= totalLinks) {
+          return baseItems;
+        }
+        return [
+          ...baseItems,
+          {id: 'show-all-connections', label: 'Show all connections'},
+        ];
+      },
+      onAction: (actionId: string, target: ContextMenuTarget) => {
+        if (actionId === 'show-all-connections' && target.kind === 'port') {
+          open(target.nodeId, target.port);
+          return;
+        }
+        baseContextMenu.onAction(actionId, target);
+      },
+    };
+  }, [open, store]);
+
+  const isPortConnectionsPopupOpen =
+    state.status === 'loading-modules' ||
+    state.status === 'ready' ||
+    state.status === 'error';
+
+  const subgraphBySystemId = useMemo(
+    () => new Map(subgraphList.map((sg) => [sg.systemId, sg])),
+    [subgraphList],
+  );
+
+  const resolveSubgraphDisplay = useCallback(
+    (subgraphSystemId: string) =>
+      subgraphBySystemId.get(subgraphSystemId)?.subgraphId ?? subgraphSystemId,
+    [subgraphBySystemId],
+  );
+
+  const handleAddUsecases = useCallback(
+    (usecases: UsecaseDto[]) => {
+      const formatted = usecases.map(formatUsecaseDisplay);
+      setSelectedUsecases([...new Set([...selectedUsecases, ...formatted])]);
+    },
+    [selectedUsecases, setSelectedUsecases],
+  );
+
+  const handleNavigateUsecases = useCallback(
+    (usecases: UsecaseDto[]) => {
+      setSelectedUsecases(usecases.map(formatUsecaseDisplay));
+    },
+    [setSelectedUsecases],
+  );
+
   const handleModuleDoubleClick = useCallback(
     async (nodeId: string, nodeKind: NodeKind, label: string) => {
       if (nodeKind !== NODE_KIND.MODULE) {
@@ -1139,11 +1210,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Register side nav with provider
   useRegisterSideNav(tabId, sideNav);
 
-  const contextMenu = useMemo(
-    () => buildContextMenuConfig(store.getState),
-    [store],
-  );
-
   return (
     <div className="flex h-full flex-col">
       {isExpandCollapsePending &&
@@ -1168,6 +1234,37 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           </div>,
           document.body,
         )}
+      {state.status === 'loading-links' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
+            style={{
+              backgroundColor:
+                'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
+            }}
+          >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
+              <div className="text-center">
+                <div className="mb-4 flex justify-center">
+                  <ProgressRing />
+                </div>
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
+                  Loading connections…
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+      <PortConnectionsInfoPopup
+        isReadonly={!isEditable}
+        onAdd={handleAddUsecases}
+        onClose={close}
+        onNavigate={handleNavigateUsecases}
+        open={isPortConnectionsPopupOpen}
+        resolveSubgraphDisplay={resolveSubgraphDisplay}
+        state={state}
+      />
       {/* Usecase Selection Control at the top */}
       <div className="bg-primary border-neutral-02 flex-shrink-0 border-b p-4">
         <div className="flex items-center gap-4">

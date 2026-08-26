@@ -73,8 +73,10 @@ function makeStore(moduleList: ModuleDefinition[] = []) {
 }
 
 function moduleWithPort(overrides: {
+  activeLinks?: number;
   moduleInstanceId: string;
   portId: string;
+  portSystemId?: string;
   totalLinksAtPort: number;
 }): ModuleInstance {
   return {
@@ -82,10 +84,12 @@ function moduleWithPort(overrides: {
     displayName: 'M',
     inputPorts: [
       {
+        activeLinks: overrides.activeLinks ?? 0,
         direction: 'input',
         isStatic: false,
         portId: overrides.portId,
         portName: 'in',
+        portSystemId: overrides.portSystemId ?? overrides.portId,
         portType: 'data',
         totalLinksAtPort: overrides.totalLinksAtPort,
       },
@@ -503,6 +507,158 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
     const instance = store.getState().graphData!.moduleInstances['sys-mod-1'];
     expect(instance.displayName).toBe('AudioDecoderRenamed');
     expect(instance.position).toEqual({x: 42, y: 7});
+  });
+
+  it('recomputes activeLinks from live connections for an updated module with no link diff of its own', () => {
+    const store = makeStore();
+    store.setState({
+      graphData: {
+        connections: [
+          {
+            connectionId: 'link-1',
+            connectionType: 'data',
+            fromModuleId: 'sys-mod-1',
+            fromPortId: 'sys-port-10',
+            isDangling: false,
+            toModuleId: 'sys-mod-2',
+            toPortId: 'sys-port-20',
+          },
+        ],
+        containers: {},
+        moduleInstances: {
+          'sys-mod-1': {
+            containerId: '10',
+            displayName: 'AudioDecoder',
+            inputPorts: [],
+            moduleId: '200',
+            moduleInstanceId: 'sys-mod-1',
+            moduleName: 'AudioDecoder',
+            moduleType: '',
+            outputPorts: [
+              {
+                activeLinks: 1,
+                direction: 'output',
+                isStatic: false,
+                portId: '10',
+                portName: 'out1',
+                portSystemId: 'sys-port-10',
+                portType: 'data',
+                totalLinksAtPort: 1,
+              },
+            ],
+            position: {x: 0, y: 0},
+            subgraphId: '1',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {},
+      },
+    });
+
+    // "updated" entry for sys-mod-1 carries no accompanying link diff —
+    // applyAddedCollection must recompute activeLinks from the still-intact
+    // connection rather than resetting it to 0.
+    store.getState().applyAddedCollection({
+      controlLinks: [],
+      dataLinks: [],
+      spfModules: [
+        makeSpfModuleDto({
+          dataPorts: [
+            {
+              changeInfo: {changeType: 'UPDATE'},
+              id: 10,
+              name: 'out1',
+              portIoType: 'Output',
+              portType: 'Static',
+              relatedEndPointLinks: [],
+              systemId: 'sys-port-10',
+              totalLinksAtPort: 1,
+            } as never,
+          ],
+          name: 'AudioDecoderRenamed',
+        }),
+      ],
+    });
+
+    const instance = store.getState().graphData!.moduleInstances['sys-mod-1'];
+    expect(instance.displayName).toBe('AudioDecoderRenamed');
+    expect(instance.outputPorts[0].activeLinks).toBe(1);
+  });
+
+  it('reflects a new link delivered in the same collection as its own new module (connections merge before modules upsert)', () => {
+    const store = makeStore();
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {
+          'sys-mod-1': {
+            containerId: '10',
+            displayName: 'Existing',
+            inputPorts: [],
+            moduleId: '200',
+            moduleInstanceId: 'sys-mod-1',
+            moduleName: 'Existing',
+            moduleType: '',
+            outputPorts: [
+              {
+                activeLinks: 0,
+                direction: 'output',
+                isStatic: false,
+                portId: '10',
+                portName: 'out1',
+                portSystemId: 'sys-port-10',
+                portType: 'data',
+                totalLinksAtPort: 0,
+              },
+            ],
+            position: {x: 0, y: 0},
+            subgraphId: '1',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {},
+      },
+    });
+
+    // Both the new module and the link connecting to it arrive in the same
+    // "added" collection — upsertModule must see the link merged into
+    // connections already, not the pre-merge snapshot.
+    store.getState().applyAddedCollection({
+      controlLinks: [],
+      dataLinks: [
+        makeDataLinkDto({
+          destinationPortSystemId: 'sys-port-20',
+          destinationSystemId: 'sys-mod-2',
+          sourcePortSystemId: 'sys-port-10',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'link-new',
+        }),
+      ],
+      spfModules: [
+        makeSpfModuleDto({
+          dataPorts: [
+            {
+              changeInfo: {changeType: 'CREATE'},
+              id: 20,
+              name: 'in1',
+              portIoType: 'Input',
+              portType: 'Static',
+              relatedEndPointLinks: [],
+              systemId: 'sys-port-20',
+              totalLinksAtPort: 1,
+            } as never,
+          ],
+          name: 'New',
+          systemId: 'sys-mod-2',
+        }),
+      ],
+    });
+
+    const newModule = store.getState().graphData!.moduleInstances['sys-mod-2'];
+    expect(newModule.inputPorts[0].activeLinks).toBe(1);
   });
 
   it('removes a module from moduleInstances via applyDeletedCollection', () => {
@@ -1174,6 +1330,49 @@ describe('adjustSurvivingPortCounts', () => {
         .totalLinksAtPort,
     ).toBe(1);
   });
+
+  it('matches by portSystemId rather than portId when adjusting counts for added/deleted links with differing id/systemId', () => {
+    const store = makeStore();
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {
+          'mod-dst': moduleWithPort({
+            moduleInstanceId: 'mod-dst',
+            portId: '999', // numeric id, distinct from portSystemId below
+            portSystemId: 'sys-port-777',
+            totalLinksAtPort: 1,
+          }),
+          'mod-src': moduleWithPort({
+            moduleInstanceId: 'mod-src',
+            portId: '777', // numeric id, collides with the other port's portId
+            portSystemId: 'sys-port-999',
+            totalLinksAtPort: 0,
+          }),
+        },
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {},
+      },
+    });
+
+    store.getState().adjustSurvivingPortCounts(
+      [
+        makeDataLinkDto({
+          destinationPortSystemId: 'sys-port-777',
+          destinationSystemId: 'mod-dst',
+          sourcePortSystemId: 'sys-port-999',
+          sourceSystemId: 'mod-src',
+        }),
+      ],
+      [],
+    );
+
+    const {moduleInstances} = store.getState().graphData!;
+    expect(moduleInstances['mod-src'].inputPorts[0].totalLinksAtPort).toBe(1);
+    expect(moduleInstances['mod-dst'].inputPorts[0].totalLinksAtPort).toBe(2);
+  });
 });
 
 describe('applyComponentCollection', () => {
@@ -1393,5 +1592,297 @@ describe('createGraphDataSlice — ModuleInstance ckvs/tags (D1)', () => {
     const instance = store.getState().graphData?.moduleInstances['sys-mod-1'];
     expect(instance?.ckvs).toBeUndefined();
     expect(instance?.tags).toBeUndefined();
+  });
+});
+
+describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
+  it('computes activeLinks per port by counting matching connections, keyed by port systemId', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [
+          makeDataLinkDto({
+            destinationPortSystemId: 'sys-port-20',
+            destinationSystemId: 'sys-mod-2',
+            sourcePortSystemId: 'sys-port-10',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'link-1',
+          }),
+          makeDataLinkDto({
+            destinationPortSystemId: 'sys-port-20',
+            destinationSystemId: 'sys-mod-2',
+            sourcePortSystemId: 'sys-port-10',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'link-2',
+          }),
+        ],
+        spfModules: [
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 10,
+                name: 'out1',
+                portIoType: 'Output',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-10',
+                totalLinksAtPort: 2,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 20,
+                name: 'in1',
+                portIoType: 'Input',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-20',
+                totalLinksAtPort: 2,
+              },
+            ],
+            systemId: 'sys-mod-2',
+          }),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const source = store.getState().graphData!.moduleInstances['sys-mod-1'];
+    const dest = store.getState().graphData!.moduleInstances['sys-mod-2'];
+    expect(source.outputPorts[0].activeLinks).toBe(2);
+    expect(dest.inputPorts[0].activeLinks).toBe(2);
+  });
+
+  it('sets portId to the numeric-derived id (String(p.id)) and portSystemId to the systemId', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 42,
+                name: 'out1',
+                portIoType: 'Output',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-42',
+                totalLinksAtPort: 0,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const port =
+      store.getState().graphData!.moduleInstances['sys-mod-1'].outputPorts[0];
+    expect(port.portId).toBe('42');
+    expect(port.portSystemId).toBe('sys-port-42');
+  });
+
+  it('computes activeLinks by portSystemId, not by the numeric id, when they differ', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [
+          makeDataLinkDto({
+            destinationPortSystemId: 'sys-port-999',
+            destinationSystemId: 'sys-mod-2',
+            sourcePortSystemId: 'sys-port-777',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'link-1',
+          }),
+        ],
+        spfModules: [
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                // Numeric id intentionally collides with the *other*
+                // port's systemId suffix (777 vs. 999) — the lookup below
+                // must key off systemId, not id, or this would coincidentally
+                // pass.
+                id: 999,
+                name: 'out1',
+                portIoType: 'Output',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-777',
+                totalLinksAtPort: 1,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 777,
+                name: 'in1',
+                portIoType: 'Input',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-999',
+                totalLinksAtPort: 1,
+              },
+            ],
+            systemId: 'sys-mod-2',
+          }),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const source = store.getState().graphData!.moduleInstances['sys-mod-1'];
+    const dest = store.getState().graphData!.moduleInstances['sys-mod-2'];
+    expect(source.outputPorts[0].portId).toBe('999');
+    expect(source.outputPorts[0].portSystemId).toBe('sys-port-777');
+    expect(source.outputPorts[0].activeLinks).toBe(1);
+    expect(dest.inputPorts[0].portId).toBe('777');
+    expect(dest.inputPorts[0].portSystemId).toBe('sys-port-999');
+    expect(dest.inputPorts[0].activeLinks).toBe(1);
+  });
+
+  it('defaults activeLinks to 0 for a port with no matching connection', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 1,
+                name: 'out1',
+                portIoType: 'Output',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-1',
+                totalLinksAtPort: 0,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const port =
+      store.getState().graphData!.moduleInstances['sys-mod-1'].outputPorts[0];
+    expect(port.activeLinks).toBe(0);
+  });
+
+  it('leaves totalLinksAtPort under its existing name, unaffected by the activeLinks addition', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            dataPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                id: 1,
+                name: 'out1',
+                portIoType: 'Output',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-port-1',
+                totalLinksAtPort: 7,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const port =
+      store.getState().graphData!.moduleInstances['sys-mod-1'].outputPorts[0];
+    expect(port.totalLinksAtPort).toBe(7);
+  });
+
+  it('populates activeLinks for control ports the same way as data ports', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [
+          makeDataLinkDto({
+            destinationPortSystemId: 'sys-ctrl-99',
+            destinationSystemId: 'sys-mod-2',
+            sourcePortSystemId: 'sys-ctrl-5',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'ctrl-link-1',
+          }),
+        ],
+        dataLinks: [],
+        spfModules: [
+          makeSpfModuleDto({
+            controlPorts: [
+              {
+                changeInfo: {changeType: 'CREATE'},
+                controlPortName: 'ctrl-out',
+                id: 5,
+                intents: [],
+                name: 'ctrl-out',
+                portType: 'Static',
+                relatedEndPointLinks: [],
+                systemId: 'sys-ctrl-5',
+                totalLinksAtPort: 1,
+              },
+            ],
+            systemId: 'sys-mod-1',
+          }),
+          makeSpfModuleDto({systemId: 'sys-mod-2'}),
+        ],
+        subsystems: [],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const ctrlPort =
+      store.getState().graphData!.moduleInstances['sys-mod-1'].inputPorts[0];
+    expect(ctrlPort.activeLinks).toBe(1);
   });
 });

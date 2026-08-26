@@ -27,10 +27,12 @@ import type {ModuleListSlice} from './module-list-slice';
 export type DiffState = 'added' | 'removed' | 'modified' | 'common';
 
 export interface Port {
+  activeLinks: number;
   direction: 'input' | 'output';
   isStatic: boolean;
   portId: string;
   portName: string;
+  portSystemId: string;
   portType: 'control' | 'data';
   totalLinksAtPort: number;
 }
@@ -99,6 +101,11 @@ export interface LinkEndpoints {
   destinationSystemId: string;
   sourcePortSystemId: string;
   sourceSystemId: string;
+}
+
+export interface PortRefreshEndpoint {
+  moduleInstanceId: string;
+  portSystemId: string;
 }
 
 export interface SubsystemPort {
@@ -289,32 +296,39 @@ function toModuleInstance(
   m: SpfModuleDto,
   moduleType: string,
   existing: ModuleInstance | undefined,
+  activeLinksByPortId: Map<string, number>,
 ): ModuleInstance {
   const inputPorts: Port[] = (m.dataPorts ?? [])
     .filter((p) => p.portIoType === 'Input')
     .map((p) => ({
+      activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
       direction: 'input' as const,
       isStatic: p.portType === 'Static',
-      portId: p.systemId,
+      portId: String(p.id),
       portName: p.name,
+      portSystemId: p.systemId,
       portType: 'data' as const,
       totalLinksAtPort: p.totalLinksAtPort,
     }));
   const controlPorts: Port[] = (m.controlPorts ?? []).map((p) => ({
+    activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
     direction: 'input' as const,
     isStatic: p.portType === 'Static',
-    portId: p.systemId,
+    portId: String(p.id),
     portName: p.controlPortName,
+    portSystemId: p.systemId,
     portType: 'control' as const,
-    totalLinksAtPort: 0,
+    totalLinksAtPort: p.totalLinksAtPort ?? 0,
   }));
   const outputPorts: Port[] = (m.dataPorts ?? [])
     .filter((p) => p.portIoType === 'Output')
     .map((p) => ({
+      activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
       direction: 'output' as const,
       isStatic: p.portType === 'Static',
-      portId: p.systemId,
+      portId: String(p.id),
       portName: p.name,
+      portSystemId: p.systemId,
       portType: 'data' as const,
       totalLinksAtPort: p.totalLinksAtPort,
     }));
@@ -332,14 +346,23 @@ function toModuleInstance(
   };
 }
 
+/**
+ * `connections` must be the module's up-to-date connection list
+ */
 export function upsertModule(
   moduleInstances: Record<string, ModuleInstance>,
   m: SpfModuleDto,
   moduleType: string,
+  connections: Connection[],
 ): Record<string, ModuleInstance> {
   return {
     ...moduleInstances,
-    [m.systemId]: toModuleInstance(m, moduleType, moduleInstances[m.systemId]),
+    [m.systemId]: toModuleInstance(
+      m,
+      moduleType,
+      moduleInstances[m.systemId],
+      buildActiveLinksByPortId(connections),
+    ),
   };
 }
 
@@ -425,18 +448,18 @@ function upsertSubsystem(
 }
 
 /**
- * Returns `module` unchanged if it has no port matching `portId`;
+ * Returns `module` unchanged if it has no port matching `portSystemId`;
  * otherwise returns a new `ModuleInstance` with that one port's
  * `totalLinksAtPort` adjusted by `delta`. Never mutates in place — this
  * store has no Immer middleware.
  */
 function withAdjustedPort(
   module: ModuleInstance,
-  portId: string,
+  portSystemId: string,
   delta: number,
 ): ModuleInstance {
   const adjust = (p: Port): Port =>
-    p.portId === portId
+    p.portSystemId === portSystemId
       ? {...p, totalLinksAtPort: p.totalLinksAtPort + delta}
       : p;
   return {
@@ -461,7 +484,7 @@ function adjustModuleInstancesForLink(
   delta: number,
 ): Record<string, ModuleInstance> {
   let next = moduleInstances;
-  for (const [instanceId, portId] of [
+  for (const [instanceId, portSystemId] of [
     [link.sourceSystemId, link.sourcePortSystemId],
     [link.destinationSystemId, link.destinationPortSystemId],
   ] as const) {
@@ -475,7 +498,7 @@ function adjustModuleInstancesForLink(
     }
     next = {
       ...next,
-      [instanceId]: withAdjustedPort(module, portId, delta),
+      [instanceId]: withAdjustedPort(module, portSystemId, delta),
     };
   }
   return next;
@@ -508,6 +531,113 @@ function resolveLinkEndpoints(
 }
 
 /**
+ * Counts live connections touching `portSystemId`, in either direction.
+ * Always a full rescan of `connections` — `activeLinks` is session-derived,
+ * not delta-adjusted like `totalLinksAtPort` (see `withAdjustedPort`).
+ */
+function countActiveLinks(
+  connections: Connection[],
+  portSystemId: string,
+): number {
+  return connections.filter(
+    (c) => c.fromPortId === portSystemId || c.toPortId === portSystemId,
+  ).length;
+}
+
+/**
+ * Counts live connections per port across `connections`,
+ * keyed by `portSystemId`
+ */
+function buildActiveLinksByPortId(
+  connections: Connection[],
+): Map<string, number> {
+  const activeLinksByPortId = new Map<string, number>();
+  for (const c of connections) {
+    activeLinksByPortId.set(
+      c.fromPortId,
+      (activeLinksByPortId.get(c.fromPortId) ?? 0) + 1,
+    );
+    activeLinksByPortId.set(
+      c.toPortId,
+      (activeLinksByPortId.get(c.toPortId) ?? 0) + 1,
+    );
+  }
+  return activeLinksByPortId;
+}
+
+/**
+ * Returns `module` unchanged if it has no port matching `portSystemId`,
+ * otherwise returns a new `ModuleInstance` with that port's `activeLinks`
+ * set. Never mutates in place — this store has no Immer middleware.
+ */
+function withRefreshedPort(
+  module: ModuleInstance,
+  portSystemId: string,
+  activeLinks: number,
+): ModuleInstance {
+  const updatePort = (p: Port): Port =>
+    p.portSystemId === portSystemId ? {...p, activeLinks} : p;
+  return {
+    ...module,
+    inputPorts: module.inputPorts.map(updatePort),
+    outputPorts: module.outputPorts.map(updatePort),
+  };
+}
+
+/**
+ * Pure `totalLinksAtPort` adjustment for `adjustSurvivingPortCounts` —
+ * factored out so `applyComponentCollection` can chain it with
+ * {@link computeRefreshedModuleInstances} against the same
+ * `moduleInstances` snapshot and commit both via a single `set()`.
+ */
+function computeAdjustedModuleInstances(
+  moduleInstances: Record<string, ModuleInstance>,
+  addedLinks: Array<ControlLinkDto | DataLinkDto>,
+  deletedLinkEndpoints: LinkEndpoints[],
+): Record<string, ModuleInstance> {
+  let next = moduleInstances;
+  for (const link of addedLinks) {
+    next = adjustModuleInstancesForLink(next, link, +1);
+  }
+  for (const link of deletedLinkEndpoints) {
+    next = adjustModuleInstancesForLink(next, link, -1);
+  }
+  return next;
+}
+
+/**
+ * Pure `activeLinks` recompute for `applyComponentCollection` — factored
+ * out so it can be chained with {@link computeAdjustedModuleInstances}
+ * against the same `moduleInstances` snapshot and committed via a single
+ * `set()`.
+ */
+function computeRefreshedModuleInstances(
+  moduleInstances: Record<string, ModuleInstance>,
+  connections: Connection[],
+  endpoints: PortRefreshEndpoint[],
+): Record<string, ModuleInstance> {
+  const uniqueEndpoints = new Map(
+    endpoints.map((e) => [`${e.moduleInstanceId}:${e.portSystemId}`, e]),
+  );
+  let next = moduleInstances;
+  for (const {moduleInstanceId, portSystemId} of uniqueEndpoints.values()) {
+    const module = next[moduleInstanceId];
+    if (!module) {
+      continue;
+    }
+    next = {
+      ...next,
+      [moduleInstanceId]: withRefreshedPort(
+        module,
+        portSystemId,
+        countActiveLinks(connections, portSystemId),
+      ),
+    };
+  }
+  return next;
+}
+
+/**
  * Creates the graph-data slice for composing into a tab store.
  *
  * @remarks The store type `S` must also compose `ModuleListSlice` — `loadGraphData`
@@ -537,21 +667,11 @@ export function createGraphDataSlice<
       if (!graphData) {
         return;
       }
-      let moduleInstances = graphData.moduleInstances;
-      for (const link of addedLinks) {
-        moduleInstances = adjustModuleInstancesForLink(
-          moduleInstances,
-          link,
-          +1,
-        );
-      }
-      for (const link of deletedLinkEndpoints) {
-        moduleInstances = adjustModuleInstancesForLink(
-          moduleInstances,
-          link,
-          -1,
-        );
-      }
+      const moduleInstances = computeAdjustedModuleInstances(
+        graphData.moduleInstances,
+        addedLinks,
+        deletedLinkEndpoints,
+      );
       logger.debug(
         `graphDataSlice: adjustSurvivingPortCounts — added=${addedLinks.length}, deleted=${deletedLinkEndpoints.length}`,
         {
@@ -572,24 +692,27 @@ export function createGraphDataSlice<
       const defModuleTypeById = new Map(
         moduleList.map((d) => [d.moduleId, d.moduleType]),
       );
-      let moduleInstances = graphData.moduleInstances;
-      for (const m of collection.spfModules) {
-        moduleInstances = upsertModule(
-          moduleInstances,
-          m,
-          defModuleTypeById.get(String(m.moduleId)) ?? '',
-        );
-      }
-      let subsystems = graphData.subsystems;
-      for (const ss of collection.subsystems ?? []) {
-        subsystems = upsertSubsystem(subsystems, ss);
-      }
+      // Connections must be merged before modules are upserted below —
+      // upsertModule recomputes activeLinks from this same list
       let connections = graphData.connections;
       for (const l of collection.dataLinks) {
         connections = upsertLink(connections, l, 'data');
       }
       for (const l of collection.controlLinks) {
         connections = upsertLink(connections, l, 'control');
+      }
+      let moduleInstances = graphData.moduleInstances;
+      for (const m of collection.spfModules) {
+        moduleInstances = upsertModule(
+          moduleInstances,
+          m,
+          defModuleTypeById.get(String(m.moduleId)) ?? '',
+          connections,
+        );
+      }
+      let subsystems = graphData.subsystems;
+      for (const ss of collection.subsystems ?? []) {
+        subsystems = upsertSubsystem(subsystems, ss);
       }
       logger.debug('graphDataSlice: applyAddedCollection', {
         action: 'applyAddedCollection',
@@ -617,7 +740,7 @@ export function createGraphDataSlice<
       // The deleted bucket carries link ids only (design.md §6.3) — their
       // endpoints must be resolved from the still-intact `graphData.connections`
       // before applyDeletedCollection removes them below, since
-      // adjustSurvivingPortCounts needs each endpoint's moduleId/portId.
+      // adjustSurvivingPortCounts needs each endpoint's moduleId/portSystemId.
       const deletedLinkEndpoints = resolveLinkEndpoints(
         get().graphData?.connections ?? [],
         deletedLinkIds,
@@ -647,12 +770,61 @@ export function createGraphDataSlice<
       //    deleted bucket's own link ids, no diffing needed.
       get().pruneDeletedLinkBookkeeping(deletedLinkIds);
 
-      // 5. totalLinksAtPort — the response never includes the surviving
-      //    sibling endpoint's updated count directly.
-      get().adjustSurvivingPortCounts(
-        [...collections.added.dataLinks, ...collections.added.controlLinks],
-        deletedLinkEndpoints,
-      );
+      // 5. totalLinksAtPort and activeLinks both derive from this same
+      //    added/deleted link diff — computed and committed together via a
+      //    single set() so this mutation causes exactly one graphData
+      //    reference change (and one downstream layout/render pass), not
+      //    two.
+      const addedLinks = [
+        ...collections.added.dataLinks,
+        ...collections.added.controlLinks,
+      ];
+      const portRefreshEndpoints: PortRefreshEndpoint[] = [];
+      for (const link of addedLinks) {
+        portRefreshEndpoints.push(
+          {
+            moduleInstanceId: link.sourceSystemId,
+            portSystemId: link.sourcePortSystemId,
+          },
+          {
+            moduleInstanceId: link.destinationSystemId,
+            portSystemId: link.destinationPortSystemId,
+          },
+        );
+      }
+      for (const endpoints of deletedLinkEndpoints) {
+        portRefreshEndpoints.push(
+          {
+            moduleInstanceId: endpoints.sourceSystemId,
+            portSystemId: endpoints.sourcePortSystemId,
+          },
+          {
+            moduleInstanceId: endpoints.destinationSystemId,
+            portSystemId: endpoints.destinationPortSystemId,
+          },
+        );
+      }
+
+      const {graphData} = get();
+      if (graphData) {
+        const adjustedModuleInstances = computeAdjustedModuleInstances(
+          graphData.moduleInstances,
+          addedLinks,
+          deletedLinkEndpoints,
+        );
+        const moduleInstances = computeRefreshedModuleInstances(
+          adjustedModuleInstances,
+          graphData.connections,
+          portRefreshEndpoints,
+        );
+        logger.debug(
+          `graphDataSlice: applyComponentCollection — adjusting port counts (added=${addedLinks.length}, deleted=${deletedLinkEndpoints.length}, portRefresh=${portRefreshEndpoints.length})`,
+          {action: 'applyComponentCollection', component: 'graphDataSlice'},
+        );
+        set({
+          graphData: {...graphData, moduleInstances},
+        } as unknown as Partial<S>);
+      }
 
       // 6. Any successful add/delete reconciled through here leaves the
       //    session dirty — gates the Apply button (apply-discard-changes
@@ -797,12 +969,23 @@ export function createGraphDataSlice<
           }
         }
 
+        const connections: Connection[] = [];
+        for (const link of dto.dataLinks) {
+          connections.push(toConnection(link, 'data'));
+        }
+        for (const link of dto.controlLinks) {
+          connections.push(toConnection(link, 'control'));
+        }
+
+        const activeLinksByPortId = buildActiveLinksByPortId(connections);
+
         const moduleInstances: Record<string, ModuleInstance> = {};
         for (const m of spfModules) {
           const instance = toModuleInstance(
             m,
             defModuleTypeById.get(String(m.moduleId)) ?? '',
             undefined,
+            activeLinksByPortId,
           );
           const diffState = toDiffState(m.changeInfo?.changeType);
           if (diffState) {
@@ -861,16 +1044,6 @@ export function createGraphDataSlice<
         }
 
         get().setSubsystemData(buildSubsystemTree(subsystemDtos, spfModules));
-
-        const connections: Connection[] = [];
-        for (const link of dto.dataLinks) {
-          const conn = toConnection(link, 'data');
-          connections.push(conn);
-        }
-        for (const link of dto.controlLinks) {
-          const conn = toConnection(link, 'control');
-          connections.push(conn);
-        }
 
         const graphData: UsecaseGraphData = {
           connections,

@@ -103,3 +103,20 @@ describe('SubgraphProxyNode — port handles', () => {
     ).not.toBeNull();
   });
 });
+
+describe('SubgraphProxyNode — fixed fill color, unaffected by link counts', () => {
+  it('always applies the fixed base fill class, regardless of activeLinks/totalLinks', () => {
+    const node = makeProxy({
+      ports: [{activeLinks: 0, id: 'i1', portIoType: 'input', totalLinks: 5}],
+    });
+    const {container} = renderProxyNode(node);
+    const handle = container.querySelector('[data-handleid="Data:i1"]');
+    expect(handle?.className).toContain('bg-[var(--node-shade-strong)]');
+    expect(handle?.className).not.toContain(
+      'bg-[var(--color-background-neutral-00)]',
+    );
+    expect(handle?.className).not.toContain(
+      'bg-[var(--color-background-neutral-10)]',
+    );
+  });
+});

@@ -343,3 +343,34 @@ describe('ModuleNode — PP highlight', () => {
     expect(shapeLayer).toHaveClass('bg-support-warning');
   });
 });
+
+describe('ModuleNode — link-count fill color', () => {
+  it('applies the "no connections" fill token for a port with totalLinks: 0', () => {
+    const node = makeModule({
+      ports: [{id: 'i1', portIoType: 'input', totalLinks: 0}],
+    });
+    const {container} = renderModuleNode(node);
+    const handle = container.querySelector('[data-handleid="Data:i1"]');
+    expect(handle?.className).toContain('bg-white');
+  });
+
+  it('applies the "fully covered" fill token when activeLinks === totalLinks', () => {
+    const node = makeModule({
+      ports: [{activeLinks: 2, id: 'i1', portIoType: 'input', totalLinks: 2}],
+    });
+    const {container} = renderModuleNode(node);
+    const handle = container.querySelector('[data-handleid="Data:i1"]');
+    expect(handle?.className).toContain('bg-black');
+  });
+
+  it('applies the "partially covered" fill token when activeLinks < totalLinks', () => {
+    const node = makeModule({
+      ports: [{activeLinks: 1, id: 'i1', portIoType: 'input', totalLinks: 2}],
+    });
+    const {container} = renderModuleNode(node);
+    const handle = container.querySelector('[data-handleid="Data:i1"]');
+    expect(handle?.className).toContain(
+      'bg-[var(--color-background-support-neutral-medium)]',
+    );
+  });
+});

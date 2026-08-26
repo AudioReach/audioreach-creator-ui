@@ -7,6 +7,9 @@ export {
   deleteDataLink,
   deleteUsecases,
   getAllUsecases,
+  getControlLinkWithUsecases,
+  getDataLinkWithUsecases,
+  getModulesBySystemIds,
   getSubgraphContents,
   getSubgraphPairs,
   getSubgraphsByIds,
@@ -18,6 +21,8 @@ export {
 export type {
   CreateControlLinkRequest,
   CreateDataLinkRequest,
+  ControlLinkWithUsecasesDto,
+  DataLinkWithUsecasesDto,
 } from './model/usecase-component.dto';
 export type {
   KeyValueInfo as KeyValue,
@@ -39,4 +44,5 @@ export {
   formatAsKeysValues,
   formatAsKeysValuesWithIds,
   formatAsSearchKey,
+  formatUsecaseDisplay,
 } from './lib/usecase-format';

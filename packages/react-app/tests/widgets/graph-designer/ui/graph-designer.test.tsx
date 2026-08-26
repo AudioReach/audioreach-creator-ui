@@ -11,7 +11,7 @@ const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
 
 interface MockUsecaseVisualizerProps {
-  contextMenu?: unknown;
+  contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: {
     onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
     onNodeDropped?: (payload: {
@@ -72,7 +72,10 @@ jest.mock('~features/graph-designer/ui/apply-discard-controls', () => ({
 }));
 
 jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
-  buildContextMenuConfig: jest.fn(() => ({getItems: jest.fn()})),
+  buildContextMenuConfig: jest.fn(() => ({
+    getItems: jest.fn(() => []),
+    onAction: jest.fn(),
+  })),
 }));
 
 jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
@@ -86,17 +89,46 @@ jest.mock('~features/usecase-selection', () => ({
   useWorkflowUsecaseData: () => mockWorkflowUsecaseData,
 }));
 
+let capturedContextMenu: VisualizerContextMenuConfig | undefined;
+
+const mockUsecaseVisualizer = (props: MockUsecaseVisualizerProps) => {
+  mockVisualizerProps = props;
+  capturedContextMenu = props.contextMenu;
+  return <div data-testid="usecase-visualizer" />;
+};
+
 jest.mock('~features/usecase-visualizer', () => ({
   NODE_DIMENSIONS: {
     container: {headerHeight: 32, padding: 12},
     subgraph: {headerHeight: 40, padding: 16},
     subgraphProxy: {height: 72, width: 160},
   },
-  UsecaseVisualizer: (props: MockUsecaseVisualizerProps) => {
-    mockVisualizerProps = props;
-    return <div data-testid="usecase-visualizer" />;
-  },
+  UsecaseVisualizer: (props: MockUsecaseVisualizerProps) =>
+    mockUsecaseVisualizer(props),
   VISUALIZER_MODE: {EDIT: 'edit', READONLY: 'readonly'},
+}));
+
+const mockPortConnectionsInfo: {
+  close: jest.Mock;
+  open: jest.Mock;
+  state: {[key: string]: unknown; status: string};
+} = {
+  close: jest.fn(),
+  open: jest.fn(),
+  state: {status: 'closed'},
+};
+
+let capturedPopupProps: PortConnectionsInfoPopupProps | undefined;
+
+const mockPortConnectionsInfoPopup = (props: PortConnectionsInfoPopupProps) => {
+  capturedPopupProps = props;
+  return props.open ? <div data-testid="port-connections-info-popup" /> : null;
+};
+
+jest.mock('~features/port-connections-info', () => ({
+  PortConnectionsInfoPopup: (props: PortConnectionsInfoPopupProps) =>
+    mockPortConnectionsInfoPopup(props),
+  usePortConnectionsInfo: () => mockPortConnectionsInfo,
 }));
 
 jest.mock('~features/search-component', () => ({
@@ -139,17 +171,23 @@ jest.mock('~widgets/graph-designer/ui/display-options-popover', () => ({
 
 import {act, render, screen, waitFor} from '@testing-library/react';
 
+import type {UsecaseDto} from '~entities/usecases';
 import {
   GraphDesignerStoreContext,
   type GraphDesignerStore,
 } from '~features/graph-designer';
-import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
 import {deleteSelection} from '~features/graph-designer/lib/multi-select-delete';
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import type {PortConnectionsInfoPopupProps} from '~features/port-connections-info';
+import type {
+  ContextMenuTarget,
+  VisualizerContextMenuConfig,
+} from '~features/usecase-visualizer';
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
+import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
 import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
 import GraphDesigner from '~widgets/graph-designer/ui/graph-designer';
 
@@ -238,6 +276,79 @@ function renderGraphDesigner(options?: {
   );
 
   return {graphDesignerStore, projectStore, rendered};
+}
+
+async function renderWithGraphReady() {
+  const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+  const projectStore = createProjectStore(PROJECT_ID);
+  await act(async () => {
+    render(
+      <SideNavProvider>
+        <ProjectStoreContext.Provider value={projectStore}>
+          <GraphDesignerStoreContext.Provider value={graphDesignerStore}>
+            <GraphDesigner
+              projectId={PROJECT_ID}
+              screenshotRegistry={new Map()}
+              tabId="tab-1"
+              usecaseData={[]}
+            />
+          </GraphDesignerStoreContext.Provider>
+        </ProjectStoreContext.Provider>
+      </SideNavProvider>,
+    );
+    // graphDataStatus: 'ready' makes Effect B build a (mocked, empty)
+    // levelView; selectedUsecases non-empty clears the "No usecases
+    // selected" branch — together they're what it takes to reach the
+    // <UsecaseVisualizer> branch and capture its contextMenu prop.
+    graphDesignerStore.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {},
+      },
+      graphDataStatus: 'ready',
+      selectedUsecases: ['usecase-1'],
+    });
+    // Effect B's layoutLevelView(...).then(setLevelView) settles on a
+    // microtask untracked by act(); staying inside this same callback
+    // (rather than a later, separate act() call) keeps React's acting
+    // flag on while it resolves.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  return {graphDesignerStore};
+}
+
+function makePortTarget(
+  activeLinks: number | undefined,
+  totalLinks: number | undefined,
+) {
+  return {
+    kind: 'port' as const,
+    nodeId: 'module-1',
+    port: {
+      activeLinks,
+      id: 'port-1',
+      portIoType: 'input' as const,
+      totalLinks,
+    },
+  };
+}
+
+function makeUsecase(systemId: string, valueLabel: string): UsecaseDto {
+  return {
+    changeInfo: {changeType: 'NONE'},
+    keyValueCollection: [
+      {
+        keyInfo: {keyId: 1, keyLabel: 'DeviceRX', keySystemId: 'key-1'},
+        valueInfo: {valueId: 1, valueLabel, valueSystemId: 'val-1'},
+      },
+    ],
+    systemId,
+    usecaseType: 'Regular',
+  };
 }
 
 describe('GraphDesigner — top bar', () => {
@@ -493,6 +604,11 @@ describe('GraphDesigner — enable overlay sync', () => {
         },
         graphDataStatus: 'ready',
       });
+      // Effect B's layoutLevelView(...).then(setLevelView) settles on a
+      // microtask untracked by act(); staying inside this same callback
+      // (rather than a later, separate act() call) keeps React's acting
+      // flag on while it resolves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(syncSpy).not.toHaveBeenCalled();
@@ -532,6 +648,11 @@ describe('GraphDesigner — enable overlay sync', () => {
         },
         graphDataStatus: 'ready',
       });
+      // Effect B's layoutLevelView(...).then(setLevelView) settles on a
+      // microtask untracked by act(); staying inside this same callback
+      // (rather than a later, separate act() call) keeps React's acting
+      // flag on while it resolves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(syncSpy).not.toHaveBeenCalled();
@@ -546,14 +667,23 @@ describe('GraphDesigner — enable overlay sync', () => {
 });
 
 describe('GraphDesigner - visualizer wiring', () => {
-  it('passes context menu config to the visualizer in edit mode', async () => {
+  it('passes a context menu config wrapping buildContextMenuConfig in edit mode', async () => {
     renderGraphDesigner({graphData: makeGraphData()});
     await screen.findByTestId('usecase-visualizer');
 
     expect(buildContextMenuConfig).toHaveBeenCalledWith(expect.any(Function));
-    expect(mockVisualizerProps?.contextMenu).toBe(
-      jest.mocked(buildContextMenuConfig).mock.results[0].value,
-    );
+    const baseConfig = jest.mocked(buildContextMenuConfig).mock.results[0]
+      .value as VisualizerContextMenuConfig;
+
+    const moduleTarget = {
+      kind: 'module',
+      node: {},
+    } as unknown as ContextMenuTarget;
+    mockVisualizerProps?.contextMenu?.getItems(moduleTarget);
+    expect(baseConfig.getItems).toHaveBeenCalledWith(moduleTarget);
+
+    mockVisualizerProps?.contextMenu?.onAction('delete', moduleTarget);
+    expect(baseConfig.onAction).toHaveBeenCalledWith('delete', moduleTarget);
   });
 
   it('calls deleteSelection for node delete payloads', async () => {
@@ -592,5 +722,251 @@ describe('GraphDesigner - visualizer wiring', () => {
       [],
       ['link-1'],
     );
+  });
+});
+
+describe('GraphDesigner — port connections context-menu gate', () => {
+  beforeEach(() => {
+    capturedContextMenu = undefined;
+    mockPortConnectionsInfo.open.mockClear();
+    mockPortConnectionsInfo.close.mockClear();
+    mockPortConnectionsInfo.state = {status: 'closed'};
+  });
+
+  it('offers "Show all connections" when activeLinks < totalLinks', async () => {
+    await renderWithGraphReady();
+
+    expect(capturedContextMenu).toBeDefined();
+    expect(capturedContextMenu!.getItems(makePortTarget(1, 3))).toEqual([
+      {id: 'show-all-connections', label: 'Show all connections'},
+    ]);
+  });
+
+  it('returns no items when activeLinks equals totalLinks', async () => {
+    await renderWithGraphReady();
+
+    expect(capturedContextMenu!.getItems(makePortTarget(3, 3))).toEqual([]);
+  });
+
+  it('returns no items when totalLinks is undefined', async () => {
+    await renderWithGraphReady();
+
+    expect(capturedContextMenu!.getItems(makePortTarget(0, undefined))).toEqual(
+      [],
+    );
+  });
+
+  it('returns no items for a non-port target', async () => {
+    await renderWithGraphReady();
+
+    const target = {kind: 'module', node: {}} as unknown as ContextMenuTarget;
+    expect(capturedContextMenu!.getItems(target)).toEqual([]);
+  });
+
+  it('calls open with the target nodeId/port on show-all-connections', async () => {
+    await renderWithGraphReady();
+
+    const target = makePortTarget(1, 3);
+    capturedContextMenu!.onAction('show-all-connections', target);
+
+    expect(mockPortConnectionsInfo.open).toHaveBeenCalledWith(
+      'module-1',
+      target.port,
+    );
+  });
+});
+
+describe('GraphDesigner — pre-open loading overlay', () => {
+  beforeEach(() => {
+    capturedContextMenu = undefined;
+    mockPortConnectionsInfo.open.mockClear();
+    mockPortConnectionsInfo.close.mockClear();
+    mockPortConnectionsInfo.state = {status: 'closed'};
+  });
+
+  it('shows the "Loading connections…" overlay while status is loading-links', async () => {
+    mockPortConnectionsInfo.state = {
+      componentSystemId: 'module-1',
+      portSystemId: 'port-1',
+      status: 'loading-links',
+    };
+
+    await renderWithGraphReady();
+
+    expect(screen.getByText('Loading connections…')).toBeInTheDocument();
+  });
+
+  it('does not show the overlay when status is closed', async () => {
+    await renderWithGraphReady();
+
+    expect(screen.queryByText('Loading connections…')).not.toBeInTheDocument();
+  });
+});
+
+describe('GraphDesigner — PortConnectionsInfoPopup wiring', () => {
+  beforeEach(() => {
+    capturedPopupProps = undefined;
+    mockPortConnectionsInfo.open.mockClear();
+    mockPortConnectionsInfo.close.mockClear();
+    mockPortConnectionsInfo.state = {status: 'closed'};
+  });
+
+  it('passes state, onClose, and isReadonly through to the popup', async () => {
+    mockPortConnectionsInfo.state = {
+      componentSystemId: 'module-1',
+      portSystemId: 'port-1',
+      rows: [],
+      status: 'ready',
+    };
+
+    await renderWithGraphReady();
+
+    expect(capturedPopupProps?.open).toBe(true);
+    expect(capturedPopupProps?.state).toBe(mockPortConnectionsInfo.state);
+    expect(capturedPopupProps?.isReadonly).toBe(true); // editModeState defaults to 'view'
+
+    capturedPopupProps!.onClose();
+    expect(mockPortConnectionsInfo.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolveSubgraphDisplay maps a subgraph systemId to its subgraphId', async () => {
+    const {graphDesignerStore} = await renderWithGraphReady();
+    act(() => {
+      graphDesignerStore.setState({
+        subgraphList: [
+          {
+            category: '',
+            description: '',
+            subgraphId: 'sg-42',
+            subgraphName: 'Playback',
+            subgraphType: 'Static',
+            systemId: 'sg-system-1',
+          },
+        ],
+      });
+    });
+
+    expect(capturedPopupProps!.resolveSubgraphDisplay('sg-system-1')).toBe(
+      'sg-42',
+    );
+    // Falls back to the raw systemId when there's no match (design.md
+    // "Error Handling" — a lookup miss is not an error).
+    expect(capturedPopupProps!.resolveSubgraphDisplay('unknown-sg')).toBe(
+      'unknown-sg',
+    );
+  });
+
+  it('onAdd merges formatted usecases into the existing selection without duplicates', async () => {
+    const {graphDesignerStore} = await renderWithGraphReady();
+    // selectedUsecases is an Effect B dependency, so each change below
+    // re-triggers layoutLevelView(...).then(setLevelView); flush inside the
+    // same act() callback so that untracked update lands before act() exits.
+    await act(async () => {
+      graphDesignerStore.setState({selectedUsecases: ['BT_Rx']});
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await act(async () => {
+      capturedPopupProps!.onAdd([
+        makeUsecase('uc-1', 'BT_Rx'), // already selected — must not duplicate
+        makeUsecase('uc-2', 'A2DP'),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(graphDesignerStore.getState().selectedUsecases).toEqual([
+      'BT_Rx',
+      'A2DP',
+    ]);
+  });
+
+  it('onNavigate replaces the existing selection entirely', async () => {
+    const {graphDesignerStore} = await renderWithGraphReady();
+    // selectedUsecases is an Effect B dependency, so each change below
+    // re-triggers layoutLevelView(...).then(setLevelView); flush inside the
+    // same act() callback so that untracked update lands before act() exits.
+    await act(async () => {
+      graphDesignerStore.setState({selectedUsecases: ['BT_Rx', 'SCO']});
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await act(async () => {
+      capturedPopupProps!.onNavigate([makeUsecase('uc-3', 'A2DP')]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(graphDesignerStore.getState().selectedUsecases).toEqual(['A2DP']);
+  });
+});
+
+describe('GraphDesigner — port connections, end to end', () => {
+  beforeEach(() => {
+    capturedContextMenu = undefined;
+    capturedPopupProps = undefined;
+    mockPortConnectionsInfo.open.mockClear();
+    mockPortConnectionsInfo.close.mockClear();
+    mockPortConnectionsInfo.state = {status: 'closed'};
+  });
+
+  it('right-click gate opens the fetch, overlay shows, then the popup opens', async () => {
+    const {graphDesignerStore} = await renderWithGraphReady();
+
+    // 1. User right-clicks a partially-covered port — the gate offers the item.
+    const target = {
+      kind: 'port' as const,
+      nodeId: 'module-1',
+      port: {
+        activeLinks: 1,
+        id: 'port-1',
+        portIoType: 'input' as const,
+        totalLinks: 3,
+      },
+    };
+    expect(capturedContextMenu!.getItems(target)).toEqual([
+      {id: 'show-all-connections', label: 'Show all connections'},
+    ]);
+
+    // 2. Clicking it calls open() — simulate the resulting 'loading-links'
+    //    state landing back on the store-backed mock, then re-render.
+    capturedContextMenu!.onAction('show-all-connections', target);
+    expect(mockPortConnectionsInfo.open).toHaveBeenCalledWith(
+      'module-1',
+      target.port,
+    );
+
+    mockPortConnectionsInfo.state = {
+      componentSystemId: 'module-1',
+      portSystemId: 'port-1',
+      status: 'loading-links',
+    };
+    // selectedUsecases is an Effect B dependency, so this re-triggers
+    // layoutLevelView(...).then(setLevelView); flush inside the same act()
+    // callback so that untracked update lands before act() exits.
+    await act(async () => {
+      graphDesignerStore.setState({
+        selectedUsecases: ['usecase-1', 'usecase-2'],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByText('Loading connections…')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('port-connections-info-popup'),
+    ).not.toBeInTheDocument();
+
+    // 3. Fetch succeeds — overlay disappears, popup opens.
+    mockPortConnectionsInfo.state = {
+      componentSystemId: 'module-1',
+      portSystemId: 'port-1',
+      rows: [],
+      status: 'ready',
+    };
+    await act(async () => {
+      graphDesignerStore.setState({selectedUsecases: ['usecase-1']});
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.queryByText('Loading connections…')).not.toBeInTheDocument();
+    expect(capturedPopupProps?.open).toBe(true);
+    expect(capturedPopupProps?.state).toBe(mockPortConnectionsInfo.state);
   });
 });

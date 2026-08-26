@@ -7,6 +7,8 @@ import type {ApiIssueItem} from '~entities/api-issues';
 import type {CkvDto, TagInfoDto} from '~entities/spf-module-data';
 import type {ApiResult} from '~shared/api';
 
+import type {UsecaseDto} from './usecase.dto';
+
 export type PortIOType = 'Input' | 'Output';
 export type PortType = 'Static' | 'Dynamic';
 export type ConnectionType =
@@ -52,6 +54,7 @@ export interface ControlPortDto {
   portType: PortType;
   relatedEndPointLinks: EndPointLink[];
   systemId: string;
+  totalLinksAtPort: number;
 }
 
 export interface SpfModuleDto {
@@ -173,6 +176,42 @@ export interface CreateControlLinkRequest {
   parentSystemId?: string;
   startComponentSystemId: string;
   startPortSystemId: string;
+}
+
+interface DataLinkWithUsecasesLinkDto {
+  changeId?: string;
+  connectionType: ConnectionType;
+  destinationId: string;
+  destinationPortId: string;
+  editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
+  isDangling: boolean;
+  relatedEndPointLinks: EndPointLink[];
+  sourceId: string;
+  sourcePortId: string;
+  systemId: string;
+}
+
+interface ControlLinkWithUsecasesLinkDto {
+  changeId?: string;
+  connectionType: ConnectionType;
+  destinationId: string;
+  destinationPortId: string;
+  editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
+  isDangling: boolean;
+  relatedEndPointLinks: EndPointLink[];
+  sourceId: string;
+  sourcePortId: string;
+  systemId: string;
+}
+
+export interface DataLinkWithUsecasesDto {
+  link: DataLinkWithUsecasesLinkDto;
+  usecases: UsecaseDto[];
+}
+
+export interface ControlLinkWithUsecasesDto {
+  link: ControlLinkWithUsecasesLinkDto;
+  usecases: UsecaseDto[];
 }
 
 export interface KeyValueInfo {
