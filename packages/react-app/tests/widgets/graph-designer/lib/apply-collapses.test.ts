@@ -17,6 +17,7 @@ function subgraph(id: number): SubgraphNode {
     height: 100,
     id: `subgraph-${id}`,
     label: `SG ${id}`,
+    meta: {subgraphSystemId: `sg-${id}`, systemId: `sg-${id}`},
     nodeKind: 'subgraph',
     subgraphId: id,
     width: 100,
@@ -74,6 +75,7 @@ function baseLevel(): LevelView {
       {
         edgeKind: 'data',
         id: 'd-cross',
+        meta: {systemId: 'd-cross'},
         sourceNodeId: 'module-2',
         sourcePortId: 'out',
         targetNodeId: 'module-3',
@@ -118,10 +120,12 @@ describe('applyCollapses', () => {
     expect(link.edgeKind).toBe('proxy-data');
     expect(link.sourceNodeId).toBe('subgraph-proxy-1');
     expect(link.sourcePortId).toBe('proxy:1:module-2:out');
+    expect(link.meta?.systemId).toBe('d-cross');
     expect(link.targetNodeId).toBe('module-3');
     expect(link.targetPortId).toBe('in');
     // proxy exposes that port as an output (edge leaves the subgraph)
     const proxy = out.subgraphProxies!.find((p) => p.subgraphId === 1)!;
+    expect(proxy.meta?.systemId).toBe('sg-1');
     expect(proxy.ports).toContainEqual(
       expect.objectContaining({
         id: 'proxy:1:module-2:out',

@@ -43,6 +43,7 @@ import {
   PORT_IO_TYPE,
 } from '~entities/graph';
 import {Theme} from '~entities/appearance';
+import {logger} from '~shared/lib/logger';
 import {useTheme} from '~shared/providers/theme-provider';
 
 import '@xyflow/react/dist/style.css';
@@ -62,6 +63,8 @@ import {
 import {
   type ContextMenuItem,
   type ContextMenuTarget,
+  type SelectedEdgeRef,
+  type SelectedNodeRef,
   type UsecaseVisualizerProps,
   type ViewportState,
   VISUALIZER_MODE,
@@ -108,6 +111,86 @@ function buildEdgeTarget(data: AnyEdge): ContextMenuTarget {
   return {edge: data, kind: `${data.edgeKind}-link`} as ContextMenuTarget;
 }
 
+function stringMeta(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function selectedNodeFromReactFlowNode(
+  node: Node,
+): SelectedNodeRef | undefined {
+  const data = node.data as unknown as AnyNode;
+  const systemId = stringMeta(data.meta?.systemId);
+
+  if (!systemId) {
+    logger.warn('UsecaseVisualizer: selected node missing systemId metadata', {
+      action: 'selection_change',
+      component: 'UsecaseVisualizer',
+      error: `nodeId=${node.id}`,
+    });
+    return undefined;
+  }
+
+  return {
+    id: node.id,
+    nodeKind: data.nodeKind,
+    systemId,
+  };
+}
+
+function selectedEdgeFromReactFlowEdge(
+  edge: Edge,
+): SelectedEdgeRef | undefined {
+  const data = edge.data as unknown as AnyEdge;
+  const systemId = stringMeta(data.meta?.systemId);
+
+  if (data.edgeKind === EDGE_KIND.CONTROL || data.edgeKind === EDGE_KIND.DATA) {
+    if (!systemId) {
+      logger.warn(
+        'UsecaseVisualizer: selected edge missing systemId metadata',
+        {
+          action: 'selection_change',
+          component: 'UsecaseVisualizer',
+          error: `edgeId=${edge.id}`,
+        },
+      );
+      return undefined;
+    }
+    return {
+      edgeKind: data.edgeKind,
+      id: edge.id,
+      systemId,
+    };
+  }
+
+  return {
+    edgeKind: data.edgeKind,
+    id: edge.id,
+    ...(systemId ? {systemId} : {}),
+  };
+}
+
+function defined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
+function refsAdded<T extends {id: string}>(next: T[], prev: T[]): T[] {
+  const prevIds = new Set(prev.map((ref) => ref.id));
+  return next.filter((ref) => !prevIds.has(ref.id));
+}
+
+function refsRemoved<T extends {id: string}>(next: T[], prev: T[]): T[] {
+  const nextIds = new Set(next.map((ref) => ref.id));
+  return prev.filter((ref) => !nextIds.has(ref.id));
+}
+
+function proxyCount(graph: LevelView): number {
+  return (
+    (graph.subgraphProxies?.length ?? 0) +
+    (graph.proxyDataLinks?.length ?? 0) +
+    (graph.proxyControlLinks?.length ?? 0)
+  );
+}
+
 function renderMenuItems(
   items: ContextMenuItem[],
   target: ContextMenuTarget,
@@ -148,10 +231,12 @@ function renderMenuItems(
 interface CanvasProps {
   contextMenu: UsecaseVisualizerProps['contextMenu'];
   eventHandlers: UsecaseVisualizerProps['eventHandlers'];
+  focusNodeRequest: UsecaseVisualizerProps['focusNodeRequest'];
   graph: LevelView;
   initialViewport: ViewportState | undefined;
   lodThreshold: number | undefined;
   mode: UsecaseVisualizerProps['mode'];
+  onFocusNodeRequestHandled: UsecaseVisualizerProps['onFocusNodeRequestHandled'];
   onScreenshotApiReady: UsecaseVisualizerProps['onScreenshotApiReady'];
   rendering: UsecaseVisualizerProps['rendering'];
   searchHighlights: UsecaseVisualizerProps['searchHighlights'];
@@ -161,10 +246,12 @@ interface CanvasProps {
 function VisualizerCanvas({
   contextMenu,
   eventHandlers,
+  focusNodeRequest,
   graph,
   initialViewport,
   lodThreshold,
   mode,
+  onFocusNodeRequestHandled,
   onScreenshotApiReady,
   rendering,
   searchHighlights,
@@ -191,7 +278,7 @@ function VisualizerCanvas({
   const prevProxiesCountRef = useRef<number>(
     // Seed from the initial graph, not 0 — prevents a spurious fitView on the
     // first prop update when the proxy count hasn't actually changed.
-    graph.subgraphProxies?.length ?? 0,
+    proxyCount(graph),
   );
   const resizedParentsRef = useRef<
     Record<string, {height: number; width: number}>
@@ -312,14 +399,28 @@ function VisualizerCanvas({
     setRfEdges(toReactFlowEdges(graph));
 
     const levelId = graph.levelId;
-    const proxiesCount = graph.subgraphProxies?.length ?? 0;
+    const proxiesCount = proxyCount(graph);
     const levelChanged = levelId !== prevLevelIdRef.current;
     // Intentionally tracks count, not identity: fitView fires when the number
     // of visible proxies changes (collapse/expand), not on every proxy swap.
     const proxiesChanged = proxiesCount !== prevProxiesCountRef.current;
 
     if (levelChanged || proxiesChanged) {
-      store.getState().clearSelection();
+      const state = store.getState();
+      const prior = state.selection;
+      if (prior.selectedNodes.length > 0 || prior.selectedEdges.length > 0) {
+        state.clearSelection();
+        state.eventHandlers?.onSelectionChange?.({
+          delta: {
+            addedEdges: [],
+            addedNodes: [],
+            removedEdges: prior.selectedEdges,
+            removedNodes: prior.selectedNodes,
+          },
+          selectedEdges: [],
+          selectedNodes: [],
+        });
+      }
     }
 
     const rafId = requestAnimationFrame(() => {
@@ -351,6 +452,22 @@ function VisualizerCanvas({
   }, [fitView, graph, setRfEdges, setRfNodes, setViewport, store]);
 
   useEffect(() => {
+    if (!focusNodeRequest) {
+      return;
+    }
+    const request = focusNodeRequest;
+    const rafId = requestAnimationFrame(() => {
+      void fitView({
+        duration: 250,
+        nodes: [{id: request.nodeId}],
+        padding: 0.2,
+      });
+      onFocusNodeRequestHandled?.(request.requestId);
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [fitView, focusNodeRequest, onFocusNodeRequestHandled]);
+
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) {
       return undefined;
@@ -360,21 +477,21 @@ function VisualizerCanvas({
       if (event.key === 'Escape') {
         const prior = state.selection;
         if (
-          prior.selectedNodeIds.length === 0 &&
-          prior.selectedEdgeIds.length === 0
+          prior.selectedNodes.length === 0 &&
+          prior.selectedEdges.length === 0
         ) {
           return;
         }
         state.clearSelection();
         state.eventHandlers?.onSelectionChange?.({
           delta: {
-            addedEdgeIds: [],
-            addedNodeIds: [],
-            removedEdgeIds: prior.selectedEdgeIds,
-            removedNodeIds: prior.selectedNodeIds,
+            addedEdges: [],
+            addedNodes: [],
+            removedEdges: prior.selectedEdges,
+            removedNodes: prior.selectedNodes,
           },
-          selectedEdgeIds: [],
-          selectedNodeIds: [],
+          selectedEdges: [],
+          selectedNodes: [],
         });
         return;
       }
@@ -383,14 +500,19 @@ function VisualizerCanvas({
           return;
         }
         const sel = state.selection;
-        const nodeIds = sel.selectedNodeIds.filter(
-          (id) =>
-            rfNodesRef.current.find((n) => n.id === id)?.data.locked !== true,
-        );
-        const edgeIds = sel.selectedEdgeIds.filter(
-          (id) =>
-            rfEdgesRef.current.find((e) => e.id === id)?.data?.locked !== true,
-        );
+        const nodeIds = sel.selectedNodes
+          .map((ref) => ref.id)
+          .filter(
+            (id) =>
+              rfNodesRef.current.find((n) => n.id === id)?.data.locked !== true,
+          );
+        const edgeIds = sel.selectedEdges
+          .map((ref) => ref.id)
+          .filter(
+            (id) =>
+              rfEdgesRef.current.find((e) => e.id === id)?.data?.locked !==
+              true,
+          );
         if (nodeIds.length > 0) {
           state.eventHandlers?.onNodesDeleted?.({nodeIds});
         }
@@ -558,27 +680,23 @@ function VisualizerCanvas({
 
   const handleSelectionChange = useCallback(
     ({edges, nodes}: {edges: Edge[]; nodes: Node[]}) => {
-      const nodeIds = nodes.map((n) => n.id);
-      const edgeIds = edges.map((e) => e.id);
+      const selectedNodes = nodes
+        .map(selectedNodeFromReactFlowNode)
+        .filter(defined);
+      const selectedEdges = edges
+        .map(selectedEdgeFromReactFlowEdge)
+        .filter(defined);
       const prev = store.getState().selection;
-      store.getState().setSelection(nodeIds, edgeIds);
+      store.getState().setSelection(selectedNodes, selectedEdges);
       store.getState().eventHandlers?.onSelectionChange?.({
         delta: {
-          addedEdgeIds: edgeIds.filter(
-            (id) => !prev.selectedEdgeIds.includes(id),
-          ),
-          addedNodeIds: nodeIds.filter(
-            (id) => !prev.selectedNodeIds.includes(id),
-          ),
-          removedEdgeIds: prev.selectedEdgeIds.filter(
-            (id) => !edgeIds.includes(id),
-          ),
-          removedNodeIds: prev.selectedNodeIds.filter(
-            (id) => !nodeIds.includes(id),
-          ),
+          addedEdges: refsAdded(selectedEdges, prev.selectedEdges),
+          addedNodes: refsAdded(selectedNodes, prev.selectedNodes),
+          removedEdges: refsRemoved(selectedEdges, prev.selectedEdges),
+          removedNodes: refsRemoved(selectedNodes, prev.selectedNodes),
         },
-        selectedEdgeIds: edgeIds,
-        selectedNodeIds: nodeIds,
+        selectedEdges,
+        selectedNodes,
       });
     },
     [store],
@@ -739,10 +857,12 @@ function VisualizerCanvas({
 export function UsecaseVisualizer({
   contextMenu,
   eventHandlers,
+  focusNodeRequest,
   graph,
   initialViewport,
   lodThreshold,
   mode,
+  onFocusNodeRequestHandled,
   onScreenshotApiReady,
   rendering,
   searchHighlights,
@@ -754,10 +874,12 @@ export function UsecaseVisualizer({
         <VisualizerCanvas
           contextMenu={contextMenu}
           eventHandlers={eventHandlers}
+          focusNodeRequest={focusNodeRequest}
           graph={graph}
           initialViewport={initialViewport}
           lodThreshold={lodThreshold}
           mode={mode}
+          onFocusNodeRequestHandled={onFocusNodeRequestHandled}
           onScreenshotApiReady={onScreenshotApiReady}
           rendering={rendering}
           searchHighlights={searchHighlights}

@@ -53,6 +53,32 @@ const baseData: UsecaseGraphData = {
 };
 
 describe('buildLevelViewFromGraphData — SubgraphNode.parentId (B5, N7)', () => {
+  it('populates backend systemId metadata for selectable graph elements', () => {
+    const lv = buildLevelViewFromGraphData(
+      {
+        ...baseData,
+        connections: [
+          {
+            connectionId: 'conn-1',
+            connectionType: 'data',
+            fromModuleId: 'sys-mod-1',
+            fromPortId: 'p-out',
+            isDangling: false,
+            toModuleId: 'sys-mod-1',
+            toPortId: 'p-in',
+          },
+        ],
+      },
+      'level-1',
+    );
+
+    expect(lv.modules?.[0]?.meta?.systemId).toBe('sys-mod-1');
+    expect(lv.containers?.[0]?.meta?.systemId).toBe('10');
+    expect(lv.subgraphs?.[0]?.meta?.systemId).toBe('5');
+    expect(lv.subsystems?.[0]?.meta?.systemId).toBe('sys-ss-20');
+    expect(lv.dataLinks?.[0]?.meta?.systemId).toBe('conn-1');
+  });
+
   it('sets parentId on a SubgraphNode when its subgraphId is listed in Subsystem.subgraphs', () => {
     const lv = buildLevelViewFromGraphData(baseData, 'level-1');
 

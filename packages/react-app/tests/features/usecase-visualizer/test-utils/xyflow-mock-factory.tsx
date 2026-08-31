@@ -64,6 +64,21 @@ export const latestReactFlowProps: {current: FakeReactFlowProps | null} = {
   current: null,
 };
 
+export interface FakeReactFlowInstance {
+  fitView: jest.Mock;
+  getNodes: jest.Mock;
+  getViewport: jest.Mock;
+  screenToFlowPosition: jest.Mock;
+  setCenter: jest.Mock;
+  setViewport: jest.Mock;
+}
+
+export const latestReactFlowInstance: {
+  current: FakeReactFlowInstance | null;
+} = {
+  current: null,
+};
+
 /**
  * Factory used by `jest.mock('@xyflow/react', () =>
  * require(...).createXyflowMockFactory())`. Kept in a separate module so tests
@@ -75,6 +90,7 @@ export const latestReactFlowProps: {current: FakeReactFlowProps | null} = {
 export function createXyflowMockFactory() {
   const FakeReactFlow = (props: FakeReactFlowProps) => {
     latestReactFlowProps.current = props;
+    latestReactFlowInstance.current = stableReactFlowInstance;
     const {edges, edgeTypes, nodes, nodeTypes, onDragOver, onDrop} = props;
     return (
       <div
@@ -187,6 +203,7 @@ export function createXyflowMockFactory() {
     setCenter: setCenterStub,
     setViewport: setViewportStub,
   };
+  latestReactFlowInstance.current = stableReactFlowInstance;
 
   return {
     BaseEdge,

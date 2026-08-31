@@ -19,6 +19,8 @@ export type {
   EdgeConnectPayload,
   NodeDragEndPayload,
   NodeDropPayload,
+  SelectedEdgeRef,
+  SelectedNodeRef,
   SelectionChangePayload,
   // Viewport / search
   SearchHighlights,

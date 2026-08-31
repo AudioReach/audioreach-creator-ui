@@ -65,14 +65,34 @@ export interface ContextMenuItem {
 
 export interface SelectionChangePayload {
   delta: {
-    addedEdgeIds: string[];
-    addedNodeIds: string[];
-    removedEdgeIds: string[];
-    removedNodeIds: string[];
+    addedEdges: SelectedEdgeRef[];
+    addedNodes: SelectedNodeRef[];
+    removedEdges: SelectedEdgeRef[];
+    removedNodes: SelectedNodeRef[];
   };
-  selectedEdgeIds: string[];
-  selectedNodeIds: string[];
+  selectedEdges: SelectedEdgeRef[];
+  selectedNodes: SelectedNodeRef[];
 }
+
+export interface SelectedNodeRef {
+  id: string;
+  nodeKind: NodeKind;
+  systemId: string;
+}
+
+interface SelectedBackendEdgeRef {
+  edgeKind: Extract<EdgeKind, 'control' | 'data'>;
+  id: string;
+  systemId: string;
+}
+
+interface SelectedProxyEdgeRef {
+  edgeKind: Extract<EdgeKind, 'proxy-control' | 'proxy-data'>;
+  id: string;
+  systemId?: string;
+}
+
+export type SelectedEdgeRef = SelectedBackendEdgeRef | SelectedProxyEdgeRef;
 
 export interface NodeDragEndPayload {
   nodeId: string;
@@ -103,6 +123,11 @@ export interface ViewportState {
   x: number;
   y: number;
   zoom: number;
+}
+
+export interface NodeFocusRequest {
+  nodeId: string;
+  requestId: number;
 }
 
 export interface XY {
@@ -188,11 +213,13 @@ export interface VisualizerEventHandlers {
 export interface UsecaseVisualizerProps {
   contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: VisualizerEventHandlers;
+  focusNodeRequest?: NodeFocusRequest | null;
   graph: LevelView;
   /** Viewport to restore on mount instead of calling fitView. */
   initialViewport?: ViewportState;
   lodThreshold?: number;
   mode?: VisualizerMode;
+  onFocusNodeRequestHandled?: (requestId: number) => void;
   /**
    * Receives an imperative capture function once the canvas is mounted.
    * Consumer stores it and calls it on demand to capture a PNG data URL of

@@ -57,6 +57,7 @@ import {
   type EdgeConnectPayload,
   type NodeDropPayload,
   type SearchHighlights,
+  type SelectionChangePayload,
   UsecaseVisualizer,
   type ViewportState,
   VISUALIZER_MODE,
@@ -202,7 +203,16 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const loadGraphData = useGraphDesignerStoreShallow((s) => s.loadGraphData);
   const levelView = useGraphDesignerStoreShallow((s) => s.levelView);
   const setLevelView = useGraphDesignerStoreShallow((s) => s.setLevelView);
+  const setEffectiveLevelView = useGraphDesignerStoreShallow(
+    (s) => s.setEffectiveLevelView,
+  );
   const clearLevelView = useGraphDesignerStoreShallow((s) => s.clearLevelView);
+  const focusNodeRequest = useGraphDesignerStoreShallow(
+    (s) => s.focusNodeRequest,
+  );
+  const clearNodeFocusRequest = useGraphDesignerStoreShallow(
+    (s) => s.clearNodeFocusRequest,
+  );
   const moduleListStatus = useGraphDesignerStoreShallow(
     (s) => s.moduleListStatus,
   );
@@ -353,6 +363,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [filteredAndHighlighted, positionOverrides, parentSizes],
   );
 
+  useEffect(() => {
+    setEffectiveLevelView(graph);
+  }, [graph, setEffectiveLevelView]);
+
   // Guards against stale layout results when selectedUsecases changes rapidly.
   const layoutGenerationRef = useRef(0);
 
@@ -373,6 +387,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const clearSearchHighlight = useGraphDesignerStoreShallow(
     (s) => s.clearSearchHighlight,
   );
+  const setSelection = useGraphDesignerStoreShallow((s) => s.setSelection);
   const isSearchVisible = useGraphDesignerStoreShallow(
     (s) => s.isSearchVisible,
   );
@@ -898,6 +913,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         }
       },
       onNodesDeleted: handleNodesDeleted,
+      onSelectionChange: ({
+        selectedEdges,
+        selectedNodes,
+      }: SelectionChangePayload) => {
+        setSelection(selectedNodes, selectedEdges);
+      },
       onSubgraphCollapse: (subgraphId: number) => {
         setCollapseByLevel((prev) => ({
           ...prev,
@@ -925,6 +946,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       handleModuleDoubleClick,
       handleNodesDeleted,
       levelId,
+      setSelection,
       linkOperations,
       store,
     ],
@@ -1271,11 +1293,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           <>
             <UsecaseVisualizer
               eventHandlers={eventHandlers}
+              focusNodeRequest={focusNodeRequest}
               graph={graph}
               initialViewport={viewportByLevel['']}
               mode={
                 isEditable ? VISUALIZER_MODE.EDIT : VISUALIZER_MODE.READONLY
               }
+              onFocusNodeRequestHandled={clearNodeFocusRequest}
               onScreenshotApiReady={handleScreenshotReady}
               rendering={visualizerRendering}
               searchHighlights={searchHighlights}
@@ -1294,9 +1318,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : levelView ? (
           <UsecaseVisualizer
             eventHandlers={eventHandlers}
+            focusNodeRequest={focusNodeRequest}
             graph={graph}
             initialViewport={viewportByLevel[levelId]}
             mode={isEditable ? VISUALIZER_MODE.EDIT : VISUALIZER_MODE.READONLY}
+            onFocusNodeRequestHandled={clearNodeFocusRequest}
             onScreenshotApiReady={handleScreenshotReady}
             rendering={visualizerRendering}
             searchHighlights={searchHighlights}

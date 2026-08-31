@@ -6,11 +6,15 @@
 export {
   createSpfModule,
   deleteSpfModule,
+  fetchSpfModuleProperties,
   patchSpfModule,
+  patchSpfModuleProperties,
 } from './api/spf-modules-api';
 export type {
   CreateSpfModuleRequestDto,
   DeletedComponentIdsDto,
+  PatchSpfModulePropertiesRequestDto,
   PatchSpfModuleRequestDto,
   RemoveSpfModuleResponseDto,
+  SpfModulePropertyDto,
 } from './model/spf-module-crud.dto';

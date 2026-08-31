@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import type {
+  PatchPropertiesRequestDto,
+  PropertyDto,
+} from '~shared/lib/property.dto';
+
 export interface CreateSpfModuleRequestDto {
   containerSystemId?: string;
   moduleDefinitionSystemId: string;
@@ -30,3 +35,7 @@ export interface DeletedComponentIdsDto {
 export interface RemoveSpfModuleResponseDto {
   deleted: DeletedComponentIdsDto;
 }
+
+export type PatchSpfModulePropertiesRequestDto = PatchPropertiesRequestDto;
+
+export type SpfModulePropertyDto = PropertyDto;

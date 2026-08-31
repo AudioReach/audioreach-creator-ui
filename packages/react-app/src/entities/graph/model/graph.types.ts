@@ -61,19 +61,23 @@ export interface NodeBase {
   label: string;
   /** Excluded from Delete key and edit affordances. Still draggable. */
   locked?: boolean;
-  meta?: Record<string, unknown>;
+  meta?: GraphElementMeta;
   parentId?: string;
   width: number;
   x: number;
   y: number;
 }
 
-export interface ContainerNodeMeta extends Record<string, unknown> {
+export interface GraphElementMeta extends Record<string, unknown> {
+  systemId: string;
+}
+
+export interface ContainerNodeMeta extends GraphElementMeta {
   containerSystemId: string;
   subgraphSystemId: string;
 }
 
-export interface SubgraphNodeMeta extends Record<string, unknown> {
+export interface SubgraphNodeMeta extends GraphElementMeta {
   subgraphSystemId: string;
 }
 
@@ -143,6 +147,7 @@ export interface EdgeBase {
   label?: string;
   /** Excluded from Delete key and context menu. */
   locked?: boolean;
+  meta?: GraphElementMeta;
   sourceNodeId: string;
   sourcePortId: string;
   targetNodeId: string;
@@ -157,12 +162,18 @@ export interface ControlLink extends EdgeBase {
   edgeKind: 'control';
 }
 
+export type VirtualDataLinkKind = 'mdf' | 'standard' | 'subsystem';
+
 export interface ProxyDataLink extends EdgeBase {
   edgeKind: 'proxy-data';
+  kind?: VirtualDataLinkKind;
+  mdfModuleIds?: string[];
+  realConnectionIds?: string[];
 }
 
 export interface ProxyControlLink extends EdgeBase {
   edgeKind: 'proxy-control';
+  realConnectionIds?: string[];
 }
 
 export interface LevelView {

@@ -39,6 +39,7 @@ function makeModule(id: string, locked = false): ModuleNode {
     id,
     label: id,
     locked,
+    meta: {systemId: `sys-${id}`},
     moduleId: 1,
     moduleType: 'GAIN',
     nodeKind: 'module',
@@ -54,6 +55,7 @@ function makeEdge(id: string, locked = false): ControlLink {
     edgeKind: 'control',
     id,
     locked,
+    meta: {systemId: `sys-${id}`},
     sourceNodeId: 'n1',
     sourcePortId: 'p',
     targetNodeId: 'n2',
@@ -124,8 +126,10 @@ describe('keyboard: Escape', () => {
 
     expect(onSelectionChange).toHaveBeenCalledTimes(1);
     const payload = onSelectionChange.mock.calls[0][0];
-    expect(payload.selectedNodeIds).toEqual([]);
-    expect(payload.delta.removedNodeIds).toEqual(['n1']);
+    expect(payload.selectedNodes).toEqual([]);
+    expect(payload.delta.removedNodes).toEqual([
+      {id: 'n1', nodeKind: 'module', systemId: 'sys-n1'},
+    ]);
   });
 
   it('does nothing when selection is empty', () => {

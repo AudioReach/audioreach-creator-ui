@@ -11,6 +11,8 @@ import {
   type NodeContentOverride,
   type NodeDisplayConfig,
   type SearchHighlights,
+  type SelectedEdgeRef,
+  type SelectedNodeRef,
   type ViewportState,
   VISUALIZER_MODE,
   type VisualizerContextMenuConfig,
@@ -37,8 +39,8 @@ interface HoverState {
 }
 
 interface SelectionState {
-  selectedEdgeIds: string[];
-  selectedNodeIds: string[];
+  selectedEdges: SelectedEdgeRef[];
+  selectedNodes: SelectedNodeRef[];
 }
 
 export interface RenderingConfigSlice {
@@ -52,8 +54,8 @@ export interface RenderingConfigSlice {
 const DEFAULT_LOD_THRESHOLD = 0.4;
 
 const EMPTY_SELECTION: SelectionState = {
-  selectedEdgeIds: [],
-  selectedNodeIds: [],
+  selectedEdges: [],
+  selectedNodes: [],
 };
 
 const EMPTY_HOVER: HoverState = {
@@ -86,7 +88,10 @@ export interface VisualizerInternalStore {
   setLodZoom: (zoom: number) => void;
   setMode: (mode: VisualizerMode) => void;
   setRenderingConfig: (config: Partial<RenderingConfigSlice>) => void;
-  setSelection: (selectedNodeIds: string[], selectedEdgeIds: string[]) => void;
+  setSelection: (
+    selectedNodes: SelectedNodeRef[],
+    selectedEdges: SelectedEdgeRef[],
+  ) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
   syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
   viewportCache: Record<string, ViewportState>;
@@ -155,8 +160,8 @@ export function createVisualizerStore(): CreatedVisualizerStore {
             : state.renderNodeContent,
       }));
     },
-    setSelection: (selectedNodeIds, selectedEdgeIds) => {
-      set({selection: {selectedEdgeIds, selectedNodeIds}});
+    setSelection: (selectedNodes, selectedEdges) => {
+      set({selection: {selectedEdges, selectedNodes}});
     },
     setViewportCache: (levelId, viewport) => {
       set((state) => ({

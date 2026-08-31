@@ -25,8 +25,8 @@ describe('createVisualizerStore — instances are isolated', () => {
     const store = createVisualizerStore();
     const state = store.getState();
     expect(state.selection).toEqual({
-      selectedEdgeIds: [],
-      selectedNodeIds: [],
+      selectedEdges: [],
+      selectedNodes: [],
     });
     expect(state.hoverState).toEqual({
       hoveredLogicalContainerId: null,
@@ -39,28 +39,39 @@ describe('createVisualizerStore — instances are isolated', () => {
 });
 
 describe('createVisualizerStore — setSelection / clearSelection', () => {
-  it('setSelection records new ids', () => {
+  it('setSelection records selected entity refs', () => {
     const store = createVisualizerStore();
-    store.getState().setSelection(['n1'], ['e1']);
+    store.getState().setSelection(
+      [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
+      [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
+    );
     expect(store.getState().selection).toEqual({
-      selectedEdgeIds: ['e1'],
-      selectedNodeIds: ['n1'],
+      selectedEdges: [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
+      selectedNodes: [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
     });
 
-    store.getState().setSelection(['n2'], []);
+    store
+      .getState()
+      .setSelection([{id: 'n2', nodeKind: 'module', systemId: 'sys-n2'}], []);
     expect(store.getState().selection).toEqual({
-      selectedEdgeIds: [],
-      selectedNodeIds: ['n2'],
+      selectedEdges: [],
+      selectedNodes: [{id: 'n2', nodeKind: 'module', systemId: 'sys-n2'}],
     });
   });
 
   it('clearSelection resets selection', () => {
     const store = createVisualizerStore();
-    store.getState().setSelection(['n1', 'n2'], ['e1']);
+    store.getState().setSelection(
+      [
+        {id: 'n1', nodeKind: 'module', systemId: 'sys-n1'},
+        {id: 'n2', nodeKind: 'module', systemId: 'sys-n2'},
+      ],
+      [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
+    );
     store.getState().clearSelection();
     expect(store.getState().selection).toEqual({
-      selectedEdgeIds: [],
-      selectedNodeIds: [],
+      selectedEdges: [],
+      selectedNodes: [],
     });
   });
 });
