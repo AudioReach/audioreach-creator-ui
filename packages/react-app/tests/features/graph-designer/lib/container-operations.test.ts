@@ -127,7 +127,7 @@ function makeTestStore(projectId = 'proj-cnt-ops-1') {
   return {containerOperations, get, store};
 }
 
-describe('createContainerOperations - deleteContainers', () => {
+describe('createContainerOperations - deleteContainer', () => {
   it('deletes every module in the container and lets recompute drop the container', async () => {
     const {containerOperations, get, store} = makeTestStore();
     await store.getState().enterEditMode();
@@ -174,7 +174,7 @@ describe('createContainerOperations - deleteContainers', () => {
         success: true,
       });
 
-    const ok = await containerOperations.deleteContainers(get, ['cnt-1']);
+    const ok = await containerOperations.deleteContainer(get, 'cnt-1');
 
     expect(ok).toBe(true);
     expect(mockDeleteSpfModule).toHaveBeenCalledTimes(2);
@@ -221,7 +221,7 @@ describe('createContainerOperations - deleteContainers', () => {
       })
       .mockResolvedValueOnce({message: 'boom', success: false});
 
-    const ok = await containerOperations.deleteContainers(get, ['cnt-1']);
+    const ok = await containerOperations.deleteContainer(get, 'cnt-1');
 
     expect(ok).toBe(false);
     expect(mockShowToast).toHaveBeenCalledWith('boom', 'danger');
@@ -231,7 +231,7 @@ describe('createContainerOperations - deleteContainers', () => {
     expect(store.getState().graphData!.moduleInstances['mod-2']).toBeDefined();
   });
 
-  it('deleteContainers holds one mutation lock for all container roots', async () => {
+  it('deleteContainer holds the mutation lock while deleting a container', async () => {
     const {containerOperations, get, store} = makeTestStore();
     const firstDelete = deferred<DeleteSpfModuleResult>();
     const secondDelete = deferred<DeleteSpfModuleResult>();
@@ -245,7 +245,7 @@ describe('createContainerOperations - deleteContainers', () => {
             moduleInstanceId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-2',
+            containerId: 'cnt-1',
             moduleInstanceId: 'mod-2',
           }),
         },
@@ -255,10 +255,7 @@ describe('createContainerOperations - deleteContainers', () => {
       .mockReturnValueOnce(firstDelete.promise)
       .mockReturnValueOnce(secondDelete.promise);
 
-    const batchPromise = containerOperations.deleteContainers(get, [
-      'cnt-1',
-      'cnt-2',
-    ]);
+    const deletePromise = containerOperations.deleteContainer(get, 'cnt-1');
 
     expect(store.getState().isMutating).toBe(true);
     expect(mockDeleteSpfModule).toHaveBeenCalledTimes(1);
@@ -289,7 +286,7 @@ describe('createContainerOperations - deleteContainers', () => {
       success: true,
     });
 
-    await expect(batchPromise).resolves.toBe(true);
+    await expect(deletePromise).resolves.toBe(true);
     expect(store.getState().isMutating).toBe(false);
   });
 
@@ -348,7 +345,7 @@ describe('createContainerOperations - deleteContainers', () => {
       success: true,
     });
 
-    const ok = await containerOperations.deleteContainers(get, ['cnt-1']);
+    const ok = await containerOperations.deleteContainer(get, 'cnt-1');
 
     expect(ok).toBe(true);
     expect(store.getState().subgraphProvenanceById).toEqual({});

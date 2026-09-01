@@ -475,6 +475,12 @@ function VisualizerCanvas({
     const handleKeyDown = (event: KeyboardEvent) => {
       const state = store.getState();
       if (event.key === 'Escape') {
+        if (state.connectionInProgress) {
+          state.cancelConnection();
+          setOpenMenu(null);
+          return;
+        }
+
         const prior = state.selection;
         if (
           prior.selectedNodes.length === 0 &&
@@ -501,11 +507,12 @@ function VisualizerCanvas({
         }
         const sel = state.selection;
         const nodeIds = sel.selectedNodes
-          .map((ref) => ref.id)
           .filter(
-            (id) =>
-              rfNodesRef.current.find((n) => n.id === id)?.data.locked !== true,
-          );
+            (ref) =>
+              rfNodesRef.current.find((n) => n.id === ref.id)?.data.locked !==
+              true,
+          )
+          .map((ref) => ref.systemId);
         const edgeIds = sel.selectedEdges
           .map((ref) => ref.id)
           .filter(
@@ -734,7 +741,13 @@ function VisualizerCanvas({
           if (port.locked === true) {
             return;
           }
-          openContextMenu(event, {kind: 'port', nodeId: node.id, port});
+          openContextMenu(event, {
+            connectionInProgress:
+              store.getState().connectionInProgress !== null,
+            kind: 'port',
+            nodeId: node.id,
+            port,
+          });
           return;
         }
       }
@@ -743,7 +756,7 @@ function VisualizerCanvas({
       }
       openContextMenu(event, buildNodeTarget(data));
     },
-    [openContextMenu],
+    [openContextMenu, store],
   );
 
   const handleEdgeContextMenu = useCallback(
@@ -767,6 +780,18 @@ function VisualizerCanvas({
 
   const handleMenuAction = useCallback(
     (item: ContextMenuItem, target: ContextMenuTarget) => {
+      if (target.kind === 'port') {
+        if (item.id === 'start-connection') {
+          store.getState().startConnection(target.nodeId, target.port);
+          setOpenMenu(null);
+          return;
+        }
+        if (item.id === 'end-connection') {
+          store.getState().completeConnection(target.nodeId, target.port);
+          setOpenMenu(null);
+          return;
+        }
+      }
       store.getState().contextMenu?.onAction(item.id, target);
       setOpenMenu(null);
     },
@@ -830,13 +855,17 @@ function VisualizerCanvas({
       {openMenu ? (
         <Portal>
           <Menu.Root
-            anchorPoint={{x: openMenu.x, y: openMenu.y}}
             onOpenChange={(open) => {
               if (!open) {
                 setOpenMenu(null);
               }
             }}
             open
+            positioning={{
+              getAnchorRect: () => ({x: openMenu.x, y: openMenu.y}),
+              gutter: 0,
+              placement: 'bottom-start',
+            }}
           >
             <Menu.Positioner>
               <Menu.Content>

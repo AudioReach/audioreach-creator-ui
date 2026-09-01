@@ -70,7 +70,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
   // to reduce traversal frequency of searchTerm
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const isExpanded = (id: number) => !!expandedIds[id]; // !! guarantees the result is strictly a boolean, not undefined, null, or other truthy/falsy values
+  const isExpanded = (id: number) => !!expandedIds[id]; // !! guarantees the result is strictly a boolean, not undefined, null, or other truthy/falsy value
   const toggleNode = (id: number) => {
     setExpandedIds((prevState) => ({...prevState, [id]: !prevState[id]}));
   };

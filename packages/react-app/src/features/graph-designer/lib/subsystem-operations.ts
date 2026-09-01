@@ -35,7 +35,7 @@ import type {GraphDesignerStore} from '../model/graph-designer-store';
 import type {InnerActionOptions} from './module-operations';
 
 export type MoveDestination =
-  {createNew: true; name: string} | {subsystemId: string};
+  {createNew: true; name: string} | {subsystemId: string} | string | null;
 
 export interface SubsystemOperations {
   deleteSubsystem: (
@@ -218,6 +218,28 @@ export function createSubsystemOperations(
     return memberField === 'subgraphs'
       ? {subgraphSystemIds: [nodeId], targetSubsystemSystemId}
       : {subsystemSystemIds: [nodeId], targetSubsystemSystemId};
+  }
+
+  function resolveMoveTargetSystemId(
+    destination: MoveDestination,
+  ): string | null {
+    if (destination === null || typeof destination === 'string') {
+      return destination;
+    }
+    if ('subsystemId' in destination) {
+      return destination.subsystemId;
+    }
+    return null;
+  }
+
+  function isNewSubsystemDestination(
+    destination: MoveDestination,
+  ): destination is {createNew: true; name: string} {
+    return (
+      destination !== null &&
+      typeof destination !== 'string' &&
+      'createNew' in destination
+    );
   }
 
   function withMovedMembership(
@@ -424,13 +446,17 @@ export function createSubsystemOperations(
 
     moveToSubsystem: (get, nodeId, destination) =>
       withMutationLock(get, async () => {
-        if ('subsystemId' in destination) {
-          if (!canMoveToSubsystem(nodeId, destination.subsystemId)) {
+        if (!isNewSubsystemDestination(destination)) {
+          const targetSubsystemId = resolveMoveTargetSystemId(destination);
+          if (
+            targetSubsystemId !== null &&
+            !canMoveToSubsystem(nodeId, targetSubsystemId)
+          ) {
             return false;
           }
           return moveWithRequest(
             get,
-            moveRequestForNode(get, nodeId, destination.subsystemId),
+            moveRequestForNode(get, nodeId, targetSubsystemId),
             'Failed to move into subsystem',
           );
         }

@@ -40,6 +40,10 @@ import {
   type ContainerOperations,
 } from '../lib/container-operations';
 import {
+  createLinkOperations,
+  type LinkOperations,
+} from '../lib/link-operations';
+import {
   createModuleOperations,
   type ModuleOperations,
 } from '../lib/module-operations';
@@ -81,6 +85,7 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   ModuleListSlice &
   ModuleDataSlice &
   ContainerOperations &
+  LinkOperations &
   ModuleOperations &
   SubgraphListSlice &
   SubgraphHeaderSelectionSlice &
@@ -118,6 +123,7 @@ export function createGraphDesignerStore(
     ),
     ...createModuleDataSlice(set, get, projectId),
     ...createContainerOperations(projectId),
+    ...createLinkOperations(projectId),
     ...createModuleOperations(set, projectId),
     ...createSubgraphListSlice(
       (partial) => set(partial as Partial<GraphDesignerStore>),

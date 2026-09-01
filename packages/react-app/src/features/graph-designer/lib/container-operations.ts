@@ -14,14 +14,14 @@ import {withMutationLock} from '../model/edit-session-slice';
 import type {GraphDesignerStore} from '../model/graph-designer-store';
 
 export interface ContainerOperations {
+  deleteContainer: (
+    get: () => GraphDesignerStore,
+    containerId: string,
+  ) => Promise<boolean>;
   deleteContainerInner: (
     get: () => GraphDesignerStore,
     containerId: string,
     options?: InnerActionOptions,
-  ) => Promise<boolean>;
-  deleteContainers: (
-    get: () => GraphDesignerStore,
-    containerIds: string[],
   ) => Promise<boolean>;
 }
 
@@ -65,16 +65,9 @@ export function createContainerOperations(
   }
 
   return {
-    deleteContainerInner,
+    deleteContainer: (get, containerId) =>
+      withMutationLock(get, () => deleteContainerInner(get, containerId)),
 
-    deleteContainers: (get, containerIds) =>
-      withMutationLock(get, async () => {
-        let allSucceeded = true;
-        for (const containerId of [...new Set(containerIds)]) {
-          const ok = await deleteContainerInner(get, containerId);
-          allSucceeded &&= ok;
-        }
-        return allSucceeded;
-      }),
+    deleteContainerInner,
   };
 }

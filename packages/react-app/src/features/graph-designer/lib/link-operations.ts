@@ -19,6 +19,7 @@ import type {DeletedIdsCollection} from '../model/graph-data-slice';
 import type {GraphDesignerStore} from '../model/graph-designer-store';
 
 import {partitionIssues} from './issue-gate';
+import type {InnerActionOptions} from './module-operations';
 
 // This file inlines its own copy rather than importing across operations
 // files — every operations file keeps its own.
@@ -39,8 +40,30 @@ const DELETE_LINK_BY_TYPE = {
   data: {deleteFn: deleteDataLink, key: 'dataLinks' as const},
 };
 
+export interface LinkOperations {
+  connectPorts: (
+    get: () => GraphDesignerStore,
+    sourceNodeId: string,
+    sourcePortId: string,
+    targetNodeId: string,
+    targetPortId: string,
+    edgeKind: 'control' | 'data',
+  ) => Promise<boolean>;
+  deleteLink: (
+    get: () => GraphDesignerStore,
+    connectionId: string,
+    linkType: 'control' | 'data',
+  ) => Promise<boolean>;
+  deleteLinkInner: (
+    get: () => GraphDesignerStore,
+    connectionId: string,
+    linkType: 'control' | 'data',
+    options?: InnerActionOptions,
+  ) => Promise<boolean>;
+}
+
 export function createLinkOperations(projectId: string) {
-  return {connectPorts, deleteLink};
+  return {connectPorts, deleteLink, deleteLinkInner};
 
   function isSubsystemNode(
     get: () => GraphDesignerStore,
@@ -62,17 +85,19 @@ export function createLinkOperations(projectId: string) {
 
     const result =
       edgeKind === 'data'
-        ? await (useSubsystemVariant
-            ? createDataLinkWithSubsystems
-            : createDataLink)(projectId, {
+        ? await (
+            useSubsystemVariant ? createDataLinkWithSubsystems : createDataLink
+          )(projectId, {
             destinationNodeSystemId: targetNodeId,
             destinationPortSystemId: targetPortId,
             sourceNodeSystemId: sourceNodeId,
             sourcePortSystemId: sourcePortId,
           })
-        : await (useSubsystemVariant
-            ? createControlLinkWithSubsystems
-            : createControlLink)(projectId, {
+        : await (
+            useSubsystemVariant
+              ? createControlLinkWithSubsystems
+              : createControlLink
+          )(projectId, {
             endComponentSystemId: targetNodeId,
             endPortSystemId: targetPortId,
             isDangling: false,
@@ -124,12 +149,15 @@ export function createLinkOperations(projectId: string) {
     get: () => GraphDesignerStore,
     connectionId: string,
     linkType: 'control' | 'data',
+    options?: InnerActionOptions,
   ): Promise<boolean> {
     const {deleteFn, key} = DELETE_LINK_BY_TYPE[linkType];
     const result = await deleteFn(projectId, connectionId);
 
     if (!result.success || !result.data) {
-      showToast(result.message ?? 'Failed to delete connection', 'danger');
+      if (!options?.suppressToast) {
+        showToast(result.message ?? 'Failed to delete connection', 'danger');
+      }
       return false;
     }
 

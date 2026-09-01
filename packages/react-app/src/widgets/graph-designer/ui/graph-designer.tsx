@@ -40,6 +40,7 @@ import {
 import {
   ApplyDiscardControls,
   createLinkOperations,
+  deleteSelection,
   GraphDesignerStoreContext,
   parseModuleDropPayload,
   parseSubgraphDropPayload,
@@ -47,7 +48,6 @@ import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
-import {PaletteContainerDeleteDialog} from '~features/graph-designer/ui/palette-container-delete-dialog';
 import {SearchComponent} from '~features/search-component';
 import {
   UsecaseSelectionControl,
@@ -76,6 +76,7 @@ import {
 import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 
 import {applyCollapses} from '../lib/apply-collapses';
+import {buildContextMenuConfig} from '../lib/context-menu-config';
 import {applyLinkVisibility} from '../lib/apply-link-visibility';
 import {applyPortVisibility} from '../lib/apply-port-visibility';
 import {applyPositionOverrides} from '../lib/apply-position-overrides';
@@ -94,11 +95,7 @@ import {
   buildSubsystemLevelViewFromGraphData,
 } from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
-import {
-  containerNodeId,
-  subgraphNodeId,
-  subgraphProxyNodeId,
-} from '../lib/node-id';
+import {subgraphNodeId, subgraphProxyNodeId} from '../lib/node-id';
 import {renderNodeContent} from '../lib/render-node-content';
 import {collapseSetForLevel} from '../lib/subgraph-collapse';
 
@@ -133,30 +130,6 @@ function graphDataHasContent(
     Object.keys(graphData.subgraphs).length > 0 ||
     Object.keys(graphData.subsystems).length > 0
   );
-}
-
-interface ContainerDeleteTarget {
-  containerId: string;
-  subgraphId: string;
-}
-
-function resolveContainerDeleteTarget(
-  graphData: GraphDesignerStore['graphData'],
-  nodeId: string,
-): ContainerDeleteTarget | null {
-  if (!graphData) {
-    return null;
-  }
-  const moduleInstance = Object.values(graphData.moduleInstances).find(
-    (m) => containerNodeId(m.containerId, m.subgraphId) === nodeId,
-  );
-  if (!moduleInstance) {
-    return null;
-  }
-  return {
-    containerId: moduleInstance.containerId,
-    subgraphId: moduleInstance.subgraphId,
-  };
 }
 
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
@@ -268,9 +241,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const [viewportByLevel, setViewportByLevel] = useState<
     Record<string, ViewportState>
   >({});
-  const [pendingPaletteContainerDelete, setPendingPaletteContainerDelete] =
-    useState<ContainerDeleteTarget | null>(null);
-
   const levelId = levelView?.levelId ?? '';
   const collapsedSubgraphs = collapseByLevel[levelId] ?? EMPTY_SET;
 
@@ -736,49 +706,19 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [levelId, preferences.visualization.expandSubgraphs],
   );
 
-  const deleteContainersByIds = useCallback(
-    async (containerIds: string[]) => {
-      await store.getState().deleteContainers(store.getState, containerIds);
+  const handleNodesDeleted = useCallback(
+    ({nodeIds}: {nodeIds: string[]}) => {
+      void deleteSelection(store.getState, nodeIds, []);
     },
     [store],
   );
 
-  const handleNodesDeleted = useCallback(
-    ({nodeIds}: {nodeIds: string[]}) => {
-      const containerIds: string[] = [];
-      for (const nodeId of nodeIds) {
-        const target = resolveContainerDeleteTarget(
-          store.getState().graphData,
-          nodeId,
-        );
-        if (!target) {
-          continue;
-        }
-        if (
-          store.getState().subgraphProvenanceById[target.subgraphId] ===
-          'palette-placed'
-        ) {
-          setPendingPaletteContainerDelete(target);
-          return;
-        }
-        containerIds.push(target.containerId);
-      }
-      if (containerIds.length > 0) {
-        void deleteContainersByIds(containerIds);
-      }
+  const handleEdgesDeleted = useCallback(
+    ({edgeIds}: {edgeIds: string[]}) => {
+      void deleteSelection(store.getState, [], edgeIds);
     },
-    [deleteContainersByIds, store],
+    [store],
   );
-
-  const confirmPaletteContainerDelete = useCallback(() => {
-    const target = pendingPaletteContainerDelete;
-    if (!target) {
-      return;
-    }
-    setPendingPaletteContainerDelete(null);
-    void deleteContainersByIds([target.containerId]);
-  }, [deleteContainersByIds, pendingPaletteContainerDelete]);
-
   const eventHandlers = useMemo(
     () => ({
       onEdgeConnected: (payload: EdgeConnectPayload) => {
@@ -802,22 +742,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             );
           });
       },
-      onEdgesDeleted: (payload: {edgeIds: string[]}) => {
-        const {connections} = store.getState().graphData ?? {connections: []};
-        const connectionTypeById = new Map(
-          connections.map((c) => [c.connectionId, c.connectionType]),
-        );
-        // Deletes one at a time, so an earlier delete can't get skipped while a later one is still in flight.
-        void (async () => {
-          for (const edgeId of payload.edgeIds) {
-            const linkType = connectionTypeById.get(edgeId);
-            if (!linkType) {
-              continue;
-            }
-            await linkOperations.deleteLink(store.getState, edgeId, linkType);
-          }
-        })();
-      },
+      onEdgesDeleted: handleEdgesDeleted,
       onNodeDoubleClick: handleModuleDoubleClick,
       onNodeDragEnd: ({
         nodeId,
@@ -964,6 +889,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       applyCreatedModuleDropPosition,
       applyPlacedSubgraphDropPosition,
       collapsePlacedSubgraphIfNeeded,
+      handleEdgesDeleted,
       handleModuleDoubleClick,
       handleNodesDeleted,
       levelId,
@@ -1213,17 +1139,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Register side nav with provider
   useRegisterSideNav(tabId, sideNav);
 
+  const contextMenu = useMemo(
+    () => buildContextMenuConfig(store.getState),
+    [store],
+  );
+
   return (
     <div className="flex h-full flex-col">
-      <PaletteContainerDeleteDialog
-        onConfirm={confirmPaletteContainerDelete}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingPaletteContainerDelete(null);
-          }
-        }}
-        open={pendingPaletteContainerDelete !== null}
-      />
       {isExpandCollapsePending &&
         createPortal(
           <div
@@ -1313,6 +1235,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         ) : selectedUsecases.length === 0 && !hasLoadedGraphContent ? (
           <>
             <UsecaseVisualizer
+              contextMenu={contextMenu}
               eventHandlers={eventHandlers}
               focusNodeRequest={focusNodeRequest}
               graph={graph}
@@ -1338,6 +1261,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           </>
         ) : levelView ? (
           <UsecaseVisualizer
+            contextMenu={contextMenu}
             eventHandlers={eventHandlers}
             focusNodeRequest={focusNodeRequest}
             graph={graph}

@@ -5,7 +5,12 @@
 
 import {create, type StoreApi, type UseBoundStore} from 'zustand';
 
-import type {AnyNode} from '~entities/graph';
+import {
+  EDGE_KIND,
+  PORT_IO_TYPE,
+  type AnyNode,
+  type Port,
+} from '~entities/graph';
 
 import {
   type NodeContentOverride,
@@ -43,12 +48,16 @@ interface SelectionState {
   selectedNodes: SelectedNodeRef[];
 }
 
+interface ConnectionInProgress {
+  nodeId: string;
+  port: Port;
+}
+
 export interface RenderingConfigSlice {
   lodThreshold: number;
   nodeDisplayConfig: NodeDisplayConfig | undefined;
   renderNodeContent:
-    | ((node: AnyNode) => NodeContentOverride | null)
-    | undefined;
+    ((node: AnyNode) => NodeContentOverride | null) | undefined;
 }
 
 const DEFAULT_LOD_THRESHOLD = 0.4;
@@ -64,8 +73,11 @@ const EMPTY_HOVER: HoverState = {
 };
 
 export interface VisualizerInternalStore {
+  cancelConnection: () => void;
   clearHoverStateIfNode: (nodeId: string) => void;
   clearSelection: () => void;
+  completeConnection: (nodeId: string, port: Port) => void;
+  connectionInProgress: ConnectionInProgress | null;
   containsMatchNodeIds: string[];
   contextMenu: VisualizerContextMenuConfig | undefined;
   eventHandlers: VisualizerEventHandlers | undefined;
@@ -75,8 +87,7 @@ export interface VisualizerInternalStore {
   mode: VisualizerMode;
   nodeDisplayConfig: NodeDisplayConfig | undefined;
   renderNodeContent:
-    | ((node: AnyNode) => NodeContentOverride | null)
-    | undefined;
+    ((node: AnyNode) => NodeContentOverride | null) | undefined;
   searchHighlightById: Record<string, SearchHighlightState>;
   selection: SelectionState;
   setContextMenu: (config: VisualizerContextMenuConfig | undefined) => void;
@@ -93,6 +104,7 @@ export interface VisualizerInternalStore {
     selectedEdges: SelectedEdgeRef[],
   ) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
+  startConnection: (nodeId: string, port: Port) => void;
   syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
   viewportCache: Record<string, ViewportState>;
 }
@@ -103,6 +115,9 @@ export type CreatedVisualizerStore = UseBoundStore<
 
 export function createVisualizerStore(): CreatedVisualizerStore {
   return create<VisualizerInternalStore>((set) => ({
+    cancelConnection: () => {
+      set({connectionInProgress: null});
+    },
     clearHoverStateIfNode: (nodeId) => {
       set((state) =>
         state.hoverState.hoveredNodeId === nodeId
@@ -113,6 +128,47 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     clearSelection: () => {
       set({selection: EMPTY_SELECTION});
     },
+    completeConnection: (nodeId, port) => {
+      set((state) => {
+        const source = state.connectionInProgress;
+        if (!source) {
+          return state;
+        }
+        const sourceIsControl = source.port.portIoType === PORT_IO_TYPE.CONTROL;
+        const targetIsControl = port.portIoType === PORT_IO_TYPE.CONTROL;
+        if (sourceIsControl !== targetIsControl) {
+          return {connectionInProgress: null};
+        }
+        if (!sourceIsControl) {
+          if (
+            source.port.portIoType === port.portIoType ||
+            source.nodeId === nodeId
+          ) {
+            return {connectionInProgress: null};
+          }
+          const sourceIsOutput = source.port.portIoType === PORT_IO_TYPE.OUTPUT;
+          state.eventHandlers?.onEdgeConnected?.({
+            edgeKind: EDGE_KIND.DATA,
+            sourceNodeId: sourceIsOutput ? source.nodeId : nodeId,
+            sourcePortId: sourceIsOutput ? source.port.id : port.id,
+            targetNodeId: sourceIsOutput ? nodeId : source.nodeId,
+            targetPortId: sourceIsOutput ? port.id : source.port.id,
+          });
+          return {connectionInProgress: null};
+        }
+        if (source.nodeId !== nodeId) {
+          state.eventHandlers?.onEdgeConnected?.({
+            edgeKind: EDGE_KIND.CONTROL,
+            sourceNodeId: source.nodeId,
+            sourcePortId: source.port.id,
+            targetNodeId: nodeId,
+            targetPortId: port.id,
+          });
+        }
+        return {connectionInProgress: null};
+      });
+    },
+    connectionInProgress: null,
     containsMatchNodeIds: [],
     contextMenu: undefined,
     eventHandlers: undefined,
@@ -167,6 +223,9 @@ export function createVisualizerStore(): CreatedVisualizerStore {
       set((state) => ({
         viewportCache: {...state.viewportCache, [levelId]: viewport},
       }));
+    },
+    startConnection: (nodeId, port) => {
+      set({connectionInProgress: {nodeId, port}});
     },
     syncSearchHighlights: (highlights) => {
       if (!highlights) {

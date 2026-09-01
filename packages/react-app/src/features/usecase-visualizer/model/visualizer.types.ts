@@ -45,7 +45,7 @@ export type ContextMenuTarget =
   | {kind: 'subgraph-proxy'; node: SubgraphProxyNode}
   | {kind: 'container'; node: ContainerNode}
   | {kind: 'subsystem'; node: SubsystemNode}
-  | {kind: 'port'; nodeId: string; port: Port}
+  | {connectionInProgress: boolean; kind: 'port'; nodeId: string; port: Port}
   | {edge: DataLink; kind: 'data-link'}
   | {edge: ControlLink; kind: 'control-link'}
   | {edge: ProxyDataLink; kind: 'proxy-data-link'}

@@ -6,11 +6,7 @@
 import type {Viewport} from '@xyflow/react';
 import type {StoreApi} from 'zustand';
 
-import type {LevelView} from '~entities/graph';
-import type {
-  SelectedEdgeRef,
-  SelectedNodeRef,
-} from '~features/usecase-visualizer';
+import type {EdgeKind, LevelView, NodeKind} from '~entities/graph';
 import {logger} from '~shared/lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -31,6 +27,26 @@ export interface NodeFocusRequest {
   nodeId: string;
   requestId: number;
 }
+
+export interface SelectedNodeRef {
+  id: string;
+  nodeKind: NodeKind;
+  systemId: string;
+}
+
+interface SelectedBackendEdgeRef {
+  edgeKind: Extract<EdgeKind, 'control' | 'data'>;
+  id: string;
+  systemId: string;
+}
+
+interface SelectedProxyEdgeRef {
+  edgeKind: Extract<EdgeKind, 'proxy-control' | 'proxy-data'>;
+  id: string;
+  systemId?: string;
+}
+
+export type SelectedEdgeRef = SelectedBackendEdgeRef | SelectedProxyEdgeRef;
 
 export interface VisualizerSlice {
   /** Subsystem id whose scoped contents the canvas should show.
