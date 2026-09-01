@@ -160,8 +160,49 @@ describe('keyboard: Delete', () => {
     selectNodes(['n1', 'n2']);
     fireEvent.keyDown(getContainer(), {key: 'Delete'});
 
-    expect(onNodesDeleted).toHaveBeenCalledWith({nodeIds: ['n1']});
+    expect(onNodesDeleted).toHaveBeenCalledWith({nodeIds: ['sys-n1']});
   });
+
+  it.each([
+    ['container-cnt-1:sg-1', 'cnt-system-1', 'container'],
+    ['subgraph-sg-1', 'sg-system-1', 'subgraph'],
+    ['subgraph-proxy-sg-1', 'sg-system-1', 'subgraph-proxy'],
+  ] as const)(
+    'dispatches %s using metadata systemId %s',
+    (visualId, systemId, nodeKind) => {
+      const onNodesDeleted = jest.fn();
+      render(
+        <UsecaseVisualizer
+          eventHandlers={{onNodesDeleted}}
+          graph={makeGraph()}
+          mode={VISUALIZER_MODE.EDIT}
+        />,
+      );
+
+      latestReactFlowProps.current?.onSelectionChange?.({
+        edges: [],
+        nodes: [
+          {
+            data: {
+              height: 100,
+              id: visualId,
+              label: visualId,
+              meta: {systemId},
+              nodeKind,
+              width: 160,
+              x: 0,
+              y: 0,
+            },
+            id: visualId,
+            type: nodeKind,
+          },
+        ],
+      });
+      fireEvent.keyDown(getContainer(), {key: 'Delete'});
+
+      expect(onNodesDeleted).toHaveBeenCalledWith({nodeIds: [systemId]});
+    },
+  );
 
   it('fires onEdgesDeleted for non-locked selected edges in edit mode', () => {
     const onEdgesDeleted = jest.fn();

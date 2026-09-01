@@ -31,10 +31,25 @@ jest.mock('@qualcomm-ui/react-core/portal', () => ({
   Portal: ({children}: {children: ReactNode}) => <>{children}</>,
 }));
 
+const mockMenuRootProps: {
+  current: {
+    positioning?: {
+      getAnchorRect?: () => {x: number; y: number};
+    };
+  } | null;
+} = {current: null};
+
 jest.mock('@qualcomm-ui/react/menu', () => {
-  const Root = ({children}: {children: ReactNode}) => (
-    <div data-testid="menu-root">{children}</div>
-  );
+  const Root = ({
+    children,
+    positioning,
+  }: {
+    children: ReactNode;
+    positioning?: {getAnchorRect?: () => {x: number; y: number}};
+  }) => {
+    mockMenuRootProps.current = {positioning};
+    return <div data-testid="menu-root">{children}</div>;
+  };
   const passthrough = ({children}: {children: ReactNode}) => <>{children}</>;
   const Item = ({
     children,
@@ -128,6 +143,7 @@ function fakeEvent(target?: Element) {
 beforeEach(() => {
   jest.clearAllMocks();
   latestReactFlowProps.current = null;
+  mockMenuRootProps.current = null;
   jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
     cb(0);
     return 0;
@@ -181,10 +197,179 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenCalledWith({
+      connectionInProgress: false,
       kind: 'port',
       nodeId: node.id,
       port: {id: 'p1', portIoType: 'input'},
     });
+  });
+
+  it('calls getItems with connectionInProgress true after start action', async () => {
+    const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(() => [
+      {id: 'start-connection', label: 'Start connection'},
+    ]);
+    const node = makeModule({ports: [{id: 'p1', portIoType: 'input'}]});
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction: jest.fn()}}
+        graph={makeGraph([node])}
+      />,
+    );
+
+    const portEl = container.querySelector('[data-port-id="p1"]');
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(portEl as Element),
+        {data: node, id: node.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start connection'));
+    getItems.mockClear();
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(portEl as Element),
+        {data: node, id: node.id, type: 'module'},
+      );
+    });
+
+    expect(getItems).toHaveBeenCalledWith({
+      connectionInProgress: true,
+      kind: 'port',
+      nodeId: node.id,
+      port: {id: 'p1', portIoType: 'input'},
+    });
+  });
+
+  it('handles end-connection inside the visualizer', async () => {
+    const onAction = jest.fn();
+    const onEdgeConnected = jest.fn();
+    const getItems = jest
+      .fn<ContextMenuItem[], [ContextMenuTarget]>()
+      .mockReturnValueOnce([{id: 'start-connection', label: 'Start'}])
+      .mockReturnValueOnce([{id: 'end-connection', label: 'End'}]);
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'out', portIoType: 'output'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'in', portIoType: 'input'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="out"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start'));
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="in"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('End'));
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      sourceNodeId: 'source',
+      sourcePortId: 'out',
+      targetNodeId: 'target',
+      targetPortId: 'in',
+    });
+  });
+
+  it('cancels an active two-click connection on Escape without connecting', async () => {
+    const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(
+      (target) =>
+        target.kind === 'port' && target.connectionInProgress
+          ? [{id: 'end-connection', label: 'End'}]
+          : [{id: 'start-connection', label: 'Start'}],
+    );
+    const onEdgeConnected = jest.fn();
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'out', portIoType: 'output'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'in', portIoType: 'input'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction: jest.fn()}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="out"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start'));
+
+    fireEvent.keyDown(container.firstElementChild ?? container, {
+      key: 'Escape',
+    });
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="in"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+
+    expect(getItems).toHaveBeenLastCalledWith({
+      connectionInProgress: false,
+      kind: 'port',
+      nodeId: target.id,
+      port: {id: 'in', portIoType: 'input'},
+    });
+    expect(onEdgeConnected).not.toHaveBeenCalled();
+  });
+
+  it('marks the source port while a two-click connection is active', async () => {
+    const node = makeModule({
+      id: 'source',
+      ports: [{id: 'out', portIoType: 'output'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{
+          getItems: () => [{id: 'start-connection', label: 'Start'}],
+          onAction: jest.fn(),
+        }}
+        graph={makeGraph([node])}
+      />,
+    );
+
+    const portEl = container.querySelector('[data-port-id="out"]');
+    expect(portEl).not.toHaveAttribute('data-connection-source', 'true');
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(portEl as Element),
+        {data: node, id: node.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start'));
+
+    const activePortEl = container.querySelector('[data-port-id="out"]');
+    expect(activePortEl).toHaveAttribute('data-connection-source', 'true');
+    expect(activePortEl?.className).toContain('port-handle-connection-source');
   });
 
   it('renders returned items and fires onAction + closes on click', async () => {
@@ -218,6 +403,32 @@ describe('context menu', () => {
       node,
     });
     expect(screen.queryByTestId('menu-root')).not.toBeInTheDocument();
+  });
+
+  it('positions the menu at the right-click coordinates', async () => {
+    const node = makeModule();
+    render(
+      <UsecaseVisualizer
+        contextMenu={{
+          getItems: () => [{id: 'delete', label: 'Delete'}],
+          onAction: jest.fn(),
+        }}
+        graph={makeGraph([node])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
+        data: node,
+        id: node.id,
+        type: 'module',
+      });
+    });
+
+    expect(mockMenuRootProps.current?.positioning?.getAnchorRect?.()).toEqual({
+      x: 120,
+      y: 80,
+    });
   });
 
   it('renders a separator before items with dividerBefore', async () => {

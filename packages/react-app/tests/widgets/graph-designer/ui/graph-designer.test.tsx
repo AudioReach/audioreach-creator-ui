@@ -11,7 +11,9 @@ const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
 
 interface MockUsecaseVisualizerProps {
+  contextMenu?: unknown;
   eventHandlers?: {
+    onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
     onNodeDropped?: (payload: {
       dropData: string;
       position: {x: number; y: number};
@@ -67,6 +69,14 @@ jest.mock('~features/graph-designer/ui/apply-discard-controls', () => ({
   ApplyDiscardControls: ({projectId}: {projectId: string}) => (
     <div data-testid="apply-discard-controls">{projectId}</div>
   ),
+}));
+
+jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
+  buildContextMenuConfig: jest.fn(() => ({getItems: jest.fn()})),
+}));
+
+jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
+  deleteSelection: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('~features/usecase-selection', () => ({
@@ -128,12 +138,13 @@ jest.mock('~widgets/graph-designer/ui/display-options-popover', () => ({
 }));
 
 import {act, render, screen, waitFor} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import {
   GraphDesignerStoreContext,
   type GraphDesignerStore,
 } from '~features/graph-designer';
+import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
+import {deleteSelection} from '~features/graph-designer/lib/multi-select-delete';
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
@@ -188,7 +199,6 @@ function makeGraphData(): UsecaseGraphData {
 
 function renderGraphDesigner(options?: {
   addModuleToEmptyCanvas?: GraphDesignerStore['addModuleToEmptyCanvas'];
-  deleteContainers?: GraphDesignerStore['deleteContainers'];
   graphData?: UsecaseGraphData;
   placeSubgraphFromPalette?: GraphDesignerStore['placeSubgraphFromPalette'];
   subgraphProvenanceById?: GraphDesignerStore['subgraphProvenanceById'];
@@ -203,9 +213,6 @@ function renderGraphDesigner(options?: {
     selectedUsecases: options?.graphData ? ['uc-1'] : [],
     ...(options?.subgraphProvenanceById
       ? {subgraphProvenanceById: options.subgraphProvenanceById}
-      : {}),
-    ...(options?.deleteContainers
-      ? {deleteContainers: options.deleteContainers}
       : {}),
     ...(options?.addModuleToEmptyCanvas
       ? {addModuleToEmptyCanvas: options.addModuleToEmptyCanvas}
@@ -538,18 +545,20 @@ describe('GraphDesigner — enable overlay sync', () => {
   });
 });
 
-describe('GraphDesigner - container deletion', () => {
-  it('warns before deleting a container from a palette-placed subgraph', async () => {
-    const deleteContainers = jest
-      .fn<
-        ReturnType<GraphDesignerStore['deleteContainers']>,
-        Parameters<GraphDesignerStore['deleteContainers']>
-      >()
-      .mockResolvedValue(true);
-    renderGraphDesigner({
-      deleteContainers,
+describe('GraphDesigner - visualizer wiring', () => {
+  it('passes context menu config to the visualizer in edit mode', async () => {
+    renderGraphDesigner({graphData: makeGraphData()});
+    await screen.findByTestId('usecase-visualizer');
+
+    expect(buildContextMenuConfig).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockVisualizerProps?.contextMenu).toBe(
+      jest.mocked(buildContextMenuConfig).mock.results[0].value,
+    );
+  });
+
+  it('calls deleteSelection for node delete payloads', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
       graphData: makeGraphData(),
-      subgraphProvenanceById: {'sg-1': 'palette-placed'},
     });
     await screen.findByTestId('usecase-visualizer');
 
@@ -559,156 +568,29 @@ describe('GraphDesigner - container deletion', () => {
       });
     });
 
-    expect(
-      screen.getByText('Delete container from subgraph?'),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /This removes the container from the underlying subgraph/,
-      ),
-    ).toBeInTheDocument();
-    expect(deleteContainers).not.toHaveBeenCalled();
+    expect(deleteSelection).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      ['container-cnt-1:sg-1'],
+      [],
+    );
   });
 
-  it('does not delete a palette-placed container when the warning is canceled', async () => {
-    const user = userEvent.setup();
-    const deleteContainers = jest
-      .fn<
-        ReturnType<GraphDesignerStore['deleteContainers']>,
-        Parameters<GraphDesignerStore['deleteContainers']>
-      >()
-      .mockResolvedValue(true);
-    renderGraphDesigner({
-      deleteContainers,
+  it('calls deleteSelection for edge delete payloads', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
       graphData: makeGraphData(),
-      subgraphProvenanceById: {'sg-1': 'palette-placed'},
     });
     await screen.findByTestId('usecase-visualizer');
 
     act(() => {
-      mockVisualizerProps?.eventHandlers?.onNodesDeleted?.({
-        nodeIds: ['container-cnt-1:sg-1'],
-      });
-    });
-    await user.click(screen.getByRole('button', {name: 'Cancel'}));
-
-    expect(deleteContainers).not.toHaveBeenCalled();
-    expect(
-      screen.queryByText('Delete container from subgraph?'),
-    ).not.toBeInTheDocument();
-  });
-
-  it('deletes a palette-placed container after the warning is confirmed', async () => {
-    const user = userEvent.setup();
-    const deleteContainers = jest
-      .fn<
-        ReturnType<GraphDesignerStore['deleteContainers']>,
-        Parameters<GraphDesignerStore['deleteContainers']>
-      >()
-      .mockResolvedValue(true);
-    renderGraphDesigner({
-      deleteContainers,
-      graphData: makeGraphData(),
-      subgraphProvenanceById: {'sg-1': 'palette-placed'},
-    });
-    await screen.findByTestId('usecase-visualizer');
-
-    act(() => {
-      mockVisualizerProps?.eventHandlers?.onNodesDeleted?.({
-        nodeIds: ['container-cnt-1:sg-1'],
-      });
-    });
-    await user.click(screen.getByRole('button', {name: 'Delete container'}));
-
-    await waitFor(() => {
-      expect(deleteContainers).toHaveBeenCalledWith(expect.any(Function), [
-        'cnt-1',
-      ]);
-    });
-  });
-
-  it('deletes a non-palette container without showing the warning', async () => {
-    const deleteContainers = jest
-      .fn<
-        ReturnType<GraphDesignerStore['deleteContainers']>,
-        Parameters<GraphDesignerStore['deleteContainers']>
-      >()
-      .mockResolvedValue(true);
-    renderGraphDesigner({
-      deleteContainers,
-      graphData: makeGraphData(),
-      subgraphProvenanceById: {'sg-1': 'pre-loaded'},
-    });
-    await screen.findByTestId('usecase-visualizer');
-
-    act(() => {
-      mockVisualizerProps?.eventHandlers?.onNodesDeleted?.({
-        nodeIds: ['container-cnt-1:sg-1'],
+      mockVisualizerProps?.eventHandlers?.onEdgesDeleted?.({
+        edgeIds: ['link-1'],
       });
     });
 
-    await waitFor(() => {
-      expect(deleteContainers).toHaveBeenCalledWith(expect.any(Function), [
-        'cnt-1',
-      ]);
-    });
-    expect(
-      screen.queryByText('Delete container from subgraph?'),
-    ).not.toBeInTheDocument();
-  });
-
-  it('deletes multiple non-palette containers through one batch call', async () => {
-    const graphData = makeGraphData();
-    const deleteContainers = jest
-      .fn<
-        ReturnType<GraphDesignerStore['deleteContainers']>,
-        Parameters<GraphDesignerStore['deleteContainers']>
-      >()
-      .mockResolvedValue(true);
-    renderGraphDesigner({
-      deleteContainers,
-      graphData: {
-        ...graphData,
-        containers: {
-          'cnt-1': {
-            containerId: 'cnt-1',
-            moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
-          },
-          'cnt-2': {
-            containerId: 'cnt-2',
-            moduleInstances: ['mod-2'],
-            subgraphId: 'sg-1',
-          },
-        },
-        moduleInstances: {
-          'mod-1': {
-            ...graphData.moduleInstances['mod-1'],
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
-          },
-          'mod-2': {
-            ...graphData.moduleInstances['mod-1'],
-            containerId: 'cnt-2',
-            moduleInstanceId: 'mod-2',
-          },
-        },
-      },
-      subgraphProvenanceById: {'sg-1': 'pre-loaded'},
-    });
-    await screen.findByTestId('usecase-visualizer');
-
-    act(() => {
-      mockVisualizerProps?.eventHandlers?.onNodesDeleted?.({
-        nodeIds: ['container-cnt-1:sg-1', 'container-cnt-2:sg-1'],
-      });
-    });
-
-    await waitFor(() => {
-      expect(deleteContainers).toHaveBeenCalledWith(expect.any(Function), [
-        'cnt-1',
-        'cnt-2',
-      ]);
-    });
+    expect(deleteSelection).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      [],
+      ['link-1'],
+    );
   });
 });

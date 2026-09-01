@@ -354,19 +354,14 @@ specified).
 
 ## 4. Port Context Menu
 
-FR-PORT-06's menu items ("Start connection" / "End connection") are defined
-and wired by Canvas UI Mechanics' context-menu configuration — this doc
-owns only the two handlers those items dispatch to:
+FR-PORT-06's menu items are mutually exclusive:
 
-- `"Start connection"` → Visualizer-internal `startConnection(nodeId, portId)`.
-- `"End connection"` → Visualizer-internal `completeConnection(nodeId, portId)`,
-  which invokes `connectPorts` via `onTwoClickConnectionComplete`
-  ([§2.2](#22-two-click-state-visualizer-internal)). Canvas UI Mechanics'
-  menu-item-visibility logic (showing "End connection" only when
-  `target.connectionInProgress` is `true`) reads a plain field on the
-  `ContextMenuTarget` the Visualizer itself populates
-  ([§2.2](#22-two-click-state-visualizer-internal)) — not a direct read of
-  `VisualizerInternalStore`, which Canvas UI Mechanics has no access to.
+- `"Start connection"` appears only when no two-click connection is active.
+- `"End connection"` appears only when `target.connectionInProgress` is `true`.
+
+`"End connection"` invokes Visualizer-internal
+`completeConnection(nodeId, port)`, which invokes `connectPorts` via
+`onEdgeConnected`.
 
 ---
 

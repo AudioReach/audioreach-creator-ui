@@ -44,7 +44,19 @@ export {useModuleList} from './hooks/use-module-list';
 export {useSubgraphList} from './hooks/use-subgraph-list';
 export {useSubsystemBrowser} from './hooks/use-subsystem-browser';
 export {useValidationResults} from './hooks/use-validation-results';
+export {
+  DELETE_HANDLERS,
+  DELETE_HANDLERS_INNER,
+  resolveGraphDesignerNodeId,
+} from './lib/delete-handlers';
 export {createLinkOperations} from './lib/link-operations';
+export {
+  deleteSelection,
+  filterCascadeRoots,
+  filterEdgesCoveredByCascade,
+  isAncestorOf,
+  resolveNodeKind,
+} from './lib/multi-select-delete';
 export {
   parseModuleDropPayload,
   resolveModuleDropTarget,
@@ -61,6 +73,7 @@ export {
 } from './model/graph-designer-store-context';
 export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
 export type {ContainerOperations} from './lib/container-operations';
+export type {LinkOperations} from './lib/link-operations';
 export type {
   ModuleDropPayload,
   ModuleDropResolution,
@@ -76,4 +89,5 @@ export type {
 } from './lib/subsystem-operations';
 export type {GraphDesignerStore} from './model/graph-designer-store';
 export type {GraphDesignerStoreApi} from './model/graph-designer-store-context';
+export type {UsecaseGraphData} from './model/graph-data-slice';
 export {ApplyDiscardControls} from './ui/apply-discard-controls';

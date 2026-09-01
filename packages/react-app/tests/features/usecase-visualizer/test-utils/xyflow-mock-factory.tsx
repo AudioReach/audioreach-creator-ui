@@ -174,6 +174,9 @@ export function createXyflowMockFactory() {
   const Handle = (props: Record<string, unknown>) => (
     <div
       className={props.className as string | undefined}
+      data-connection-source={
+        props['data-connection-source'] ? 'true' : undefined
+      }
       data-handleid={props.id as string | undefined}
       data-handlepos={props.position as string | undefined}
       data-port-id={props['data-port-id'] as string | undefined}
