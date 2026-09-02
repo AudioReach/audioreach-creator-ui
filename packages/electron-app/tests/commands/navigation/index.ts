@@ -3,4 +3,5 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export * from './electron';
+export {openAbout} from './about';
+export {expandSideNav} from './side-nav';
