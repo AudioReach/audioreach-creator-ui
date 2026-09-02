@@ -1186,7 +1186,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       </div>
 
       {/* Graph Visualizer below */}
-      <div className="bg-primary relative flex-1 overflow-hidden">
+      <div
+        className="bg-primary relative flex-1 overflow-hidden"
+        data-project-id={projectId}
+      >
         {/* Search overlay – floats above the graph canvas at top-right */}
         <div
           className={`absolute top-[5px] right-3 z-10 w-[380px] max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${

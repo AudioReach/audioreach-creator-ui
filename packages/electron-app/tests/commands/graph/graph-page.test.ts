@@ -49,7 +49,7 @@ test('graph page prefers an instance ID and falls back to the first label', asyn
   await page.setContent(`
     <div data-project-id="project-1">
       <div class="react-flow__node">
-        <div data-testid="module-node" onclick="this.classList.add('selected')">
+        <div data-testid="module-node" onclick="document.querySelectorAll('.react-flow__node').forEach((node) => node.classList.remove('selected')); this.parentElement.classList.add('selected')">
           <div data-testid="module-footer">
             <span>Data Logging</span>
             <span data-testid="module-instance-id">IID: 0x1</span>
@@ -57,7 +57,7 @@ test('graph page prefers an instance ID and falls back to the first label', asyn
         </div>
       </div>
       <div class="react-flow__node">
-        <div data-testid="module-node" onclick="this.classList.add('selected')">
+        <div data-testid="module-node" onclick="document.querySelectorAll('.react-flow__node').forEach((node) => node.classList.remove('selected')); this.parentElement.classList.add('selected')">
           <div data-testid="module-footer">
             <span>Data Logging</span>
             <span data-testid="module-instance-id">IID: 0x2</span>
@@ -75,12 +75,12 @@ test('graph page prefers an instance ID and falls back to the first label', asyn
     projectId: 'project-1',
   });
   await expect(
-    graph.nodeByIdentity({
+    graph.selectedNode({
       nodeInstanceId: '0x2',
       nodeLabel: 'Data Logging',
       projectId: 'project-1',
     }),
-  ).toHaveClass(/selected/);
+  ).toHaveCount(1);
 
   await graph.selectNode({
     nodeInstanceId: 'missing',
@@ -100,4 +100,11 @@ test('graph page prefers an instance ID and falls back to the first label', asyn
       projectId: 'project-1',
     }),
   ).toHaveCount(2);
+  await expect(
+    graph.selectedNode({
+      nodeInstanceId: '0x1',
+      nodeLabel: 'Data Logging',
+      projectId: 'project-1',
+    }),
+  ).toHaveCount(1);
 });

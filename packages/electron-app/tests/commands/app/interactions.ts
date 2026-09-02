@@ -151,7 +151,8 @@ export const isEnabled: CommandFactory<InteractionTargetInput, boolean> = (
 export const isSelected: CommandFactory<InteractionTargetInput, boolean> = (
   input,
 ) => ({
-  execute: (context) => locate(context, input).isSelected(),
+  execute: async (context) =>
+    (await locate(context, input).getAttribute('aria-selected')) === 'true',
   id: 'app.is-selected',
   metadata: {target: input.targetDescription},
 });

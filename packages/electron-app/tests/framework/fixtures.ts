@@ -17,6 +17,11 @@ import {
   installOpenProjectFileSeam,
   type OpenProjectFileResponse,
 } from './open-project-file';
+import {
+  loadTestInputs,
+  resolveTestData,
+  type TestInputOverrides,
+} from './test-data';
 import {createGraphPage} from '../pages/graph-page';
 import {createHomePage} from '../pages/home-page';
 import {createSideNav} from '../pages/side-nav';
@@ -30,6 +35,8 @@ export type TestSession = TestContext & {
 };
 
 type AppLauncher = () => Promise<ElectronApplication>;
+
+const testCaseAnnotationType = 'audioreach-test-case';
 
 const defaultValidOpenProjectPath = fileURLToPath(
   new URL(
@@ -78,22 +85,27 @@ export async function closeTestApp(
 }
 
 export function getTestData(
-  environment: NodeJS.ProcessEnv = process.env,
+  overrides: TestInputOverrides = {},
 ): TestData {
   return {
-    moduleNodeId: environment.E2E_MODULE_NODE_ID,
-    rejectedProjectPath:
-      environment.E2E_REJECTED_PROJECT_PATH ?? defaultRejectedProjectPath,
-    useCaseQuery: environment.E2E_USE_CASE_QUERY ?? 'Active',
-    validOpenProjectPath:
-      environment.E2E_VALID_OPEN_PROJECT_PATH ?? defaultValidOpenProjectPath,
-    workspacePath:
-      environment.E2E_WORKSPACE_PATH ?? defaultValidOpenProjectPath,
+    customInputs: {},
+    rejectedProjectPath: defaultRejectedProjectPath,
+    useCaseQuery: '',
+    validOpenProjectPath: defaultValidOpenProjectPath,
+    workspacePath: defaultValidOpenProjectPath,
+    ...overrides,
   };
 }
 
 export const testSession = base.extend<{testSession: TestSession}>({
   testSession: async ({playwright: _playwright}, use, testInfo: TestInfo) => {
+    const inputsPath = fileURLToPath(
+      new URL('../data/inputs.json', import.meta.url),
+    );
+    const inputs = await loadTestInputs(inputsPath);
+    const caseId = testInfo.annotations.find(
+      (annotation) => annotation.type === testCaseAnnotationType,
+    )?.description;
     const app = await launchTestApp();
     let testError: unknown;
     let failed = false;
@@ -166,7 +178,12 @@ export const testSession = base.extend<{testSession: TestSession}>({
           sideNav: createSideNav(page),
           useCaseSelector: createUseCaseSelector(page),
         },
-        testData: getTestData(),
+        testData: resolveTestData(
+          getTestData(),
+          inputs,
+          caseId,
+          inputsPath,
+        ),
         testInfo,
       };
       const runner = new CommandRunner(testInfo, context);
@@ -198,3 +215,11 @@ export const testSession = base.extend<{testSession: TestSession}>({
     }
   },
 });
+
+export function testCase(id: string): {
+  readonly annotation: {readonly description: string; readonly type: string};
+} {
+  return {
+    annotation: {description: id, type: testCaseAnnotationType},
+  };
+}

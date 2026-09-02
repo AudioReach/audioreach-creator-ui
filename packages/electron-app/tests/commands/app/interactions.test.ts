@@ -49,8 +49,10 @@ function createCalls(): Calls {
       dragTo: () => Promise.resolve(calls.push('drag-to')),
       fill: (value: string) => Promise.resolve(calls.push(`fill:${value}`)),
       focus: () => Promise.resolve(calls.push('focus')),
-      getAttribute: (name: string) =>
-        Promise.resolve(calls.push(`attribute:${name}`) && 'value'),
+       getAttribute: (name: string) => {
+         calls.push(`attribute:${name}`);
+         return Promise.resolve(name === 'aria-selected' ? 'true' : 'value');
+       },
       hover: () => Promise.resolve(calls.push('hover')),
       innerText: () => Promise.resolve(calls.push('text') && 'visible text'),
       isChecked: () => Promise.resolve(calls.push('checked') && true),
@@ -135,8 +137,8 @@ test('interaction commands use stable IDs, descriptions, and operations', async 
     'focus',
     'describe:control',
     'enabled',
-    'describe:control',
-    'selected',
+     'describe:control',
+     'attribute:aria-selected',
     'describe:control',
     'checked',
     'describe:control',

@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "rejectedProjectPath": "fixtures/rejected-open-project/workspaceFileXml.awsp",
+    "useCaseQuery": "Speaker_Mic",
+    "validOpenProjectPath": "fixtures/valid-open-project/workspaceFileXml.awsp",
+    "workspacePath": "fixtures/valid-open-project/workspaceFileXml.awsp"
+  },
+  "cases": {
+    "module-selection": {
+      "customInputs": {
+        "graph": {
+          "moduleLabel": "Data Logging"
+        }
+      },
+      "useCaseQuery": "Speaker"
+    },
+    "module-instance-selection": {
+      "customInputs": {
+        "graph": {
+          "moduleInstanceId": "0xDEADBEEF",
+          "moduleLabel": "Data Logging"
+        }
+      },
+      "useCaseQuery": "Speaker"
+    },
+    "use-case-filter": {
+      "useCaseQuery": "BT_Rx"
+    }
+  }
+}
