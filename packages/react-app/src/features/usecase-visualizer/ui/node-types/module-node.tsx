@@ -178,6 +178,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
     <div
       className="relative"
       data-locked={isLocked || undefined}
+      data-node-id={node.id}
       data-pp-module={isPpModule || undefined}
       data-shape={shape}
       data-testid="module-node"
@@ -195,7 +196,6 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
         ]
           .filter(Boolean)
           .join(' ')}
-        data-node-id={node.id}
         data-testid="module-shape-layer"
         style={{height: boxHeight}}
       >

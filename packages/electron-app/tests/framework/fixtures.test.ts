@@ -55,19 +55,19 @@ test('getTestData default path does not depend on process CWD', () => {
   }
 });
 
-test('getTestData preserves an environment workspace override', () => {
+test('getTestData preserves a workspace override', () => {
   const override = 'portable-temp/workspaceFileXml.awsp';
 
   expect(
-    getTestData({E2E_VALID_OPEN_PROJECT_PATH: override}).validOpenProjectPath,
+    getTestData({validOpenProjectPath: override}).validOpenProjectPath,
   ).toBe(override);
 });
 
-test('getTestData preserves an environment rejected-project override', () => {
+test('getTestData preserves a rejected-project override', () => {
   const override = 'portable-temp/rejected-workspace.awsp';
 
   expect(
-    getTestData({E2E_REJECTED_PROJECT_PATH: override}).rejectedProjectPath,
+    getTestData({rejectedProjectPath: override}).rejectedProjectPath,
   ).toBe(override);
 });
 
@@ -125,7 +125,7 @@ test('CommandRunner names the step and attaches safe command metadata', async ()
     page,
     pages: {} as PageObjects,
     testData: {
-      moduleNodeId: 'module-1',
+      customInputs: {},
       rejectedProjectPath: '/tmp/rejected-project',
       useCaseQuery: 'voice call',
       validOpenProjectPath: '/tmp/valid-open-project',

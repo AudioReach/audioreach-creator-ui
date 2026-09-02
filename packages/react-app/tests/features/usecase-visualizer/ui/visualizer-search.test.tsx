@@ -59,6 +59,15 @@ function makeGraph(overrides: Partial<LevelView> = {}): LevelView {
   };
 }
 
+function getModuleShape(
+  container: HTMLElement,
+  nodeId: string,
+): HTMLElement | null {
+  return container.querySelector(
+    `[data-node-id="${nodeId}"] [data-testid="module-shape-layer"]`,
+  );
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   latestReactFlowProps.current = null;
@@ -84,8 +93,8 @@ describe('search highlights', () => {
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights} />,
     );
 
-    const m1 = container.querySelector('[data-node-id="m-1"]');
-    const m2 = container.querySelector('[data-node-id="m-2"]');
+    const m1 = getModuleShape(container, 'm-1');
+    const m2 = getModuleShape(container, 'm-2');
     expect(m1?.classList.contains('search-highlight-match')).toBe(true);
     expect(m2?.classList.contains('search-highlight-match')).toBe(false);
   });
@@ -99,7 +108,7 @@ describe('search highlights', () => {
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights} />,
     );
 
-    const m1 = container.querySelector('[data-node-id="m-1"]');
+    const m1 = getModuleShape(container, 'm-1');
     // active overrides match in the store — class is search-highlight-active not
     // match
     expect(m1?.classList.contains('search-highlight-active')).toBe(true);
@@ -115,8 +124,8 @@ describe('search highlights', () => {
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights} />,
     );
 
-    const m1 = container.querySelector('[data-node-id="m-1"]');
-    const m2 = container.querySelector('[data-node-id="m-2"]');
+    const m1 = getModuleShape(container, 'm-1');
+    const m2 = getModuleShape(container, 'm-2');
     expect(m1?.classList.contains('search-contains-match')).toBe(true);
     expect(m2?.classList.contains('search-contains-match')).toBe(false);
   });
@@ -129,23 +138,23 @@ describe('search highlights', () => {
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights1} />,
     );
     expect(
-      container
-        .querySelector('[data-node-id="m-1"]')
-        ?.classList.contains('search-highlight-match'),
+      getModuleShape(container, 'm-1')?.classList.contains(
+        'search-highlight-match',
+      ),
     ).toBe(true);
 
     rerender(
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights2} />,
     );
     expect(
-      container
-        .querySelector('[data-node-id="m-1"]')
-        ?.classList.contains('search-highlight-match'),
+      getModuleShape(container, 'm-1')?.classList.contains(
+        'search-highlight-match',
+      ),
     ).toBe(false);
     expect(
-      container
-        .querySelector('[data-node-id="m-2"]')
-        ?.classList.contains('search-highlight-match'),
+      getModuleShape(container, 'm-2')?.classList.contains(
+        'search-highlight-match',
+      ),
     ).toBe(true);
     // No activeId — setCenter must not be called
     expect(mockSetCenter).not.toHaveBeenCalled();
@@ -160,7 +169,7 @@ describe('search highlights', () => {
     const {container, rerender} = render(
       <UsecaseVisualizer graph={makeGraph()} searchHighlights={highlights} />,
     );
-    const m1 = container.querySelector('[data-node-id="m-1"]');
+    const m1 = getModuleShape(container, 'm-1');
     expect(m1?.classList.contains('search-highlight-match')).toBe(true);
     expect(m1?.classList.contains('search-contains-match')).toBe(true);
 
