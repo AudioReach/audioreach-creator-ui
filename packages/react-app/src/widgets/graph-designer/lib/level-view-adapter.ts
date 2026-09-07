@@ -233,3 +233,111 @@ export function buildLevelViewFromGraphData(
     subsystems,
   };
 }
+
+function collectDescendantSubsystemIds(
+  data: UsecaseGraphData,
+  subsystemId: string,
+): Set<string> {
+  const descendantSubsystemIds = new Set<string>();
+  const pendingSubsystemIds = [
+    ...(data.subsystems[subsystemId]?.childSubsystemIds ?? []),
+  ];
+
+  while (pendingSubsystemIds.length > 0) {
+    const childSubsystemId = pendingSubsystemIds.pop();
+    if (
+      childSubsystemId === undefined ||
+      childSubsystemId === subsystemId ||
+      descendantSubsystemIds.has(childSubsystemId)
+    ) {
+      continue;
+    }
+
+    const childSubsystem = data.subsystems[childSubsystemId];
+    if (!childSubsystem) {
+      continue;
+    }
+
+    descendantSubsystemIds.add(childSubsystemId);
+    pendingSubsystemIds.push(...childSubsystem.childSubsystemIds);
+  }
+
+  return descendantSubsystemIds;
+}
+
+/**
+ * Builds a canvas view scoped to one subsystem's descendant nodes and links.
+ * Returns null if the subsystem is not found in the current graph data.
+ */
+export function buildSubsystemLevelViewFromGraphData(
+  data: UsecaseGraphData,
+  subsystemId: string,
+  levelId: string,
+): LevelView | null {
+  const subsystem = data.subsystems[subsystemId];
+  if (!subsystem) {
+    return null;
+  }
+
+  const descendantSubsystemIds = collectDescendantSubsystemIds(
+    data,
+    subsystemId,
+  );
+  const scopedSubsystemIds = new Set([subsystemId, ...descendantSubsystemIds]);
+  const scopedSubgraphIds = new Set<string>();
+  for (const scopedSubsystemId of scopedSubsystemIds) {
+    for (const subgraphId of data.subsystems[scopedSubsystemId]?.subgraphs ?? []) {
+      scopedSubgraphIds.add(subgraphId);
+    }
+  }
+
+  const moduleInstances: UsecaseGraphData['moduleInstances'] = {};
+  for (const [id, m] of Object.entries(data.moduleInstances)) {
+    if (scopedSubgraphIds.has(m.subgraphId)) {
+      moduleInstances[id] = m;
+    }
+  }
+  const includedNodeIds = new Set([
+    ...Object.keys(moduleInstances),
+    ...descendantSubsystemIds,
+  ]);
+
+  const connections = data.connections.filter(
+    (c) =>
+      includedNodeIds.has(c.fromModuleId) &&
+      includedNodeIds.has(c.toModuleId),
+  );
+
+  const subgraphs: UsecaseGraphData['subgraphs'] = {};
+  for (const [id, sg] of Object.entries(data.subgraphs)) {
+    if (scopedSubgraphIds.has(id)) {
+      subgraphs[id] = sg;
+    }
+  }
+
+  const containers: UsecaseGraphData['containers'] = {};
+  for (const [id, c] of Object.entries(data.containers)) {
+    if (scopedSubgraphIds.has(c.subgraphId)) {
+      containers[id] = c;
+    }
+  }
+
+  const subsystems: UsecaseGraphData['subsystems'] = {};
+  for (const [id, ss] of Object.entries(data.subsystems)) {
+    if (descendantSubsystemIds.has(id)) {
+      subsystems[id] = ss;
+    }
+  }
+
+  return buildLevelViewFromGraphData(
+    {
+      connections,
+      containers,
+      moduleInstances,
+      selectedUsecases: data.selectedUsecases,
+      subgraphs,
+      subsystems,
+    },
+    levelId,
+  );
+}

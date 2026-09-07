@@ -25,6 +25,7 @@ import {
   RIGHT_TABSET_ID,
   ROOT_LAYOUT_ID,
   SUBGRAPH_LIST_COMPONENT_NAME,
+  SUBSYSTEM_BROWSER_COMPONENT_NAME,
   VALIDATION_RESULTS_COMPONENT_NAME,
 } from '~shared/config/utils';
 
@@ -39,7 +40,8 @@ function tabset(id: string, children: IJsonTabNode[]): IJsonTabSetNode {
 }
 
 // Mirrors GetFlexLayoutConfig()'s current shape: root > topRow (left column +
-// center + right) and bottomRow, with left holding Module List + Subgraph List.
+// center + right) and bottomRow, with left holding Module List + Subgraph
+// List + Subsystem Browser.
 function layout(overrides?: {
   bottom?: IJsonTabNode[];
   center?: IJsonTabNode[];
@@ -49,6 +51,7 @@ function layout(overrides?: {
   const left = overrides?.left ?? [
     tab(MODULE_LIST_COMPONENT_NAME, MODULE_LIST_COMPONENT_NAME),
     tab(SUBGRAPH_LIST_COMPONENT_NAME, SUBGRAPH_LIST_COMPONENT_NAME),
+    tab(SUBSYSTEM_BROWSER_COMPONENT_NAME, SUBSYSTEM_BROWSER_COMPONENT_NAME),
   ];
   const center = overrides?.center ?? [tab('graph-designer', 'graph-designer')];
   const right = overrides?.right ?? [

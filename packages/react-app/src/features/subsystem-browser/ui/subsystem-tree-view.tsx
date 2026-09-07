@@ -9,7 +9,7 @@ import {ChevronsDown, ChevronsUp} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
-import type {SubsystemBrowserTreeNode} from '~features/subsystem-browser/model/subsystem-browser.types';
+import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
 import SearchBox from './search-box';
@@ -17,7 +17,7 @@ import SubsystemTreeNode from './subsystem-tree-node';
 
 interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
-  onClick: (id: number) => void;
+  onClick: (systemId: string) => void;
 }
 
 // collect all ids in the tree (depth-first)

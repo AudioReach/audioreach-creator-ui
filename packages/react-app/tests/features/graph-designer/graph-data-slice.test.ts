@@ -32,6 +32,10 @@ import {
   type ModuleDefinition,
   type ModuleListSlice,
 } from '~features/graph-designer/model/module-list-slice';
+import {
+  createSubsystemSlice,
+  type SubsystemSlice,
+} from '~shared/store/tab-store-slices/subsystem-slice';
 
 import {
   makeDataLinkDto,
@@ -50,13 +54,17 @@ beforeEach(() => {
   });
 });
 
-type TestStore = GraphDataSlice & ModuleListSlice & EditSessionSlice;
+type TestStore = GraphDataSlice &
+  ModuleListSlice &
+  EditSessionSlice &
+  SubsystemSlice;
 
 function makeStore(moduleList: ModuleDefinition[] = []) {
   const store = createStore<TestStore>((set, get) => ({
     ...createGraphDataSlice(set, get, 'proj-1'),
     ...createModuleListSlice(set, get, 'proj-1'),
     ...createEditSessionSlice(set, get, 'proj-1'),
+    ...createSubsystemSlice(set, get),
   }));
   if (moduleList.length > 0) {
     store.setState({moduleList});

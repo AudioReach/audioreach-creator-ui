@@ -89,7 +89,10 @@ import {
   buildDroppedModulePositionOverrides,
   type ModuleDropPlacement,
 } from '../lib/dropped-module-position-overrides';
-import {buildLevelViewFromGraphData} from '../lib/level-view-adapter';
+import {
+  buildLevelViewFromGraphData,
+  buildSubsystemLevelViewFromGraphData,
+} from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
 import {
   containerNodeId,
@@ -213,12 +216,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const clearNodeFocusRequest = useGraphDesignerStoreShallow(
     (s) => s.clearNodeFocusRequest,
   );
+  const clearActiveSubsystem = useGraphDesignerStoreShallow(
+    (s) => s.clearActiveSubsystem,
+  );
   const moduleListStatus = useGraphDesignerStoreShallow(
     (s) => s.moduleListStatus,
   );
   const loadModuleList = useGraphDesignerStoreShallow((s) => s.loadModuleList);
   const syncEnableOverlays = useGraphDesignerStoreShallow(
     (s) => s.syncEnableOverlays,
+  );
+
+  // Active subsystem for scoped canvas view (set by Subsystem Browser panel).
+  const activeSubsystemId = useGraphDesignerStoreShallow(
+    (s) => s.activeSubsystemId,
   );
 
   // Module list, for deriving which modules are PP for Highlight PP Modules.
@@ -539,6 +550,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Effect A — trigger load when selection changes
   useEffect(() => {
     resetSearch();
+    clearActiveSubsystem();
     clearLevelView();
     setCollapseByLevel({});
     setPositionOverrides({});
@@ -560,6 +572,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   }, [
     selectedUsecases,
     resolvedData,
+    clearActiveSubsystem,
     clearLevelView,
     initializeEmptyGraphData,
     loadGraphData,
@@ -575,8 +588,15 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       return;
     }
     const gen = ++layoutGenerationRef.current;
-    const levelId = selectedUsecases.join(',');
-    const unpositioned = buildLevelViewFromGraphData(graphData, levelId);
+    const levelId = activeSubsystemId
+      ? `subsystem:${activeSubsystemId}`
+      : selectedUsecases.join(',');
+    const unpositioned = activeSubsystemId
+      ? buildSubsystemLevelViewFromGraphData(graphData, activeSubsystemId, levelId)
+      : buildLevelViewFromGraphData(graphData, levelId);
+    if (!unpositioned) {
+      return;
+    }
     const filtered = applyPortVisibility(
       unpositioned,
       effectivePortVisibilityMode,
@@ -596,6 +616,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     selectedUsecases,
     setLevelView,
     effectivePortVisibilityMode,
+    activeSubsystemId,
   ]);
 
   // Effect — proactively fetch enable-parameter values so canvas enable

@@ -17,6 +17,9 @@ import type {
 } from '~entities/usecases/model/usecase-component.dto';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
+import type {SubsystemSlice} from '~shared/store/tab-store-slices/subsystem-slice';
+
+import {buildSubsystemTree} from '../lib/subsystem-tree.utils';
 
 import type {EditSessionSlice} from './edit-session-slice';
 import type {ModuleListSlice} from './module-list-slice';
@@ -516,7 +519,10 @@ function resolveLinkEndpoints(
  * @param projectId - Project identifier passed to the API.
  */
 export function createGraphDataSlice<
-  S extends GraphDataSlice & ModuleListSlice & EditSessionSlice,
+  S extends GraphDataSlice &
+    ModuleListSlice &
+    EditSessionSlice &
+    SubsystemSlice,
 >(
   set: StoreApi<S>['setState'],
   get: StoreApi<S>['getState'],
@@ -853,6 +859,8 @@ export function createGraphDataSlice<
             subsystemName: ss.name,
           };
         }
+
+        get().setSubsystemData(buildSubsystemTree(subsystemDtos, spfModules));
 
         const connections: Connection[] = [];
         for (const link of dto.dataLinks) {

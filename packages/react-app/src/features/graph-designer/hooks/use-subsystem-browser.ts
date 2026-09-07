@@ -11,6 +11,7 @@ export function useSubsystemBrowser() {
     loadSubsystems: state.loadSubsystems,
     removeSubsystem: state.removeSubsystem,
     renameSubsystem: state.renameSubsystem,
+    setActiveSubsystemId: state.setActiveSubsystemId,
     setSubsystemData: state.setSubsystemData,
     subsystemData: state.subsystemData,
     subsystemStatus: state.subsystemStatus,

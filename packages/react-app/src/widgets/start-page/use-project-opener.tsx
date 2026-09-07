@@ -20,6 +20,7 @@ import type {
 } from '~features/project-operations';
 import {useArcRecentProjects} from '~features/recent-projects';
 import {SubgraphList} from '~features/subgraph-list';
+import {SubsystemBrowser} from '~features/subsystem-browser';
 import {ValidationResultPanel} from '~features/validation-result-view';
 import {ConfigFileManager} from '~shared/config/config-manager';
 import {
@@ -31,6 +32,7 @@ import {
   migrateFlexLayoutConfig,
   MODULE_LIST_COMPONENT_NAME,
   SUBGRAPH_LIST_COMPONENT_NAME,
+  SUBSYSTEM_BROWSER_COMPONENT_NAME,
   VALIDATION_RESULTS_COMPONENT_NAME,
 } from '~shared/config/utils';
 import {showToast} from '~shared/controls/global-toaster';
@@ -179,6 +181,15 @@ export function useProjectOpener({
             <ProjectStoreContext.Provider value={projectStore}>
               <GraphDesignerStoreContext.Provider value={tabStore}>
                 <SubgraphList />
+              </GraphDesignerStoreContext.Provider>
+            </ProjectStoreContext.Provider>
+          );
+        }
+        if (component === SUBSYSTEM_BROWSER_COMPONENT_NAME) {
+          return (
+            <ProjectStoreContext.Provider value={projectStore}>
+              <GraphDesignerStoreContext.Provider value={tabStore}>
+                <SubsystemBrowser />
               </GraphDesignerStoreContext.Provider>
             </ProjectStoreContext.Provider>
           );

@@ -45,6 +45,7 @@ export function buildSubsystemTree(
       id: ss.id,
       name: ss.name,
       subgraphIds: Array.from(subsystemSubgraphIds.get(ss.id) ?? []),
+      systemId: ss.systemId,
     });
   }
 

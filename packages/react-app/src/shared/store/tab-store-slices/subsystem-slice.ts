@@ -18,6 +18,7 @@ export interface SubsystemBrowserTreeNode {
   id: number;
   name: string;
   subgraphIds: string[];
+  systemId: string;
 }
 
 export interface SubsystemSlice {

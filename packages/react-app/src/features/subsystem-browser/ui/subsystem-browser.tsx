@@ -10,12 +10,11 @@ import {useSubsystemBrowser} from '~features/graph-designer';
 import SubSystemTreeView from './subsystem-tree-view';
 
 export const SubsystemBrowser: FC = () => {
-  // _id is intentionally unused for now to satisfy lint rule
-  const handleOnClick = (_id: number) => {
-    // TODO: Implement actual navigation logic
-  };
+  const {setActiveSubsystemId, subsystemData} = useSubsystemBrowser();
 
-  const {subsystemData} = useSubsystemBrowser();
+  const handleOnClick = (systemId: string) => {
+    setActiveSubsystemId(systemId);
+  };
 
   return (
     <div
