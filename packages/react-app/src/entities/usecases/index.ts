@@ -14,6 +14,7 @@ export {
   getSubgraphPairs,
   getSubgraphsByIds,
   getUsecaseComponents,
+  getUsecaseComponentsFilteredBySubsystem,
   getUsecasesFilteredBySubsystem,
   getUsecasesWithFilter,
   renameSubgraph,

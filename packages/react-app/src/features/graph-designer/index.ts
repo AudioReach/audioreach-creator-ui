@@ -49,6 +49,7 @@ export {
   DELETE_HANDLERS_INNER,
   resolveGraphDesignerNodeId,
 } from './lib/delete-handlers';
+export {isSubsystemScopedFilter} from './lib/is-subsystem-scoped-filter';
 export {createLinkOperations} from './lib/link-operations';
 export {
   deleteSelection,

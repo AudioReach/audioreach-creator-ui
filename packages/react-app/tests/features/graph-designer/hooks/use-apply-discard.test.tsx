@@ -4,6 +4,33 @@
  */
 
 jest.mock('~shared/lib/logger');
+jest.mock('~shared/config/hooks', () => ({
+  useUserPreferences: jest.fn(() => ({
+    getPreference: jest.fn(),
+    preferences: {
+      display: {portVisibilityMode: 'active'},
+      usecases: {
+        namePreference: 'alias',
+        selectedUsecases: [],
+        workflowLevel: 'usecase-level',
+        workflowType: 'usecase-workflow',
+      },
+      visualization: {
+        expandSubgraphs: false,
+        highlightPPModules: false,
+        showContainerIds: false,
+        showControlLinks: true,
+        showDanglingLinks: true,
+        showMdfModules: false,
+        showModuleInstanceIds: false,
+        showSubgraphIds: false,
+        simplifySubsystems: false,
+        viewMode: 'compact',
+      },
+    },
+    updatePreference: jest.fn(),
+  })),
+}));
 jest.mock('~shared/store/global-store', () => ({
   useGlobalStore: {
     getState: jest.fn(() => ({
@@ -53,9 +80,7 @@ import {
   createGraphDesignerStore,
   type GraphDesignerStore,
 } from '~features/graph-designer/model/graph-designer-store';
-import {
-  GraphDesignerStoreContext,
-} from '~features/graph-designer/model/graph-designer-store-context';
+import {GraphDesignerStoreContext} from '~features/graph-designer/model/graph-designer-store-context';
 import {showToast} from '~shared/controls/global-toaster';
 import {tabFocusRegistry} from '~shared/store';
 
@@ -112,9 +137,7 @@ function renderApplyDiscard(
     () => useApplyDiscard({projectId: PROJECT_ID, routingTriggered}),
     {
       wrapper: ({children}) => (
-        <GraphDesignerStoreContext.Provider
-          value={store}
-        >
+        <GraphDesignerStoreContext.Provider value={store}>
           {children}
         </GraphDesignerStoreContext.Provider>
       ),
@@ -634,10 +657,10 @@ describe('useApplyDiscard', () => {
         await result.current.submitReview(['change-1'], 'add');
       });
 
-      expect(loadGraphDataSpy).toHaveBeenCalledWith([
-        'uc-existing',
-        'uc-new-1',
-      ]);
+      expect(loadGraphDataSpy).toHaveBeenCalledWith(
+        ['uc-existing', 'uc-new-1'],
+        {filterBySubsystem: false},
+      );
       loadGraphDataSpy.mockRestore();
     });
 
@@ -656,7 +679,9 @@ describe('useApplyDiscard', () => {
         await result.current.submitReview(['change-1'], 'switch');
       });
 
-      expect(loadGraphDataSpy).toHaveBeenCalledWith(['uc-new-1']);
+      expect(loadGraphDataSpy).toHaveBeenCalledWith(['uc-new-1'], {
+        filterBySubsystem: false,
+      });
       loadGraphDataSpy.mockRestore();
     });
 
@@ -675,7 +700,9 @@ describe('useApplyDiscard', () => {
         await result.current.submitReview([], 'switch');
       });
 
-      expect(loadGraphDataSpy).toHaveBeenCalledWith([]);
+      expect(loadGraphDataSpy).toHaveBeenCalledWith([], {
+        filterBySubsystem: false,
+      });
       loadGraphDataSpy.mockRestore();
     });
   });

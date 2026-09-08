@@ -605,11 +605,17 @@ export async function layoutLevelView(graph: LevelView): Promise<LevelView> {
     0,
   );
   const ssStartX = subsystems.length > 0 ? sgRight + SP * 2 : 0;
-  const finalSubsystems = subsystems.map((ss, i) => ({
-    ...ss,
-    x: ssStartX + i * (ss.width + SP * 2),
-    y: 0,
-  }));
+  const finalSubsystems = subsystems.map((ss, i) => {
+    const width = Math.max(ss.width, NODE_DIMENSIONS.subsystem.width);
+    const height = Math.max(ss.height, NODE_DIMENSIONS.subsystem.baseHeight);
+    return {
+      ...ss,
+      height,
+      width,
+      x: ssStartX + i * (width + SP * 2),
+      y: 0,
+    };
+  });
 
   return {
     ...graph,

@@ -19,7 +19,10 @@ import {
   type SubgraphNodeMeta,
   type SubsystemNode,
 } from '~entities/graph';
-import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import type {
+  Connection,
+  UsecaseGraphData,
+} from '~features/graph-designer/model/graph-data-slice';
 import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
 import {logger} from '~shared/lib/logger';
 
@@ -43,45 +46,83 @@ function resolveModuleShape(name: string): ModuleShape | undefined {
   return undefined;
 }
 
+function dedupeConnectionsById(connections: Connection[]): Connection[] {
+  const seenConnectionIds = new Set<string>();
+  const dedupedConnections: Connection[] = [];
+
+  for (const connection of connections) {
+    if (seenConnectionIds.has(connection.connectionId)) {
+      logger.warn(
+        `buildLevelViewFromGraphData: duplicate connection id omitted: ${connection.connectionId}`,
+        {
+          action: 'build_level_view',
+          component: 'levelViewAdapter',
+        },
+      );
+      continue;
+    }
+    seenConnectionIds.add(connection.connectionId);
+    dedupedConnections.push(connection);
+  }
+
+  return dedupedConnections;
+}
+
 export function buildLevelViewFromGraphData(
   data: UsecaseGraphData,
   levelId: string,
 ): LevelView {
-  const modules: ModuleNode[] = Object.values(data.moduleInstances).map((m) => {
+  const allSubsystems = Object.values(data.subsystems);
+  const childSubsystemIds = new Set(
+    allSubsystems.flatMap((ss) => ss.childSubsystemIds),
+  );
+  const visibleSubsystems = allSubsystems.filter(
+    (ss) => !childSubsystemIds.has(ss.subsystemId),
+  );
+  const subgraphToSubsystemId = new Map<string, string>();
+  for (const ss of allSubsystems) {
+    for (const sgId of ss.subgraphs) {
+      subgraphToSubsystemId.set(sgId, ss.subsystemId);
+    }
+  }
+  const subsystemChildSubgraphIds = new Set(subgraphToSubsystemId.keys());
+  const visibleModuleInstances = Object.values(data.moduleInstances).filter(
+    (m) => !subsystemChildSubgraphIds.has(m.subgraphId),
+  );
+  const visibleConnectionNodeIds = new Set([
+    ...visibleModuleInstances.map((m) => m.moduleInstanceId),
+    ...visibleSubsystems.map((ss) => ss.subsystemId),
+  ]);
+
+  const modules: ModuleNode[] = visibleModuleInstances.map((m) => {
     const ports: Port[] = [
       ...m.inputPorts
         .filter((p) => p.portType === 'data')
-        .map(
-          (p): Port => ({
-            activeLinks: p.activeLinks,
-            id: p.portSystemId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.INPUT,
-            totalLinks: p.totalLinksAtPort,
-          }),
-        ),
+        .map((p): Port => ({
+          activeLinks: p.activeLinks,
+          id: p.portSystemId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.INPUT,
+          totalLinks: p.totalLinksAtPort,
+        })),
       ...m.outputPorts
         .filter((p) => p.portType === 'data')
-        .map(
-          (p): Port => ({
-            activeLinks: p.activeLinks,
-            id: p.portSystemId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.OUTPUT,
-            totalLinks: p.totalLinksAtPort,
-          }),
-        ),
+        .map((p): Port => ({
+          activeLinks: p.activeLinks,
+          id: p.portSystemId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.OUTPUT,
+          totalLinks: p.totalLinksAtPort,
+        })),
       ...m.inputPorts
         .filter((p) => p.portType === 'control')
-        .map(
-          (p): Port => ({
-            activeLinks: p.activeLinks,
-            id: p.portSystemId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.CONTROL,
-            totalLinks: p.totalLinksAtPort,
-          }),
-        ),
+        .map((p): Port => ({
+          activeLinks: p.activeLinks,
+          id: p.portSystemId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.CONTROL,
+          totalLinks: p.totalLinksAtPort,
+        })),
     ];
 
     return {
@@ -102,7 +143,7 @@ export function buildLevelViewFromGraphData(
   });
 
   // Derive containers from the unique (containerId, subgraphId) pairs present
-  // in moduleInstances. data.containers provides metadata (label) keyed by
+  // in visible moduleInstances. data.containers provides metadata (label) keyed by
   // containerId, but it has one entry per container entity â€” not one per
   // subgraph context. A container that spans multiple subgraphs needs a
   // separate ContainerNode per subgraph so every module has a valid parent.
@@ -110,7 +151,7 @@ export function buildLevelViewFromGraphData(
     Object.values(data.containers).map((c) => [c.containerId, c]),
   );
   const containersByKey = new Map<string, ContainerNode>();
-  for (const m of Object.values(data.moduleInstances)) {
+  for (const m of visibleModuleInstances) {
     const key = containerNodeId(m.containerId, m.subgraphId);
     if (containersByKey.has(key)) {
       continue;
@@ -141,75 +182,74 @@ export function buildLevelViewFromGraphData(
       y: 0,
     });
   }
-  // Build reverse index: subgraphId â†’ subsystem systemId.
-  const subgraphToSubsystemId = new Map<string, string>();
-  for (const ss of Object.values(data.subsystems)) {
-    for (const sgId of ss.subgraphs) {
-      subgraphToSubsystemId.set(sgId, ss.subsystemId);
-    }
-  }
 
-  const subgraphs: SubgraphNode[] = Object.values(data.subgraphs).map((sg) => ({
-    height: 0,
-    id: subgraphNodeId(sg.subgraphId),
-    label: sg.subgraphName,
-    meta: {
-      subgraphSystemId: sg.subgraphId,
-      systemId: sg.subgraphId,
-    } satisfies SubgraphNodeMeta,
-    nodeKind: NODE_KIND.SUBGRAPH,
-    parentId: subgraphToSubsystemId.get(sg.subgraphId),
-    subgraphId: Number(sg.subgraphId),
-    width: 0,
-    x: 0,
-    y: 0,
-  }));
+  const subgraphs: SubgraphNode[] = Object.values(data.subgraphs)
+    .filter((sg) => !subsystemChildSubgraphIds.has(sg.subgraphId))
+    .map((sg) => ({
+      height: 0,
+      id: subgraphNodeId(sg.subgraphId),
+      label: sg.subgraphName,
+      meta: {
+        subgraphSystemId: sg.subgraphId,
+        systemId: sg.subgraphId,
+      } satisfies SubgraphNodeMeta,
+      nodeKind: NODE_KIND.SUBGRAPH,
+      parentId: subgraphToSubsystemId.get(sg.subgraphId),
+      subgraphId: Number(sg.subgraphId),
+      width: 0,
+      x: 0,
+      y: 0,
+    }));
 
-  const subsystems: SubsystemNode[] = Object.values(data.subsystems).map(
-    (ss) => {
-      const ports: Port[] = [
-        ...ss.dataPorts
-          .filter((p) => p.direction === 'input')
-          .map((p): Port => ({
-            id: p.portId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.INPUT,
-          })),
-        ...ss.dataPorts
-          .filter((p) => p.direction === 'output')
-          .map((p): Port => ({
-            id: p.portId,
-            name: p.portName,
-            portIoType: PORT_IO_TYPE.OUTPUT,
-          })),
-        ...ss.controlPorts.map((p): Port => ({
+  const subsystems: SubsystemNode[] = visibleSubsystems.map((ss) => {
+    const ports: Port[] = [
+      ...ss.dataPorts
+        .filter((p) => p.direction === 'input')
+        .map((p): Port => ({
           id: p.portId,
           name: p.portName,
-          portIoType: PORT_IO_TYPE.CONTROL,
+          portIoType: PORT_IO_TYPE.INPUT,
         })),
-      ];
+      ...ss.dataPorts
+        .filter((p) => p.direction === 'output')
+        .map((p): Port => ({
+          id: p.portId,
+          name: p.portName,
+          portIoType: PORT_IO_TYPE.OUTPUT,
+        })),
+      ...ss.controlPorts.map((p): Port => ({
+        id: p.portId,
+        name: p.portName,
+        portIoType: PORT_IO_TYPE.CONTROL,
+      })),
+    ];
 
-      return {
-        height: 0,
-        // Subsystem systemIds are globally unique â€” no prefix needed unlike
-        // container or subgraph ids which share a numeric namespace.
-        id: ss.subsystemId,
-        label: ss.subsystemName,
-        meta: {systemId: ss.subsystemId},
-        nodeKind: NODE_KIND.SUBSYSTEM,
-        ports,
-        subsystemId: ss.subsystemId,
-        width: 0,
-        x: 0,
-        y: 0,
-      };
-    },
-  );
+    return {
+      height: NODE_DIMENSIONS.subsystem.baseHeight,
+      // Subsystem systemIds are globally unique â€” no prefix needed unlike
+      // container or subgraph ids which share a numeric namespace.
+      id: ss.subsystemId,
+      label: ss.subsystemName,
+      meta: {systemId: ss.subsystemId},
+      nodeKind: NODE_KIND.SUBSYSTEM,
+      ports,
+      subsystemId: ss.subsystemId,
+      width: NODE_DIMENSIONS.subsystem.width,
+      x: 0,
+      y: 0,
+    };
+  });
 
   const dataLinks: DataLink[] = [];
   const controlLinks: ControlLink[] = [];
 
-  for (const c of data.connections) {
+  for (const c of dedupeConnectionsById(data.connections)) {
+    if (
+      !visibleConnectionNodeIds.has(c.fromModuleId) ||
+      !visibleConnectionNodeIds.has(c.toModuleId)
+    ) {
+      continue;
+    }
     if (c.connectionType === 'data') {
       dataLinks.push({
         edgeKind: EDGE_KIND.DATA,
@@ -235,7 +275,7 @@ export function buildLevelViewFromGraphData(
     }
   }
 
-  return {
+  const levelView = {
     containers: [...containersByKey.values()],
     controlLinks,
     dataLinks,
@@ -244,6 +284,8 @@ export function buildLevelViewFromGraphData(
     subgraphs,
     subsystems,
   };
+
+  return levelView;
 }
 
 function collectDescendantSubsystemIds(
@@ -298,7 +340,8 @@ export function buildSubsystemLevelViewFromGraphData(
   const scopedSubsystemIds = new Set([subsystemId, ...descendantSubsystemIds]);
   const scopedSubgraphIds = new Set<string>();
   for (const scopedSubsystemId of scopedSubsystemIds) {
-    for (const subgraphId of data.subsystems[scopedSubsystemId]?.subgraphs ?? []) {
+    for (const subgraphId of data.subsystems[scopedSubsystemId]?.subgraphs ??
+      []) {
       scopedSubgraphIds.add(subgraphId);
     }
   }
@@ -316,8 +359,7 @@ export function buildSubsystemLevelViewFromGraphData(
 
   const connections = data.connections.filter(
     (c) =>
-      includedNodeIds.has(c.fromModuleId) &&
-      includedNodeIds.has(c.toModuleId),
+      includedNodeIds.has(c.fromModuleId) && includedNodeIds.has(c.toModuleId),
   );
 
   const subgraphs: UsecaseGraphData['subgraphs'] = {};

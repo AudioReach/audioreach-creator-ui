@@ -17,8 +17,11 @@ import SubsystemTreeNode from './subsystem-tree-node';
 
 interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
+  defaultExpandedIds?: number[];
   onClick: (systemId: string) => void;
 }
+
+const EMPTY_DEFAULT_EXPANDED_IDS: number[] = [];
 
 // collect all ids in the tree (depth-first)
 function extractAllSubsystemIds(nodes: SubsystemBrowserTreeNode[]): number[] {
@@ -64,7 +67,11 @@ function collectAncestorIdsForMatches(
   return Array.from(new Set(ids));
 }
 
-const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
+const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
+  data,
+  defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
+  onClick,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
   // to reduce traversal frequency of searchTerm
@@ -74,6 +81,19 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({data, onClick}) => {
   const toggleNode = (id: number) => {
     setExpandedIds((prevState) => ({...prevState, [id]: !prevState[id]}));
   };
+
+  useEffect(() => {
+    if (defaultExpandedIds.length === 0) {
+      return;
+    }
+    setExpandedIds((prevState) => {
+      const next = {...prevState};
+      defaultExpandedIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+  }, [defaultExpandedIds]);
 
   // Debounce the search term
   useEffect(() => {

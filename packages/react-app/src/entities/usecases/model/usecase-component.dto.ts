@@ -71,7 +71,7 @@ export interface SpfModuleDto {
   maxOutputPortsSupported: number;
   moduleId: number;
   name: string;
-  parentId?: number;
+  parentSystemId?: string;
   relatedEndPointLinks: EndPointLink[];
   subgraphId: string;
   systemId: string;

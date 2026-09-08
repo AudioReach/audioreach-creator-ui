@@ -44,6 +44,7 @@ import {
   createLinkOperations,
   deleteSelection,
   GraphDesignerStoreContext,
+  isSubsystemScopedFilter,
   parseModuleDropPayload,
   parseSubgraphDropPayload,
   type GraphDesignerStore,
@@ -164,6 +165,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const {highlightPPModules, showControlLinks, showDanglingLinks} =
     preferences.visualization;
   const {workflowLevel, workflowType} = preferences.usecases;
+  const filterComponentsBySubsystem = isSubsystemScopedFilter(
+    preferences.usecases,
+  );
 
   const {isLoading: isWorkflowLoading, resolvedData} = useWorkflowUsecaseData(
     projectId,
@@ -200,6 +204,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const clearActiveSubsystem = useGraphDesignerStoreShallow(
     (s) => s.clearActiveSubsystem,
   );
+  const setSubsystemData = useGraphDesignerStoreShallow(
+    (s) => s.setSubsystemData,
+  );
+  const navigateToSubsystem = useGraphDesignerStoreShallow(
+    (s) => s.navigateToSubsystem,
+  );
   const moduleListStatus = useGraphDesignerStoreShallow(
     (s) => s.moduleListStatus,
   );
@@ -211,6 +221,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Active subsystem for scoped canvas view (set by Subsystem Browser panel).
   const activeSubsystemId = useGraphDesignerStoreShallow(
     (s) => s.activeSubsystemId,
+  );
+  const subsystemNavigationRequestId = useGraphDesignerStoreShallow(
+    (s) => s.subsystemNavigationRequestId,
   );
 
   // Module list, for deriving which modules are PP for Highlight PP Modules.
@@ -342,15 +355,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     ppModuleIds,
   ]);
 
-  const graph = useMemo<LevelView>(
-    () =>
-      applyPositionOverrides(
-        filteredAndHighlighted,
-        positionOverrides,
-        parentSizes,
-      ),
-    [filteredAndHighlighted, positionOverrides, parentSizes],
-  );
+  const graph = useMemo<LevelView>(() => {
+    return applyPositionOverrides(
+      filteredAndHighlighted,
+      positionOverrides,
+      parentSizes,
+    );
+  }, [filteredAndHighlighted, positionOverrides, parentSizes]);
 
   useEffect(() => {
     setEffectiveLevelView(graph);
@@ -415,6 +426,23 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     setCurrentMatchIndex(0);
     clearSearchHighlight();
   }, [clearSearchHighlight]);
+
+  const previousSubsystemNavigationRequestIdRef = useRef(
+    subsystemNavigationRequestId,
+  );
+
+  useEffect(() => {
+    if (
+      previousSubsystemNavigationRequestIdRef.current ===
+      subsystemNavigationRequestId
+    ) {
+      return;
+    }
+    previousSubsystemNavigationRequestIdRef.current =
+      subsystemNavigationRequestId;
+    resetSearch();
+    clearSelection();
+  }, [clearSelection, resetSearch, subsystemNavigationRequestId]);
 
   // Handle screenshot function registration - directly register with passed registry
   const handleScreenshotReady = (
@@ -537,6 +565,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     // Resets the level tracker so reselecting the same usecases after deselecting still counts as a fresh load, not a same-level mutation.
     appliedLevelSignatureRef.current = undefined;
     if (selectedUsecases.length === 0) {
+      setSubsystemData([]);
       initializeEmptyGraphData();
       return;
     }
@@ -545,16 +574,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       resolvedData,
     );
     if (systemIds.length > 0) {
-      void loadGraphData(systemIds);
+      void loadGraphData(systemIds, {
+        filterBySubsystem: filterComponentsBySubsystem,
+      });
     }
   }, [
     selectedUsecases,
     resolvedData,
     clearActiveSubsystem,
     clearLevelView,
+    filterComponentsBySubsystem,
     initializeEmptyGraphData,
     loadGraphData,
     resetSearch,
+    setSubsystemData,
   ]);
 
   // Effect B — build LevelView when graphData is ready or the port
@@ -570,7 +603,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       ? `subsystem:${activeSubsystemId}`
       : selectedUsecases.join(',');
     const unpositioned = activeSubsystemId
-      ? buildSubsystemLevelViewFromGraphData(graphData, activeSubsystemId, levelId)
+      ? buildSubsystemLevelViewFromGraphData(
+          graphData,
+          activeSubsystemId,
+          levelId,
+        )
       : buildLevelViewFromGraphData(graphData, levelId);
     if (!unpositioned) {
       return;
@@ -733,6 +770,22 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [projectId, store],
   );
 
+  const handleNodeDoubleClick = useCallback(
+    (nodeId: string, nodeKind: NodeKind, label: string) => {
+      if (nodeKind === NODE_KIND.SUBSYSTEM) {
+        if (!store.getState().graphData?.subsystems[nodeId]) {
+          return;
+        }
+        navigateToSubsystem(nodeId);
+        return;
+      }
+      if (nodeKind === NODE_KIND.MODULE) {
+        void handleModuleDoubleClick(nodeId, nodeKind, label);
+      }
+    },
+    [handleModuleDoubleClick, navigateToSubsystem, store],
+  );
+
   const applyCreatedModuleDropPosition = useCallback(
     (createdModuleId: string, position: XY, placement: ModuleDropPlacement) => {
       const overrides = buildDroppedModulePositionOverrides(
@@ -814,7 +867,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           });
       },
       onEdgesDeleted: handleEdgesDeleted,
-      onNodeDoubleClick: handleModuleDoubleClick,
+      onNodeDoubleClick: handleNodeDoubleClick,
       onNodeDragEnd: ({
         nodeId,
         position,
@@ -961,7 +1014,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       applyPlacedSubgraphDropPosition,
       collapsePlacedSubgraphIfNeeded,
       handleEdgesDeleted,
-      handleModuleDoubleClick,
+      handleNodeDoubleClick,
       handleNodesDeleted,
       levelId,
       setSelection,

@@ -13,12 +13,14 @@ import {
   endSession,
   stageChanges,
 } from '~entities/edit-session';
+import {useUserPreferences} from '~shared/config/hooks';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {tabFocusRegistry, VALIDATION_RESULTS_TAB_NODE_ID} from '~shared/store';
 import type {ValidationResult} from '~shared/store/tab-store-slices/validation-result-slice';
 
 import {buildCreateUsecasesRequest} from '../lib/build-create-usecases-request';
+import {isSubsystemScopedFilter} from '../lib/is-subsystem-scoped-filter';
 import {mapFinalizeErrorToValidationResults} from '../lib/map-finalize-error-to-validation-results';
 import {mapIssueToValidationResult} from '../lib/map-issue-to-validation-result';
 import {
@@ -151,6 +153,7 @@ async function finalize(
   navChoice: NavChoice,
   createdSystemIds: string[],
   actionLabel: 'apply_changes' | 'submit_review',
+  filterComponentsBySubsystem: boolean,
 ): Promise<void> {
   const outcome = await runFinalize(
     {
@@ -174,6 +177,7 @@ async function finalize(
           createdSystemIds,
           store.getState().selectedUsecases,
         ),
+        {filterBySubsystem: filterComponentsBySubsystem},
       );
   };
 
@@ -248,6 +252,7 @@ async function finalize(
 async function performDiscard(
   store: GraphDesignerStoreApi,
   projectId: string,
+  filterComponentsBySubsystem: boolean,
 ): Promise<void> {
   const outcome = await runDiscard(
     {
@@ -258,7 +263,11 @@ async function performDiscard(
   );
 
   const reload = async (): Promise<void> => {
-    await store.getState().loadGraphData(store.getState().selectedUsecases);
+    await store
+      .getState()
+      .loadGraphData(store.getState().selectedUsecases, {
+        filterBySubsystem: filterComponentsBySubsystem,
+      });
   };
 
   switch (outcome.kind) {
@@ -316,6 +325,10 @@ export function useApplyDiscard(
 ): UseApplyDiscardReturn {
   const {projectId, routingTriggered} = args;
   const store = useGraphDesignerStore();
+  const {preferences} = useUserPreferences();
+  const filterComponentsBySubsystem = isSubsystemScopedFilter(
+    preferences.usecases,
+  );
   const [isBusy, setIsBusy] = useState(false);
   const [pendingReview, setPendingReview] = useState<{
     response: CreateUsecasesResponseDto;
@@ -328,7 +341,15 @@ export function useApplyDiscard(
     async (outcome: ReconcileOutcome): Promise<void> => {
       switch (outcome.kind) {
         case 'finalizeDirectly': {
-          await finalize(store, projectId, [], 'keep', [], 'apply_changes');
+          await finalize(
+            store,
+            projectId,
+            [],
+            'keep',
+            [],
+            'apply_changes',
+            filterComponentsBySubsystem,
+          );
           return;
         }
         case 'blocked': {
@@ -339,7 +360,15 @@ export function useApplyDiscard(
         }
         case 'emptyReconcile': {
           publishRows(store, outcome.notices.map(mapIssueToValidationResult));
-          await finalize(store, projectId, [], 'keep', [], 'apply_changes');
+          await finalize(
+            store,
+            projectId,
+            [],
+            'keep',
+            [],
+            'apply_changes',
+            filterComponentsBySubsystem,
+          );
           return;
         }
         case 'reconcileTransportIndeterminate': {
@@ -362,7 +391,7 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId],
+    [store, projectId, filterComponentsBySubsystem],
   );
 
   const apply = useCallback(async () => {
@@ -425,6 +454,7 @@ export function useApplyDiscard(
             navChoice,
             createdSystemIds,
             'submit_review',
+            filterComponentsBySubsystem,
           ),
         );
       } catch (error) {
@@ -440,7 +470,7 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId],
+    [store, projectId, filterComponentsBySubsystem],
   );
 
   const cancelReview = useCallback(() => {
@@ -452,7 +482,7 @@ export function useApplyDiscard(
     setIsBusy(true);
     try {
       await withMutationLock(store.getState, () =>
-        performDiscard(store, projectId),
+        performDiscard(store, projectId, filterComponentsBySubsystem),
       );
     } catch (error) {
       logger.debug('useApplyDiscard: discard_changes aborted', {
@@ -466,7 +496,7 @@ export function useApplyDiscard(
         setIsBusy(false);
       }
     }
-  }, [store, projectId]);
+  }, [store, projectId, filterComponentsBySubsystem]);
 
   return {apply, cancelReview, discard, isBusy, pendingReview, submitReview};
 }

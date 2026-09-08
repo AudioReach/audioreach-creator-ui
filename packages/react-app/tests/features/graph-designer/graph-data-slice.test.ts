@@ -348,8 +348,7 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
         id: 1,
         moduleId: 200,
         name: 'AudioDecoder',
-        // parentId links the module's subgraph to subsystem id=20
-        parentId: 20,
+        parentSystemId: 'sys-ss-20',
         subgraphId: 'sys-sg-5',
         systemId: 'sys-mod-1',
       },
@@ -365,7 +364,7 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     ],
   };
 
-  it('populates Subsystem.subgraphs with the subgraph IDs whose modules have parentId matching the subsystem', async () => {
+  it('populates Subsystem.subgraphs with the subgraph IDs whose modules have parentSystemId matching the subsystem', async () => {
     const store = makeStore([]);
     mockGetUsecaseComponents.mockResolvedValueOnce({
       data: dtoWithSubsystem as never,
@@ -379,14 +378,16 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     expect(subsystem?.subgraphs).toContain('sys-sg-5');
   });
 
-  it('leaves Subsystem.subgraphs empty when no module has a parentId linking it to that subsystem', async () => {
-    const dtoNoParentId = {
+  it('leaves Subsystem.subgraphs empty when no module has a parent linking it to that subsystem', async () => {
+    const dtoNoParent = {
       ...dtoWithSubsystem,
-      spfModules: [{...dtoWithSubsystem.spfModules[0], parentId: undefined}],
+      spfModules: [
+        {...dtoWithSubsystem.spfModules[0], parentSystemId: undefined},
+      ],
     };
     const store = makeStore([]);
     mockGetUsecaseComponents.mockResolvedValueOnce({
-      data: dtoNoParentId as never,
+      data: dtoNoParent as never,
       message: undefined,
       success: true,
     });

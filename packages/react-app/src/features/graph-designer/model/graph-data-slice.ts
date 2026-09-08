@@ -7,7 +7,11 @@ import type {StoreApi} from 'zustand';
 
 import type {CkvDto, TagInfoDto} from '~entities/spf-module-data';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
-import {getSubgraphsByIds, getUsecaseComponents} from '~entities/usecases';
+import {
+  getSubgraphsByIds,
+  getUsecaseComponents,
+  getUsecaseComponentsFilteredBySubsystem,
+} from '~entities/usecases';
 import type {
   ComponentCollectionDto,
   ControlLinkDto,
@@ -162,7 +166,7 @@ export interface GraphDataSlice {
   isDirty: boolean;
   loadGraphData: (
     usecases: string[],
-    options?: {stagingSessionId?: string},
+    options?: {filterBySubsystem?: boolean; stagingSessionId?: string},
   ) => Promise<void>;
   markClean: () => void;
   markDirty: () => void;
@@ -904,7 +908,7 @@ export function createGraphDataSlice<
 
     loadGraphData: async (
       usecases: string[],
-      _options?: {stagingSessionId?: string},
+      options?: {filterBySubsystem?: boolean; stagingSessionId?: string},
     ) => {
       logger.debug('graphDataSlice: loadGraphData — loading', {
         action: 'loadGraphData',
@@ -917,7 +921,9 @@ export function createGraphDataSlice<
       } as unknown as Partial<S>);
 
       try {
-        const result = await getUsecaseComponents(projectId, usecases);
+        const result = options?.filterBySubsystem
+          ? await getUsecaseComponentsFilteredBySubsystem(projectId, usecases)
+          : await getUsecaseComponents(projectId, usecases);
 
         if (!result.success || !result.data) {
           logger.error('graphDataSlice: loadGraphData — API error', {
@@ -936,35 +942,21 @@ export function createGraphDataSlice<
         const spfModules = dto.spfModules ?? [];
         const subsystemDtos = dto.subsystems ?? [];
 
-        // Build numeric id → systemId lookup used to resolve a module's
-        // parentId (its parent subsystem's numeric id) to that subsystem's
-        // systemId, below.
-        const numericIdToSystemId = new Map<number, string>();
-        for (const m of spfModules) {
-          numericIdToSystemId.set(m.id, m.systemId);
-        }
-        for (const ss of subsystemDtos) {
-          numericIdToSystemId.set(ss.id, ss.systemId);
-        }
-
         // Build moduleId → moduleType lookup from already-loaded module definitions.
         const defModuleTypeById = new Map(
           get().moduleList.map((d) => [d.moduleId, d.moduleType]),
         );
 
-        // parentId on a module refers to its parent subsystem's numeric id.
         const subsystemIdToSubgraphs = new Map<string, string[]>();
         for (const m of spfModules) {
-          if (m.parentId !== undefined) {
-            const ssId = numericIdToSystemId.get(m.parentId);
-            if (ssId) {
-              const sgId = m.subgraphId;
-              const list = subsystemIdToSubgraphs.get(ssId);
-              if (list) {
-                list.push(sgId);
-              } else {
-                subsystemIdToSubgraphs.set(ssId, [sgId]);
-              }
+          const ssId = m.parentSystemId;
+          if (ssId) {
+            const sgId = m.subgraphId;
+            const list = subsystemIdToSubgraphs.get(ssId);
+            if (list) {
+              list.push(sgId);
+            } else {
+              subsystemIdToSubgraphs.set(ssId, [sgId]);
             }
           }
         }

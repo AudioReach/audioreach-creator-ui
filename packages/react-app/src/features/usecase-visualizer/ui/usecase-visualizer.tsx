@@ -395,8 +395,10 @@ function VisualizerCanvas({
   }, [onScreenshotApiReady, rfInstance]); // intentionally empty — captured once at mount
 
   useEffect(() => {
-    setRfNodes(toReactFlowNodes(graph));
-    setRfEdges(toReactFlowEdges(graph));
+    const nextNodes = toReactFlowNodes(graph);
+    const nextEdges = toReactFlowEdges(graph);
+    setRfNodes(nextNodes);
+    setRfEdges(nextEdges);
 
     const levelId = graph.levelId;
     const proxiesCount = proxyCount(graph);
@@ -897,6 +899,7 @@ export function UsecaseVisualizer({
   searchHighlights,
 }: UsecaseVisualizerProps) {
   const store = useMemo(() => createVisualizerStore(), []);
+
   return (
     <ReactFlowProvider>
       <VisualizerStoreProvider store={store}>
