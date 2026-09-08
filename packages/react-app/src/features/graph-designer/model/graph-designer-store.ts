@@ -61,6 +61,10 @@ import {
   type EditSessionSlice,
 } from './edit-session-slice';
 import {createGraphDataSlice, type GraphDataSlice} from './graph-data-slice';
+import {
+  createGraphNavigationSlice,
+  type GraphNavigationSlice,
+} from './graph-navigation-slice';
 import {createKeyConfigSlice, type KeyConfigSlice} from './key-config-slice';
 import {createModuleDataSlice, type ModuleDataSlice} from './module-data-slice';
 import {createModuleListSlice, type ModuleListSlice} from './module-list-slice';
@@ -77,6 +81,7 @@ import {createVisualizerSlice, type VisualizerSlice} from './visualizer-slice';
 export type GraphDesignerStore = UsecaseSelectionSlice &
   GraphDataSlice &
   EditSessionSlice &
+  GraphNavigationSlice &
   VisualizerSlice &
   SubsystemSlice &
   SubsystemOperations &
@@ -107,6 +112,7 @@ export function createGraphDesignerStore(
     ...createGraphDataSlice(set, get, projectId),
     ...createEditSessionSlice(set, get, projectId),
     ...createVisualizerSlice(set),
+    ...createGraphNavigationSlice(set),
     ...createSubsystemSlice(
       (partial) => set(partial as Partial<GraphDesignerStore>),
       get,

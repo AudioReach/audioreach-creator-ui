@@ -5,7 +5,7 @@
 
 jest.mock('~shared/lib/logger');
 
-import {NODE_KIND, type LevelView} from '~entities/graph';
+import {NODE_KIND, type LevelView, type NodeKind} from '~entities/graph';
 
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
@@ -14,6 +14,11 @@ interface MockUsecaseVisualizerProps {
   contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: {
     onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
+    onNodeDoubleClick?: (
+      nodeId: string,
+      nodeKind: NodeKind,
+      label: string,
+    ) => void;
     onNodeDropped?: (payload: {
       dropData: string;
       position: {x: number; y: number};
@@ -153,6 +158,15 @@ jest.mock('~widgets/graph-designer/lib/level-view-adapter', () => ({
     subgraphs: [],
     subsystems: [],
   })),
+  buildSubsystemLevelViewFromGraphData: jest.fn(
+    (_graphData: unknown, _subsystemId: string, levelId: string) => ({
+      containers: [],
+      levelId,
+      modules: [],
+      subgraphs: [],
+      subsystems: [],
+    }),
+  ),
 }));
 
 jest.mock('~widgets/module-data-tab', () => ({
@@ -188,7 +202,9 @@ import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
 import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
+import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/level-view-adapter';
 import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
+import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 import GraphDesigner from '~widgets/graph-designer/ui/graph-designer';
 
 const PROJECT_ID = 'proj-1';
@@ -232,6 +248,23 @@ function makeGraphData(): UsecaseGraphData {
       },
     },
     subsystems: {},
+  };
+}
+
+function makeSubsystemGraphData(): UsecaseGraphData {
+  const graphData = makeGraphData();
+  return {
+    ...graphData,
+    subsystems: {
+      'subsystem-1': {
+        childSubsystemIds: [],
+        controlPorts: [],
+        dataPorts: [],
+        subgraphs: ['sg-1'],
+        subsystemId: 'subsystem-1',
+        subsystemName: 'Subsystem 1',
+      },
+    },
   };
 }
 
@@ -968,5 +1001,59 @@ describe('GraphDesigner — port connections, end to end', () => {
     expect(screen.queryByText('Loading connections…')).not.toBeInTheDocument();
     expect(capturedPopupProps?.open).toBe(true);
     expect(capturedPopupProps?.state).toBe(mockPortConnectionsInfo.state);
+  });
+});
+
+describe('GraphDesigner - node double click', () => {
+  it('navigates into a subsystem node without opening a module tab', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeSubsystemGraphData(),
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'subsystem-1',
+        NODE_KIND.SUBSYSTEM,
+        'Subsystem 1',
+      );
+    });
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBe(
+        'subsystem-1',
+      );
+    });
+    expect(buildSubsystemLevelViewFromGraphData).toHaveBeenCalledWith(
+      expect.any(Object),
+      'subsystem-1',
+      'subsystem:subsystem-1',
+    );
+    expect(tabLayoutService.createProjectTab).not.toHaveBeenCalled();
+  });
+
+  it('ignores subsystem double clicks for stale subsystem ids', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeSubsystemGraphData(),
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'missing-subsystem',
+        NODE_KIND.SUBSYSTEM,
+        'Missing Subsystem',
+      );
+    });
+
+    expect(graphDesignerStore.getState().activeSubsystemId).toBeNull();
+    expect(buildSubsystemLevelViewFromGraphData).not.toHaveBeenCalledWith(
+      expect.any(Object),
+      'missing-subsystem',
+      'subsystem:missing-subsystem',
+    );
+    expect(tabLayoutService.createProjectTab).not.toHaveBeenCalled();
   });
 });

@@ -464,6 +464,37 @@ describe('layoutLevelView', () => {
         width: 360 + 2 * CP + 2 * SP,
       });
     });
+
+    it('places subsystems with fixed minimum dimensions after subgraphs', async () => {
+      const graph: LevelView = {
+        ...unpositioned,
+        subsystems: [
+          {
+            height: 0,
+            id: 'ss-1',
+            label: 'Subsystem 1',
+            nodeKind: NODE_KIND.SUBSYSTEM,
+            ports: [],
+            subsystemId: 'ss-1',
+            width: 0,
+            x: 0,
+            y: 0,
+          },
+        ],
+      };
+
+      const result = await layoutLevelView(graph);
+
+      const subsystem = result.subsystems?.find((ss) => ss.id === 'ss-1');
+      const subgraphWidth = 360 + 2 * CP + 2 * SP;
+
+      expect(subsystem).toMatchObject({
+        height: NODE_DIMENSIONS.subsystem.baseHeight,
+        width: NODE_DIMENSIONS.subsystem.width,
+        x: subgraphWidth + 2 * SP,
+        y: 0,
+      });
+    });
   });
 
   describe('container splitting', () => {

@@ -70,6 +70,23 @@ export async function getUsecaseComponents(
 }
 
 /**
+ * Query usecase components for specified system IDs.
+ * Returns flat component collection without subsystem hierarchy.
+ * @param projectId - The unique identifier of the project
+ * @param systemIds - Array of usecase system identifiers
+ * @returns ComponentCollectionDto with spfModules, dataLinks, and controlLinks
+ */
+export async function getUsecaseComponentsFilteredBySubsystem(
+  projectId: string,
+  systemIds: string[],
+): Promise<ApiResult<ComponentCollectionDto>> {
+  return httpClient.post<ComponentCollectionDto>(
+    `/projects/${projectId}/usecases/components/filtered-by-subsystem`,
+    {systemIds},
+  );
+}
+
+/**
  * Search usecases using a structured filter expression.
  * Called when the user types in the search box inside UsecaseSelectionControl.
  * @param projectId - The unique identifier of the project

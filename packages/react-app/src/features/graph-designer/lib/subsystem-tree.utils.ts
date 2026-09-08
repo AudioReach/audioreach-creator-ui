@@ -13,33 +13,44 @@ import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subs
  * Builds a hierarchical subsystem tree from a flat SubsystemDto array.
  *
  * - Parent-child relationships are wired via SubsystemDto.parentSystemId.
- * - subgraphIds per node are derived from SpfModuleDto.parentId: when a
- *   module's parentId points to a subsystem, its subgraphId belongs to that
+ * - subgraphIds per node are derived from SpfModuleDto.parentSystemId: when a
+ *   module's parent points to a subsystem, its subgraphId belongs to that
  *   subsystem.
  */
 export function buildSubsystemTree(
   subsystemDtos: SubsystemDto[],
   spfModules: SpfModuleDto[],
 ): SubsystemBrowserTreeNode[] {
-  const subsystemIdSet = new Set(subsystemDtos.map((s) => s.id));
-  const systemIdToId = new Map(
-    subsystemDtos.map((s) => [s.systemId, s.id] as const),
-  );
+  const subsystemDtoBySystemId = new Map<string, SubsystemDto>();
+  for (const ss of subsystemDtos) {
+    if (!subsystemDtoBySystemId.has(ss.systemId)) {
+      subsystemDtoBySystemId.set(ss.systemId, ss);
+    }
+  }
+  const uniqueSubsystemDtos = Array.from(subsystemDtoBySystemId.values());
+  const subsystemIdSet = new Set(uniqueSubsystemDtos.map((s) => s.id));
+  const systemIdToId = new Map<string, number>();
+  for (const [systemId, subsystem] of subsystemDtoBySystemId.entries()) {
+    systemIdToId.set(systemId, subsystem.id);
+  }
 
-  // Derive which subgraph IDs belong to each subsystem via module parentId.
   const subsystemSubgraphIds = new Map<number, Set<string>>();
   for (const m of spfModules) {
-    if (m.parentId != null && subsystemIdSet.has(m.parentId)) {
-      if (!subsystemSubgraphIds.has(m.parentId)) {
-        subsystemSubgraphIds.set(m.parentId, new Set());
+    const parentId =
+      m.parentSystemId === undefined
+        ? undefined
+        : systemIdToId.get(m.parentSystemId);
+    if (parentId != null && subsystemIdSet.has(parentId)) {
+      if (!subsystemSubgraphIds.has(parentId)) {
+        subsystemSubgraphIds.set(parentId, new Set());
       }
-      subsystemSubgraphIds.get(m.parentId)!.add(m.subgraphId);
+      subsystemSubgraphIds.get(parentId)!.add(m.subgraphId);
     }
   }
 
   // Build node map.
   const nodeMap = new Map<number, SubsystemBrowserTreeNode>();
-  for (const ss of subsystemDtos) {
+  for (const ss of uniqueSubsystemDtos) {
     nodeMap.set(ss.id, {
       children: [],
       id: ss.id,
@@ -51,7 +62,7 @@ export function buildSubsystemTree(
 
   // Wire parent → child relationships; collect roots.
   const roots: SubsystemBrowserTreeNode[] = [];
-  for (const ss of subsystemDtos) {
+  for (const ss of uniqueSubsystemDtos) {
     const node = nodeMap.get(ss.id)!;
     const parentId =
       ss.parentSystemId === undefined

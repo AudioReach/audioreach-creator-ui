@@ -4,3 +4,4 @@
  */
 
 export type {GenericTreeViewUiState} from './tree-view-ui-state';
+export type {SelectedEdgeRef, SelectedNodeRef} from './graph-selection.types';

@@ -6,8 +6,9 @@
 import type {Viewport} from '@xyflow/react';
 import type {StoreApi} from 'zustand';
 
-import type {EdgeKind, LevelView, NodeKind} from '~entities/graph';
 import {logger} from '~shared/lib/logger';
+import type {SelectedEdgeRef, SelectedNodeRef} from '~shared/types';
+import type {LevelView} from '~entities/graph';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,31 +29,7 @@ export interface NodeFocusRequest {
   requestId: number;
 }
 
-export interface SelectedNodeRef {
-  id: string;
-  nodeKind: NodeKind;
-  systemId: string;
-}
-
-interface SelectedBackendEdgeRef {
-  edgeKind: Extract<EdgeKind, 'control' | 'data'>;
-  id: string;
-  systemId: string;
-}
-
-interface SelectedProxyEdgeRef {
-  edgeKind: Extract<EdgeKind, 'proxy-control' | 'proxy-data'>;
-  id: string;
-  systemId?: string;
-}
-
-export type SelectedEdgeRef = SelectedBackendEdgeRef | SelectedProxyEdgeRef;
-
 export interface VisualizerSlice {
-  /** Subsystem id whose scoped contents the canvas should show.
-   *  null means show the normal full usecase view. */
-  activeSubsystemId: string | null;
-  clearActiveSubsystem: () => void;
   clearLevelView: () => void;
   clearNodeFocusRequest: (requestId: number) => void;
   clearSearchHighlight: () => void;
@@ -67,7 +44,6 @@ export interface VisualizerSlice {
   searchHighlight: SearchHighlight | null;
   selectedEdges: SelectedEdgeRef[];
   selectedNodes: SelectedNodeRef[];
-  setActiveSubsystemId: (subsystemId: string) => void;
   setEffectiveLevelView: (lv: LevelView) => void;
   setGraphView: (graphView: GraphView | null) => void;
   setLevelView: (lv: LevelView) => void;
@@ -100,13 +76,6 @@ export function createVisualizerSlice<S extends VisualizerSlice>(
   set: StoreApi<S>['setState'],
 ): VisualizerSlice {
   return {
-    activeSubsystemId: null,
-
-    clearActiveSubsystem: () => {
-      logger.debug('visualizerSlice: clearActiveSubsystem');
-      set({activeSubsystemId: null} as Partial<S>);
-    },
-
     clearLevelView: () => {
       logger.debug('visualizerSlice: clearLevelView');
       set({effectiveLevelView: null, levelView: null} as Partial<S>);
@@ -167,14 +136,6 @@ export function createVisualizerSlice<S extends VisualizerSlice>(
     selectedEdges: [],
 
     selectedNodes: [],
-
-    setActiveSubsystemId: (subsystemId: string) => {
-      logger.debug('visualizerSlice: setActiveSubsystemId', {
-        action: 'setActiveSubsystemId',
-        component: 'visualizerSlice',
-      });
-      set({activeSubsystemId: subsystemId} as Partial<S>);
-    },
 
     setEffectiveLevelView: (lv: LevelView) => {
       logger.debug('visualizerSlice: setEffectiveLevelView', {

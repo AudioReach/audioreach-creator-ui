@@ -29,6 +29,9 @@ import type {
   SubgraphProxyNode,
   SubsystemNode,
 } from '~entities/graph';
+import type {SelectedEdgeRef, SelectedNodeRef} from '~shared/types';
+
+export type {SelectedEdgeRef, SelectedNodeRef} from '~shared/types';
 
 export const VISUALIZER_MODE = {
   EDIT: 'edit',
@@ -73,26 +76,6 @@ export interface SelectionChangePayload {
   selectedEdges: SelectedEdgeRef[];
   selectedNodes: SelectedNodeRef[];
 }
-
-export interface SelectedNodeRef {
-  id: string;
-  nodeKind: NodeKind;
-  systemId: string;
-}
-
-interface SelectedBackendEdgeRef {
-  edgeKind: Extract<EdgeKind, 'control' | 'data'>;
-  id: string;
-  systemId: string;
-}
-
-interface SelectedProxyEdgeRef {
-  edgeKind: Extract<EdgeKind, 'proxy-control' | 'proxy-data'>;
-  id: string;
-  systemId?: string;
-}
-
-export type SelectedEdgeRef = SelectedBackendEdgeRef | SelectedProxyEdgeRef;
 
 export interface NodeDragEndPayload {
   nodeId: string;
