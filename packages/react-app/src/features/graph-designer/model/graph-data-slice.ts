@@ -44,6 +44,9 @@ export interface ModuleInstance {
   diffState?: DiffState;
   displayName: string;
   inputPorts: Port[];
+  maxControlPorts?: number;
+  maxInputPorts?: number;
+  maxOutputPorts?: number;
   moduleId: string;
   moduleInstanceId: string;
   moduleName: string;
@@ -168,6 +171,19 @@ export interface GraphDataSlice {
   markDirty: () => void;
   pruneDeletedLinkBookkeeping: (deletedLinkIds: string[]) => void;
   recomputeContainersAndSubgraphs: () => Promise<void>;
+  updateContainerIdLocal: (containerId: string, newId: string) => void;
+  updateModuleAliasLocal: (moduleId: string, alias: string) => void;
+  updateModuleContainerLocal: (
+    moduleId: string,
+    newContainerId: string,
+  ) => void;
+  updateModulePortCountLocal: (
+    moduleId: string,
+    field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
+    value: number,
+  ) => void;
+  updateSubgraphNameLocal: (subgraphId: string, name: string) => void;
+  updateSubsystemNameLocal: (subsystemId: string, name: string) => void;
 }
 
 function toDiffState(changeType: string): DiffState | undefined {
@@ -1151,6 +1167,129 @@ export function createGraphDataSlice<
       set({
         graphData: {...graphData, containers, subgraphs},
       } as unknown as Partial<S>);
+    },
+
+    updateContainerIdLocal: (containerId: string, newId: string): void => {
+      const {graphData} = get();
+      const current = graphData?.containers[containerId];
+      if (!graphData || !current) {
+        return;
+      }
+
+      const containers = {...graphData.containers};
+      delete containers[containerId];
+      containers[newId] = {...current, containerId: newId};
+
+      const moduleInstances = Object.fromEntries(
+        Object.entries(graphData.moduleInstances).map(([id, module]) => [
+          id,
+          module.containerId === containerId
+            ? {...module, containerId: newId}
+            : module,
+        ]),
+      );
+
+      set({
+        graphData: {...graphData, containers, moduleInstances},
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateModuleAliasLocal: (moduleId: string, alias: string): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleId]: {...current, displayName: alias},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateModuleContainerLocal: (
+      moduleId: string,
+      newContainerId: string,
+    ): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleId]: {...current, containerId: newContainerId},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateModulePortCountLocal: (
+      moduleId: string,
+      field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
+      value: number,
+    ): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleId]: {...current, [field]: value},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateSubgraphNameLocal: (subgraphId: string, name: string): void => {
+      const {graphData} = get();
+      const current = graphData?.subgraphs[subgraphId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          subgraphs: {
+            ...graphData.subgraphs,
+            [subgraphId]: {...current, subgraphName: name},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateSubsystemNameLocal: (subsystemId: string, name: string): void => {
+      const {graphData} = get();
+      const current = graphData?.subsystems[subsystemId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          subsystems: {
+            ...graphData.subsystems,
+            [subsystemId]: {...current, subsystemName: name},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
     },
   };
 }

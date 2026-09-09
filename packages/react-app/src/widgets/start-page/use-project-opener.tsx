@@ -31,6 +31,7 @@ import {
   MAIN_TAB_TITLE,
   migrateFlexLayoutConfig,
   MODULE_LIST_COMPONENT_NAME,
+  PROPERTIES_PANEL_COMPONENT_NAME,
   SUBGRAPH_LIST_COMPONENT_NAME,
   SUBSYSTEM_BROWSER_COMPONENT_NAME,
   VALIDATION_RESULTS_COMPONENT_NAME,
@@ -46,6 +47,7 @@ import {
 import {useGlobalStore} from '~shared/store/global-store';
 import {tabStoreRegistry} from '~shared/store/tab-store-registry';
 import {KeyConfiguratorPanel} from '~widgets/key-configurator-panel';
+import {PropertiesPanelHost} from '~widgets/graph-designer/ui/properties-panel-host';
 import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 
 interface UseProjectOpenerOptions {
@@ -206,6 +208,15 @@ export function useProjectOpener({
             <ProjectStoreContext.Provider value={projectStore}>
               <GraphDesignerStoreContext.Provider value={tabStore}>
                 <KeyConfiguratorPanel />
+              </GraphDesignerStoreContext.Provider>
+            </ProjectStoreContext.Provider>
+          );
+        }
+        if (component === PROPERTIES_PANEL_COMPONENT_NAME) {
+          return (
+            <ProjectStoreContext.Provider value={projectStore}>
+              <GraphDesignerStoreContext.Provider value={tabStore}>
+                <PropertiesPanelHost projectId={project.id} />
               </GraphDesignerStoreContext.Provider>
             </ProjectStoreContext.Provider>
           );

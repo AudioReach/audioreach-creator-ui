@@ -15,6 +15,7 @@ import {
 import {
   BOTTOM_TABSET_ID,
   CENTER_TABSET_ID,
+  GetFlexLayoutConfig,
   getFlexLayoutGlobalConfig,
   KEY_CONFIGURATOR_COMPONENT_NAME,
   LEFT_TABSET_ID,
@@ -22,6 +23,7 @@ import {
   migrateFlexLayoutConfig,
   MODULE_LIST_COMPONENT_NAME,
   PLACEHOLDER_COMPONENT_NAME,
+  PROPERTIES_PANEL_COMPONENT_NAME,
   RIGHT_TABSET_ID,
   ROOT_LAYOUT_ID,
   SUBGRAPH_LIST_COMPONENT_NAME,
@@ -56,6 +58,7 @@ function layout(overrides?: {
   const center = overrides?.center ?? [tab('graph-designer', 'graph-designer')];
   const right = overrides?.right ?? [
     tab(KEY_CONFIGURATOR_COMPONENT_NAME, KEY_CONFIGURATOR_COMPONENT_NAME),
+    tab(PROPERTIES_PANEL_COMPONENT_NAME, PROPERTIES_PANEL_COMPONENT_NAME),
   ];
   const bottom = overrides?.bottom ?? [
     tab(LOG_VIEW_COMPONENT_NAME, LOG_VIEW_COMPONENT_NAME),
@@ -98,6 +101,12 @@ function findTabset(result: IJsonModel, tabsetId: string): IJsonTabSetNode {
 }
 
 describe('migrateFlexLayoutConfig', () => {
+  it('includes the properties panel in the default layout', () => {
+    expect(JSON.stringify(GetFlexLayoutConfig())).toContain(
+      PROPERTIES_PANEL_COMPONENT_NAME,
+    );
+  });
+
   it('removes a tabset when its last tab is moved to another tabset', () => {
     const savedLayout = layout();
     const topRow = savedLayout.layout.children[0];
@@ -111,7 +120,9 @@ describe('migrateFlexLayoutConfig', () => {
         type: 'tabset',
       },
       {
-        children: [tab(SUBGRAPH_LIST_COMPONENT_NAME, SUBGRAPH_LIST_COMPONENT_NAME)],
+        children: [
+          tab(SUBGRAPH_LIST_COMPONENT_NAME, SUBGRAPH_LIST_COMPONENT_NAME),
+        ],
         type: 'tabset',
       },
       ...topRow.children.slice(1),
@@ -136,8 +147,9 @@ describe('migrateFlexLayoutConfig', () => {
     if (updatedTopRow.type !== 'row') {
       throw new Error('expected top row');
     }
-    const leftTabsets = updatedTopRow.children
-      .filter((node) => node.type === 'tabset' && node.id !== CENTER_TABSET_ID);
+    const leftTabsets = updatedTopRow.children.filter(
+      (node) => node.type === 'tabset' && node.id !== CENTER_TABSET_ID,
+    );
 
     expect(leftTabsets).toHaveLength(2);
     expect(
@@ -167,6 +179,24 @@ describe('migrateFlexLayoutConfig', () => {
 
     expect(bottomTabset.children.map((t) => t.id)).toContain(
       VALIDATION_RESULTS_COMPONENT_NAME,
+    );
+  });
+
+  it('adds the properties panel when missing from an older saved layout', () => {
+    const savedLayout = layout({
+      right: [
+        tab(KEY_CONFIGURATOR_COMPONENT_NAME, KEY_CONFIGURATOR_COMPONENT_NAME),
+      ],
+    });
+
+    const result = migrateFlexLayoutConfig(savedLayout);
+    const rightTabset = findTabset(result, RIGHT_TABSET_ID);
+
+    expect(result).toEqual(
+      expect.objectContaining({layout: expect.any(Object)}),
+    );
+    expect(rightTabset.children.map((t) => t.id)).toContain(
+      PROPERTIES_PANEL_COMPONENT_NAME,
     );
   });
 
@@ -228,6 +258,7 @@ describe('migrateFlexLayoutConfig', () => {
 
     expect(rightTabset.children.map((t) => t.id)).toEqual([
       KEY_CONFIGURATOR_COMPONENT_NAME,
+      PROPERTIES_PANEL_COMPONENT_NAME,
     ]);
   });
 
@@ -276,6 +307,9 @@ describe('migrateFlexLayoutConfig', () => {
     );
     expect(rightTabset.children.map((t) => t.id)).toContain(
       KEY_CONFIGURATOR_COMPONENT_NAME,
+    );
+    expect(rightTabset.children.map((t) => t.id)).toContain(
+      PROPERTIES_PANEL_COMPONENT_NAME,
     );
   });
 
