@@ -37,30 +37,6 @@ function collectConfigElements(
   });
 }
 
-function isPropertyHidden(property: PropertyDto): boolean {
-  if (property.isHidden) {
-    return true;
-  }
-
-  const configElements = collectConfigElements(property.elements);
-  return (
-    configElements.length > 0 &&
-    configElements.every((element) => element.policy === 'HIDDEN')
-  );
-}
-
-function isPropertyReadOnly(property: PropertyDto): boolean {
-  if (property.isReadOnly) {
-    return true;
-  }
-
-  const configElements = collectConfigElements(property.elements);
-  return (
-    configElements.length > 0 &&
-    configElements.every((element) => element.isReadOnly)
-  );
-}
-
 export function propertyHasConfigName(
   property: PropertyDto,
   name: string,
@@ -77,15 +53,10 @@ export function propertyDtosToTreeViewData(
 ): TreeViewData {
   return {
     items: properties.map((property) => ({
-      changeInfo: property.changeInfo,
-      description: property.description,
       elements: property.elements,
       id: String(property.propertyId),
-      isHidden: isPropertyHidden(property),
-      isReadOnly: isPropertyReadOnly(property),
       name: property.propertyName,
       systemId: property.systemId,
-      toolPolicy: property.toolPolicy,
     })),
     source,
     systemId,
@@ -104,17 +75,19 @@ export function dirtyItemsToPatchPropertiesRequest(
   );
 
   return {
-    properties: dirtyItems.map((item) => {
+    properties: dirtyItems.flatMap((item) => {
       const original = byId.get(item.id);
+      if (original) {
+        return [{
+          elements: item.elements,
+          hasDefinition: true,
+          propertyId: original.propertyId,
+          propertyName: original.propertyName,
+          systemId: original.systemId,
+        }];
+      }
 
-      return {
-        ...original,
-        changeInfo: {changeType: 'UPDATE'},
-        elements: item.elements,
-        propertyId: original?.propertyId ?? item.id,
-        propertyName: original?.propertyName ?? item.name,
-        systemId: original?.systemId ?? item.id,
-      };
+      return [];
     }),
   };
 }

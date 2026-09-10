@@ -7,7 +7,4 @@ export {
   fetchControlLinkProperties,
   patchControlLinkProperties,
 } from './api/control-links-api';
-export type {
-  ControlLinkPropertiesResponseDto,
-  ControlLinkResponseDto,
-} from './api/control-links-api';
+export type {ControlLinkPropertiesResponseDto} from './api/control-links-api';

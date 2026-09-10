@@ -172,7 +172,7 @@ function addEdgeGroupItem(
       groups.virtualDataLinks.push({
         edgeId: selectedEdge.id,
         proxyDataLink,
-        systemId: selectedEdge.systemId,
+        systemId: selectedEdge.id,
       });
     }
     return;
@@ -186,7 +186,7 @@ function addEdgeGroupItem(
       groups.virtualControlLinks.push({
         edgeId: selectedEdge.id,
         proxyControlLink,
-        systemId: selectedEdge.systemId,
+        systemId: selectedEdge.id,
       });
     }
   }

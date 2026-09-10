@@ -53,16 +53,12 @@ describe('propertyDtosToTreeViewData', () => {
         {
           elements: visibleProperty.elements,
           id: '32',
-          isHidden: false,
-          isReadOnly: false,
           name: 'Scenario',
           systemId: 'prop-scenario',
         },
         {
           elements: hiddenProperty.elements,
           id: '64',
-          isHidden: true,
-          isReadOnly: false,
           name: 'Hidden',
           systemId: 'prop-hidden',
         },
@@ -101,8 +97,6 @@ describe('propertyDtosToTreeViewData', () => {
 
     expect(request.properties).toEqual([
       {
-        ...visibleProperty,
-        changeInfo: {changeType: 'UPDATE'},
         elements: [
           {
             isReadOnly: false,
@@ -112,7 +106,10 @@ describe('propertyDtosToTreeViewData', () => {
             value: '2',
           },
         ],
+        hasDefinition: true,
+        propertyId: 32,
         propertyName: 'Scenario',
+        systemId: 'prop-scenario',
       },
     ]);
   });
