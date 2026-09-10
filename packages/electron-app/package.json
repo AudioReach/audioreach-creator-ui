@@ -20,7 +20,11 @@
     "package": "cross-env NODE_TLS_REJECT_UNAUTHORIZED= electron-builder --dir --config electron-builder.config.ts",
     "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"scripts/**/*.{ts,js}\" \"*.{ts,js}\" --quiet",
     "test": "cross-env DEBUG=pw:browser* playwright test",
-    "test:ci": "cross-env IS_CI=true DEBUG=pw:browser* playwright test",
+    "coverage:merge": "pnpm exec tsx scripts/merge-coverage.ts --electron-only",
+    "coverage:prepare": "pnpm exec tsx scripts/merge-coverage.ts --prepare --electron-only",
+    "test:ci": "pnpm run coverage:prepare && run-s --continue-on-error test:ci:run coverage:merge",
+    "test:ci:run": "cross-env COVERAGE=true IS_CI=true DEBUG=pw:browser* playwright test",
+    "test:merge-coverage": "node --experimental-strip-types scripts/merge-coverage.test.ts",
     "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
   },
   "dependencies": {
@@ -38,6 +42,7 @@
     "fs-extra": "^11.4.0",
     "glob": "^13.0.6",
     "npm-run-all2": "^8.0.4",
+    "nyc": "^18.0.0",
     "ora": "^9.4.1",
     "shx": "^0.4.0",
     "tsx": "^4.23.12",

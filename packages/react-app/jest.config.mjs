@@ -1,4 +1,6 @@
 /** @type {import('jest').Config} */
+import {createBabelOptions} from './babel-coverage-config.mjs';
+
 export default {
   // Clear mocks between tests
   clearMocks: true,
@@ -12,6 +14,7 @@ export default {
     '!src/**/*.test.{ts,tsx}',
     '!src/**/*.spec.{ts,tsx}',
   ],
+  coverageDirectory: '<rootDir>/../../coverage/react-app',
 
   // Coverage thresholds
   coverageThreshold: {
@@ -47,8 +50,6 @@ export default {
     '^~shared/(.*)$': '<rootDir>/src/shared/$1',
     '^~widgets/(.*)$': '<rootDir>/src/widgets/$1',
   },
-
-  preset: 'ts-jest/presets/default-esm',
 
   // Reporters
   reporters: [
@@ -96,6 +97,10 @@ export default {
     '^.+\\.(ts|tsx|js)$': [
       'ts-jest',
       {
+        babelConfig: {
+          ...createBabelOptions(process.env.COVERAGE === 'true', true),
+          excludeJestPreset: true,
+        },
         tsconfig: {
           allowSyntheticDefaultImports: true,
           esModuleInterop: true,

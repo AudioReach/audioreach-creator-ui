@@ -81,6 +81,7 @@ jobs:
         with:
           name: test-results-node-${{ matrix.node-version }}
           path: |
+            coverage/**/*
             packages/**/test-results/**/*
             packages/**/coverage/**/*
           retention-days: 5
