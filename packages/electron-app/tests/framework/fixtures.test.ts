@@ -15,6 +15,7 @@ import {CommandError} from './errors';
 import {CommandRunner} from './command-runner';
 import {click} from '../commands/app/interactions';
 import {
+  captureCoverage,
   closeTestApp,
   getTestData,
   getFirstWindow,
@@ -22,6 +23,8 @@ import {
 } from './fixtures';
 import type {PageObjects} from './test-context';
 import {tmpdir} from 'node:os';
+import {readFile, rm} from 'node:fs/promises';
+import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 test('launchTestApp preserves launch failures', async () => {
@@ -96,6 +99,27 @@ test('closeTestApp reports teardown failure when no test failed', async () => {
   } as unknown as ElectronApplication;
 
   await expect(closeTestApp(app, undefined)).rejects.toThrow('teardown failed');
+});
+
+test('captureCoverage writes coverage after a test failure', async () => {
+  const testId = 'fixture-coverage';
+  const coveragePath = resolve(`test-results/coverage-${testId}.json`);
+  const testInfo = {
+    attach: () => Promise.resolve(),
+    testId,
+  } as unknown as TestInfo;
+  const page = {
+    evaluate: () => Promise.resolve({path: 'source.ts'}),
+  } as unknown as Page;
+
+  try {
+    await captureCoverage(page, testInfo);
+    await expect(readFile(coveragePath, 'utf8')).resolves.toBe(
+      JSON.stringify({path: 'source.ts'}),
+    );
+  } finally {
+    await rm(coveragePath, {force: true});
+  }
 });
 
 test('CommandRunner names the step and attaches safe command metadata', async () => {

@@ -10,6 +10,8 @@ import {
   type TestInfo,
 } from '@playwright/test';
 import {fileURLToPath} from 'node:url';
+import {promises as fs} from 'node:fs';
+import {resolve} from 'node:path';
 
 import type {TestCommand} from './command';
 import {CommandRunner} from './command-runner';
@@ -84,9 +86,28 @@ export async function closeTestApp(
   return testError;
 }
 
-export function getTestData(
-  overrides: TestInputOverrides = {},
-): TestData {
+export async function captureCoverage(
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
+  const coverage = await page.evaluate(
+    () => (window as Window & {__coverage__?: unknown}).__coverage__,
+  );
+  if (!coverage) {
+    return;
+  }
+
+  const coveragePath = resolve(`test-results/coverage-${testInfo.testId}.json`);
+  await fs.mkdir(resolve('test-results'), {recursive: true});
+  await fs.writeFile(coveragePath, JSON.stringify(coverage));
+
+  await testInfo.attach('coverage', {
+    body: JSON.stringify(coverage),
+    contentType: 'application/json',
+  });
+}
+
+export function getTestData(overrides: TestInputOverrides = {}): TestData {
   return {
     customInputs: {},
     rejectedProjectPath: defaultRejectedProjectPath,
@@ -107,6 +128,7 @@ export const testSession = base.extend<{testSession: TestSession}>({
       (annotation) => annotation.type === testCaseAnnotationType,
     )?.description;
     const app = await launchTestApp();
+    let page: Page | undefined;
     let testError: unknown;
     let failed = false;
     const seamDisposers: Array<() => Promise<void>> = [];
@@ -117,7 +139,7 @@ export const testSession = base.extend<{testSession: TestSession}>({
     let explicitSeamResponse: OpenProjectFileResponse | undefined;
 
     try {
-      const page = await getFirstWindow(app);
+      page = await getFirstWindow(app);
       const registerSeam = async (
         response: OpenProjectFileResponse,
       ): Promise<() => Promise<void>> => {
@@ -178,12 +200,7 @@ export const testSession = base.extend<{testSession: TestSession}>({
           sideNav: createSideNav(page),
           useCaseSelector: createUseCaseSelector(page),
         },
-        testData: resolveTestData(
-          getTestData(),
-          inputs,
-          caseId,
-          inputsPath,
-        ),
+        testData: resolveTestData(getTestData(), inputs, caseId, inputsPath),
         testInfo,
       };
       const runner = new CommandRunner(testInfo, context);
@@ -195,6 +212,17 @@ export const testSession = base.extend<{testSession: TestSession}>({
     } catch (error) {
       failed = true;
       testError = error;
+    }
+
+    if (page) {
+      try {
+        await captureCoverage(page, testInfo);
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          testError = error;
+        }
+      }
     }
 
     for (const disposeOpenProjectFileSeam of seamDisposers.reverse()) {

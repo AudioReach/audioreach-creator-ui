@@ -7,6 +7,10 @@ import react from '@vitejs/plugin-react';
 import {resolve} from 'node:path';
 import {defineConfig} from 'vite';
 
+import {createCoveragePlugin} from './scripts/coverage-transform.ts';
+
+const isCoverageBuild = process.env.COVERAGE === 'true';
+
 // https://vitejs.dev/config/
 export default defineConfig({
   assetsInclude: ['**/*.xml'],
@@ -14,6 +18,12 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     outDir: 'dist',
+    ...(isCoverageBuild
+      ? {
+          rolldownOptions: {checks: {invalidAnnotation: false}},
+          sourcemap: true,
+        }
+      : {}),
   },
   css: {
     modules: {
@@ -21,7 +31,7 @@ export default defineConfig({
     },
     transformer: 'postcss',
   },
-  plugins: [react()],
+  plugins: [react(), createCoveragePlugin(isCoverageBuild)],
   resolve: {
     alias: {
       '~assets': resolve(import.meta.dirname, './src/assets'),

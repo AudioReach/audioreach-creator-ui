@@ -5,6 +5,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["COVERAGE"],
       "outputs": ["build/**", "dist/**"],
       "inputs": ["**/*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}"],
       "outputLogs": "new-only"
@@ -28,6 +29,7 @@
       "outputLogs": "new-only"
     },
     "test:ci": {
+      "cache": false,
       "dependsOn": ["^build", "build"],
       "inputs": [
         "*.{html,cjs,css,js,json,md,mdx,mjs,scss,ts,tsx,yaml}",
