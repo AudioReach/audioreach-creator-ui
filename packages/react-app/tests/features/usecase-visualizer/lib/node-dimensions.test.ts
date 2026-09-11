@@ -32,11 +32,15 @@ describe('NODE_DIMENSIONS — exact constants', () => {
   });
 
   it('subgraph dimensions match the spec', () => {
-    expect(NODE_DIMENSIONS.subgraph).toEqual({headerHeight: 40, padding: 16});
+    expect(NODE_DIMENSIONS.subgraph).toEqual({
+      headerHeight: 40,
+      minWidth: 320,
+      padding: 16,
+    });
   });
 
   it('container dimensions match the spec', () => {
-    expect(NODE_DIMENSIONS.container).toEqual({headerHeight: 32, padding: 12});
+    expect(NODE_DIMENSIONS.container).toEqual({headerHeight: 32, padding: 16});
   });
 });
 

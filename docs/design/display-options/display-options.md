@@ -1,6 +1,6 @@
 # Display Options
 
-**Version:** 1.2
+**Version:** 1.3
 
 ## Revision History
 
@@ -9,6 +9,7 @@
 | 1.0 | 2026-07-27 | Initial merge of `display-options.md`, `port-visibility.md`, and the `expand-collapse-subgraphs` design into one doc. |
 | 1.1 | 2026-07-30 | Expand Subgraphs checkbox now reads and writes `visualization.expandSubgraphs` directly via `savePreference`; `subgraph-collapse.ts` keeps only `allSubgraphIds` and `collapseSetForLevel`. Also adds a progress overlay — a blurred backdrop with a QUI `ProgressRing` and an "Expanding Subgraphs"/"Collapsing Subgraphs" label — shown while `graph-designer.tsx` applies a checkbox click. |
 | 1.2 | 2026-08-03 | Wires up Show Control Links, Show Dangling Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isDangling` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/dangling link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
+| 1.3 | 2026-09-07 | Wires Detailed View ID preferences through `nodeDisplayConfig`; adds Container ID rendering and ensures Compact View hides subgraph, container, and module instance IDs regardless of checkbox state. |
 
 ## Feature Overview and Strategic Fit
 
@@ -412,6 +413,31 @@ tier as `node.shape`/`node.icon`) and applies
 `var(--color-border-support-success)`, composed with the existing highlight
 precedence — search/selection highlight still wins when active.
 
+### ID Display Design
+
+`graph-designer.tsx` constructs a memoized `nodeDisplayConfig` from the
+visualization preferences. Each ID flag is enabled only when both Detailed
+View is active and its corresponding checkbox is checked:
+
+```ts
+{
+  showSubgraphId: isDetailedView && showSubgraphIds,
+  showContainerId: isDetailedView && showContainerIds,
+  showModuleInstanceId: isDetailedView && showModuleInstanceIds,
+}
+```
+
+The config is passed through the existing `visualizerRendering` object into
+the per-visualizer store. `ModuleNode` and `SubgraphNode` already consume
+their respective flags. `ContainerNode` previously rendered only its label;
+it now renders `Container ID: <id>` centered below the label when
+`showContainerId` is true,
+using the same hexadecimal formatting convention as the other node IDs.
+
+Compact View always supplies all three flags as `false`, even when the saved
+ID checkboxes remain checked. Switching back to Detailed View restores each
+checkbox's saved value.
+
 ### Port Visibility Design
 
 **`applyPortVisibility` transform:**
@@ -665,6 +691,14 @@ Not applicable on frontend.
   attribute and uses default styling; `isPpModule: true` combined with an
   active search/selection highlight shows the highlight, not the PP color —
   the existing highlight precedence wins
+- `graph-designer.tsx`'s `nodeDisplayConfig` memo enables each ID only
+  when `viewMode` is Detailed and its corresponding checkbox is checked;
+  Compact View forces all three flags to `false`
+
+**Component Tests:**
+
+- `ContainerNode` renders `data-testid="container-id"` by default and omits
+  it when `nodeDisplayConfig.showContainerId` is `false`
 
 **Integration Tests:**
 
@@ -675,6 +709,8 @@ Not applicable on frontend.
   preference save triggered
 - Select Detailed View → correct preference save triggered, ID checkboxes
   and Show all ports appear
+- With all three ID checkboxes checked, Compact View hides subgraph,
+  container, and module instance IDs; Detailed View shows all three
 - Select System Workflow → correct preference save triggered,
   Subsystem/Usecase level radios disappear, Simplified Subsystems becomes
   enabled (checked value unchanged)
@@ -702,13 +738,10 @@ Not applicable on frontend.
 
 **Manual verification — `graph-designer.tsx`:**
 
-`graph-designer.tsx` has no existing test harness (rendering it requires
-mocking `GraphDesignerStoreContext`, async ELK layout, `SideNavProvider`,
-and the full `UsecaseVisualizer`/`@xyflow/react` tree — infrastructure no
-other test in this suite builds). Every pure function in
-`subgraph-collapse.ts` and the `effectivePortVisibilityMode` formula are
-already covered by unit tests above; the wiring itself is verified manually
-in the running app:
+The `graph-designer.test.tsx` harness covers the `nodeDisplayConfig` wiring;
+the pure functions in `subgraph-collapse.ts` and the
+`effectivePortVisibilityMode` formula are covered by unit tests above. The
+remaining visual behavior is verified manually in the running app:
 
 - Toggling "Show all ports" re-runs layout and updates module box sizes and
   port handles, without reselecting the usecase or reloading the graph data

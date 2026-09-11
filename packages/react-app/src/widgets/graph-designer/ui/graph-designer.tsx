@@ -158,12 +158,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const usecaseData = initialUsecaseData;
 
   const {preferences, updatePreference} = useUserPreferences();
+  const {
+    highlightPPModules,
+    showContainerIds,
+    showControlLinks,
+    showDanglingLinks,
+    showModuleInstanceIds,
+    showSubgraphIds,
+    viewMode,
+  } = preferences.visualization;
+  const isDetailedView = viewMode === 'detailed';
   const effectivePortVisibilityMode =
-    preferences.visualization.viewMode === 'detailed'
+    isDetailedView
       ? preferences.display.portVisibilityMode
       : 'active';
-  const {highlightPPModules, showControlLinks, showDanglingLinks} =
-    preferences.visualization;
   const {workflowLevel, workflowType} = preferences.usecases;
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
     preferences.usecases,
@@ -1034,7 +1042,17 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [preferences, projectId, updatePreference],
   );
 
-  const visualizerRendering = useMemo(() => ({renderNodeContent}), []);
+  const visualizerRendering = useMemo(
+    () => ({
+      nodeDisplayConfig: {
+        showContainerId: isDetailedView && showContainerIds,
+        showModuleInstanceId: isDetailedView && showModuleInstanceIds,
+        showSubgraphId: isDetailedView && showSubgraphIds,
+      },
+      renderNodeContent,
+    }),
+    [isDetailedView, showContainerIds, showModuleInstanceIds, showSubgraphIds],
+  );
 
   const sideNavItems = useMemo(
     () => [

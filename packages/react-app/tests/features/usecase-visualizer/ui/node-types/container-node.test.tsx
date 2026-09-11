@@ -46,11 +46,28 @@ function renderContainerNode(
 }
 
 describe('ContainerNode — header', () => {
-  it('renders the label', () => {
+  it('does not render the container label separately from its id', () => {
     renderContainerNode(makeContainer({label: 'DSP Container'}));
-    expect(screen.getByTestId('container-node')).toHaveTextContent(
+    expect(screen.getByTestId('container-node')).not.toHaveTextContent(
       'DSP Container',
     );
+  });
+});
+
+describe('ContainerNode — showContainerId', () => {
+  it('renders the container id by default', () => {
+    renderContainerNode(makeContainer({containerId: 7}));
+    const containerId = screen.getByTestId('container-id');
+    expect(containerId).toHaveTextContent('Container ID: 0x00000007');
+    expect(containerId.parentElement).toHaveClass('whitespace-nowrap');
+    expect(containerId.parentElement).toHaveClass('text-xxs');
+  });
+
+  it('hides the container id when showContainerId is false', () => {
+    renderContainerNode(makeContainer(), (store) => {
+      store.setState({nodeDisplayConfig: {showContainerId: false}});
+    });
+    expect(screen.queryByTestId('container-id')).not.toBeInTheDocument();
   });
 });
 

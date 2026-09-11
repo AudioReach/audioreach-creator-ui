@@ -7,6 +7,7 @@ import type {Node, NodeProps} from '@xyflow/react';
 import {Minimize2} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import type {SubgraphNode as SubgraphNodeData} from '~entities/graph';
 import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
@@ -64,17 +65,30 @@ export function SubgraphNode({data: node, selected}: SubgraphNodeProps) {
         data-testid="subgraph-header"
       >
         <div
-          className="flex min-w-0 items-center gap-2"
+          className="flex min-w-0 flex-1 items-center gap-2"
           data-testid="subgraph-header-title-group"
         >
-          <span className="text-primary flex items-center gap-1 truncate text-xs font-semibold">
-            {node.label}
-            {showSubgraphId ? (
-              <span className="text-secondary" data-testid="subgraph-id">
-                {`#${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
+          <Tooltip
+            positioning={{placement: 'bottom', strategy: 'fixed'}}
+            trigger={
+              <span
+                className="text-primary max-w-full min-w-0 truncate text-xs font-semibold"
+                data-testid="subgraph-label"
+              >
+                {node.label}
               </span>
-            ) : null}
-          </span>
+            }
+          >
+            {node.label}
+          </Tooltip>
+          {showSubgraphId ? (
+            <span
+              className="text-secondary shrink-0 text-xs whitespace-nowrap"
+              data-testid="subgraph-id"
+            >
+              {`SGID: ${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
+            </span>
+          ) : null}
           {override?.header ? (
             <span data-testid="subgraph-header-slot">{override.header}</span>
           ) : null}

@@ -42,7 +42,7 @@ describe('recalculateParentSizes — container parent', () => {
       type: 'container',
       width: 50,
     });
-    // padding = 12 (container)
+    // padding = 16 (container)
     const child = makeNode({
       height: 80,
       id: 'm1',
@@ -56,13 +56,13 @@ describe('recalculateParentSizes — container parent', () => {
       child,
     ]);
 
-    // maxRight = 20 + 160 = 180; newWidth = 180 + 12 = 192
-    // maxBottom = 20 + 80 = 100; newHeight = 100 + 12 = 112
-    expect(resizedParents['cnt-1']).toEqual({height: 112, width: 192});
+    // maxRight = 20 + 160 = 180; newWidth = 180 + 16 = 196
+    // maxBottom = 20 + 80 = 100; newHeight = 100 + 16 = 116
+    expect(resizedParents['cnt-1']).toEqual({height: 116, width: 196});
 
     const updatedParent = out.find((n) => n.id === 'cnt-1');
-    expect(updatedParent?.width).toBe(192);
-    expect(updatedParent?.height).toBe(112);
+    expect(updatedParent?.width).toBe(196);
+    expect(updatedParent?.height).toBe(116);
   });
 
   it('does not emit resizedParents entry when dimensions are unchanged', () => {
@@ -73,13 +73,13 @@ describe('recalculateParentSizes — container parent', () => {
       position: {x: 20, y: 20},
       width: 160,
     });
-    // Pre-sized to exact fit: width=192, height=112
+    // Pre-sized to exact fit: width=196, height=116
     const parent = makeNode({
-      height: 112,
+      height: 116,
       id: 'cnt-1',
       position: {x: 0, y: 0},
       type: 'container',
-      width: 192,
+      width: 196,
     });
 
     const {resizedParents} = recalculateParentSizes([parent, child]);
@@ -108,8 +108,8 @@ describe('recalculateParentSizes — overflow correction', () => {
     const updatedParent = out.find((n) => n.id === 'cnt-overflow')!;
     const updatedChild = out.find((n) => n.id === 'c-overflow')!;
 
-    expect(updatedParent.position.x).toBe(90);
-    expect(updatedChild.position.x).toBe(12);
+    expect(updatedParent.position.x).toBe(86);
+    expect(updatedChild.position.x).toBe(16);
   });
 
   it('shifts child inward and parent up when child drifts past top edge', () => {
@@ -149,13 +149,13 @@ describe('recalculateParentSizes — overflow correction', () => {
       height: 80,
       id: 'c-no-shift',
       parentId: 'cnt-no-shift',
-      position: {x: 12, y: 12},
+      position: {x: 16, y: 16},
       width: 160,
     });
 
     const {nodes: out} = recalculateParentSizes([parent, child]);
     const updatedChild = out.find((n) => n.id === 'c-no-shift')!;
-    expect(updatedChild.position).toEqual({x: 12, y: 12});
+    expect(updatedChild.position).toEqual({x: 16, y: 16});
   });
 });
 describe('recalculateParentSizes — subgraph parent', () => {
@@ -177,9 +177,8 @@ describe('recalculateParentSizes — subgraph parent', () => {
 
     const {resizedParents} = recalculateParentSizes([parent, child]);
     // child at padding boundary (16) → no overflow correction
-    // maxRight = 16 + 100 = 116; newWidth = 116 + 16 = 132
-    // maxBottom = 16 + 60 = 76; newHeight = 76 + 16 = 92
-    expect(resizedParents['sg-1']).toEqual({height: 92, width: 132});
+    // Header minimum width (320) is larger than the child bounds (132).
+    expect(resizedParents['sg-1']).toEqual({height: 92, width: 320});
   });
 });
 
@@ -196,7 +195,7 @@ describe('recalculateParentSizes — multiple children', () => {
       height: 80,
       id: 'c1',
       parentId: 'cnt-1',
-      position: {x: 12, y: 12},
+      position: {x: 16, y: 16},
       width: 100,
     });
     const child2 = makeNode({
@@ -208,11 +207,11 @@ describe('recalculateParentSizes — multiple children', () => {
     });
 
     const {resizedParents} = recalculateParentSizes([parent, child1, child2]);
-    // child1 at x=12 (= padding), child2 at x=150+120=270 — no overflow
-    // maxRight = max(12+100, 150+120) = max(112, 270) = 270
-    // maxBottom = max(12+80, 20+60) = max(92, 80) = 92
-    // newWidth = 270 + 12 = 282; newHeight = 92 + 12 = 104
-    expect(resizedParents['cnt-1']).toEqual({height: 104, width: 282});
+    // child1 at x=16 (= padding), child2 at x=150 — no overflow
+    // maxRight = max(16+100, 150+120) = max(116, 270) = 270
+    // maxBottom = max(16+80, 20+60) = max(96, 80) = 96
+    // newWidth = 270 + 16 = 286; newHeight = 96 + 16 = 112
+    expect(resizedParents['cnt-1']).toEqual({height: 112, width: 286});
   });
 });
 
@@ -267,7 +266,7 @@ describe('recalculateParentSizes — nested parent chain', () => {
       height: 40,
       id: 'm-1',
       parentId: 'cnt-1',
-      position: {x: 12, y: 12},
+      position: {x: 16, y: 16},
       width: 50,
     });
 
@@ -282,22 +281,22 @@ describe('recalculateParentSizes — nested parent chain', () => {
     const updatedSubgraph = out.find((n) => n.id === 'sg-1')!;
     const updatedSubsystem = out.find((n) => n.id === 'ss-1')!;
 
-    // Container padding=12: module (12,12,50x40) -> width=74,height=64
-    expect(updatedContainer.width).toBe(74);
-    expect(updatedContainer.height).toBe(64);
+    // Container padding=16: module (16,16,50x40) -> width=82,height=72
+    expect(updatedContainer.width).toBe(82);
+    expect(updatedContainer.height).toBe(72);
 
-    // Subgraph padding=16 using updated container dimensions from the prior step.
-    expect(updatedSubgraph.width).toBe(110);
-    expect(updatedSubgraph.height).toBe(100);
+    // Subgraph header minimum width is larger than the child bounds.
+    expect(updatedSubgraph.width).toBe(320);
+    expect(updatedSubgraph.height).toBe(108);
 
     // Subsystem padding/baseHeight=100 using updated subgraph dimensions.
-    expect(updatedSubsystem.width).toBe(310);
-    expect(updatedSubsystem.height).toBe(300);
+    expect(updatedSubsystem.width).toBe(520);
+    expect(updatedSubsystem.height).toBe(308);
 
     expect(resizedParents).toEqual({
-      'cnt-1': {height: 64, width: 74},
-      'sg-1': {height: 100, width: 110},
-      'ss-1': {height: 300, width: 310},
+      'cnt-1': {height: 72, width: 82},
+      'sg-1': {height: 108, width: 320},
+      'ss-1': {height: 308, width: 520},
     });
   });
 });

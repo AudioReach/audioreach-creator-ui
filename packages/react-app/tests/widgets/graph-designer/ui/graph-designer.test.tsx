@@ -6,6 +6,11 @@
 jest.mock('~shared/lib/logger');
 
 import {NODE_KIND, type LevelView, type NodeKind} from '~entities/graph';
+import type {
+  ContextMenuTarget,
+  NodeDisplayConfig,
+  VisualizerContextMenuConfig,
+} from '~features/usecase-visualizer';
 
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
@@ -28,6 +33,7 @@ interface MockUsecaseVisualizerProps {
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
   };
   graph?: LevelView;
+  rendering?: {nodeDisplayConfig?: NodeDisplayConfig};
 }
 
 jest.mock('@qualcomm-ui/react/button', () => {
@@ -104,7 +110,7 @@ const mockUsecaseVisualizer = (props: MockUsecaseVisualizerProps) => {
 
 jest.mock('~features/usecase-visualizer', () => ({
   NODE_DIMENSIONS: {
-    container: {headerHeight: 32, padding: 12},
+    container: {headerHeight: 32, padding: 16},
     subgraph: {headerHeight: 40, padding: 16},
     subgraphProxy: {height: 72, width: 160},
   },
@@ -194,10 +200,10 @@ import {deleteSelection} from '~features/graph-designer/lib/multi-select-delete'
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import type {PortConnectionsInfoPopupProps} from '~features/port-connections-info';
-import type {
-  ContextMenuTarget,
-  VisualizerContextMenuConfig,
-} from '~features/usecase-visualizer';
+import {
+  DEFAULT_USER_PREFERENCES,
+  type UserPreferences,
+} from '~shared/config/user-preferences-types';
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
@@ -251,6 +257,18 @@ function makeGraphData(): UsecaseGraphData {
   };
 }
 
+function makeUserPreferences(
+  visualization: Partial<UserPreferences['visualization']>,
+): UserPreferences {
+  return {
+    ...DEFAULT_USER_PREFERENCES,
+    visualization: {
+      ...DEFAULT_USER_PREFERENCES.visualization,
+      ...visualization,
+    },
+  };
+}
+
 function makeSubsystemGraphData(): UsecaseGraphData {
   const graphData = makeGraphData();
   return {
@@ -273,9 +291,13 @@ function renderGraphDesigner(options?: {
   graphData?: UsecaseGraphData;
   placeSubgraphFromPalette?: GraphDesignerStore['placeSubgraphFromPalette'];
   subgraphProvenanceById?: GraphDesignerStore['subgraphProvenanceById'];
+  userPreferences?: UserPreferences;
 }) {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
   const projectStore = createProjectStore(PROJECT_ID);
+  if (options?.userPreferences) {
+    projectStore.setState({userPreferences: options.userPreferences});
+  }
   projectStore.setState({editModeState: 'edit'});
   graphDesignerStore.setState({
     graphData: options?.graphData,
@@ -391,6 +413,42 @@ describe('GraphDesigner — top bar', () => {
     const applyDiscardControls = screen.getByTestId('apply-discard-controls');
     expect(applyDiscardControls).toBeInTheDocument();
     expect(applyDiscardControls).toHaveTextContent(PROJECT_ID);
+  });
+});
+
+describe('GraphDesigner — node display config', () => {
+  it('reflects the ID preferences in Detailed View', () => {
+    renderGraphDesigner({
+      userPreferences: makeUserPreferences({
+        showContainerIds: false,
+        showModuleInstanceIds: true,
+        showSubgraphIds: true,
+        viewMode: 'detailed',
+      }),
+    });
+
+    expect(mockVisualizerProps?.rendering?.nodeDisplayConfig).toEqual({
+      showContainerId: false,
+      showModuleInstanceId: true,
+      showSubgraphId: true,
+    });
+  });
+
+  it('hides all IDs in Compact View regardless of checkbox state', () => {
+    renderGraphDesigner({
+      userPreferences: makeUserPreferences({
+        showContainerIds: true,
+        showModuleInstanceIds: true,
+        showSubgraphIds: true,
+        viewMode: 'compact',
+      }),
+    });
+
+    expect(mockVisualizerProps?.rendering?.nodeDisplayConfig).toEqual({
+      showContainerId: false,
+      showModuleInstanceId: false,
+      showSubgraphId: false,
+    });
   });
 });
 

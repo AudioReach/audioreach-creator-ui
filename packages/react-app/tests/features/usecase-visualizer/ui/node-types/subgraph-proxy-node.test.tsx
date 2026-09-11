@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 import {ReactFlowProvider} from '@xyflow/react';
 
 import {createVisualizerStore} from '~features/usecase-visualizer/model/usecase-visualizer-store';
@@ -51,11 +51,30 @@ function renderProxyNode(
 }
 
 describe('SubgraphProxyNode — label and border', () => {
-  it('renders the label', () => {
+  it('renders the label and subgraph id outside the proxy border', () => {
     renderProxyNode(makeProxy({label: 'Collapsed SG'}));
-    expect(screen.getByTestId('subgraph-proxy-node')).toHaveTextContent(
-      'Collapsed SG',
+    const subgraphId = screen.getByText('SGID: 0x00000009');
+    const label = subgraphId.parentElement?.querySelector('span');
+    expect(label).not.toBeNull();
+    expect(label).toHaveTextContent('Collapsed SG');
+    expect(
+      within(screen.getByTestId('subgraph-proxy-node')).queryByText(
+        'Collapsed SG',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides the id when showSubgraphId is false', () => {
+    const store = createVisualizerStore();
+    store.setState({nodeDisplayConfig: {showSubgraphId: false}});
+    render(
+      <ReactFlowProvider>
+        <VisualizerStoreProvider store={store}>
+          <SubgraphProxyNode {...makeSubgraphProxyNodeProps(makeProxy())} />
+        </VisualizerStoreProvider>
+      </ReactFlowProvider>,
     );
+    expect(screen.queryByText('SGID: 0x00000009')).not.toBeInTheDocument();
   });
 
   it('applies the dashed-border class', () => {

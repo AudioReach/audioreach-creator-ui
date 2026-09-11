@@ -12,6 +12,7 @@ import {GhostNode} from '~features/usecase-visualizer/lib/ghost-node';
 import type {
   ContainerNode,
   ModuleNode,
+  SubgraphNode,
 } from '~features/usecase-visualizer/model/visualizer.types';
 
 function makeModule(overrides: Partial<ModuleNode> = {}): ModuleNode {
@@ -44,6 +45,20 @@ function makeContainer(overrides: Partial<ContainerNode> = {}): ContainerNode {
   };
 }
 
+function makeSubgraph(overrides: Partial<SubgraphNode> = {}): SubgraphNode {
+  return {
+    height: 100,
+    id: 'sg-1',
+    label: 'Subgraph A',
+    nodeKind: 'subgraph',
+    subgraphId: 7,
+    width: 200,
+    x: 0,
+    y: 0,
+    ...overrides,
+  };
+}
+
 function renderGhost(node: Parameters<typeof GhostNode>[0]['node']) {
   return render(
     <ReactFlowProvider>
@@ -56,6 +71,32 @@ describe('GhostNode', () => {
   it('renders node label once', () => {
     renderGhost(makeModule({label: 'Custom Label'}));
     expect(screen.getAllByText('Custom Label')).toHaveLength(1);
+  });
+
+  it('centers module labels vertically and horizontally', () => {
+    renderGhost(makeModule());
+    expect(screen.getByTestId('ghost-node-label')).toHaveClass(
+      'top-1/2',
+      '-translate-y-1/2',
+      'text-center',
+    );
+  });
+
+  it('centers the container ID instead of the container label', () => {
+    renderGhost(makeContainer({containerId: 601, label: 'Container 601'}));
+    const label = screen.getByTestId('ghost-node-label');
+    expect(label).toHaveTextContent('Container ID: 0x00000259');
+    expect(label).not.toHaveTextContent('Container 601');
+    expect(label).toHaveClass('top-1', 'text-center');
+    expect(label).not.toHaveClass('top-1/2', '-translate-y-1/2');
+  });
+
+  it('keeps only the subgraph name in ghost mode', () => {
+    renderGhost(makeSubgraph());
+    const label = screen.getByTestId('ghost-node-label');
+    expect(label).toHaveTextContent('Subgraph A');
+    expect(label).not.toHaveTextContent('0x00000007');
+    expect(label).toHaveClass('left-1', 'right-1', 'truncate');
   });
 
   it('applies declared width and height', () => {

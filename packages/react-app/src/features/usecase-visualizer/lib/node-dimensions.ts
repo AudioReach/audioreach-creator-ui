@@ -16,7 +16,7 @@
 export const NODE_DIMENSIONS = {
   container: {
     headerHeight: 32,
-    padding: 12,
+    padding: 16,
   },
   module: {
     baseHeight: 80,
@@ -27,6 +27,7 @@ export const NODE_DIMENSIONS = {
   },
   subgraph: {
     headerHeight: 40,
+    minWidth: 320,
     padding: 16,
   },
   subgraphProxy: {
