@@ -11,16 +11,21 @@ import {IconButton} from '@qualcomm-ui/react/button';
 
 import type {ConfigurationItem} from '~features/key-configurator';
 
+/**
+ * Provides the common accordion host for all Graph Designer configuration items.
+ * Callers map graph selection into items and supply the View/Edit body per type.
+ */
 export interface ConfigurationSection {
   isExpanded: boolean;
   item: ConfigurationItem;
 }
 
+/** Supports numeric legacy IDs and string subgraph system IDs in one host. */
 export interface ConfiguratorPanelProps {
   isEditable?: boolean; // Controls whether the configuration views are editable or readonly
   onEditModeChange?: (isEditable: boolean) => void; // Callback when edit mode changes
-  onItemExpand?: (itemId: number, expanded: boolean) => void;
-  onItemRemove?: (itemId: number) => void;
+  onItemExpand?: (itemId: number | string, expanded: boolean) => void;
+  onItemRemove?: (itemId: number | string) => void;
   onSelectionChange?: (items: ConfigurationItem[]) => void;
   renderConfigurationView?: (
     item: ConfigurationItem,
@@ -82,7 +87,7 @@ export const ConfiguratorUtils = {
    */
   removeItem: (
     currentItems: ConfigurationItem[],
-    itemId: number,
+    itemId: number | string,
   ): ConfigurationItem[] => {
     return currentItems.filter((item) => item.id !== itemId);
   },
@@ -91,8 +96,8 @@ export const ConfiguratorUtils = {
 // Configuration Section Component
 const ConfigurationSection: React.FC<{
   isEditable: boolean;
-  onRemove: (id: number) => void;
-  onToggleExpand: (id: number) => void;
+  onRemove: (id: number | string) => void;
+  onToggleExpand: (id: number | string) => void;
   renderContent?: (
     item: ConfigurationItem,
     isEditable: boolean,
@@ -129,9 +134,7 @@ const ConfigurationSection: React.FC<{
   return (
     <div className="border-neutral-02 overflow-hidden rounded-lg border">
       {/* Header */}
-      <div
-        className="bg-secondary border-neutral-02 flex items-center justify-between border-b px-4 py-3"
-      >
+      <div className="bg-secondary border-neutral-02 flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center space-x-2">
           <IconButton
             aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
@@ -197,7 +200,7 @@ export const ConfiguratorPanel: React.FC<ConfiguratorPanelProps> = ({
   }, [selectedItems]);
 
   const handleToggleExpand = useCallback(
-    (sectionId: number) => {
+    (sectionId: number | string) => {
       setSections((prevSections) =>
         prevSections.map((section) =>
           section.item.id === sectionId
@@ -215,7 +218,7 @@ export const ConfiguratorPanel: React.FC<ConfiguratorPanelProps> = ({
   );
 
   const handleRemoveSection = useCallback(
-    (sectionId: number) => {
+    (sectionId: number | string) => {
       const updatedItems = selectedItems.filter(
         (item) => item.id !== sectionId,
       );

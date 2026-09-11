@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers subgraph mutations with the complete Edit Session prerequisites in
+ * place. The SGKV-related mocks keep session setup valid so test failures
+ * describe subgraph operations instead of missing edit-entry dependencies.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~shared/controls/global-toaster', () => ({
   showToast: jest.fn(),
@@ -26,6 +31,9 @@ jest.mock('~entities/edit-session', () => ({
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
 }));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 jest.mock('~shared/store/project-store-registry', () => ({
   projectStoreRegistry: {
     get: jest.fn(() => ({
@@ -42,6 +50,7 @@ import {createStore} from 'zustand';
 
 import {getContainersBySystemIds} from '~entities/containers';
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {deleteSpfModule} from '~entities/spf-modules';
 import {
@@ -80,6 +89,7 @@ const mockGetSubgraphPairs = jest.mocked(getSubgraphPairs);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
 const mockDeleteSpfModule = jest.mocked(deleteSpfModule);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockRenameSubgraphApi = jest.mocked(renameSubgraph);
 const mockShowToast = jest.mocked(showToast);
 const mockEndSession = jest.mocked(endSession);
@@ -88,6 +98,11 @@ const mockGetProjectById = jest.mocked(getProjectById);
 
 beforeEach(() => {
   mockGetContainersBySystemIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
+  mockGetAllKeyDefinitions.mockResolvedValue({
     data: [],
     message: undefined as never,
     success: true,

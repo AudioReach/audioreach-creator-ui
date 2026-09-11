@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers container mutations with the complete Edit Session prerequisites in
+ * place. SGKV-specific mocks ensure entering Edit mode remains realistic while
+ * this suite focuses on container behavior rather than silently timing out.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~shared/controls/global-toaster', () => ({
   showToast: jest.fn(),
@@ -23,6 +28,9 @@ jest.mock('~entities/edit-session', () => ({
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
 }));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 jest.mock('~shared/store/project-store-registry', () => ({
   projectStoreRegistry: {
     get: jest.fn(() => ({
@@ -39,6 +47,7 @@ import {createStore} from 'zustand';
 
 import {getContainersBySystemIds} from '~entities/containers';
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {deleteSpfModule} from '~entities/spf-modules';
 import {getSubgraphsByIds} from '~entities/usecases';
@@ -61,6 +70,7 @@ import {makeModuleInstance} from '../test-utils/component-dto-fixtures';
 
 const mockDeleteSpfModule = jest.mocked(deleteSpfModule);
 const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockShowToast = jest.mocked(showToast);
 const mockEndSession = jest.mocked(endSession);
@@ -92,6 +102,11 @@ beforeEach(() => {
     message: undefined as never,
     success: true,
   });
+  mockGetAllKeyDefinitions.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -100,7 +115,11 @@ beforeEach(() => {
   mockDeleteSpfModule.mockReset();
   mockShowToast.mockClear();
   mockEndSession.mockResolvedValue({
-    data: {projectId: 'proj-container-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+    data: {
+      projectId: 'proj-container-ops-1',
+      sessionMode: 'READONLY',
+      summary: 'ok',
+    },
   });
   mockStartSession.mockResolvedValue({
     data: {

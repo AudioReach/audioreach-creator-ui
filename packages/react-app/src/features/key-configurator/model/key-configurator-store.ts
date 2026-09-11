@@ -15,14 +15,17 @@ import {
 } from './configurator-item.types';
 import {moduleInstanceCoordinator} from './module-instance-coordinator';
 import {useModuleTagKeysStore} from './module-tag-keys-store';
-import {useSubgraphConfigStore} from './subgraph-config-store';
 import {useSubsystemConfigStore} from './subsystem-config-store';
 
+/**
+ * Owns existing module/subsystem configuration lifecycle and graph selection.
+ * SGKV state stays in Graph Designer; this store only hosts selected item views.
+ */
 /**
  * Base context information for configuration sessions
  */
 interface BaseConfigurationContext {
-  entityId: number; // moduleId, subgraphId, or subsystemId
+  entityId: number | string;
   systemId: string;
 }
 
@@ -30,15 +33,9 @@ interface BaseConfigurationContext {
  * Module configuration context for module-instance API lookups.
  */
 export interface ModuleConfigurationContext extends BaseConfigurationContext {
+  entityId: number;
   entityType: ConfigurationItemType.MODULE;
   moduleDefinitionSystemId: string;
-}
-
-/**
- * Subgraph configuration context
- */
-export interface SubgraphConfigurationContext extends BaseConfigurationContext {
-  entityType: ConfigurationItemType.SUBGRAPH;
 }
 
 /**
@@ -48,13 +45,9 @@ export interface SubsystemConfigurationContext extends BaseConfigurationContext 
   entityType: ConfigurationItemType.SUBSYSTEM;
 }
 
-/**
- * Discriminated union of all configuration context types
- */
+/** Configures modules/subsystems only; SGKV reads Graph Designer state directly. */
 export type ConfigurationContext =
-  | ModuleConfigurationContext
-  | SubgraphConfigurationContext
-  | SubsystemConfigurationContext;
+  ModuleConfigurationContext | SubsystemConfigurationContext;
 
 export interface KeyConfiguratorStore {
   clearSelection: () => void;
@@ -163,22 +156,6 @@ export function createKeyConfiguratorStore(projectId: string) {
               break;
             }
 
-            case ConfigurationItemType.SUBGRAPH: {
-              const store = useSubgraphConfigStore.getState();
-              if (!store.projectId) {
-                const initSuccess = await store.initialize(state.projectId);
-                if (!initSuccess) {
-                  logger.error('Failed to initialize subgraph config store', {
-                    action: 'initialize_configuration',
-                    component: 'KeyConfiguratorStore',
-                    projectId: state.projectId,
-                  });
-                  return false;
-                }
-              }
-              break;
-            }
-
             case ConfigurationItemType.SUBSYSTEM: {
               const store = useSubsystemConfigStore.getState();
               if (!store.projectId) {
@@ -219,13 +196,12 @@ export function createKeyConfiguratorStore(projectId: string) {
         // Reset all individual stores
         useCalibrationKeysStore.getState().reset();
         useModuleTagKeysStore.getState().reset();
-        useSubgraphConfigStore.getState().reset();
         useSubsystemConfigStore.getState().reset();
 
         // Reset main store
         set({
           projectId: '',
-          selectedItems: [], // NEW: Also reset selection
+          selectedItems: [],
         });
       },
 
@@ -252,7 +228,6 @@ export function createKeyConfiguratorStore(projectId: string) {
           const results = await Promise.all([
             useCalibrationKeysStore.getState().saveToBackend(),
             useModuleTagKeysStore.getState().saveToBackend(),
-            useSubgraphConfigStore.getState().saveToBackend(),
             useSubsystemConfigStore.getState().saveToBackend(),
           ]);
 
@@ -298,7 +273,6 @@ export function createKeyConfiguratorStore(projectId: string) {
         });
       },
 
-      // NEW: Selection actions
       setSelectedItems: (items) => {
         set({selectedItems: items});
         logger.debug(`Selection updated: ${items.length} items`, {

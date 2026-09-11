@@ -7,6 +7,10 @@ import type {StoreApi} from 'zustand';
 
 import {getContainersBySystemIds} from '~entities/containers';
 import type {CkvDto, TagInfoDto} from '~entities/spf-module-data';
+import type {
+  KvSelection,
+  KvSelectionMetadata,
+} from '~entities/subgraph-definitions';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {
   getSubgraphsByIds,
@@ -27,10 +31,16 @@ import type {SliceStatus} from '~shared/store/global-store.types';
 import type {SubsystemSlice} from '~shared/store/tab-store-slices/subsystem-slice';
 
 import {buildSubsystemTree} from '../lib/subsystem-tree.utils';
+import {mapSubgraphKvVectors} from '../lib/subgraph-kv-mapping';
 
 import type {EditSessionSlice} from './edit-session-slice';
 import type {ModuleListSlice} from './module-list-slice';
 
+/**
+ * Owns the authoritative read-only graph snapshot for the selected usecases.
+ * SGKV arrives from subgraph-detail enrichment and remains here in View mode;
+ * Edit mode copies it into Edit Session before user changes are allowed.
+ */
 export type DiffState = 'added' | 'removed' | 'modified' | 'common';
 
 export interface Port {
@@ -80,6 +90,8 @@ export interface Connection {
 export interface Subgraph {
   containers: string[];
   diffState?: DiffState;
+  /** Read-only SGKV snapshot populated by the subgraph-detail request. */
+  kvVectors: KvSelection[];
   naturalId?: number;
   subgraphName: string;
   subgraphType: string;
@@ -174,6 +186,8 @@ export interface GraphDataSlice {
   graphDataStatus: SliceStatus;
   initializeEmptyGraphData: () => void;
   isDirty: boolean;
+  isSgKvMetadataRefreshing: boolean;
+  /** Loads the graph snapshot and its subgraph-detail SGKV enrichment. */
   loadGraphData: (
     usecases: string[],
     options?: {filterBySubsystem?: boolean; stagingSessionId?: string},
@@ -182,6 +196,8 @@ export interface GraphDataSlice {
   markDirty: () => void;
   pruneDeletedLinkBookkeeping: (deletedLinkIds: string[]) => void;
   recomputeContainersAndSubgraphs: () => Promise<void>;
+  /** Controls the neutral UI while selected-subgraph metadata is refreshed. */
+  setSgKvMetadataRefreshing: (isRefreshing: boolean) => void;
   updateContainerIdLocal: (
     subgraphSystemId: string,
     containerSystemId: string,
@@ -197,6 +213,10 @@ export interface GraphDataSlice {
     moduleSystemId: string,
     field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
     value: number,
+  ) => void;
+  /** Replaces derived View-mode selected/EC flags without changing vectors. */
+  updateSgKvMetadata: (
+    metadataBySubgraphId: Record<string, Record<string, KvSelectionMetadata>>,
   ) => void;
   updateSubgraphNameLocal: (subgraphSystemId: string, name: string) => void;
   updateSubsystemNameLocal: (subsystemId: string, name: string) => void;
@@ -243,6 +263,7 @@ function deriveContainersAndSubgraphs(
       const existing = existingSubgraphs?.[m.subgraphSystemId];
       const sg: Subgraph = {
         containers: [],
+        kvVectors: existing?.kvVectors ?? [],
         naturalId: existing?.naturalId,
         subgraphName:
           existing?.subgraphName ?? `Subgraph ${m.subgraphSystemId}`,
@@ -297,12 +318,12 @@ async function hydrateContainerNaturalIds(
 }
 
 /**
- * Fetches real subgraph names/types from the backend and overlays them onto
- * the placeholder entries `deriveContainersAndSubgraphs` produces, mutating
- * `subgraphs` in place. Failure is non-fatal — the placeholder name is left
- * in place so a naming lookup failure doesn't block the graph from loading.
+ * Fetches real subgraph details and overlays them onto the placeholder entries
+ * `deriveContainersAndSubgraphs` produces. Failure is non-fatal so a detail
+ * lookup failure does not block the graph from loading.
  */
-async function applyRealSubgraphNames(
+/** Enriches graph-derived subgraph placeholders with detail-only SGKV data. */
+async function applySubgraphDetails(
   projectId: string,
   subgraphs: Record<string, Subgraph>,
 ): Promise<void> {
@@ -313,7 +334,7 @@ async function applyRealSubgraphNames(
 
   const result = await getSubgraphsByIds(projectId, subgraphIds);
   if (hasBlockingIssues(result) || !result.data) {
-    logger.error('graphDataSlice: applyRealSubgraphNames — API error', {
+    logger.error('graphDataSlice: applySubgraphDetails — API error', {
       action: 'loadGraphData',
       component: 'graphDataSlice',
       error: getIssueMessage(result, 'Failed to load subgraph names'),
@@ -325,10 +346,23 @@ async function applyRealSubgraphNames(
     const sg = subgraphs[dto.systemId];
     if (sg) {
       sg.naturalId = dto.naturalId;
+      sg.kvVectors = mapSubgraphKvVectors(dto.SGKV);
       sg.subgraphName = dto.name ?? '';
       sg.subgraphType = dto.subGraphSharedType;
     }
   }
+}
+
+/** Projects the Graph Data snapshot into the Edit Session reconciliation input. */
+function getSgKvVectorsBySubgraphId(
+  subgraphs: Record<string, Subgraph>,
+): Record<string, KvSelection[]> {
+  return Object.fromEntries(
+    Object.entries(subgraphs).map(([subgraphId, subgraph]) => [
+      subgraphId,
+      subgraph.kvVectors,
+    ]),
+  );
 }
 
 /**
@@ -928,6 +962,7 @@ export function createGraphDataSlice<
         graphDataError: null,
         graphDataStatus: 'uninitialized',
         isDirty: false,
+        isSgKvMetadataRefreshing: false,
       } as Partial<S>);
     },
 
@@ -942,22 +977,30 @@ export function createGraphDataSlice<
         action: 'initializeEmptyGraphData',
         component: 'graphDataSlice',
       });
+      const graphData: UsecaseGraphData = {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {},
+      };
       set({
-        graphData: {
-          connections: [],
-          containers: {},
-          moduleInstances: {},
-          selectedUsecases: [],
-          subgraphs: {},
-          subsystems: {},
-        },
+        graphData,
         graphDataError: null,
         graphDataStatus: 'ready',
         isDirty: false,
       } as unknown as Partial<S>);
+      if (get().mode === 'edit') {
+        get().updateSgKvConfigInfo(
+          getSgKvVectorsBySubgraphId(graphData.subgraphs),
+        );
+      }
     },
 
     isDirty: false,
+
+    isSgKvMetadataRefreshing: false,
 
     loadGraphData: async (
       usecases: string[],
@@ -971,6 +1014,7 @@ export function createGraphDataSlice<
       set({
         graphDataError: null,
         graphDataStatus: 'loading',
+        isSgKvMetadataRefreshing: false,
       } as unknown as Partial<S>);
 
       try {
@@ -1046,7 +1090,8 @@ export function createGraphDataSlice<
 
         const {containers, newSubgraphs, subgraphs} =
           deriveContainersAndSubgraphs(moduleInstances);
-        await applyRealSubgraphNames(projectId, newSubgraphs);
+        // The component response identifies subgraphs; detail data supplies SGKV.
+        await applySubgraphDetails(projectId, newSubgraphs);
         await hydrateContainerNaturalIds(projectId, containers);
 
         const subsystemIdToChildSubsystemIds = new Map<string, string[]>();
@@ -1104,6 +1149,12 @@ export function createGraphDataSlice<
           graphDataError: null,
           graphDataStatus: 'ready',
         } as unknown as Partial<S>);
+        if (get().mode === 'edit') {
+          // Preserve local vectors while refreshing their derived metadata.
+          get().updateSgKvConfigInfo(
+            getSgKvVectorsBySubgraphId(graphData.subgraphs),
+          );
+        }
 
         logger.debug('graphDataSlice: loadGraphData — ready', {
           action: 'loadGraphData',
@@ -1186,18 +1237,31 @@ export function createGraphDataSlice<
         component: 'graphDataSlice',
       });
 
-      // A subgraph deriveContainersAndSubgraphs reports as new is freshly
-      // created by this mutation — it only got the `Subgraph ${id}`
-      // placeholder and needs its real name/type fetched, same as
-      // loadGraphData does for a full snapshot.
+      // A newly derived subgraph has only its placeholder fields and needs its
+      // full details, the same way a full Graph Data load does.
       if (Object.keys(newSubgraphs).length > 0) {
-        await applyRealSubgraphNames(projectId, newSubgraphs);
+        await applySubgraphDetails(projectId, newSubgraphs);
       }
+
       await hydrateContainerNaturalIds(projectId, containers);
 
+      const nextGraphData = {...graphData, containers, subgraphs};
       set({
-        graphData: {...graphData, containers, subgraphs},
+        graphData: nextGraphData,
       } as unknown as Partial<S>);
+      if (get().mode === 'edit') {
+        get().updateSgKvConfigInfo(
+          getSgKvVectorsBySubgraphId(nextGraphData.subgraphs),
+        );
+      }
+    },
+
+    setSgKvMetadataRefreshing: (isRefreshing: boolean): void => {
+      set((state) => {
+        return state.isSgKvMetadataRefreshing === isRefreshing
+          ? state
+          : {...state, isSgKvMetadataRefreshing: isRefreshing};
+      });
     },
 
     updateContainerIdLocal: (
@@ -1317,6 +1381,52 @@ export function createGraphDataSlice<
         },
       } as unknown as Partial<S>);
       get().markDirty();
+    },
+
+    updateSgKvMetadata: (metadataBySubgraphId): void => {
+      const {graphData} = get();
+      if (!graphData) {
+        return;
+      }
+
+      let changed = false;
+      const subgraphs = Object.fromEntries(
+        Object.entries(graphData.subgraphs).map(([subgraphId, subgraph]) => {
+          const metadataByVectorId = metadataBySubgraphId[subgraphId];
+          if (!metadataByVectorId) {
+            return [subgraphId, subgraph];
+          }
+
+          let vectorsChanged = false;
+          const kvVectors = subgraph.kvVectors.map((vector) => {
+            const metadata = metadataByVectorId[vector.systemId];
+            if (
+              !metadata ||
+              (metadata.isEc === vector.isEc &&
+                metadata.selected === vector.selected)
+            ) {
+              return vector;
+            }
+
+            changed = true;
+            vectorsChanged = true;
+            return {...vector, ...metadata};
+          });
+
+          return [
+            subgraphId,
+            vectorsChanged ? {...subgraph, kvVectors} : subgraph,
+          ];
+        }),
+      );
+
+      if (!changed) {
+        return;
+      }
+
+      set({
+        graphData: {...graphData, subgraphs},
+      } as unknown as Partial<S>);
     },
 
     updateSubgraphNameLocal: (subgraphSystemId: string, name: string): void => {

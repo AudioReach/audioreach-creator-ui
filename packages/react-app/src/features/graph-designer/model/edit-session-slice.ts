@@ -6,34 +6,46 @@
 import type {StoreApi} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
+import {
+  getAllKeyDefinitions,
+  type KeyDefinitionResponseDto,
+} from '~entities/key-definitions';
 import {getProjectById, SessionMode} from '~entities/project';
+import {
+  areKvVectorsEqual,
+  type KvSelection,
+  type SubgraphKvPair,
+} from '~entities/subgraph-definitions';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
-import type {KeyValueInfo} from '~entities/usecases';
 import {hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import {projectStoreRegistry} from '~shared/store/project-store-registry';
 
+import {getKvVectorSignature} from '../lib/subgraph-kv-mapping';
 import type {Connection, UsecaseGraphData} from './graph-data-slice';
 
 /**
- * Where a subgraph currently on canvas came from this edit session
+ * Owns graph changes that exist only between Edit entry and Apply/Discard.
+ * SGKV vectors are copied from the read-only graph here so Add, Delete, and
+ * selection changes can be staged without changing the Graph Data snapshot.
  */
+/** Records how each subgraph currently on canvas entered the edit session. */
 export type SubgraphProvenance =
   'newly-created' | 'palette-placed' | 'pre-loaded';
 
-/** One selectable KV *selection* a subgraph supports — a whole Key+Value
- *  combination offered as a unit, not an individually toggleable pair
- */
-export interface KvSelection {
-  keyValuePairs: KeyValueInfo[];
-  selected: boolean;
-  systemId: string;
-}
-
 export interface EditSessionSlice {
+  /** Adds a selected, locally deletable vector to one editable subgraph. */
+  addSgKvVector: (
+    subgraphSystemId: string,
+    keyValuePairs: SubgraphKvPair[],
+  ) => boolean;
+  availableGraphKeys: KeyDefinitionResponseDto[] | null;
   beginMutation: () => void;
   clearStageProcessed: () => void;
+  /** Deletes a locally added vector; persisted vectors are deliberately retained. */
+  deleteSgKvVector: (subgraphSystemId: string, vectorSystemId: string) => void;
   endMutation: () => void;
+  /** Starts the backend edit session and seeds editable SGKV state. */
   enterEditMode: () => Promise<boolean>;
   excludedLinks: Connection[];
   exitEditMode: () => Promise<boolean>;
@@ -44,12 +56,22 @@ export interface EditSessionSlice {
   pruneSessionLocalMapsForSubgraph: (subgraphId: string) => void;
   recordStageProcessed: (ids: string[]) => void;
   resetSessionLocalMaps: () => void;
+  /** Updates one staged vector's Apply eligibility. */
+  setSgKvVectorSelected: (
+    subgraphSystemId: string,
+    vectorSystemId: string,
+    selected: boolean,
+  ) => void;
   setSubgraphProvenance: (
     subgraphId: string,
     provenance: SubgraphProvenance,
   ) => void;
   stagedProcessedChangeIds: string[];
   subgraphProvenanceById: Record<string, SubgraphProvenance>;
+  /** Reconciles refreshed derived metadata without discarding local edits. */
+  updateSgKvConfigInfo: (
+    vectorsBySubgraphId: Record<string, KvSelection[]>,
+  ) => void;
   /** Fixed for the lifetime of the edit session, set in `enterEditMode()`. */
   usesSubsystemVariant: boolean;
 }
@@ -61,12 +83,63 @@ const USES_SUBSYSTEM_VARIANT_STUB = false;
 const LOCK_OWNER = 'usecase-edit';
 
 const INITIAL_SESSION_LOCAL_STATE = {
+  availableGraphKeys: null as KeyDefinitionResponseDto[] | null,
   excludedLinks: [] as Connection[],
   kvSelectionsById: {} as Record<string, KvSelection[]>,
   pairLinksById: {} as Record<string, SubgraphPairResponseDto>,
   stagedProcessedChangeIds: [] as string[],
   subgraphProvenanceById: {} as Record<string, SubgraphProvenance>,
 };
+
+/** Preserves staged vector identity while accepting refreshed selected/EC values. */
+function reconcileSgKvConfigInfo(
+  currentVectorsBySubgraphId: Record<string, KvSelection[]>,
+  incomingVectorsBySubgraphId: Record<string, KvSelection[]>,
+): Record<string, KvSelection[]> {
+  // Preserve staged selections and `local:` vectors; refresh derived metadata.
+  let changed =
+    Object.keys(currentVectorsBySubgraphId).length !==
+    Object.keys(incomingVectorsBySubgraphId).length;
+  const reconciledVectorsBySubgraphId: Record<string, KvSelection[]> = {};
+
+  for (const [subgraphSystemId, incomingVectors] of Object.entries(
+    incomingVectorsBySubgraphId,
+  )) {
+    const currentVectors = currentVectorsBySubgraphId[subgraphSystemId];
+    if (!currentVectors) {
+      reconciledVectorsBySubgraphId[subgraphSystemId] = incomingVectors.map(
+        (vector) => ({...vector, isSessionAdded: false}),
+      );
+      changed = true;
+      continue;
+    }
+
+    const incomingBySystemId = Object.fromEntries(
+      incomingVectors.map((vector) => [vector.systemId, vector]),
+    );
+    let subgraphChanged = false;
+    const reconciledVectors = currentVectors.map((vector) => {
+      const incoming = incomingBySystemId[vector.systemId];
+      // Missing refresh data must not erase a local vector staged by this user.
+      if (
+        !incoming ||
+        (incoming.isEc === vector.isEc && incoming.selected === vector.selected)
+      ) {
+        return vector;
+      }
+
+      subgraphChanged = true;
+      return {...vector, isEc: incoming.isEc, selected: incoming.selected};
+    });
+
+    reconciledVectorsBySubgraphId[subgraphSystemId] = subgraphChanged
+      ? reconciledVectors
+      : currentVectors;
+    changed ||= subgraphChanged;
+  }
+
+  return changed ? reconciledVectorsBySubgraphId : currentVectorsBySubgraphId;
+}
 
 /**
  * Creates the edit-session slice for composing into the Graph Designer tab
@@ -80,7 +153,10 @@ const INITIAL_SESSION_LOCAL_STATE = {
  * @param projectId - Project identifier this session's exclusive lock is scoped to.
  */
 export function createEditSessionSlice<
-  S extends EditSessionSlice & {graphData: UsecaseGraphData | null},
+  S extends EditSessionSlice & {
+    graphData: UsecaseGraphData | null;
+    markDirty: () => void;
+  },
 >(set: SetState<S>, get: () => S, projectId: string): EditSessionSlice {
   const setSlice: SetState<EditSessionSlice> = set;
   const logSession = (message: string, action: string): void => {
@@ -92,6 +168,41 @@ export function createEditSessionSlice<
   };
 
   return {
+    addSgKvVector: (
+      subgraphSystemId: string,
+      keyValuePairs: SubgraphKvPair[],
+    ): boolean => {
+      const vectors = get().kvSelectionsById[subgraphSystemId];
+      if (!vectors || keyValuePairs.length === 0) {
+        return false;
+      }
+
+      const signature = getKvVectorSignature(keyValuePairs);
+      if (
+        vectors.some((vector) =>
+          areKvVectorsEqual(vector.keyValuePairs, keyValuePairs),
+        )
+      ) {
+        return false;
+      }
+
+      const vector: KvSelection = {
+        isEc: false,
+        isSessionAdded: true,
+        keyValuePairs,
+        selected: true,
+        systemId: `local:${signature}`,
+      };
+      setSlice((state) => ({
+        kvSelectionsById: {
+          ...state.kvSelectionsById,
+          [subgraphSystemId]: [...vectors, vector],
+        },
+      }));
+      get().markDirty();
+      return true;
+    },
+
     beginMutation: () => {
       logSession('beginMutation', 'beginMutation');
       setSlice({isMutating: true});
@@ -99,6 +210,27 @@ export function createEditSessionSlice<
 
     clearStageProcessed: (): void => {
       setSlice({stagedProcessedChangeIds: []});
+    },
+
+    deleteSgKvVector: (
+      subgraphSystemId: string,
+      vectorSystemId: string,
+    ): void => {
+      const vectors = get().kvSelectionsById[subgraphSystemId];
+      const vector = vectors?.find((item) => item.systemId === vectorSystemId);
+      if (!vector?.isSessionAdded) {
+        return;
+      }
+
+      setSlice((state) => ({
+        kvSelectionsById: {
+          ...state.kvSelectionsById,
+          [subgraphSystemId]: state.kvSelectionsById[subgraphSystemId].filter(
+            (item) => item.systemId !== vectorSystemId,
+          ),
+        },
+      }));
+      get().markDirty();
     },
 
     endMutation: () => {
@@ -128,12 +260,14 @@ export function createEditSessionSlice<
         return false;
       }
 
+      // Record current graph membership before mutations can add palette items.
       const subgraphs = get().graphData?.subgraphs ?? {};
       const subgraphProvenanceById: Record<string, SubgraphProvenance> = {};
       for (const subgraphId of Object.keys(subgraphs)) {
         subgraphProvenanceById[subgraphId] = 'pre-loaded';
       }
 
+      // Normalize the backend session before requesting the Designer session.
       const endResult = await endSession(projectId);
       if (hasBlockingIssues(endResult) || !endResult.data) {
         const projectResult = await getProjectById(projectId);
@@ -162,7 +296,34 @@ export function createEditSessionSlice<
         return false;
       }
 
+      // Missing definitions disable Add controls but must not block Edit mode.
+      let availableGraphKeys: KeyDefinitionResponseDto[] | null = null;
+      try {
+        const definitionsResult = await getAllKeyDefinitions(projectId);
+        if (!hasBlockingIssues(definitionsResult) && definitionsResult.data) {
+          availableGraphKeys = definitionsResult.data.filter(
+            (definition) => definition.isGraphKey === true,
+          );
+        }
+      } catch (error) {
+        logger.error('editSessionSlice: graph key definition load failed', {
+          action: 'enterEditMode',
+          component: 'editSessionSlice',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          projectId,
+        });
+      }
+
+      const kvSelectionsById = Object.fromEntries(
+        Object.entries(get().graphData?.subgraphs ?? {}).map(
+          ([subgraphId, subgraph]) => [subgraphId, subgraph.kvVectors ?? []],
+        ),
+      );
+      // Seed before exposing Edit mode so the panel never sees View-state data.
+      get().updateSgKvConfigInfo(kvSelectionsById);
+
       setSlice({
+        availableGraphKeys,
         mode: 'edit',
         subgraphProvenanceById,
         usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,
@@ -233,6 +394,29 @@ export function createEditSessionSlice<
       setSlice(INITIAL_SESSION_LOCAL_STATE);
     },
 
+    setSgKvVectorSelected: (
+      subgraphSystemId: string,
+      vectorSystemId: string,
+      selected: boolean,
+    ): void => {
+      const vectors = get().kvSelectionsById[subgraphSystemId];
+      const vector = vectors?.find((item) => item.systemId === vectorSystemId);
+      if (!vector || vector.selected === selected) {
+        return;
+      }
+
+      setSlice((state) => ({
+        kvSelectionsById: {
+          ...state.kvSelectionsById,
+          [subgraphSystemId]: state.kvSelectionsById[subgraphSystemId].map(
+            (item) =>
+              item.systemId === vectorSystemId ? {...item, selected} : item,
+          ),
+        },
+      }));
+      get().markDirty();
+    },
+
     setSubgraphProvenance: (
       subgraphId: string,
       provenance: SubgraphProvenance,
@@ -243,6 +427,22 @@ export function createEditSessionSlice<
           [subgraphId]: provenance,
         },
       }));
+    },
+
+    updateSgKvConfigInfo: (
+      vectorsBySubgraphId: Record<string, KvSelection[]>,
+    ): void => {
+      const currentKvSelectionsById = get().kvSelectionsById;
+      const kvSelectionsById = reconcileSgKvConfigInfo(
+        currentKvSelectionsById,
+        vectorsBySubgraphId,
+      );
+      if (kvSelectionsById === currentKvSelectionsById) {
+        // Retain Zustand references when metadata was already current.
+        return;
+      }
+
+      setSlice({kvSelectionsById});
     },
 
     usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,

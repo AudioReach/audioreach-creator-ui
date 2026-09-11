@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers exclusive mutation-lock semantics with valid Edit Session dependencies.
+ * The mocked SGKV definition/session requests isolate lock behavior from the
+ * asynchronous edit-entry setup now required by the production store.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/edit-session', () => ({
   endSession: jest.fn(),
@@ -10,6 +15,9 @@ jest.mock('~entities/edit-session', () => ({
 }));
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
+}));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
 }));
 
 const mockReleaseExclusiveMode = jest.fn();
@@ -31,6 +39,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 import {createStore} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {
   createEditSessionSlice,
@@ -39,6 +48,7 @@ import {
 } from '~features/graph-designer/model/edit-session-slice';
 
 const mockEndSession = jest.mocked(endSession);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockGetProjectById = jest.mocked(getProjectById);
 const mockStartSession = jest.mocked(startSession);
 
@@ -50,11 +60,18 @@ function makeStore(projectId = 'proj-wml-1') {
 
 describe('withMutationLock', () => {
   beforeEach(() => {
+    mockGetAllKeyDefinitions.mockResolvedValue({
+      data: [],
+      message: undefined as never,
+      success: true,
+    });
     mockReleaseExclusiveMode.mockClear();
     mockSetActiveExclusiveMode.mockClear();
     mockSetEditModeState.mockClear();
     mockEndSession.mockResolvedValue({
-      issues: [{code: 'END_FAILED', message: 'Already ended', severity: 'ERROR'}],
+      issues: [
+        {code: 'END_FAILED', message: 'Already ended', severity: 'ERROR'},
+      ],
     });
     mockGetProjectById.mockResolvedValue({
       data: {

@@ -3,15 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {KeyValue} from '~entities/usecases';
+/**
+ * Verifies the Apply payload boundary for staged SGKV changes. Only selected
+ * vectors become `activeSubgraphs` value-system-ID lists; display labels and
+ * unselected vectors must never leak into the backend request.
+ */
+import type {KvSelection, SubgraphKvPair} from '~entities/subgraph-definitions';
 import {buildCreateUsecasesRequest} from '~features/graph-designer/lib/build-create-usecases-request';
-import type {KvSelection} from '~features/graph-designer/model/edit-session-slice';
 import type {Connection} from '~features/graph-designer/model/graph-data-slice';
 
-function makeKeyValue(id: number, valueSystemId: string): KeyValue {
+function makeKeyValue(id: number, valueSystemId: string): SubgraphKvPair {
   return {
-    key: {name: `key${id}`, naturalId: id, systemId: `ks${id}`},
-    value: {name: `value${id}`, naturalId: id, systemId: valueSystemId},
+    keyInfo: {keyId: id, keyLabel: `key${id}`, keySystemId: `ks${id}`},
+    valueInfo: {valueId: id, valueLabel: `value${id}`, valueSystemId},
   };
 }
 
@@ -37,11 +41,13 @@ describe('buildCreateUsecasesRequest', () => {
     const kvSelectionsById: Record<string, KvSelection[]> = {
       sg1: [
         {
+          isEc: false,
           keyValuePairs: [kv1, kv2],
           selected: true,
           systemId: 'sel1',
         },
         {
+          isEc: false,
           keyValuePairs: [kv3],
           selected: false,
           systemId: 'sel2',
@@ -68,6 +74,7 @@ describe('buildCreateUsecasesRequest', () => {
     const kvSelectionsById: Record<string, KvSelection[]> = {
       sg1: [
         {
+          isEc: false,
           keyValuePairs: [kv1],
           selected: false,
           systemId: 'sel1',

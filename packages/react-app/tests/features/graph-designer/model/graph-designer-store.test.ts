@@ -3,8 +3,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers the composed Graph Designer store with valid Edit Session dependencies.
+ * It ensures a store-level test does not fail in SGKV session initialization
+ * before exercising the composition behavior it was written to verify.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/usecases/api/usecases-api');
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 jest.mock('~entities/edit-session', () => ({
   endSession: jest.fn(),
   startSession: jest.fn(),
@@ -27,6 +35,7 @@ jest.mock('~shared/store/global-store', () => ({
 }));
 
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getSubgraphsByIds} from '~entities/usecases/api/usecases-api';
 import type {
   ControlLinkDto,
@@ -44,10 +53,16 @@ import {
 } from '../test-utils/component-dto-fixtures';
 
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockEndSession = jest.mocked(endSession);
 const mockStartSession = jest.mocked(startSession);
 
 beforeEach(() => {
+  mockGetAllKeyDefinitions.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
     message: undefined as never,
