@@ -7,8 +7,10 @@ import type {Node, NodeProps} from '@xyflow/react';
 import {Maximize2} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import type {SubgraphProxyNode as SubgraphProxyNodeData} from '~entities/graph';
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import {useNodeHighlight} from '../../model/use-node-highlight';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
@@ -25,6 +27,9 @@ export function SubgraphProxyNode({
 }: SubgraphProxyNodeProps) {
   const onSubgraphExpand = useVisualizerStore(
     (state) => state.eventHandlers?.onSubgraphExpand,
+  );
+  const showSubgraphId = useVisualizerStore(
+    (state) => state.nodeDisplayConfig?.showSubgraphId !== false,
   );
   const highlight = useNodeHighlight(node.id);
 
@@ -49,26 +54,43 @@ export function SubgraphProxyNode({
     .join(' ');
 
   return (
-    <div
-      className={classNames}
-      data-locked={isLocked || undefined}
-      data-node-id={node.id}
-      data-testid="subgraph-proxy-node"
-    >
-      <div className="flex items-center justify-between gap-1 px-2 py-1">
-        <span className="text-primary truncate text-xs font-semibold">
-          {node.label}
-        </span>
-        <InlineIconButton
-          aria-label="Expand subgraph"
-          icon={Maximize2}
-          onClick={() => onSubgraphExpand?.(node.subgraphId)}
-          size="lg"
-          variant="scale"
-        />
+    <div className="relative h-full w-full">
+      <div
+        className={classNames}
+        data-locked={isLocked || undefined}
+        data-node-id={node.id}
+        data-testid="subgraph-proxy-node"
+      >
+        <div className="flex justify-end px-2 py-1">
+          <InlineIconButton
+            aria-label="Expand subgraph"
+            icon={Maximize2}
+            onClick={() => onSubgraphExpand?.(node.subgraphId)}
+            size="lg"
+            variant="scale"
+          />
+        </div>
+
+        <PortHandles node={node} />
       </div>
 
-      <PortHandles node={node} />
+      <div className="absolute inset-x-0 top-full mt-2 flex min-w-0 flex-col items-center text-center">
+        <Tooltip
+          positioning={{placement: 'bottom', strategy: 'fixed'}}
+          trigger={
+            <span className="text-primary text-xxs block max-w-full truncate font-semibold">
+              {node.label}
+            </span>
+          }
+        >
+          {node.label}
+        </Tooltip>
+        {showSubgraphId ? (
+          <span className="text-secondary text-xxs">
+            {`SGID: ${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,30 @@ function renderSubgraphNode(
 describe('SubgraphNode — header', () => {
   it('renders the label', () => {
     renderSubgraphNode(makeSubgraph({label: 'Audio SG'}));
-    expect(screen.getByTestId('subgraph-header')).toHaveTextContent('Audio SG');
+    const label = screen.getByTestId('subgraph-label');
+    expect(label).toHaveTextContent('Audio SG');
+    expect(label).not.toHaveClass('flex-1');
+    expect(screen.getByTestId('subgraph-header-title-group')).toHaveClass(
+      'gap-2',
+    );
+  });
+
+  it('keeps the subgraph id visible when the label is long', () => {
+    renderSubgraphNode(
+      makeSubgraph({
+        label: 'A very long subgraph name that needs truncation',
+      }),
+    );
+    expect(screen.getByTestId('subgraph-id')).toHaveTextContent(
+      'SGID: 0x00000007',
+    );
+    expect(screen.getByTestId('subgraph-id')).toHaveClass(
+      'shrink-0',
+      'whitespace-nowrap',
+    );
+    expect(
+      screen.getByTestId('subgraph-header').firstElementChild,
+    ).toHaveTextContent('A very long subgraph name that needs truncation');
   });
 
   it('does not render the collapse toggle when onSubgraphCollapse is not wired', () => {
@@ -182,7 +205,9 @@ describe('SubgraphNode — selection styling', () => {
 describe('SubgraphNode — showSubgraphId', () => {
   it('renders the subgraph id by default', () => {
     renderSubgraphNode(makeSubgraph({subgraphId: 7}));
-    expect(screen.getByTestId('subgraph-id')).toHaveTextContent('#0x00000007');
+    expect(screen.getByTestId('subgraph-id')).toHaveTextContent(
+      'SGID: 0x00000007',
+    );
   });
 
   it('hides the subgraph id when showSubgraphId is false', () => {

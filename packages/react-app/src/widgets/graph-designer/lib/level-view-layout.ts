@@ -279,7 +279,11 @@ function computeBoundingBoxes(
   subsystems: SubsystemNode[];
 } {
   const {headerHeight: CH, padding: CP} = NODE_DIMENSIONS.container;
-  const {headerHeight: SH, padding: SP} = NODE_DIMENSIONS.subgraph;
+  const {
+    headerHeight: SH,
+    minWidth: SMW,
+    padding: SP,
+  } = NODE_DIMENSIONS.subgraph;
 
   // --- Container bounding boxes (from global module positions) ---
   // Module parentId is the effective container key:
@@ -375,7 +379,7 @@ function computeBoundingBoxes(
 
     const gx = minX - SP;
     const gy = minY - SH - SP;
-    const gw = maxRight - gx + SP;
+    const gw = Math.max(maxRight - gx + SP, SMW);
     const gh = maxBottom - gy + SP;
 
     subgraphGlobal.set(sg.id, {height: gh, width: gw, x: gx, y: gy});

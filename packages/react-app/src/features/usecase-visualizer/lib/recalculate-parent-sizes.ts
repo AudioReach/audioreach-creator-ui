@@ -14,6 +14,10 @@ const PADDING_BY_KIND: Record<string, number> = {
   subsystem: NODE_DIMENSIONS.subsystem.baseHeight,
 };
 
+const MIN_WIDTH_BY_KIND: Record<string, number> = {
+  subgraph: NODE_DIMENSIONS.subgraph.minWidth,
+};
+
 const PARENT_KINDS = new Set(Object.keys(PADDING_BY_KIND));
 
 /**
@@ -136,7 +140,10 @@ export function recalculateParentSizes(nodes: Node[]): {
       maxBottom += dy;
     }
 
-    parent.width = maxRight + padding;
+    parent.width = Math.max(
+      maxRight + padding,
+      MIN_WIDTH_BY_KIND[parent.type ?? ''] ?? 0,
+    );
     parent.height = maxBottom + padding;
   }
 

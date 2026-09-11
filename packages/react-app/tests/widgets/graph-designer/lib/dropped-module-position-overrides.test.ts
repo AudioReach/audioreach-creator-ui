@@ -65,7 +65,7 @@ describe('buildDroppedModulePositionOverrides', () => {
       ),
     ).toEqual({
       'container-20:5': {x: 56, y: 78},
-      'mod-created': {x: 12, y: 44},
+      'mod-created': {x: 16, y: 48},
     });
   });
 
@@ -91,7 +91,7 @@ describe('buildDroppedModulePositionOverrides', () => {
       ),
     ).toEqual({
       'container-30:6': {x: 16, y: 56},
-      'mod-created': {x: 12, y: 44},
+      'mod-created': {x: 16, y: 48},
       'subgraph-6': {x: 90, y: 120},
     });
   });

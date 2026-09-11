@@ -9,7 +9,6 @@ import type {AnyNode} from '~entities/graph';
 import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import {useNodeHighlight} from '../model/use-node-highlight';
-import {useVisualizerStore} from '../model/visualizer-store-context';
 
 import {getPortAnchors} from './port-anchors';
 import {anchorStyle} from './port-geometry';
@@ -22,9 +21,6 @@ interface GhostNodeProps {
 const HANDLE_HIDDEN_CLASS = 'pointer-events-none opacity-0 ghost-node-handle';
 
 export function GhostNode({node, selected}: GhostNodeProps) {
-  const showSubgraphId = useVisualizerStore(
-    (s) => s.nodeDisplayConfig?.showSubgraphId !== false,
-  );
   const highlight = useNodeHighlight(node.id);
   const ports =
     node.nodeKind === 'module' ||
@@ -35,20 +31,17 @@ export function GhostNode({node, selected}: GhostNodeProps) {
   const shape = node.nodeKind === 'module' ? node.shape : undefined;
   const anchors = getPortAnchors(shape, ports, node.width, node.height);
 
-  // Mirror the full SubgraphNode header: append the hex id when enabled, so the
-  // id is visible at low zoom too.
   const label =
-    node.nodeKind === 'subgraph' && showSubgraphId
-      ? `${node.label} #${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`
+    node.nodeKind === 'container'
+      ? `Container ID: ${ConvertNumberToHexString(node.containerId) ?? node.containerId}`
       : node.label;
 
-  // Boundary nodes (subgraph / container) label top-left like their headers;
-  // leaf nodes label centered, matching full-detail rendering at low zoom.
-  const labelTopLeft =
-    node.nodeKind === 'subgraph' || node.nodeKind === 'container';
-  const labelClass = labelTopLeft
-    ? 'text-primary text-xxs absolute left-1 top-1 truncate font-semibold'
-    : 'text-primary text-xxs absolute inset-x-1 top-1 truncate text-center';
+  const labelClass =
+    node.nodeKind === 'subgraph'
+      ? 'text-primary text-xxs absolute left-1 right-1 top-1 truncate'
+      : node.nodeKind === 'module'
+        ? 'text-primary text-xxs absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-center'
+        : 'text-primary text-xxs absolute inset-x-1 top-1 truncate text-center';
 
   // Search highlight is a visual cue, so it must survive LOD: apply the same
   // border / active-fill / contains-match treatment the full node components do.
