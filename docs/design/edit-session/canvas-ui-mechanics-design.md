@@ -77,7 +77,7 @@ Dispatches on `target.kind`:
 | `'subsystem'`                                | Delete (disabled, tooltipped, when the subsystem still has any children — subgraphs, modules, containers; per FR-SUBSYS-02/[node-operations-design.md §6.3](node-operations-design.md#63-delete-req-031b) the backend only removes an empty subsystem); "Move to Subsystem" (opens destination selection and excludes the moved subsystem); "Remove from Subsystem" (if parented); "Expand" (FR-SUBSYS-06, dispatches to `expandSubsystem`). Rename is handled by the properties panel work, not this context-menu PR. |
 | `'container'`                                | Delete only — no rename item (FR-CONT-02)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `'subgraph-proxy'`                           | Delete only in this PR. Rename uses the underlying subgraph rename operation and is handled by the properties panel work.                                                                                                                                                                                                                                                                                                                                                                                              |
-| `'port'`                                     | "Start connection" when no two-click connection is active; "End connection" when `target.connectionInProgress` is `true` (FR-PORT-06). These are mutually exclusive so the user cannot start a second two-click connection while one is already active. See [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal) for why this field is populated by the Visualizer itself rather than read from its store here.                                                              |
+| `'port'`                                     | Data ports show "Start connection", "Start EC Link", and "Start InterUsecase Data Link" when idle; control ports show "Start connection" and "Start InterUsecase Control Link". An active connection shows exactly one matching completion item. See [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal) for why this field is populated by the Visualizer itself rather than read from its store here. |
 | `'data-link'` / `'control-link'`             | Delete; "Exclude Link" shown only if `target.edge.id` is a key in `pairLinksById` (FR-SG-03 — only pair-derived edges are excludable)                                                                                                                                                                                                                                                                                                                                                                                  |
 | `'proxy-data-link'` / `'proxy-control-link'` | Same as the plain link kinds — a proxy edge is the display-collapsed form of a real link (FR-MDF-02), not a distinct excludable entity                                                                                                                                                                                                                                                                                                                                                                                 |
 
@@ -395,7 +395,7 @@ duplicated:
   store, specified in
   [link-and-port-design.md §2.2](link-and-port-design.md#22-two-click-state-visualizer-internal).
   This doc's port context menu ([§2.1](#21-getitemstarget-contextmenutarget-contextmenuitem))
-  only _reads_ `target.connectionInProgress`, a plain boolean field the
+  only _reads_ `target.connectionInProgress`, a `{linkKind}` object or `null` that the
   Visualizer itself populates on the target before this doc's `getItems`
   ever sees it — this doc never reaches into `VisualizerInternalStore`
   directly, since it has no access to it (FSD).
@@ -456,10 +456,11 @@ sequenceDiagram
 Extends [design.md §14](design.md#14-testing-strategy) with cases specific
 to this doc:
 
-- **Unit — context menu item visibility**: each `target.kind` produces the
-  expected item set; "End connection" appears only when
-  `target.connectionInProgress` is `true`; "Exclude Link" appears only for a
-  `pairLinksById`-tracked edge; menu is empty in View mode.
+- **Unit — context menu item visibility**: data ports expose Start connection,
+  Start EC Link, and Start InterUsecase Data Link; control ports expose Start
+  connection and Start InterUsecase Control Link; the matching completion item
+  appears only when `target.connectionInProgress` is non-null; "Exclude Link"
+  appears only for a `pairLinksById`-tracked edge; menu is empty in View mode.
 - **Unit — delete dispatch table**: each node kind in `DELETE_HANDLERS`
   calls the correct Node Operations function with the correct id field.
 - **Unit — cascade-aware root filtering**: a selected container + its own

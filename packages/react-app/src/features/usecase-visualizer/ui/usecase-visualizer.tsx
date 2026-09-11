@@ -61,6 +61,7 @@ import {
   VisualizerStoreProvider,
 } from '../model/visualizer-store-context';
 import {
+  LINK_MENU_ACTIONS,
   type ContextMenuItem,
   type ContextMenuTarget,
   type SelectedEdgeRef,
@@ -86,6 +87,18 @@ const nodeTypes = {
   subsystem: withGhostFallback(SubsystemNode),
 };
 const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
+const START_LINK_KINDS = {
+  [LINK_MENU_ACTIONS.startConnection]: 'normal',
+  [LINK_MENU_ACTIONS.startEcLink]: 'EC',
+  [LINK_MENU_ACTIONS.startInterUsecaseControlLink]: 'interUsecase',
+  [LINK_MENU_ACTIONS.startInterUsecaseDataLink]: 'interUsecase',
+} as const;
+const COMPLETE_LINK_ACTIONS: ReadonlySet<string> = new Set([
+  LINK_MENU_ACTIONS.completeEcLink,
+  LINK_MENU_ACTIONS.completeInterUsecaseControlLink,
+  LINK_MENU_ACTIONS.completeInterUsecaseDataLink,
+  LINK_MENU_ACTIONS.endConnection,
+]);
 
 const edgeTypes = {
   'control-link': ControlLinkEdge,
@@ -607,6 +620,7 @@ function VisualizerCanvas({
       const edgeKind = sourceIsControl ? EDGE_KIND.CONTROL : EDGE_KIND.DATA;
       store.getState().eventHandlers?.onEdgeConnected?.({
         edgeKind,
+        linkKind: 'normal',
         sourceNodeId: source,
         sourcePortId,
         targetNodeId: target,
@@ -741,9 +755,11 @@ function VisualizerCanvas({
           if (port.locked === true) {
             return;
           }
+          const connectionInProgress = store.getState().connectionInProgress;
           openContextMenu(event, {
-            connectionInProgress:
-              store.getState().connectionInProgress !== null,
+            connectionInProgress: connectionInProgress
+              ? {linkKind: connectionInProgress.linkKind}
+              : null,
             kind: 'port',
             nodeId: node.id,
             port,
@@ -781,12 +797,16 @@ function VisualizerCanvas({
   const handleMenuAction = useCallback(
     (item: ContextMenuItem, target: ContextMenuTarget) => {
       if (target.kind === 'port') {
-        if (item.id === 'start-connection') {
-          store.getState().startConnection(target.nodeId, target.port);
+        const linkKind =
+          START_LINK_KINDS[item.id as keyof typeof START_LINK_KINDS];
+        if (linkKind) {
+          store
+            .getState()
+            .startConnection(target.nodeId, target.port, linkKind);
           setOpenMenu(null);
           return;
         }
-        if (item.id === 'end-connection') {
+        if (COMPLETE_LINK_ACTIONS.has(item.id)) {
           store.getState().completeConnection(target.nodeId, target.port);
           setOpenMenu(null);
           return;

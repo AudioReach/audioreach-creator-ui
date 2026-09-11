@@ -37,6 +37,19 @@ export const VISUALIZER_MODE = {
 export type VisualizerMode =
   (typeof VISUALIZER_MODE)[keyof typeof VISUALIZER_MODE];
 
+export type LinkKind = 'EC' | 'interUsecase' | 'normal';
+
+export const LINK_MENU_ACTIONS = {
+  completeEcLink: 'complete-ec-link',
+  completeInterUsecaseControlLink: 'complete-interusecase-control-link',
+  completeInterUsecaseDataLink: 'complete-interusecase-data-link',
+  endConnection: 'end-connection',
+  startConnection: 'start-connection',
+  startEcLink: 'start-ec-link',
+  startInterUsecaseControlLink: 'start-interusecase-control-link',
+  startInterUsecaseDataLink: 'start-interusecase-data-link',
+} as const;
+
 // ── Context menu ──────────────────────────────────────────────────────────────
 
 export type ContextMenuTarget =
@@ -45,7 +58,12 @@ export type ContextMenuTarget =
   | {kind: 'subgraph-proxy'; node: SubgraphProxyNode}
   | {kind: 'container'; node: ContainerNode}
   | {kind: 'subsystem'; node: SubsystemNode}
-  | {connectionInProgress: boolean; kind: 'port'; nodeId: string; port: Port}
+  | {
+      connectionInProgress: {linkKind: LinkKind} | null;
+      kind: 'port';
+      nodeId: string;
+      port: Port;
+    }
   | {edge: DataLink; kind: 'data-link'}
   | {edge: ControlLink; kind: 'control-link'}
   | {edge: ProxyDataLink; kind: 'proxy-data-link'}
@@ -111,6 +129,7 @@ export interface NodeDropPayload {
 
 export interface EdgeConnectPayload {
   edgeKind: EdgeKind;
+  linkKind: LinkKind;
   sourceNodeId: string;
   sourcePortId: string;
   targetNodeId: string;

@@ -5,17 +5,19 @@
 
 import {ChevronRight, Link, Trash2} from 'lucide-react';
 
-import {EDGE_KIND} from '~entities/graph';
+import {EDGE_KIND, PORT_IO_TYPE, type PortIoType} from '~entities/graph';
 import {
   DELETE_HANDLERS,
   resolveGraphDesignerNodeId,
   type GraphDesignerStore,
   type UsecaseGraphData,
 } from '~features/graph-designer';
-import type {
-  ContextMenuItem,
-  ContextMenuTarget,
-  VisualizerContextMenuConfig,
+import {
+  LINK_MENU_ACTIONS,
+  type ContextMenuItem,
+  type ContextMenuTarget,
+  type LinkKind,
+  type VisualizerContextMenuConfig,
 } from '~features/usecase-visualizer';
 
 type EdgeTarget = Extract<
@@ -76,11 +78,55 @@ function parentSubsystemIdOf(
   );
 }
 
-function buildPortItems(connectionInProgress: boolean): ContextMenuItem[] {
+function buildPortItems(
+  connectionInProgress: {linkKind: LinkKind} | null,
+  portIoType: PortIoType,
+): ContextMenuItem[] {
   if (connectionInProgress) {
-    return [{id: 'end-connection', label: 'End connection'}];
+    const completeItems = {
+      EC: {
+        id: LINK_MENU_ACTIONS.completeEcLink,
+        label: 'Complete EC Link',
+      },
+      interUsecase: {
+        id:
+          portIoType === PORT_IO_TYPE.CONTROL
+            ? LINK_MENU_ACTIONS.completeInterUsecaseControlLink
+            : LINK_MENU_ACTIONS.completeInterUsecaseDataLink,
+        label:
+          portIoType === PORT_IO_TYPE.CONTROL
+            ? 'Complete InterUsecase Control Link'
+            : 'Complete InterUsecase Data Link',
+      },
+      normal: {id: LINK_MENU_ACTIONS.endConnection, label: 'End connection'},
+    } satisfies Record<LinkKind, ContextMenuItem>;
+    return [completeItems[connectionInProgress.linkKind]];
   }
-  return [{icon: Link, id: 'start-connection', label: 'Start connection'}];
+  const startConnection = {
+    icon: Link,
+    id: LINK_MENU_ACTIONS.startConnection,
+    label: 'Start connection',
+  };
+  if (portIoType === PORT_IO_TYPE.CONTROL) {
+    return [
+      startConnection,
+      {
+        id: LINK_MENU_ACTIONS.startInterUsecaseControlLink,
+        label: 'Start InterUsecase Control Link',
+      },
+    ];
+  }
+  if (portIoType === PORT_IO_TYPE.INPUT || portIoType === PORT_IO_TYPE.OUTPUT) {
+    return [
+      startConnection,
+      {id: LINK_MENU_ACTIONS.startEcLink, label: 'Start EC Link'},
+      {
+        id: LINK_MENU_ACTIONS.startInterUsecaseDataLink,
+        label: 'Start InterUsecase Data Link',
+      },
+    ];
+  }
+  return [];
 }
 
 export function buildContextMenuConfig(
@@ -125,7 +171,10 @@ export function buildContextMenuConfig(
           ];
         }
         case 'port':
-          return buildPortItems(target.connectionInProgress);
+          return buildPortItems(
+            target.connectionInProgress,
+            target.port.portIoType,
+          );
         case 'control-link':
         case 'data-link':
         case 'proxy-control-link':

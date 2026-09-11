@@ -380,12 +380,19 @@ backend confirms. Newly added ports become available for connection.
 subsystem from the properties panel. The canvas is updated only after the
 backend confirms. Newly added ports become available for connection.
 
-**FR-PORT-06** In Edit mode, right-clicking a port shows a context menu with two
-options:
+**FR-PORT-06** In Edit mode, right-clicking a data port shows the following
+options when no connection is active:
 
 - **Start connection**: begins a connection operation from this port.
-- **End connection**: completes an in-progress connection at this port. This
-  option is shown only when a connection is already in progress.
+- **Start EC Link**: begins an EC data-link operation from this port.
+- **Start InterUsecase Data Link**: begins an InterUsecase data-link operation
+  from this port.
+
+Right-clicking a control port shows **Start connection** and **Start
+InterUsecase Control Link**. When a connection is already in progress, exactly
+one completion option is shown: **End connection** for normal
+links, **Complete EC Link** for EC links, or the matching InterUsecase Data or
+Control completion option.
 
 ---
 

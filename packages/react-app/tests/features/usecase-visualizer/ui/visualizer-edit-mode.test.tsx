@@ -542,6 +542,7 @@ describe('edge connect', () => {
     expect(onEdgeConnected).toHaveBeenCalledTimes(1);
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'data',
+      linkKind: 'normal',
       sourceNodeId: 'n1',
       sourcePortId: 'p-out',
       targetNodeId: 'n2',
@@ -575,6 +576,7 @@ describe('edge connect', () => {
     expect(onEdgeConnected).toHaveBeenCalledTimes(1);
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'control',
+      linkKind: 'normal',
       sourceNodeId: 'n1',
       sourcePortId: 'cp1',
       targetNodeId: 'n2',

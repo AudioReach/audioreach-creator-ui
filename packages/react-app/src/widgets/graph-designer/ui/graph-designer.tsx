@@ -805,6 +805,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             payload.targetNodeId,
             payload.targetPortId,
             payload.edgeKind,
+            payload.linkKind,
           )
           .catch(() => {
             showToast(
