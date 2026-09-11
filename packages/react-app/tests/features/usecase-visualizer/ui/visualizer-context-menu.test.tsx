@@ -197,7 +197,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenCalledWith({
-      connectionInProgress: false,
+      connectionInProgress: null,
       kind: 'port',
       nodeId: node.id,
       port: {id: 'p1', portIoType: 'input'},
@@ -234,7 +234,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenCalledWith({
-      connectionInProgress: true,
+      connectionInProgress: {linkKind: 'normal'},
       kind: 'port',
       nodeId: node.id,
       port: {id: 'p1', portIoType: 'input'},
@@ -282,10 +282,117 @@ describe('context menu', () => {
     expect(onAction).not.toHaveBeenCalled();
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'data',
+      linkKind: 'normal',
       sourceNodeId: 'source',
       sourcePortId: 'out',
       targetNodeId: 'target',
       targetPortId: 'in',
+    });
+  });
+
+  it('passes EC link kind through the two-click context-menu flow', async () => {
+    const onEdgeConnected = jest.fn();
+    const getItems = jest
+      .fn<ContextMenuItem[], [ContextMenuTarget]>()
+      .mockReturnValueOnce([{id: 'start-ec-link', label: 'Start EC Link'}])
+      .mockReturnValueOnce([
+        {id: 'complete-ec-link', label: 'Complete EC Link'},
+      ]);
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'out', portIoType: 'output'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'in', portIoType: 'input'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction: jest.fn()}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="out"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start EC Link'));
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="in"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Complete EC Link'));
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      linkKind: 'EC',
+      sourceNodeId: 'source',
+      sourcePortId: 'out',
+      targetNodeId: 'target',
+      targetPortId: 'in',
+    });
+  });
+
+  it('passes InterUsecase control link kind through the context-menu flow', async () => {
+    const onEdgeConnected = jest.fn();
+    const getItems = jest
+      .fn<ContextMenuItem[], [ContextMenuTarget]>()
+      .mockReturnValueOnce([
+        {
+          id: 'start-interusecase-control-link',
+          label: 'Start InterUsecase Control Link',
+        },
+      ])
+      .mockReturnValueOnce([
+        {
+          id: 'complete-interusecase-control-link',
+          label: 'Complete InterUsecase Control Link',
+        },
+      ]);
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'start', portIoType: 'control'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'end', portIoType: 'control'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction: jest.fn()}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="start"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start InterUsecase Control Link'));
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="end"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Complete InterUsecase Control Link'));
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'control',
+      linkKind: 'interUsecase',
+      sourceNodeId: 'source',
+      sourcePortId: 'start',
+      targetNodeId: 'target',
+      targetPortId: 'end',
     });
   });
 
@@ -333,7 +440,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenLastCalledWith({
-      connectionInProgress: false,
+      connectionInProgress: null,
       kind: 'port',
       nodeId: target.id,
       port: {id: 'in', portIoType: 'input'},

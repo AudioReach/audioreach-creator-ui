@@ -41,10 +41,12 @@ describe('createVisualizerStore — instances are isolated', () => {
 describe('createVisualizerStore — setSelection / clearSelection', () => {
   it('setSelection records selected entity refs', () => {
     const store = createVisualizerStore();
-    store.getState().setSelection(
-      [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
-      [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
-    );
+    store
+      .getState()
+      .setSelection(
+        [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
+        [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
+      );
     expect(store.getState().selection).toEqual({
       selectedEdges: [{edgeKind: 'control', id: 'e1', systemId: 'sys-e1'}],
       selectedNodes: [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
@@ -209,5 +211,63 @@ describe('createVisualizerStore — setEventHandlers', () => {
     store.getState().setEventHandlers({onSubgraphExpand: jest.fn()});
     store.getState().setEventHandlers(undefined);
     expect(store.getState().eventHandlers).toBeUndefined();
+  });
+});
+
+describe('createVisualizerStore — two-click link kinds', () => {
+  it('preserves the selected data link kind in the edge payload', () => {
+    const store = createVisualizerStore();
+    const onEdgeConnected = jest.fn();
+    store.getState().setEventHandlers({onEdgeConnected});
+
+    store
+      .getState()
+      .startConnection('source', {id: 'out', portIoType: 'output'}, 'EC');
+    expect(store.getState().connectionInProgress).toEqual({
+      linkKind: 'EC',
+      nodeId: 'source',
+      port: {id: 'out', portIoType: 'output'},
+    });
+
+    store
+      .getState()
+      .completeConnection('target', {id: 'in', portIoType: 'input'});
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      linkKind: 'EC',
+      sourceNodeId: 'source',
+      sourcePortId: 'out',
+      targetNodeId: 'target',
+      targetPortId: 'in',
+    });
+    expect(store.getState().connectionInProgress).toBeNull();
+  });
+
+  it('preserves the selected control link kind in the edge payload', () => {
+    const store = createVisualizerStore();
+    const onEdgeConnected = jest.fn();
+    store.getState().setEventHandlers({onEdgeConnected});
+
+    store
+      .getState()
+      .startConnection(
+        'source',
+        {id: 'start', portIoType: 'control'},
+        'interUsecase',
+      );
+    store
+      .getState()
+      .completeConnection('target', {id: 'end', portIoType: 'control'});
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'control',
+      linkKind: 'interUsecase',
+      sourceNodeId: 'source',
+      sourcePortId: 'start',
+      targetNodeId: 'target',
+      targetPortId: 'end',
+    });
+    expect(store.getState().connectionInProgress).toBeNull();
   });
 });

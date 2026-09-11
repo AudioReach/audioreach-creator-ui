@@ -173,6 +173,7 @@ export interface CreateControlLinkRequest {
   endComponentSystemId: string;
   endPortSystemId: string;
   isDangling: boolean;
+  isInterUsecase?: boolean;
   parentSystemId?: string;
   startComponentSystemId: string;
   startPortSystemId: string;

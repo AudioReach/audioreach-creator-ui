@@ -9,10 +9,19 @@ import {NODE_KIND, type LevelView, type NodeKind} from '~entities/graph';
 
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
+const mockConnectPorts = jest.fn().mockResolvedValue(true);
 
 interface MockUsecaseVisualizerProps {
   contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: {
+    onEdgeConnected?: (payload: {
+      edgeKind: 'control' | 'data';
+      linkKind: 'EC' | 'interUsecase' | 'normal';
+      sourceNodeId: string;
+      sourcePortId: string;
+      targetNodeId: string;
+      targetPortId: string;
+    }) => void;
     onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
     onNodeDoubleClick?: (
       nodeId: string,
@@ -81,6 +90,10 @@ jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
     getItems: jest.fn(() => []),
     onAction: jest.fn(),
   })),
+}));
+
+jest.mock('~features/graph-designer/lib/link-operations', () => ({
+  createLinkOperations: jest.fn(() => ({connectPorts: mockConnectPorts})),
 }));
 
 jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
@@ -754,6 +767,35 @@ describe('GraphDesigner - visualizer wiring', () => {
       graphDesignerStore.getState,
       [],
       ['link-1'],
+    );
+  });
+
+  it('forwards link kind from visualizer edge events to link operations', async () => {
+    mockConnectPorts.mockClear();
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeGraphData(),
+    });
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onEdgeConnected?.({
+        edgeKind: 'data',
+        linkKind: 'EC',
+        sourceNodeId: 'source',
+        sourcePortId: 'out',
+        targetNodeId: 'target',
+        targetPortId: 'in',
+      });
+    });
+
+    expect(mockConnectPorts).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      'source',
+      'out',
+      'target',
+      'in',
+      'data',
+      'EC',
     );
   });
 });

@@ -15,6 +15,7 @@ import {
 import {
   type NodeContentOverride,
   type NodeDisplayConfig,
+  type LinkKind,
   type SearchHighlights,
   type SelectedEdgeRef,
   type SelectedNodeRef,
@@ -49,6 +50,7 @@ interface SelectionState {
 }
 
 interface ConnectionInProgress {
+  linkKind: LinkKind;
   nodeId: string;
   port: Port;
 }
@@ -104,7 +106,7 @@ export interface VisualizerInternalStore {
     selectedEdges: SelectedEdgeRef[],
   ) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
-  startConnection: (nodeId: string, port: Port) => void;
+  startConnection: (nodeId: string, port: Port, linkKind: LinkKind) => void;
   syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
   viewportCache: Record<string, ViewportState>;
 }
@@ -149,6 +151,7 @@ export function createVisualizerStore(): CreatedVisualizerStore {
           const sourceIsOutput = source.port.portIoType === PORT_IO_TYPE.OUTPUT;
           state.eventHandlers?.onEdgeConnected?.({
             edgeKind: EDGE_KIND.DATA,
+            linkKind: source.linkKind,
             sourceNodeId: sourceIsOutput ? source.nodeId : nodeId,
             sourcePortId: sourceIsOutput ? source.port.id : port.id,
             targetNodeId: sourceIsOutput ? nodeId : source.nodeId,
@@ -159,6 +162,7 @@ export function createVisualizerStore(): CreatedVisualizerStore {
         if (source.nodeId !== nodeId) {
           state.eventHandlers?.onEdgeConnected?.({
             edgeKind: EDGE_KIND.CONTROL,
+            linkKind: source.linkKind,
             sourceNodeId: source.nodeId,
             sourcePortId: source.port.id,
             targetNodeId: nodeId,
@@ -224,8 +228,8 @@ export function createVisualizerStore(): CreatedVisualizerStore {
         viewportCache: {...state.viewportCache, [levelId]: viewport},
       }));
     },
-    startConnection: (nodeId, port) => {
-      set({connectionInProgress: {nodeId, port}});
+    startConnection: (nodeId, port, linkKind) => {
+      set({connectionInProgress: {linkKind, nodeId, port}});
     },
     syncSearchHighlights: (highlights) => {
       if (!highlights) {

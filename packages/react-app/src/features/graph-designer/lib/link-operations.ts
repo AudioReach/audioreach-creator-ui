@@ -40,6 +40,8 @@ const DELETE_LINK_BY_TYPE = {
   data: {deleteFn: deleteDataLink, key: 'dataLinks' as const},
 };
 
+type LinkKind = 'EC' | 'interUsecase' | 'normal';
+
 export interface LinkOperations {
   connectPorts: (
     get: () => GraphDesignerStore,
@@ -48,6 +50,7 @@ export interface LinkOperations {
     targetNodeId: string,
     targetPortId: string,
     edgeKind: 'control' | 'data',
+    linkKind: LinkKind,
   ) => Promise<boolean>;
   deleteLink: (
     get: () => GraphDesignerStore,
@@ -79,6 +82,7 @@ export function createLinkOperations(projectId: string) {
     targetNodeId: string,
     targetPortId: string,
     edgeKind: 'control' | 'data',
+    linkKind: LinkKind,
   ): Promise<boolean> {
     const useSubsystemVariant =
       isSubsystemNode(get, sourceNodeId) || isSubsystemNode(get, targetNodeId);
@@ -92,6 +96,7 @@ export function createLinkOperations(projectId: string) {
             destinationPortSystemId: targetPortId,
             sourceNodeSystemId: sourceNodeId,
             sourcePortSystemId: sourcePortId,
+            type: linkKind,
           })
         : await (
             useSubsystemVariant
@@ -101,6 +106,7 @@ export function createLinkOperations(projectId: string) {
             endComponentSystemId: targetNodeId,
             endPortSystemId: targetPortId,
             isDangling: false,
+            isInterUsecase: linkKind === 'interUsecase',
             startComponentSystemId: sourceNodeId,
             startPortSystemId: sourcePortId,
           });
@@ -132,6 +138,7 @@ export function createLinkOperations(projectId: string) {
     targetNodeId: string,
     targetPortId: string,
     edgeKind: 'control' | 'data',
+    linkKind: LinkKind,
   ): Promise<boolean> {
     return withMutationLock(get, () =>
       connectPortsInner(
@@ -141,6 +148,7 @@ export function createLinkOperations(projectId: string) {
         targetNodeId,
         targetPortId,
         edgeKind,
+        linkKind,
       ),
     );
   }

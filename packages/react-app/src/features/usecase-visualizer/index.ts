@@ -9,7 +9,7 @@ export type {UsecaseVisualizerProps} from './ui/usecase-visualizer';
 
 export {calculateModuleHeight, NODE_DIMENSIONS} from './lib/node-dimensions';
 
-export {VISUALIZER_MODE} from './model/visualizer.types';
+export {LINK_MENU_ACTIONS, VISUALIZER_MODE} from './model/visualizer.types';
 export type {
   VisualizerMode,
   // Context menu
@@ -17,6 +17,7 @@ export type {
   ContextMenuTarget,
   // Event payloads
   EdgeConnectPayload,
+  LinkKind,
   NodeDragEndPayload,
   NodeDropPayload,
   SelectedEdgeRef,
