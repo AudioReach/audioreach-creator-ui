@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Verifies project-scoped Key Configurator store lifecycle and selection state.
+ * SGKV deliberately does not live here: it is graph-owned, while this store
+ * remains the bridge that receives Graph Designer selection items.
+ */
 import {
   keyConfiguratorStoreManager,
   useKeyConfiguratorSelectionStore,
@@ -39,17 +44,6 @@ jest.mock('~features/key-configurator/model/calibration-keys-store', () => ({
 
 jest.mock('~features/key-configurator/model/module-tag-keys-store', () => ({
   useModuleTagKeysStore: {
-    getState: jest.fn(() => ({
-      initialize: jest.fn(),
-      projectId: null,
-      reset: jest.fn(),
-      saveToBackend: jest.fn(),
-    })),
-  },
-}));
-
-jest.mock('~features/key-configurator/model/subgraph-config-store', () => ({
-  useSubgraphConfigStore: {
     getState: jest.fn(() => ({
       initialize: jest.fn(),
       projectId: null,

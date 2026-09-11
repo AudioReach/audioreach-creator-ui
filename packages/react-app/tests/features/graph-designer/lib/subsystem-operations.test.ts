@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers subsystem mutations with the complete Edit Session prerequisites in
+ * place. The SGKV-related mocks keep session setup valid without making this
+ * suite responsible for SGKV behavior itself.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~shared/controls/global-toaster', () => ({
   showToast: jest.fn(),
@@ -27,6 +32,9 @@ jest.mock('~entities/edit-session', () => ({
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
 }));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 jest.mock('~shared/store/project-store-registry', () => ({
   projectStoreRegistry: {
     get: jest.fn(() => ({
@@ -42,6 +50,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 import {createStore, type StoreApi} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {
   createSubsystem,
   deleteSubsystem as deleteSubsystemApi,
@@ -75,6 +84,7 @@ import {makeDataLinkDto} from '../test-utils/component-dto-fixtures';
 
 const mockCreateSubsystem = jest.mocked(createSubsystem);
 const mockDeleteSubsystemApi = jest.mocked(deleteSubsystemApi);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockMoveSubsystemComponents = jest.mocked(moveSubsystemComponents);
 const mockPatchSubsystem = jest.mocked(patchSubsystem);
 const mockShowToast = jest.mocked(showToast);
@@ -200,6 +210,11 @@ async function enterEditMode(store: StoreApi<TestStore>): Promise<void> {
 }
 
 beforeEach(() => {
+  mockGetAllKeyDefinitions.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockCreateSubsystem.mockReset();
   mockDeleteSubsystemApi.mockReset();
   mockMoveSubsystemComponents.mockReset();

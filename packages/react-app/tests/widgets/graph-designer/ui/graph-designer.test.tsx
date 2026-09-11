@@ -100,6 +100,13 @@ jest.mock('~features/graph-designer/ui/apply-discard-controls', () => ({
   ),
 }));
 
+jest.mock(
+  '~widgets/graph-designer/ui/use-subgraph-kv-metadata-refresh',
+  () => ({
+    useSubgraphKvMetadataRefresh: jest.fn(() => jest.fn()),
+  }),
+);
+
 jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
   buildContextMenuConfig: jest.fn(() => ({
     getItems: jest.fn(() => []),

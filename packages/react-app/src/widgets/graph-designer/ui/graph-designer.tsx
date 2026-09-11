@@ -113,6 +113,7 @@ import {collapseSetForLevel} from '../lib/subgraph-collapse';
 import {buildSubsystemBreadcrumbPath} from '../lib/subsystem-breadcrumbs';
 
 import {DisplayOptionsPopover} from './display-options-popover';
+import {useSubgraphKvMetadataRefresh} from './use-subgraph-kv-metadata-refresh';
 
 interface GraphDesignerProps {
   projectId: string;
@@ -283,6 +284,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Store API for imperative action calls and provider value for new tabs.
   const store = useGraphDesignerStore();
+  // SGKV metadata is lifecycle work, not Key Configurator-tab work.
+  useSubgraphKvMetadataRefresh(projectId);
 
   // Backend-call core for drawing/deleting connections on the canvas.
   const linkOperations = useMemo(

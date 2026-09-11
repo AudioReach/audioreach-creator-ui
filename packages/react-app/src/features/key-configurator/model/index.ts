@@ -13,7 +13,6 @@ export {
 
 export {useCalibrationKeysStore} from './calibration-keys-store';
 export {useModuleTagKeysStore} from './module-tag-keys-store';
-export {useSubgraphConfigStore} from './subgraph-config-store';
 export {useSubsystemConfigStore} from './subsystem-config-store';
 
 export {moduleInstanceCoordinator} from './module-instance-coordinator';

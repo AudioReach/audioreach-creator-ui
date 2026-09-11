@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Exercises the Graph Data load lifecycle, including SGKV detail enrichment.
+ * It proves the graph remains usable when detail data is absent or fails, and
+ * that View-mode metadata updates do not replace the underlying vectors.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/usecases/api/usecases-api');
 jest.mock('~entities/containers', () => ({
@@ -74,6 +79,10 @@ type TestStore = GraphDataSlice &
   EditSessionSlice &
   SubsystemSlice;
 
+/**
+ * Composes the production slices needed to verify the actual SGKV lifecycle.
+ * This avoids testing Graph Data with a fake Edit Session reconciliation path.
+ */
 function makeStore(moduleList: ModuleDefinition[] = []) {
   const store = createStore<TestStore>((set, get) => ({
     ...createGraphDataSlice(set, get, 'proj-1'),
@@ -268,6 +277,116 @@ describe('createGraphDataSlice — moduleType resolution', () => {
 });
 
 describe('createGraphDataSlice — subgraph name enrichment', () => {
+  it('reconciles Graph Data vectors into Edit Session only in Edit mode', async () => {
+    const store = makeStore([]);
+    store.setState({
+      kvSelectionsById: {stale: []},
+      mode: 'edit',
+    });
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          name: 'RealSubgraphName',
+          relatedEndPointLinks: [],
+          SGKV: [
+            {
+              keyValuePairs: [],
+              systemId: 'sgkv-1',
+            },
+          ],
+          subGraphSharedType: 'AUDIO_PLAYBACK',
+          systemId: 'sys-sg-1',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(store.getState().kvSelectionsById).toEqual({
+      'sys-sg-1': [
+        expect.objectContaining({
+          isSessionAdded: false,
+          systemId: 'sgkv-1',
+        }),
+      ],
+    });
+  });
+
+  it('clears Edit Session vectors when an empty Graph Data snapshot is initialized', () => {
+    const store = makeStore([]);
+    store.setState({
+      kvSelectionsById: {sg1: []},
+      mode: 'edit',
+    });
+
+    store.getState().initializeEmptyGraphData();
+
+    expect(store.getState().kvSelectionsById).toEqual({});
+  });
+
+  it('maps SGKV detail vectors during the full graph load', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          name: 'RealSubgraphName',
+          relatedEndPointLinks: [],
+          SGKV: [
+            {
+              keyValuePairs: [
+                {
+                  key: {
+                    keyId: 1,
+                    name: 'DeviceTX',
+                    systemId: 'key-device-tx',
+                  },
+                  value: {
+                    name: 'A2B_Mic',
+                    systemId: 'value-a2b-mic',
+                    valueId: 10,
+                  },
+                },
+              ],
+              systemId: 'sgkv-1',
+            },
+          ],
+          subGraphSharedType: 'AUDIO_PLAYBACK',
+          systemId: 'sys-sg-1',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const [vector] =
+      store.getState().graphData!.subgraphs['sys-sg-1'].kvVectors;
+    expect(vector).toMatchObject({
+      isEc: false,
+      selected: false,
+      systemId: 'sgkv-1',
+    });
+    expect(vector.keyValuePairs[0]?.keyInfo.keySystemId).toBe('key-device-tx');
+    expect(vector.keyValuePairs[0]?.valueInfo.valueSystemId).toBe(
+      'value-a2b-mic',
+    );
+  });
+
   it('queries getSubgraphsByIds with the loaded subgraph ids and overlays the real name/type onto the placeholder', async () => {
     const store = makeStore([]);
     mockGetUsecaseComponents.mockResolvedValueOnce({
@@ -341,9 +460,10 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
         subgraphs: {
           'sys-sg-1': {
             containers: [],
+            kvVectors: [],
             subgraphName: 'RealSubgraphName',
-            subgraphSystemId: 'sys-sg-1',
             subgraphType: 'AUDIO_PLAYBACK',
+            systemId: 'sys-sg-1',
           },
         },
         subsystems: {},
@@ -355,6 +475,85 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
     const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
     expect(subgraph?.subgraphName).toBe('RealSubgraphName');
     expect(subgraph?.subgraphType).toBe('AUDIO_PLAYBACK');
+    expect(subgraph?.kvVectors).toEqual([]);
+  });
+
+  it('updates metadata without changing vector identities or pairs', () => {
+    const store = makeStore([]);
+    const keyValuePairs = [
+      {
+        keyInfo: {
+          keyId: 1,
+          keyLabel: 'DeviceTX',
+          keySystemId: 'key-device-tx',
+        },
+        valueInfo: {
+          valueId: 10,
+          valueLabel: 'A2B_Mic',
+          valueSystemId: 'value-a2b-mic',
+        },
+      },
+    ];
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {
+          'sys-sg-1': {
+            containers: [],
+            kvVectors: [
+              {
+                isEc: false,
+                keyValuePairs,
+                selected: false,
+                systemId: 'sgkv-1',
+              },
+            ],
+            subgraphId: 'sys-sg-1',
+            subgraphName: 'RealSubgraphName',
+            subgraphType: 'AUDIO_PLAYBACK',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    store.getState().updateSgKvMetadata({
+      'sys-sg-1': {'sgkv-1': {isEc: true, selected: true}},
+      unknown: {'sgkv-1': {isEc: true, selected: true}},
+    });
+
+    expect(store.getState().graphData!.subgraphs['sys-sg-1'].kvVectors).toEqual(
+      [
+        {
+          isEc: true,
+          keyValuePairs,
+          selected: true,
+          systemId: 'sgkv-1',
+        },
+      ],
+    );
+
+    const graphData = store.getState().graphData;
+    store.getState().updateSgKvMetadata({
+      'sys-sg-1': {'sgkv-1': {isEc: true, selected: true}},
+    });
+
+    expect(store.getState().graphData).toBe(graphData);
+  });
+
+  it('tracks whether selected-subgraph metadata is refreshing', () => {
+    const store = makeStore();
+
+    store.getState().setSgKvMetadataRefreshing(true);
+
+    expect(store.getState().isSgKvMetadataRefreshing).toBe(true);
+
+    store.getState().setSgKvMetadataRefreshing(false);
+
+    expect(store.getState().isSgKvMetadataRefreshing).toBe(false);
   });
 });
 
@@ -1126,9 +1325,10 @@ describe('recomputeContainersAndSubgraphs', () => {
         subgraphs: {
           'subgraph-existing': {
             containers: ['container-1'],
+            kvVectors: [],
             subgraphName: 'Existing Subgraph',
-            subgraphSystemId: 'subgraph-existing',
             subgraphType: 'AUDIO_RECORD',
+            systemId: 'subgraph-existing',
           },
         },
         subsystems: {},
@@ -1580,6 +1780,8 @@ describe('createGraphDataSlice - store-only property updates', () => {
     });
     expect(graphData.subgraphs['sg-1']).toEqual({
       containers: ['cnt-2', 'cnt-1'],
+      kvVectors: [],
+      naturalId: undefined,
       subgraphName: 'Subgraph 1',
       subgraphType: '',
       systemId: 'sg-1',
@@ -1731,9 +1933,10 @@ describe('applyComponentCollection', () => {
         subgraphs: {
           'subgraph-1': {
             containers: ['container-10'],
+            kvVectors: [],
             subgraphName: 'Existing Subgraph',
-            subgraphSystemId: 'subgraph-1',
             subgraphType: 'AUDIO_RECORD',
+            systemId: 'subgraph-1',
           },
         },
         subsystems: {},
@@ -1769,6 +1972,7 @@ describe('applyComponentCollection', () => {
     expect(Object.keys(state.graphData!.subgraphs)).toEqual(['subgraph-1']);
     expect(state.graphData!.subgraphs['subgraph-1']).toEqual({
       containers: ['container-10'],
+      kvVectors: [],
       subgraphName: 'Existing Subgraph',
       subgraphType: 'AUDIO_RECORD',
       systemId: 'subgraph-1',

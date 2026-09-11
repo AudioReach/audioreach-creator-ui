@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Declares catalog data shared by the Usecase Browser and SGKV metadata loader.
+ * The metadata loader retains all usecases because EC is not selection-scoped.
+ */
 export interface UsecaseDto {
   keyValuePairs: KeyValueInfo[];
   relatedEndPointLinks?: RelatedEndPointLink[];
@@ -10,7 +14,8 @@ export interface UsecaseDto {
   usecaseAliasId?: number;
   usecaseAliasName?: string;
   usecaseCategory?: string;
-  usecaseType: 'Regular' | 'Manual';
+  /** Backend classification used when deriving SGKV EC metadata. */
+  usecaseType: 'EC' | 'LINKED' | 'ISLAND';
 }
 
 /**

@@ -7,17 +7,22 @@ import type {
   CreateUsecasesRequestDto,
   SubgraphKvSelectionDto,
 } from '~entities/edit-session';
-import type {KeyValueInfo} from '~entities/usecases';
+import type {KvSelection} from '~entities/subgraph-definitions';
 
-import type {KvSelection} from '../model/edit-session-slice';
 import type {Connection} from '../model/graph-data-slice';
 
+/**
+ * Builds the one Apply request from the staged Edit Session state.
+ * It intentionally serializes system IDs only: labels and UI-only metadata
+ * are presentation concerns and must not be sent to the backend.
+ */
 export interface BuildCreateUsecasesRequestInput {
   excludedLinks: Connection[];
   kvSelectionsById: Record<string, KvSelection[]>;
   selectedUsecaseSystemIds: string[];
 }
 
+/** Serializes only selected editable SGKV vectors into the Apply request. */
 export function buildCreateUsecasesRequest(
   input: BuildCreateUsecasesRequestInput,
 ): CreateUsecasesRequestDto {
@@ -29,7 +34,7 @@ export function buildCreateUsecasesRequest(
     systemId: subgraphId,
     valueSystemIds: selections
       .filter((s) => s.selected)
-      .map((s) => s.keyValuePairs.map((kv: KeyValueInfo) => kv.value.systemId)),
+      .map((s) => s.keyValuePairs.map((kv) => kv.valueInfo.valueSystemId)),
   }));
 
   const excludedDataLinks = excludedLinks

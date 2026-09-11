@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Covers module mutations with the complete Edit Session prerequisites in
+ * place. The SGKV definition/session mocks protect this existing operation
+ * suite from failing before it reaches the module behavior under test.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~shared/controls/global-toaster', () => ({
   showToast: jest.fn(),
@@ -25,6 +30,9 @@ jest.mock('~entities/edit-session', () => ({
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
 }));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 jest.mock('~shared/store/project-store-registry', () => ({
   projectStoreRegistry: {
     get: jest.fn(() => ({
@@ -42,6 +50,7 @@ import {createStore} from 'zustand';
 import {getContainersBySystemIds} from '~entities/containers';
 import {endSession, startSession} from '~entities/edit-session';
 import {type AnyNode, NODE_KIND} from '~entities/graph';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {
   createSpfModule,
@@ -77,6 +86,7 @@ import {
 const mockCreateSpfModule = jest.mocked(createSpfModule);
 const mockDeleteSpfModule = jest.mocked(deleteSpfModule);
 const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockPatchSpfModule = jest.mocked(patchSpfModule);
 const mockShowToast = jest.mocked(showToast);
@@ -86,6 +96,11 @@ const mockGetProjectById = jest.mocked(getProjectById);
 
 beforeEach(() => {
   mockGetContainersBySystemIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
+  mockGetAllKeyDefinitions.mockResolvedValue({
     data: [],
     message: undefined as never,
     success: true,
@@ -478,7 +493,9 @@ describe('createModuleOperations — delete', () => {
         },
       },
       kvSelectionsById: {
-        '1': [{keyValuePairs: [], selected: true, systemId: 'kv-1'}],
+        '1': [
+          {isEc: false, keyValuePairs: [], selected: true, systemId: 'kv-1'},
+        ],
       },
       subgraphProvenanceById: {'1': 'pre-loaded'},
     });

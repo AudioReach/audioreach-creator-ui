@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Exercises SGKV ownership while a graph is editable. It covers session entry,
+ * Add/Delete/selection mutations, and refresh reconciliation, especially the
+ * invariant that local vectors survive a refresh for a surviving subgraph.
+ */
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/edit-session', () => ({
   endSession: jest.fn(),
@@ -11,11 +16,16 @@ jest.mock('~entities/edit-session', () => ({
 jest.mock('~entities/project/api/projects-api', () => ({
   getProjectById: jest.fn(),
 }));
+jest.mock('~entities/key-definitions/api/key-definition-api', () => ({
+  getAllKeyDefinitions: jest.fn(),
+}));
 
 import {createStore, type StoreApi} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
+import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
+import type {SubgraphKvPair} from '~entities/subgraph-definitions';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
@@ -28,25 +38,40 @@ import {
 import {projectStoreRegistry} from '~shared/store/project-store-registry';
 
 const mockEndSession = jest.mocked(endSession);
+const mockGetAllKeyDefinitions = jest.mocked(getAllKeyDefinitions);
 const mockStartSession = jest.mocked(startSession);
 const mockGetProjectById = jest.mocked(getProjectById);
 
+type TestEditSessionStore = EditSessionSlice & {
+  graphData: UsecaseGraphData | null;
+  markDirty: () => void;
+};
+
+/**
+ * Builds the smallest project-scoped store that still follows production lock
+ * and project-store interactions. Individual tests override only the API or
+ * graph data needed for the scenario.
+ */
 function createTestStore(projectId = 'proj-1'): {
   projectStore: StoreApi<ProjectStore>;
-  store: StoreApi<EditSessionSlice>;
+  store: StoreApi<TestEditSessionStore>;
 } {
   const projectStore = createProjectStore(projectId);
   projectStoreRegistry.register(projectId, projectStore);
-  const store = createStore<EditSessionSlice>((set, get) =>
-    createEditSessionSlice(set, get, projectId),
-  );
+  const store = createStore<TestEditSessionStore>((set, get) => ({
+    ...createEditSessionSlice(set, get, projectId),
+    graphData: null,
+    markDirty: jest.fn(),
+  }));
   return {projectStore, store};
 }
 
-type TestStoreWithGraphData = EditSessionSlice & {
-  graphData: UsecaseGraphData | null;
-};
+type TestStoreWithGraphData = TestEditSessionStore;
 
+/**
+ * Adds a Graph Data snapshot for session entry and refresh reconciliation.
+ * Keeping it separate makes it clear which tests need loaded graph state.
+ */
 function createTestStoreWithGraphData(
   graphData: UsecaseGraphData | null,
   projectId = 'proj-1',
@@ -56,15 +81,21 @@ function createTestStoreWithGraphData(
   const store = createStore<TestStoreWithGraphData>((set, get) => ({
     ...createEditSessionSlice(set, get, projectId),
     graphData,
+    markDirty: jest.fn(),
   }));
   return {projectStore, store};
 }
 
+/**
+ * Produces a minimal View-mode graph whose subgraphs have explicit SGKV lists.
+ * This mirrors the data shape passed from Graph Data to Edit Session on entry.
+ */
 function makeGraphData(subgraphIds: string[]): UsecaseGraphData {
   const subgraphs: UsecaseGraphData['subgraphs'] = {};
   for (const subgraphId of subgraphIds) {
     subgraphs[subgraphId] = {
       containers: [],
+      kvVectors: [],
       subgraphName: subgraphId,
       subgraphType: '',
       systemId: subgraphId,
@@ -80,12 +111,251 @@ function makeGraphData(subgraphIds: string[]): UsecaseGraphData {
   };
 }
 
+function makeKeyValue(
+  naturalId: number,
+  valueSystemId: string,
+): SubgraphKvPair {
+  return {
+    keyInfo: {
+      keyId: naturalId,
+      keyLabel: `key${naturalId}`,
+      keySystemId: `key-${naturalId}`,
+    },
+    valueInfo: {
+      valueId: naturalId,
+      valueLabel: `value${naturalId}`,
+      valueSystemId,
+    },
+  };
+}
+
 describe('EditSessionSlice', () => {
   beforeEach(() => {
     projectStoreRegistry.clear();
     mockEndSession.mockReset();
+    mockGetAllKeyDefinitions.mockReset();
+    mockGetAllKeyDefinitions.mockResolvedValue({
+      data: [],
+      message: undefined as never,
+      success: true,
+    });
     mockStartSession.mockReset();
     mockGetProjectById.mockReset();
+  });
+
+  it('reconciles active subgraphs while retaining staged vector pairs', () => {
+    const {store} = createTestStore();
+    const retainedPairs = [makeKeyValue(1, 'value-1')];
+    store.setState({
+      kvSelectionsById: {
+        sg1: [
+          {
+            isEc: false,
+            isSessionAdded: true,
+            keyValuePairs: retainedPairs,
+            selected: false,
+            systemId: 'sgkv-1',
+          },
+        ],
+        stale: [],
+      },
+    });
+
+    store.getState().updateSgKvConfigInfo({
+      sg1: [
+        {
+          isEc: true,
+          keyValuePairs: [makeKeyValue(2, 'value-2')],
+          selected: true,
+          systemId: 'sgkv-1',
+        },
+      ],
+      sg3: [],
+    });
+
+    expect(store.getState().kvSelectionsById).toEqual({
+      sg1: [
+        {
+          isEc: true,
+          isSessionAdded: true,
+          keyValuePairs: retainedPairs,
+          selected: true,
+          systemId: 'sgkv-1',
+        },
+      ],
+      sg3: [],
+    });
+  });
+
+  it('keeps the stored vector map when reconciliation metadata is unchanged', () => {
+    const {store} = createTestStore();
+    const vector = {
+      isEc: false,
+      keyValuePairs: [makeKeyValue(1, 'value-1')],
+      selected: true,
+      systemId: 'persisted',
+    };
+    store.setState({kvSelectionsById: {sg1: [vector]}});
+    const existingMap = store.getState().kvSelectionsById;
+
+    store.getState().updateSgKvConfigInfo({sg1: [vector]});
+
+    expect(store.getState().kvSelectionsById).toBe(existingMap);
+  });
+
+  it('retains a local vector when refreshed metadata reconciles its subgraph', () => {
+    const {store} = createTestStore();
+    const localVector = {
+      isEc: false,
+      isSessionAdded: true,
+      keyValuePairs: [makeKeyValue(2, 'value-2')],
+      selected: true,
+      systemId: 'local:key-2:value-2',
+    };
+    store.setState({
+      kvSelectionsById: {
+        sg1: [
+          {
+            isEc: false,
+            keyValuePairs: [makeKeyValue(1, 'value-1')],
+            selected: false,
+            systemId: 'persisted',
+          },
+          localVector,
+        ],
+      },
+    });
+
+    store.getState().updateSgKvConfigInfo({
+      sg1: [
+        {
+          isEc: true,
+          keyValuePairs: [makeKeyValue(1, 'value-1')],
+          selected: true,
+          systemId: 'persisted',
+        },
+      ],
+    });
+
+    expect(store.getState().kvSelectionsById.sg1).toEqual([
+      expect.objectContaining({
+        isEc: true,
+        selected: true,
+        systemId: 'persisted',
+      }),
+      localVector,
+    ]);
+    expect(store.getState().kvSelectionsById.sg1[1]).toBe(localVector);
+  });
+
+  it('adds a selected local vector and rejects an order-independent duplicate', () => {
+    const {store} = createTestStore();
+    const pairs = [makeKeyValue(1, 'value-1'), makeKeyValue(2, 'value-2')];
+    store.setState({kvSelectionsById: {sg1: []}});
+
+    expect(store.getState().addSgKvVector('sg1', pairs)).toBe(true);
+    expect(store.getState().addSgKvVector('sg1', [...pairs].reverse())).toBe(
+      false,
+    );
+    expect(store.getState().kvSelectionsById.sg1).toEqual([
+      expect.objectContaining({
+        isEc: false,
+        isSessionAdded: true,
+        keyValuePairs: pairs,
+        selected: true,
+        systemId: 'local:key-1:value-1|key-2:value-2',
+      }),
+    ]);
+    expect(store.getState().markDirty).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a persisted vector with matching numeric IDs', () => {
+    const {store} = createTestStore();
+    const candidatePair = makeKeyValue(1, 'candidate-value');
+    const existingPair = {
+      ...candidatePair,
+      keyInfo: {...candidatePair.keyInfo, keySystemId: 'persisted-key'},
+      valueInfo: {
+        ...candidatePair.valueInfo,
+        valueSystemId: 'persisted-value',
+      },
+    };
+    store.setState({
+      kvSelectionsById: {
+        sg1: [
+          {
+            isEc: false,
+            keyValuePairs: [existingPair],
+            selected: true,
+            systemId: 'persisted',
+          },
+        ],
+      },
+    });
+
+    expect(store.getState().addSgKvVector('sg1', [candidatePair])).toBe(false);
+    expect(store.getState().kvSelectionsById.sg1).toHaveLength(1);
+    expect(store.getState().markDirty).not.toHaveBeenCalled();
+  });
+
+  it('allows a different value under a stored key', () => {
+    const {store} = createTestStore();
+    const existingPair = makeKeyValue(1, 'value-1');
+    const candidatePair = {
+      ...makeKeyValue(1, 'value-2'),
+      valueInfo: {
+        ...makeKeyValue(1, 'value-2').valueInfo,
+        valueId: 2,
+      },
+    };
+    store.setState({
+      kvSelectionsById: {
+        sg1: [
+          {
+            isEc: false,
+            keyValuePairs: [existingPair],
+            selected: true,
+            systemId: 'persisted',
+          },
+        ],
+      },
+    });
+
+    expect(store.getState().addSgKvVector('sg1', [candidatePair])).toBe(true);
+    expect(store.getState().kvSelectionsById.sg1).toHaveLength(2);
+  });
+
+  it('marks dirty only when selection changes and deletes only session-added vectors', () => {
+    const {store} = createTestStore();
+    store.setState({
+      kvSelectionsById: {
+        sg1: [
+          {
+            isEc: false,
+            keyValuePairs: [],
+            selected: false,
+            systemId: 'persisted',
+          },
+          {
+            isEc: false,
+            isSessionAdded: true,
+            keyValuePairs: [],
+            selected: true,
+            systemId: 'local:session',
+          },
+        ],
+      },
+    });
+
+    store.getState().setSgKvVectorSelected('sg1', 'persisted', false);
+    store.getState().setSgKvVectorSelected('sg1', 'persisted', true);
+    store.getState().deleteSgKvVector('sg1', 'persisted');
+    store.getState().deleteSgKvVector('sg1', 'local:session');
+
+    expect(store.getState().kvSelectionsById.sg1).toEqual([
+      expect.objectContaining({selected: true, systemId: 'persisted'}),
+    ]);
+    expect(store.getState().markDirty).toHaveBeenCalledTimes(2);
   });
 
   it('clears session-local maps when exiting edit mode', async () => {
@@ -97,6 +367,21 @@ describe('EditSessionSlice', () => {
     });
 
     store.setState({
+      availableGraphKeys: [
+        {
+          enumMember: '',
+          enumName: '',
+          graphKeyEnumMember: '',
+          isCalibrationKey: false,
+          isDynamic: false,
+          isGraphKey: true,
+          isVoice: false,
+          name: 'DeviceTX',
+          naturalId: 1,
+          systemId: 'key-1',
+          values: [],
+        },
+      ],
       excludedLinks: [
         {
           destinationPortSystemId: 'p2',
@@ -109,7 +394,7 @@ describe('EditSessionSlice', () => {
         },
       ],
       kvSelectionsById: {
-        sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
+        sg1: [{isEc: false, keyValuePairs: [], selected: true, systemId: 's1'}],
       },
       pairLinksById: {
         sg1: {
@@ -125,6 +410,7 @@ describe('EditSessionSlice', () => {
     await store.getState().exitEditMode();
 
     const state = store.getState();
+    expect(state.availableGraphKeys).toBeNull();
     expect(state.mode).toBe('view');
     expect(state.kvSelectionsById).toEqual({});
     expect(state.excludedLinks).toEqual([]);
@@ -146,7 +432,7 @@ describe('EditSessionSlice', () => {
     await store.getState().enterEditMode();
     store.setState({
       kvSelectionsById: {
-        sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
+        sg1: [{isEc: false, keyValuePairs: [], selected: true, systemId: 's1'}],
       },
     });
     await store.getState().exitEditMode();
@@ -276,8 +562,12 @@ describe('EditSessionSlice', () => {
 
       store.setState({
         kvSelectionsById: {
-          sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
-          sg2: [{keyValuePairs: [], selected: true, systemId: 's2'}],
+          sg1: [
+            {isEc: false, keyValuePairs: [], selected: true, systemId: 's1'},
+          ],
+          sg2: [
+            {isEc: false, keyValuePairs: [], selected: true, systemId: 's2'},
+          ],
         },
         pairLinksById: {
           'sg1:sg2': {
@@ -301,7 +591,7 @@ describe('EditSessionSlice', () => {
       const state = store.getState();
       expect(state.subgraphProvenanceById).toEqual({sg2: 'pre-loaded'});
       expect(state.kvSelectionsById).toEqual({
-        sg2: [{keyValuePairs: [], selected: true, systemId: 's2'}],
+        sg2: [{isEc: false, keyValuePairs: [], selected: true, systemId: 's2'}],
       });
       expect(state.pairLinksById).toEqual({
         'sg3:sg4': {
@@ -337,7 +627,9 @@ describe('EditSessionSlice', () => {
 
       store.setState({
         kvSelectionsById: {
-          sg2: [{keyValuePairs: [], selected: true, systemId: 's2'}],
+          sg2: [
+            {isEc: false, keyValuePairs: [], selected: true, systemId: 's2'},
+          ],
         },
         pairLinksById: {
           'sg3:sg4': {
@@ -393,6 +685,77 @@ describe('EditSessionSlice', () => {
       await store.getState().enterEditMode();
 
       expect(store.getState().subgraphProvenanceById).toEqual({});
+    });
+
+    it('caches graph-key definitions and seeds editable SGKV vectors', async () => {
+      mockGetAllKeyDefinitions.mockResolvedValueOnce({
+        data: [
+          {
+            isGraphKey: true,
+            name: 'DeviceTX',
+            naturalId: 1,
+            systemId: 'key-device-tx',
+            values: [
+              {
+                name: 'A2B_Mic',
+                naturalId: 10,
+                systemId: 'value-a2b-mic',
+              },
+            ],
+          },
+          {
+            isGraphKey: false,
+            name: 'CalibrationOnly',
+            naturalId: 2,
+            systemId: 'key-calibration',
+            values: [],
+          },
+        ] as never,
+        message: undefined,
+        success: true,
+      });
+      const graphData = makeGraphData(['sg1']);
+      graphData.subgraphs.sg1.kvVectors = [
+        {
+          isEc: true,
+          keyValuePairs: [makeKeyValue(1, 'value-1')],
+          selected: true,
+          systemId: 'sgkv-1',
+        },
+      ];
+      const {store} = createTestStoreWithGraphData(graphData);
+
+      expect(await store.getState().enterEditMode()).toBe(true);
+
+      expect(store.getState().availableGraphKeys).toEqual([
+        {
+          isGraphKey: true,
+          name: 'DeviceTX',
+          naturalId: 1,
+          systemId: 'key-device-tx',
+          values: [{name: 'A2B_Mic', naturalId: 10, systemId: 'value-a2b-mic'}],
+        },
+      ]);
+      expect(store.getState().kvSelectionsById).toEqual({
+        sg1: [
+          {
+            isEc: true,
+            isSessionAdded: false,
+            keyValuePairs: [makeKeyValue(1, 'value-1')],
+            selected: true,
+            systemId: 'sgkv-1',
+          },
+        ],
+      });
+    });
+
+    it('seeds an empty editable vector list for a legacy subgraph snapshot', async () => {
+      const graphData = makeGraphData(['sg1']);
+      Reflect.deleteProperty(graphData.subgraphs.sg1, 'kvVectors');
+      const {store} = createTestStoreWithGraphData(graphData);
+
+      expect(await store.getState().enterEditMode()).toBe(true);
+      expect(store.getState().kvSelectionsById).toEqual({sg1: []});
     });
   });
 
@@ -521,7 +884,9 @@ describe('EditSessionSlice', () => {
       });
       store.setState({
         kvSelectionsById: {
-          sg1: [{keyValuePairs: [], selected: true, systemId: 's1'}],
+          sg1: [
+            {isEc: false, keyValuePairs: [], selected: true, systemId: 's1'},
+          ],
         },
       });
 
