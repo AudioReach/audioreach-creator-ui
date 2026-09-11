@@ -88,6 +88,22 @@ function baseLevel(): LevelView {
   };
 }
 
+function baseLevelWithControlLink(): LevelView {
+  return {
+    ...baseLevel(),
+    controlLinks: [
+      {
+        edgeKind: 'control',
+        id: 'ctrl-1',
+        sourceNodeId: 'module-2',
+        sourcePortId: 'in',
+        targetNodeId: 'module-3',
+        targetPortId: 'in',
+      },
+    ],
+  };
+}
+
 describe('applyCollapses', () => {
   it('returns the same reference when nothing is collapsed', () => {
     const level = baseLevel();
@@ -163,5 +179,21 @@ describe('applyCollapses', () => {
     );
     expect(outputPorts).toHaveLength(1);
     expect(out.proxyDataLinks).toHaveLength(2);
+  });
+
+  it('emits collapse metadata for proxy data and control links', () => {
+    const out = applyCollapses(baseLevelWithControlLink(), new Set([1]));
+
+    expect(out.proxyDataLinks?.[0]).toEqual(
+      expect.objectContaining({
+        kind: 'standard',
+        realConnectionIds: ['d-cross'],
+      }),
+    );
+    expect(out.proxyControlLinks?.[0]).toEqual(
+      expect.objectContaining({
+        realConnectionIds: ['ctrl-1'],
+      }),
+    );
   });
 });

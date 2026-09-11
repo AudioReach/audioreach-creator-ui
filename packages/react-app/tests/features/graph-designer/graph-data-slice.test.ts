@@ -5,6 +5,9 @@
 
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/usecases/api/usecases-api');
+jest.mock('~entities/spf-modules', () => ({
+  patchSpfModule: jest.fn(),
+}));
 jest.mock('~shared/store/project-store-registry', () => ({
   projectStoreRegistry: {
     get: jest.fn(() => undefined),
@@ -17,6 +20,7 @@ import {
   getSubgraphsByIds,
   getUsecaseComponents,
 } from '~entities/usecases/api/usecases-api';
+import {patchSpfModule} from '~entities/spf-modules';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
@@ -45,6 +49,7 @@ import {
 
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+const mockPatchSpfModule = jest.mocked(patchSpfModule);
 
 beforeEach(() => {
   mockGetSubgraphsByIds.mockResolvedValue({
@@ -1373,6 +1378,159 @@ describe('adjustSurvivingPortCounts', () => {
     const {moduleInstances} = store.getState().graphData!;
     expect(moduleInstances['mod-src'].inputPorts[0].totalLinksAtPort).toBe(1);
     expect(moduleInstances['mod-dst'].inputPorts[0].totalLinksAtPort).toBe(2);
+  });
+});
+
+describe('createGraphDataSlice - store-only property updates', () => {
+  function makeStoreWithGraphData() {
+    const store = makeStore();
+    store.setState({
+      graphData: {
+        connections: [],
+        containers: {
+          'cnt-1': {
+            containerId: 'cnt-1',
+            moduleInstances: ['mod-1', 'mod-2'],
+            subgraphId: 'sg-1',
+          },
+        },
+        moduleInstances: {
+          'mod-1': {
+            containerId: 'cnt-1',
+            displayName: 'Module 1',
+            inputPorts: [],
+            moduleId: '100',
+            moduleInstanceId: 'mod-1',
+            moduleName: 'Module 1',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'sg-1',
+          },
+          'mod-2': {
+            containerId: 'cnt-1',
+            displayName: 'Module 2',
+            inputPorts: [],
+            moduleId: '200',
+            moduleInstanceId: 'mod-2',
+            moduleName: 'Module 2',
+            moduleType: '',
+            outputPorts: [],
+            position: {x: 0, y: 0},
+            subgraphId: 'sg-1',
+          },
+        },
+        selectedUsecases: [],
+        subgraphs: {
+          'sg-1': {
+            containers: ['cnt-1'],
+            subgraphId: 'sg-1',
+            subgraphName: 'Subgraph 1',
+            subgraphType: '',
+          },
+        },
+        subsystems: {
+          'ss-1': {
+            childSubsystemIds: [],
+            controlPorts: [],
+            dataPorts: [],
+            subgraphs: [],
+            subsystemId: 'ss-1',
+            subsystemName: 'Subsystem 1',
+          },
+        },
+      },
+      isDirty: false,
+    });
+    return store;
+  }
+
+  beforeEach(() => {
+    mockPatchSpfModule.mockClear();
+  });
+
+  it('updates module alias locally without calling module patch', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateModuleAliasLocal('mod-1', 'New Alias');
+
+    expect(
+      store.getState().graphData?.moduleInstances['mod-1'].displayName,
+    ).toBe('New Alias');
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('updates subgraph name locally', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateSubgraphNameLocal('sg-1', 'Main');
+
+    expect(store.getState().graphData?.subgraphs['sg-1'].subgraphName).toBe(
+      'Main',
+    );
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('updates subsystem name locally', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateSubsystemNameLocal('ss-1', 'Playback');
+
+    expect(store.getState().graphData?.subsystems['ss-1'].subsystemName).toBe(
+      'Playback',
+    );
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('renames a container locally and moves member modules to the new id', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateContainerIdLocal('cnt-1', 'cnt-2');
+
+    const graphData = store.getState().graphData!;
+    expect(graphData.containers['cnt-1']).toBeUndefined();
+    expect(graphData.containers['cnt-2']).toEqual({
+      containerId: 'cnt-2',
+      moduleInstances: ['mod-1', 'mod-2'],
+      subgraphId: 'sg-1',
+    });
+    expect(graphData.moduleInstances['mod-1'].containerId).toBe('cnt-2');
+    expect(graphData.moduleInstances['mod-2'].containerId).toBe('cnt-2');
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('updates module container locally', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateModuleContainerLocal('mod-1', 'cnt-2');
+
+    expect(
+      store.getState().graphData?.moduleInstances['mod-1'].containerId,
+    ).toBe('cnt-2');
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('updates module port count fields locally', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateModulePortCountLocal('mod-1', 'maxInputPorts', 2);
+    store.getState().updateModulePortCountLocal('mod-1', 'maxOutputPorts', 3);
+    store.getState().updateModulePortCountLocal('mod-1', 'maxControlPorts', 4);
+
+    expect(store.getState().graphData?.moduleInstances['mod-1']).toEqual(
+      expect.objectContaining({
+        maxControlPorts: 4,
+        maxInputPorts: 2,
+        maxOutputPorts: 3,
+      }),
+    );
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
   });
 });
 
