@@ -42,6 +42,12 @@ describe('NODE_DIMENSIONS — exact constants', () => {
   it('container dimensions match the spec', () => {
     expect(NODE_DIMENSIONS.container).toEqual({headerHeight: 32, padding: 16});
   });
+
+  it('uses only the header height above a subsystem boundary child', () => {
+    expect(NODE_DIMENSIONS.subsystemBoundary.topInset).toBe(
+      NODE_DIMENSIONS.subsystemBoundary.headerHeight,
+    );
+  });
 });
 
 describe('calculateModuleHeight', () => {

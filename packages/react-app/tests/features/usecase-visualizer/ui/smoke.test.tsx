@@ -179,6 +179,14 @@ describe('UsecaseVisualizer — smoke', () => {
     );
 
     await act(async () => {
+      latestReactFlowProps.current?.onNodesChange?.([
+        {
+          dragging: true,
+          id: 'm-a',
+          position: {x: 10, y: 20},
+          type: 'position',
+        },
+      ]);
       latestReactFlowProps.current?.onNodeDragStop?.(
         {},
         {
@@ -190,6 +198,67 @@ describe('UsecaseVisualizer — smoke', () => {
 
     expect(onNodeDragEnd).toHaveBeenCalledWith(
       expect.objectContaining({nodeId: 'm-a', position: {x: 10, y: 20}}),
+    );
+  });
+
+  it('persists all overflow-corrected positions after dragging a boundary child', () => {
+    const onNodeDragEnd = jest.fn();
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodeDragEnd}}
+        graph={{
+          boundarySubsystem: {...subsystem, height: 400, width: 600},
+          levelId: 'subsystem:ss-1',
+          subgraphs: [
+            {
+              ...subgraph,
+              parentId: 'ss-1',
+              x: 96,
+              y: 136,
+            },
+          ],
+          subsystems: [
+            {
+              ...subsystem,
+              id: 'ss-sibling',
+              parentId: 'ss-1',
+              x: 160,
+              y: 180,
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      latestReactFlowProps.current?.onNodesChange?.([
+        {
+          dragging: true,
+          id: 'sg-1',
+          position: {x: -8, y: -12},
+          type: 'position',
+        },
+      ]);
+      latestReactFlowProps.current?.onNodeDragStop?.(
+        {},
+        {
+          id: 'sg-1',
+          position: {x: -8, y: -12},
+          type: 'subgraph',
+        },
+      );
+    });
+
+    expect(onNodeDragEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correctedPositions: {
+          'sg-1': {x: 96, y: 40},
+          'ss-1': {x: -104, y: -52},
+          'ss-sibling': {x: 264, y: 232},
+        },
+        nodeId: 'sg-1',
+        position: {x: 96, y: 40},
+      }),
     );
   });
 });

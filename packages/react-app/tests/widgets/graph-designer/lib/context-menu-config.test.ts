@@ -173,6 +173,64 @@ describe('context-menu-config', () => {
     expect(items.map((item) => item.id)).toEqual(['delete', 'exclude-link']);
   });
 
+  it('suppresses structural actions only for the active boundary subsystem', () => {
+    const config = configFor(
+      makeStore({
+        activeSubsystemId: 'ss-1',
+        graphData: {
+          connections: [],
+          containers: {},
+          moduleInstances: {},
+          selectedUsecases: [],
+          subgraphs: {},
+          subsystems: {
+            'ss-1': {
+              childSubsystemIds: [],
+              controlPorts: [],
+              dataPorts: [],
+              subgraphs: [],
+              subsystemId: 'ss-1',
+              subsystemName: 'Boundary',
+            },
+          },
+        },
+      }),
+    );
+
+    expect(
+      config.getItems({kind: 'subsystem', node: {id: 'ss-1'} as never}),
+    ).toEqual([]);
+    expect(
+      config
+        .getItems({
+          connectionInProgress: null,
+          kind: 'port',
+          nodeId: 'ss-1',
+          port: {id: 'port-1', portIoType: 'input'},
+        })
+        .map((item) => item.id),
+    ).toEqual([
+      'start-connection',
+      'start-ec-link',
+      'start-dangling-data-link',
+    ]);
+    expect(
+      config
+        .getItems({
+          edge: {
+            edgeKind: 'data',
+            id: 'inner-link',
+            sourceNodeId: 'module-1',
+            sourcePortId: 'p1',
+            targetNodeId: 'module-2',
+            targetPortId: 'p2',
+          },
+          kind: 'data-link',
+        })
+        .map((item) => item.id),
+    ).toEqual(['delete']);
+  });
+
   it('resolves context-menu node ids from system metadata', () => {
     expect(
       resolveContextMenuNodeId({

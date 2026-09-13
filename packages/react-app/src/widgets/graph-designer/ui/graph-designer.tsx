@@ -120,6 +120,10 @@ interface GraphDesignerProps {
 const EMPTY_SET: ReadonlySet<number> = new Set<number>();
 const EMPTY_STRING_SET: ReadonlySet<string> = new Set<string>();
 const EMPTY_LEVEL_VIEW: LevelView = {levelId: ''};
+const EMPTY_POSITION_OVERRIDES: Readonly<Record<string, XY>> = {};
+const EMPTY_PARENT_SIZES: Readonly<
+  Record<string, {height: number; width: number}>
+> = {};
 
 function parseSubgraphSystemId(subgraphId: string): number | null {
   const parsed = Number(subgraphId);
@@ -168,10 +172,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     viewMode,
   } = preferences.visualization;
   const isDetailedView = viewMode === 'detailed';
-  const effectivePortVisibilityMode =
-    isDetailedView
-      ? preferences.display.portVisibilityMode
-      : 'active';
+  const effectivePortVisibilityMode = isDetailedView
+    ? preferences.display.portVisibilityMode
+    : 'active';
   const {workflowLevel, workflowType} = preferences.usecases;
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
     preferences.usecases,
@@ -261,17 +264,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const [collapseByLevel, setCollapseByLevel] = useState<
     Record<string, Set<number>>
   >({});
-  const [positionOverrides, setPositionOverrides] = useState<
-    Record<string, XY>
+  const [positionOverridesByLevel, setPositionOverridesByLevel] = useState<
+    Record<string, Record<string, XY>>
   >({});
-  const [parentSizes, setParentSizes] = useState<
-    Record<string, {height: number; width: number}>
+  const [parentSizesByLevel, setParentSizesByLevel] = useState<
+    Record<string, Record<string, {height: number; width: number}>>
   >({});
   const [viewportByLevel, setViewportByLevel] = useState<
     Record<string, ViewportState>
   >({});
   const levelId = levelView?.levelId ?? '';
   const collapsedSubgraphs = collapseByLevel[levelId] ?? EMPTY_SET;
+  const positionOverrides =
+    positionOverridesByLevel[levelId] ?? EMPTY_POSITION_OVERRIDES;
+  const parentSizes = parentSizesByLevel[levelId] ?? EMPTY_PARENT_SIZES;
 
   // Shows a blur overlay while a large graph recompute is in progress, so
   // the screen doesn't look frozen.
@@ -369,7 +375,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       positionOverrides,
       parentSizes,
     );
-  }, [filteredAndHighlighted, positionOverrides, parentSizes]);
+  }, [filteredAndHighlighted, parentSizes, positionOverrides]);
 
   useEffect(() => {
     setEffectiveLevelView(graph);
@@ -567,8 +573,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     clearActiveSubsystem();
     clearLevelView();
     setCollapseByLevel({});
-    setPositionOverrides({});
-    setParentSizes({});
+    setPositionOverridesByLevel({});
+    setParentSizesByLevel({});
     setViewportByLevel({});
     // Resets the level tracker so reselecting the same usecases after deselecting still counts as a fresh load, not a same-level mutation.
     appliedLevelSignatureRef.current = undefined;
@@ -781,6 +787,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const handleNodeDoubleClick = useCallback(
     (nodeId: string, nodeKind: NodeKind, label: string) => {
       if (nodeKind === NODE_KIND.SUBSYSTEM) {
+        if (nodeId === store.getState().activeSubsystemId) {
+          return;
+        }
         if (!store.getState().graphData?.subsystems[nodeId]) {
           return;
         }
@@ -805,20 +814,26 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       if (Object.keys(overrides).length === 0) {
         return;
       }
-      setPositionOverrides((previous) => ({...previous, ...overrides}));
+      setPositionOverridesByLevel((previous) => ({
+        ...previous,
+        [levelId]: {...(previous[levelId] ?? {}), ...overrides},
+      }));
     },
-    [store],
+    [levelId, store],
   );
 
   const applyPlacedSubgraphDropPosition = useCallback(
     (subgraphId: string, position: XY) => {
-      setPositionOverrides((previous) => ({
+      setPositionOverridesByLevel((previous) => ({
         ...previous,
-        [subgraphNodeId(subgraphId)]: position,
-        [subgraphProxyNodeId(subgraphId)]: position,
+        [levelId]: {
+          ...(previous[levelId] ?? {}),
+          [subgraphNodeId(subgraphId)]: position,
+          [subgraphProxyNodeId(subgraphId)]: position,
+        },
       }));
     },
-    [],
+    [levelId],
   );
 
   const collapsePlacedSubgraphIfNeeded = useCallback(
@@ -878,17 +893,29 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       onEdgesDeleted: handleEdgesDeleted,
       onNodeDoubleClick: handleNodeDoubleClick,
       onNodeDragEnd: ({
+        correctedPositions,
         nodeId,
         position,
         resizedParents,
       }: {
+        correctedPositions?: Record<string, XY>;
         nodeId: string;
         position: XY;
         resizedParents?: Record<string, {height: number; width: number}>;
       }) => {
-        setPositionOverrides((p) => ({...p, [nodeId]: position}));
+        setPositionOverridesByLevel((p) => ({
+          ...p,
+          [levelId]: {
+            ...(p[levelId] ?? {}),
+            ...(correctedPositions ?? {}),
+            [nodeId]: position,
+          },
+        }));
         if (resizedParents) {
-          setParentSizes((p) => ({...p, ...resizedParents}));
+          setParentSizesByLevel((p) => ({
+            ...p,
+            [levelId]: {...(p[levelId] ?? {}), ...resizedParents},
+          }));
         }
       },
       onNodeDropped: ({

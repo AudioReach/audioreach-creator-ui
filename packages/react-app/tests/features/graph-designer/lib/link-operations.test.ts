@@ -243,11 +243,11 @@ describe('createLinkOperations — connectPorts', () => {
         selectedUsecases: [],
         subgraphs: {},
         subsystems: {
-          'sys-ss-1': {
+          'ss-1': {
             controlPorts: [],
             dataPorts: [],
             subgraphs: [],
-            subsystemId: 'sys-ss-1',
+            subsystemId: 'ss-1',
             subsystemName: 'Subsystem A',
           },
         },
@@ -260,12 +260,12 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(get, 'sys-ss-1', '10', 'mod-B', '20', 'data', 'normal');
+    await connectPorts(get, 'ss-1', '10', 'mod-B', '20', 'data', 'normal');
 
     expect(mockCreateDataLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       destinationNodeSystemId: 'mod-B',
       destinationPortSystemId: '20',
-      sourceNodeSystemId: 'sys-ss-1',
+      sourceNodeSystemId: 'ss-1',
       sourcePortSystemId: '10',
       type: 'normal',
     });
@@ -282,11 +282,11 @@ describe('createLinkOperations — connectPorts', () => {
         selectedUsecases: [],
         subgraphs: {},
         subsystems: {
-          'sys-ss-1': {
+          'ss-1': {
             controlPorts: [],
             dataPorts: [],
             subgraphs: [],
-            subsystemId: 'sys-ss-1',
+            subsystemId: 'ss-1',
             subsystemName: 'Subsystem A',
           },
         },
@@ -303,21 +303,13 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(
-      get,
-      'sys-ss-1',
-      '10',
-      'mod-B',
-      '20',
-      'control',
-      'normal',
-    );
+    await connectPorts(get, 'ss-1', '10', 'mod-B', '20', 'control', 'normal');
 
     expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'mod-B',
       endPortSystemId: '20',
       isDangling: false,
-      startComponentSystemId: 'sys-ss-1',
+      startComponentSystemId: 'ss-1',
       startPortSystemId: '10',
     });
     expect(mockCreateControlLink).not.toHaveBeenCalled();

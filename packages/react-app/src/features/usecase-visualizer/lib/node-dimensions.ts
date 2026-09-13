@@ -49,9 +49,7 @@ export const NODE_DIMENSIONS = {
     minHeight: BASE_NODE_DIMENSIONS.subsystem.baseHeight,
     minWidth: BASE_NODE_DIMENSIONS.subsystem.width,
     sidePadding: BASE_NODE_DIMENSIONS.subgraph.padding * 6,
-    topInset:
-      BASE_NODE_DIMENSIONS.subgraph.headerHeight +
-      BASE_NODE_DIMENSIONS.subgraph.padding * 6,
+    topInset: BASE_NODE_DIMENSIONS.subgraph.headerHeight,
   },
 } as const;
 
