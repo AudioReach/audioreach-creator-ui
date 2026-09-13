@@ -119,7 +119,7 @@ describe('SubsystemBoundaryNode', () => {
       totalLinks: 2,
     };
     const store = createVisualizerStore();
-    store.getState().startConnection('module-1', port, 'source');
+    store.getState().startConnection('module-1', port, 'normal', 'source');
     const {container} = render(
       <ReactFlowProvider>
         <VisualizerStoreProvider store={store}>

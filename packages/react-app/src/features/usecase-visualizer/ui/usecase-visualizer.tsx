@@ -49,6 +49,7 @@ import {useTheme} from '~shared/providers/theme-provider';
 import '@xyflow/react/dist/style.css';
 
 import {captureScreenshot} from '../lib/capture-screenshot';
+import {connectionRoleForPort} from '../lib/connection-role';
 import {resolveDropTarget} from '../lib/drop-target';
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
 import {parsePortIdFromHandleId} from '../lib/port-geometry';
@@ -76,6 +77,7 @@ import {ContainerNode} from './node-types/container-node';
 import {ModuleNode} from './node-types/module-node';
 import {SubgraphNode} from './node-types/subgraph-node';
 import {SubgraphProxyNode} from './node-types/subgraph-proxy-node';
+import {SubsystemBoundaryNode} from './node-types/subsystem-boundary-node';
 import {SubsystemNode} from './node-types/subsystem-node';
 
 const nodeTypes = {
@@ -84,6 +86,7 @@ const nodeTypes = {
   subgraph: withGhostFallback(SubgraphNode),
   'subgraph-proxy': withGhostFallback(SubgraphProxyNode),
   subsystem: withGhostFallback(SubsystemNode),
+  'subsystem-boundary': withGhostFallback(SubsystemBoundaryNode),
 };
 const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
 
@@ -787,12 +790,19 @@ function VisualizerCanvas({
     (item: ContextMenuItem, target: ContextMenuTarget) => {
       const command = store.getState().contextMenu?.onAction(item.id, target);
       if (target.kind === 'port' && command) {
+        const node = rfNodesRef.current.find((n) => n.id === target.nodeId);
+        const role = connectionRoleForPort(node?.type, target.port);
         if (command.command === 'start') {
           store
             .getState()
-            .startConnection(target.nodeId, target.port, command.edgeMode);
+            .startConnection(
+              target.nodeId,
+              target.port,
+              command.edgeMode,
+              role,
+            );
         } else {
-          store.getState().completeConnection(target.nodeId, target.port);
+          store.getState().completeConnection(target.nodeId, target.port, role);
         }
       }
       setOpenMenu(null);
