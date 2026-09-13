@@ -286,6 +286,9 @@ function VisualizerCanvas({
   const resizedParentsRef = useRef<
     Record<string, {height: number; width: number}>
   >({});
+  const correctedPositionsRef = useRef<Record<string, {x: number; y: number}>>(
+    {},
+  );
   // Capture initialViewport at mount only — changes after mount are ignored by
   // design.
   const initialViewportRef = useRef(initialViewport);
@@ -512,11 +515,10 @@ function VisualizerCanvas({
         }
         const sel = state.selection;
         const nodeIds = sel.selectedNodes
-          .filter(
-            (ref) =>
-              rfNodesRef.current.find((n) => n.id === ref.id)?.data.locked !==
-              true,
-          )
+          .filter((ref) => {
+            const node = rfNodesRef.current.find((n) => n.id === ref.id);
+            return node?.data.locked !== true && node?.deletable !== false;
+          })
           .map((ref) => ref.systemId);
         const edgeIds = sel.selectedEdges
           .map((ref) => ref.id)
@@ -637,7 +639,15 @@ function VisualizerCanvas({
       // the drag. resizedParentsRef is read only once on dragStop.
       // Ref write is outside the updater to keep the updater pure.
       const applied = applyNodeChanges(changes, rfNodesRef.current);
-      const {nodes: resized, resizedParents} = recalculateParentSizes(applied);
+      const {
+        correctedPositions,
+        nodes: resized,
+        resizedParents,
+      } = recalculateParentSizes(applied);
+      correctedPositionsRef.current = {
+        ...correctedPositionsRef.current,
+        ...correctedPositions,
+      };
       resizedParentsRef.current = resizedParents;
       rfNodesRef.current = resized;
       setRfNodes(resized);
@@ -647,12 +657,20 @@ function VisualizerCanvas({
 
   const handleNodeDragStop = useCallback(
     (_e: MouseEvent | TouchEvent, node: Node) => {
+      const correctedPositions = correctedPositionsRef.current;
       const rp = resizedParentsRef.current;
+      const settledNode = rfNodesRef.current.find(
+        (candidate) => candidate.id === node.id,
+      );
       store.getState().eventHandlers?.onNodeDragEnd?.({
         nodeId: node.id,
-        position: node.position,
+        position: settledNode?.position ?? node.position,
+        ...(Object.keys(correctedPositions).length > 0
+          ? {correctedPositions}
+          : {}),
         ...(Object.keys(rp).length > 0 ? {resizedParents: rp} : {}),
       });
+      correctedPositionsRef.current = {};
       resizedParentsRef.current = {};
     },
     [store],

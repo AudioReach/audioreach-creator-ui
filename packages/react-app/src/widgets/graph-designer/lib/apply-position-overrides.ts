@@ -33,8 +33,10 @@ function overlay<T extends AnyNode>(
   }
   let changed = false;
   const next = nodes.map((n) => {
-    const pos = positions[n.id];
-    const size = sizes[n.id];
+    const overrideId =
+      n.nodeKind === 'container' ? (n.logicalContainerId ?? n.id) : n.id;
+    const pos = positions[overrideId];
+    const size = sizes[overrideId];
     if (!pos && !size) {
       return n;
     }

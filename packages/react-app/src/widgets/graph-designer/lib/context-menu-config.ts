@@ -174,6 +174,9 @@ export function buildContextMenuConfig(
               : []),
           ];
         case 'subsystem': {
+          if (target.node.id === store.activeSubsystemId) {
+            return [];
+          }
           const hasChildren = hasAnySubsystemChildren(store, target.node.id);
           return [
             {

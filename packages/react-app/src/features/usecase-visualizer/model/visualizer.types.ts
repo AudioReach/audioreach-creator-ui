@@ -88,6 +88,8 @@ export interface SelectionChangePayload {
 }
 
 export interface NodeDragEndPayload {
+  /** Positions changed by parent overflow correction, keyed by nodeId. */
+  correctedPositions?: Record<string, XY>;
   nodeId: string;
   position: XY;
   /** Parent nodes whose dimensions changed during the drag, keyed by nodeId. */

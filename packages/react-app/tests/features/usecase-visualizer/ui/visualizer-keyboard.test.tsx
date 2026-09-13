@@ -11,6 +11,7 @@ import {
   type ModuleNode,
   VISUALIZER_MODE,
 } from '~features/usecase-visualizer/model/visualizer.types';
+import type {SubsystemNode} from '~entities/graph';
 import {UsecaseVisualizer} from '~features/usecase-visualizer/ui/usecase-visualizer';
 
 import {latestReactFlowProps} from '../test-utils/xyflow-mock-factory';
@@ -60,6 +61,21 @@ function makeEdge(id: string, locked = false): ControlLink {
     sourcePortId: 'p',
     targetNodeId: 'n2',
     targetPortId: 'p',
+  };
+}
+
+function makeBoundary(): SubsystemNode {
+  return {
+    height: 400,
+    id: 'ss-1',
+    label: 'Subsystem boundary',
+    meta: {systemId: 'sys-ss-1'},
+    nodeKind: 'subsystem',
+    ports: [],
+    subsystemId: 'ss-1',
+    width: 600,
+    x: 0,
+    y: 0,
   };
 }
 
@@ -161,6 +177,32 @@ describe('keyboard: Delete', () => {
     fireEvent.keyDown(getContainer(), {key: 'Delete'});
 
     expect(onNodesDeleted).toHaveBeenCalledWith({nodeIds: ['sys-n1']});
+  });
+
+  it('does not delete a selected subsystem boundary', () => {
+    const onNodesDeleted = jest.fn();
+    const boundary = makeBoundary();
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodesDeleted}}
+        graph={{...makeGraph(), boundarySubsystem: boundary}}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+
+    latestReactFlowProps.current?.onSelectionChange?.({
+      edges: [],
+      nodes: [
+        {
+          data: boundary,
+          id: boundary.id,
+          type: 'subsystem-boundary',
+        },
+      ],
+    });
+    fireEvent.keyDown(getContainer(), {key: 'Delete'});
+
+    expect(onNodesDeleted).not.toHaveBeenCalled();
   });
 
   it.each([

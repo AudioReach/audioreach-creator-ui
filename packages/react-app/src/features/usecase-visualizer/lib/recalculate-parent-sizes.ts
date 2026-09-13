@@ -41,6 +41,8 @@ const PARENT_INSETS: Record<string, ParentInsets> = {
   },
 };
 
+type ParentKind = keyof typeof PARENT_INSETS;
+
 const MIN_WIDTH_BY_KIND: Record<string, number> = {
   subgraph: NODE_DIMENSIONS.subgraph.minWidth,
   'subsystem-boundary': NODE_DIMENSIONS.subsystemBoundary.minWidth,
@@ -50,7 +52,9 @@ const MIN_HEIGHT_BY_KIND: Record<string, number> = {
   'subsystem-boundary': NODE_DIMENSIONS.subsystemBoundary.minHeight,
 };
 
-const PARENT_KINDS = new Set(Object.keys(PARENT_INSETS));
+function isParentKind(type: string | undefined): type is ParentKind {
+  return type !== undefined && type in PARENT_INSETS;
+}
 
 function getBoundaryMinimumSize(node: Node): {height: number; width: number} {
   if (node.type !== 'subsystem-boundary') {
@@ -75,6 +79,7 @@ function getBoundaryMinimumSize(node: Node): {height: number; width: number} {
  * dimensions actually changed, keyed by nodeId.
  */
 export function recalculateParentSizes(nodes: Node[]): {
+  correctedPositions: Record<string, {x: number; y: number}>;
   nodes: Node[];
   resizedParents: Record<string, {height: number; width: number}>;
 } {
@@ -118,13 +123,17 @@ export function recalculateParentSizes(nodes: Node[]): {
   };
 
   const parentIds = nodes
-    .filter((n) => PARENT_KINDS.has(n.type ?? ''))
+    .filter((node) => isParentKind(node.type))
     .map((n) => n.id)
     .sort((a, b) => depthOf(b) - depthOf(a));
 
   for (const parentId of parentIds) {
     const parent = workingById.get(parentId);
     if (!parent) {
+      continue;
+    }
+    const parentType = parent.type;
+    if (!isParentKind(parentType)) {
       continue;
     }
 
@@ -141,12 +150,7 @@ export function recalculateParentSizes(nodes: Node[]): {
       continue;
     }
 
-    const insets = PARENT_INSETS[parent.type ?? ''] ?? {
-      bottom: 16,
-      left: 16,
-      right: 16,
-      top: 16,
-    };
+    const insets = PARENT_INSETS[parentType];
 
     let minX = Infinity;
     let minY = Infinity;
@@ -205,12 +209,20 @@ export function recalculateParentSizes(nodes: Node[]): {
 
   const result = nodes.map((n) => workingById.get(n.id) ?? n);
 
+  const correctedPositions: Record<string, {x: number; y: number}> = {};
   const resizedParents: Record<string, {height: number; width: number}> = {};
   for (const node of result) {
     const orig = originalById.get(node.id);
     if (
       orig &&
-      PARENT_KINDS.has(node.type ?? '') &&
+      (node.position.x !== orig.position.x ||
+        node.position.y !== orig.position.y)
+    ) {
+      correctedPositions[node.id] = node.position;
+    }
+    if (
+      orig &&
+      isParentKind(node.type) &&
       (node.width !== orig.width || node.height !== orig.height)
     ) {
       resizedParents[node.id] = {
@@ -220,5 +232,5 @@ export function recalculateParentSizes(nodes: Node[]): {
     }
   }
 
-  return {nodes: result, resizedParents};
+  return {correctedPositions, nodes: result, resizedParents};
 }

@@ -10,9 +10,12 @@ import {
   useState,
 } from 'react';
 
+import type {NodeChange} from '@xyflow/react';
+
 interface FakeNode {
   data: Record<string, unknown>;
   id: string;
+  position?: {x: number; y: number};
   type: string;
 }
 
@@ -49,6 +52,7 @@ export interface FakeReactFlowProps {
   onNodeContextMenu?: (event: unknown, node: FakeNode) => void;
   onNodeDoubleClick?: (event: unknown, node: FakeNode) => void;
   onNodeDragStop?: (event: unknown, node: FakeNode) => void;
+  onNodesChange?: (changes: NodeChange[]) => void;
   onPaneContextMenu?: (event: unknown) => void;
   onSelectionChange?: (params: {edges: FakeEdge[]; nodes: FakeNode[]}) => void;
   panActivationKeyCode?: string;
@@ -209,6 +213,18 @@ export function createXyflowMockFactory() {
   latestReactFlowInstance.current = stableReactFlowInstance;
 
   return {
+    applyNodeChanges: (changes: NodeChange[], nodes: FakeNode[]) => {
+      return nodes.map((node) => {
+        const change = changes.find(
+          (candidate) =>
+            candidate.id === node.id && candidate.type === 'position',
+        );
+        if (change?.type !== 'position' || !change.position) {
+          return node;
+        }
+        return {...node, position: change.position};
+      });
+    },
     BaseEdge,
     EdgeLabelRenderer,
     getBezierPath: () => ['M 0 0 L 100 100', 50, 50, 50, 50],
