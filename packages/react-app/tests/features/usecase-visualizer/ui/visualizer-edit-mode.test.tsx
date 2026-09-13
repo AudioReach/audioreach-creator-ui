@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {DragEvent as ReactDragEvent} from 'react';
+import type {DragEvent as ReactDragEvent, ReactNode} from 'react';
 
-import {act, render} from '@testing-library/react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 
 import type {
   ContainerNode,
@@ -13,6 +13,7 @@ import type {
   ModuleNode,
   Port,
   SubgraphNode,
+  SubsystemNode,
 } from '~entities/graph';
 import {VISUALIZER_MODE} from '~features/usecase-visualizer';
 import {UsecaseVisualizer} from '~features/usecase-visualizer/ui/usecase-visualizer';
@@ -25,6 +26,39 @@ jest.mock('@xyflow/react', () => {
   return {
     ...base,
     applyNodeChanges: jest.fn((_changes: unknown[], nodes: unknown[]) => nodes),
+  };
+});
+
+jest.mock('@qualcomm-ui/react-core/portal', () => ({
+  Portal: ({children}: {children: ReactNode}) => <>{children}</>,
+}));
+
+jest.mock('@qualcomm-ui/react/menu', () => {
+  const passthrough = ({children}: {children: ReactNode}) => <>{children}</>;
+  const Item = ({
+    children,
+    onSelect,
+    value,
+  }: {
+    children: ReactNode;
+    onSelect?: () => void;
+    value: string;
+  }) => (
+    <button data-menu-item={value} onClick={() => onSelect?.()} type="button">
+      {children}
+    </button>
+  );
+  return {
+    Menu: {
+      Content: passthrough,
+      Item,
+      ItemLabel: passthrough,
+      ItemStartIcon: passthrough,
+      Positioner: passthrough,
+      Root: passthrough,
+      Separator: () => null,
+      TriggerItem: passthrough,
+    },
   };
 });
 
@@ -123,6 +157,23 @@ function makeSubgraph(
   };
 }
 
+function makeBoundary(): SubsystemNode {
+  return {
+    height: 400,
+    id: 'ss-1',
+    label: 'Subsystem boundary',
+    nodeKind: 'subsystem',
+    ports: [
+      {id: 'in-1', portIoType: 'input'},
+      {id: 'out-1', portIoType: 'output'},
+    ],
+    subsystemId: 'ss-1',
+    width: 600,
+    x: 0,
+    y: 0,
+  };
+}
+
 function makeGraph(overrides: Partial<LevelView> = {}): LevelView {
   return {
     levelId: 'root',
@@ -179,6 +230,125 @@ describe('nodesConnectable', () => {
       <UsecaseVisualizer graph={makeGraph()} mode={VISUALIZER_MODE.EDIT} />,
     );
     expect(typeof latestReactFlowProps.current?.onDrop).toBe('function');
+  });
+});
+
+describe('connection payloads in edit mode', () => {
+  it('keeps direct React Flow connections in source-target order', () => {
+    const onEdgeConnected = jest.fn();
+    const source = makeModule('m6', [makePort('m6-out', 'output')]);
+    const target = makeModule('m7', [makePort('m7-in', 'input')]);
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph({modules: [source, target]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+
+    act(() => {
+      latestReactFlowProps.current?.onConnect?.({
+        source: 'm6',
+        sourceHandle: 'Data:m6-out',
+        target: 'm7',
+        targetHandle: 'Data:m7-in',
+      });
+    });
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      edgeMode: 'normal',
+      sourceNodeId: 'm6',
+      sourcePortId: 'm6-out',
+      targetNodeId: 'm7',
+      targetPortId: 'm7-in',
+    });
+  });
+
+  it('matches direct connections when using context-menu actions', () => {
+    const onEdgeConnected = jest.fn();
+    const boundary = makeBoundary();
+    const module = makeModule('m6', [makePort('m6-in', 'input')]);
+    const getItems = jest
+      .fn()
+      .mockReturnValueOnce([{id: 'start-connection', label: 'Start'}])
+      .mockReturnValueOnce([{id: 'end-connection', label: 'End'}]);
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-connection'
+        ? {command: 'start' as const, edgeMode: 'normal' as const}
+        : {command: 'complete' as const},
+    );
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph({boundarySubsystem: boundary, modules: [module]})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    const boundaryNode = latestReactFlowProps.current?.nodes.find(
+      (node) => node.id === boundary.id,
+    );
+    const boundaryPort = container.querySelector('[data-port-id="in-1"]');
+    const modulePort = container.querySelector('[data-port-id="m6-in"]');
+
+    act(() => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        {
+          clientX: 0,
+          clientY: 0,
+          preventDefault: jest.fn(),
+          target: boundaryPort,
+        },
+        boundaryNode as never,
+      );
+    });
+    fireEvent.click(screen.getByText('Start'));
+    act(() => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        {
+          clientX: 0,
+          clientY: 0,
+          preventDefault: jest.fn(),
+          target: modulePort,
+        },
+        {data: module, id: module.id, type: 'module'} as never,
+      );
+    });
+    fireEvent.click(screen.getByText('End'));
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      edgeMode: 'normal',
+      sourceNodeId: 'ss-1',
+      sourcePortId: 'in-1',
+      targetNodeId: 'm6',
+      targetPortId: 'm6-in',
+    });
+  });
+});
+
+describe('subsystem boundary editability', () => {
+  it('is selectable but not draggable or deletable in edit mode', () => {
+    render(
+      <UsecaseVisualizer
+        graph={makeGraph({boundarySubsystem: makeBoundary()})}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+
+    const boundary = latestReactFlowProps.current?.nodes.find(
+      (node) => node.id === 'ss-1',
+    );
+    expect(boundary).toEqual(
+      expect.objectContaining({
+        deletable: false,
+        draggable: false,
+        selectable: true,
+        type: 'subsystem-boundary',
+      }),
+    );
+    expect(screen.getByTestId('subsystem-boundary-node')).toBeInTheDocument();
   });
 });
 

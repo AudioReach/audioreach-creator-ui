@@ -222,16 +222,22 @@ describe('createVisualizerStore — two-click edge modes', () => {
 
     store
       .getState()
-      .startConnection('source', {id: 'out', portIoType: 'output'}, 'EC');
+      .startConnection(
+        'source',
+        {id: 'out', portIoType: 'output'},
+        'EC',
+        'source',
+      );
     expect(store.getState().connectionInProgress).toEqual({
       edgeMode: 'EC',
       nodeId: 'source',
       port: {id: 'out', portIoType: 'output'},
+      role: 'source',
     });
 
     store
       .getState()
-      .completeConnection('target', {id: 'in', portIoType: 'input'});
+      .completeConnection('target', {id: 'in', portIoType: 'input'}, 'target');
 
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'data',
@@ -255,10 +261,15 @@ describe('createVisualizerStore — two-click edge modes', () => {
         'source',
         {id: 'start', portIoType: 'control'},
         'dangling',
+        'either',
       );
     store
       .getState()
-      .completeConnection('target', {id: 'end', portIoType: 'control'});
+      .completeConnection(
+        'target',
+        {id: 'end', portIoType: 'control'},
+        'either',
+      );
 
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'control',

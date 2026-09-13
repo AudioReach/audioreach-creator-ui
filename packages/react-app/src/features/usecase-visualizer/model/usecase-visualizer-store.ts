@@ -12,6 +12,8 @@ import {
   type Port,
 } from '~entities/graph';
 
+import type {ConnectionEndpointRole} from '../lib/connection-role';
+
 import {
   type NodeContentOverride,
   type NodeDisplayConfig,
@@ -53,6 +55,7 @@ interface ConnectionInProgress {
   edgeMode: EdgeMode;
   nodeId: string;
   port: Port;
+  role: ConnectionEndpointRole;
 }
 
 export interface RenderingConfigSlice {
@@ -78,7 +81,11 @@ export interface VisualizerInternalStore {
   cancelConnection: () => void;
   clearHoverStateIfNode: (nodeId: string) => void;
   clearSelection: () => void;
-  completeConnection: (nodeId: string, port: Port) => void;
+  completeConnection: (
+    nodeId: string,
+    port: Port,
+    role: ConnectionEndpointRole,
+  ) => void;
   connectionInProgress: ConnectionInProgress | null;
   containsMatchNodeIds: string[];
   contextMenu: VisualizerContextMenuConfig | undefined;
@@ -106,7 +113,12 @@ export interface VisualizerInternalStore {
     selectedEdges: SelectedEdgeRef[],
   ) => void;
   setViewportCache: (levelId: string, viewport: ViewportState) => void;
-  startConnection: (nodeId: string, port: Port, edgeMode: EdgeMode) => void;
+  startConnection: (
+    nodeId: string,
+    port: Port,
+    edgeMode: EdgeMode,
+    role: ConnectionEndpointRole,
+  ) => void;
   syncSearchHighlights: (highlights: SearchHighlights | undefined) => void;
   viewportCache: Record<string, ViewportState>;
 }
@@ -130,7 +142,7 @@ export function createVisualizerStore(): CreatedVisualizerStore {
     clearSelection: () => {
       set({selection: EMPTY_SELECTION});
     },
-    completeConnection: (nodeId, port) => {
+    completeConnection: (nodeId, port, role) => {
       set((state) => {
         const source = state.connectionInProgress;
         if (!source) {
@@ -142,20 +154,20 @@ export function createVisualizerStore(): CreatedVisualizerStore {
           return {connectionInProgress: null};
         }
         if (!sourceIsControl) {
-          if (
-            source.port.portIoType === port.portIoType ||
-            source.nodeId === nodeId
-          ) {
+          const complementaryRoles =
+            (source.role === 'source' && role === 'target') ||
+            (source.role === 'target' && role === 'source');
+          if (!complementaryRoles || source.nodeId === nodeId) {
             return {connectionInProgress: null};
           }
-          const sourceIsOutput = source.port.portIoType === PORT_IO_TYPE.OUTPUT;
+          const sourceIsRenderedSource = source.role === 'source';
           state.eventHandlers?.onEdgeConnected?.({
             edgeKind: EDGE_KIND.DATA,
             edgeMode: source.edgeMode,
-            sourceNodeId: sourceIsOutput ? source.nodeId : nodeId,
-            sourcePortId: sourceIsOutput ? source.port.id : port.id,
-            targetNodeId: sourceIsOutput ? nodeId : source.nodeId,
-            targetPortId: sourceIsOutput ? port.id : source.port.id,
+            sourceNodeId: sourceIsRenderedSource ? source.nodeId : nodeId,
+            sourcePortId: sourceIsRenderedSource ? source.port.id : port.id,
+            targetNodeId: sourceIsRenderedSource ? nodeId : source.nodeId,
+            targetPortId: sourceIsRenderedSource ? port.id : source.port.id,
           });
           return {connectionInProgress: null};
         }
@@ -228,8 +240,8 @@ export function createVisualizerStore(): CreatedVisualizerStore {
         viewportCache: {...state.viewportCache, [levelId]: viewport},
       }));
     },
-    startConnection: (nodeId, port, edgeMode) => {
-      set({connectionInProgress: {edgeMode, nodeId, port}});
+    startConnection: (nodeId, port, edgeMode, role) => {
+      set({connectionInProgress: {edgeMode, nodeId, port, role}});
     },
     syncSearchHighlights: (highlights) => {
       if (!highlights) {
