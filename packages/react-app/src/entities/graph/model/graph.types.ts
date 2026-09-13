@@ -179,6 +179,7 @@ export interface ProxyControlLink extends EdgeBase {
 }
 
 export interface LevelView {
+  boundarySubsystem?: SubsystemNode;
   containers?: ContainerNode[];
   controlLinks?: ControlLink[];
   dataLinks?: DataLink[];

@@ -277,3 +277,36 @@ describe('toReactFlowEdges — flatten', () => {
     expect(toReactFlowEdges({levelId: 'L'})).toEqual([]);
   });
 });
+
+describe('toReactFlowNodes — subsystem boundary', () => {
+  it('maps the boundary slot without changing its identity or data', () => {
+    const boundary: SubsystemNode = {
+      height: 120,
+      id: 'ss-1',
+      label: 'Boundary subsystem',
+      meta: {systemId: 'system-1'},
+      nodeKind: 'subsystem',
+      ports: [{id: 'in-1', portIoType: 'input'}],
+      subsystemId: 'subsystem-1',
+      width: 240,
+      x: 10,
+      y: 20,
+    };
+
+    expect(
+      toReactFlowNodes({boundarySubsystem: boundary, levelId: 'ss-1'}),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          data: boundary,
+          deletable: false,
+          draggable: false,
+          id: 'ss-1',
+          position: {x: 10, y: 20},
+          selectable: true,
+          type: 'subsystem-boundary',
+        }),
+      ]),
+    );
+  });
+});

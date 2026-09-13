@@ -16,6 +16,7 @@ import {
   type LevelView,
   NODE_KIND,
   PORT_IO_TYPE,
+  type SubsystemNode,
 } from '~entities/graph';
 import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
 import {logger} from '~shared/lib/logger';
@@ -714,5 +715,34 @@ describe('layoutLevelView', () => {
         expect((arg as {edges: {id: string}[]}).edges).toHaveLength(0);
       }
     });
+  });
+
+  it('wraps scoped roots in a frame-relative boundary', async () => {
+    const boundary: SubsystemNode = {
+      height: NODE_DIMENSIONS.subsystemBoundary.minHeight,
+      id: 'ss-1',
+      label: 'Boundary',
+      nodeKind: NODE_KIND.SUBSYSTEM,
+      ports: Array.from({length: 5}, (_, index) => ({
+        id: `control-${index}`,
+        portIoType: PORT_IO_TYPE.CONTROL,
+      })),
+      subsystemId: 'ss-1',
+      width: NODE_DIMENSIONS.subsystemBoundary.minWidth,
+      x: 0,
+      y: 0,
+    };
+    const result = await layoutLevelView({
+      ...unpositioned,
+      boundarySubsystem: boundary,
+    });
+
+    expect(result.boundarySubsystem).toMatchObject({id: 'ss-1', x: 0, y: 0});
+    expect(result.subgraphs?.every((node) => node.parentId === 'ss-1')).toBe(
+      true,
+    );
+    expect(result.boundarySubsystem?.width).toBeGreaterThanOrEqual(
+      NODE_DIMENSIONS.subsystemBoundary.minWidth,
+    );
   });
 });

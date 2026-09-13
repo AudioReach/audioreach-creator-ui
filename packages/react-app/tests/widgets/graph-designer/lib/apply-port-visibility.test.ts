@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {LevelView, ModuleNode} from '~entities/graph';
+import type {LevelView, ModuleNode, SubsystemNode} from '~entities/graph';
 import {applyPortVisibility} from '~widgets/graph-designer/lib/apply-port-visibility';
 
 function moduleNode(id: string, portIds: string[]): ModuleNode {
@@ -20,6 +20,24 @@ function moduleNode(id: string, portIds: string[]): ModuleNode {
       portIoType: i % 2 === 0 ? 'input' : 'output',
     })),
     width: 160,
+    x: 0,
+    y: 0,
+  };
+}
+
+function boundaryNode(): SubsystemNode {
+  return {
+    height: 120,
+    id: 'ss-1',
+    label: 'Boundary subsystem',
+    nodeKind: 'subsystem',
+    ports: [
+      {id: 'in-1', name: 'Input', portIoType: 'input'},
+      {id: 'out-1', name: 'Output', portIoType: 'output'},
+      {id: 'ctrl-1', name: 'Control', portIoType: 'control'},
+    ],
+    subsystemId: 'subsystem-1',
+    width: 240,
     x: 0,
     y: 0,
   };
@@ -66,6 +84,43 @@ function baseLevel(): LevelView {
   };
 }
 
+function levelWithBoundaryLinks(): LevelView {
+  const level = baseLevel();
+  return {
+    ...level,
+    boundarySubsystem: boundaryNode(),
+    controlLinks: [
+      ...(level.controlLinks ?? []),
+      {
+        edgeKind: 'control',
+        id: 'boundary-control-1',
+        sourceNodeId: 'ss-1',
+        sourcePortId: 'ctrl-1',
+        targetNodeId: 'module-1',
+        targetPortId: 'ctrl-out',
+      },
+    ],
+    dataLinks: [
+      ...(level.dataLinks ?? []),
+      {
+        edgeKind: 'data',
+        id: 'boundary-data-1',
+        sourceNodeId: 'module-1',
+        sourcePortId: 'out-1',
+        targetNodeId: 'ss-1',
+        targetPortId: 'in-1',
+      },
+    ],
+  };
+}
+
+function levelWithInactiveBoundary(): LevelView {
+  return {
+    ...baseLevel(),
+    boundarySubsystem: boundaryNode(),
+  };
+}
+
 describe('applyPortVisibility', () => {
   let activeOut: LevelView;
 
@@ -77,6 +132,42 @@ describe('applyPortVisibility', () => {
   it('returns the same reference when mode is "all"', () => {
     const level = baseLevel();
     expect(applyPortVisibility(level, 'all')).toBe(level);
+  });
+
+  // The boundary node's own ports are never activity-filtered — a port's
+  // external link lives outside this level's link set, so filtering by
+  // this level's links alone would incorrectly hide boundary ports whose
+  // only link was just deleted on the other side of the boundary.
+  it('keeps all boundary ports regardless of activity', () => {
+    expect(
+      applyPortVisibility(
+        levelWithBoundaryLinks(),
+        'active',
+      ).boundarySubsystem?.ports.map((port) => port.id),
+    ).toEqual(['in-1', 'out-1', 'ctrl-1']);
+  });
+
+  it('keeps the boundary when no boundary ports are active', () => {
+    expect(
+      applyPortVisibility(levelWithInactiveBoundary(), 'active')
+        .boundarySubsystem?.id,
+    ).toBe('ss-1');
+  });
+
+  it('passes the boundary through unchanged, by reference', () => {
+    const level = levelWithBoundaryLinks();
+    level.boundarySubsystem = {
+      ...level.boundarySubsystem!,
+      height: 600,
+      meta: {systemId: 'system-1'},
+      width: 800,
+      x: 12,
+      y: 34,
+    };
+
+    const result = applyPortVisibility(level, 'active');
+
+    expect(result.boundarySubsystem).toBe(level.boundarySubsystem);
   });
 
   // 'active' mode should keep only ports that a dataLink/controlLink touches

@@ -13,7 +13,7 @@
  * See docs/design/usecase-visualizer/usecase-visualizer-design.md
  *   → Implementation Notes → Node dimensions and consumer sizing contract.
  */
-export const NODE_DIMENSIONS = {
+const BASE_NODE_DIMENSIONS = {
   container: {
     headerHeight: 32,
     padding: 16,
@@ -38,6 +38,20 @@ export const NODE_DIMENSIONS = {
     baseHeight: 100,
     portRowHeight: 24,
     width: 200,
+  },
+} as const;
+
+export const NODE_DIMENSIONS = {
+  ...BASE_NODE_DIMENSIONS,
+  subsystemBoundary: {
+    bottomPadding: BASE_NODE_DIMENSIONS.subgraph.padding * 6,
+    headerHeight: BASE_NODE_DIMENSIONS.subgraph.headerHeight,
+    minHeight: BASE_NODE_DIMENSIONS.subsystem.baseHeight,
+    minWidth: BASE_NODE_DIMENSIONS.subsystem.width,
+    sidePadding: BASE_NODE_DIMENSIONS.subgraph.padding * 6,
+    topInset:
+      BASE_NODE_DIMENSIONS.subgraph.headerHeight +
+      BASE_NODE_DIMENSIONS.subgraph.padding * 6,
   },
 } as const;
 

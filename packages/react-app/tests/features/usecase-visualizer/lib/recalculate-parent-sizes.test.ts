@@ -6,6 +6,7 @@
 import type {Node} from '@xyflow/react';
 
 import {recalculateParentSizes} from '~features/usecase-visualizer/lib/recalculate-parent-sizes';
+import {NODE_DIMENSIONS} from '~features/usecase-visualizer/lib/node-dimensions';
 
 // Suppress logger noise.
 jest.mock('~shared/lib/logger', () => ({
@@ -156,6 +157,116 @@ describe('recalculateParentSizes — overflow correction', () => {
     const {nodes: out} = recalculateParentSizes([parent, child]);
     const updatedChild = out.find((n) => n.id === 'c-no-shift')!;
     expect(updatedChild.position).toEqual({x: 16, y: 16});
+  });
+});
+
+describe('recalculateParentSizes — subsystem boundary', () => {
+  it('sizes an empty boundary from its minimum frame', () => {
+    const boundary = makeNode({
+      data: {
+        ports: [
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+        ],
+      },
+      height: 1,
+      id: 'ss-empty',
+      type: 'subsystem-boundary',
+      width: 1,
+    });
+
+    const {nodes: out} = recalculateParentSizes([boundary]);
+    const updatedBoundary = out.find((node) => node.id === 'ss-empty')!;
+    const {subsystemBoundary} = NODE_DIMENSIONS;
+
+    expect(updatedBoundary.width).toBeGreaterThanOrEqual(
+      subsystemBoundary.minWidth,
+    );
+    expect(updatedBoundary.height).toBeGreaterThanOrEqual(
+      subsystemBoundary.minHeight,
+    );
+  });
+
+  it('enforces minimum frame dimensions at runtime', () => {
+    const boundary = makeNode({
+      data: {
+        ports: [
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+          {portIoType: 'control'},
+        ],
+      },
+      height: 1,
+      id: 'ss-minimum',
+      type: 'subsystem-boundary',
+      width: 1,
+    });
+    const child = makeNode({
+      height: 1,
+      id: 'sg-minimum',
+      parentId: 'ss-minimum',
+      position: {x: 16, y: 80},
+      type: 'subgraph',
+      width: 1,
+    });
+
+    const {nodes: out} = recalculateParentSizes([boundary, child]);
+    const updatedBoundary = out.find((node) => node.id === 'ss-minimum')!;
+    const {subsystemBoundary} = NODE_DIMENSIONS;
+
+    expect(updatedBoundary.width).toBeGreaterThanOrEqual(
+      subsystemBoundary.minWidth,
+    );
+    expect(updatedBoundary.height).toBeGreaterThanOrEqual(
+      subsystemBoundary.minHeight,
+    );
+  });
+
+  it('resizes the boundary and preserves absolute position on overflow', () => {
+    const boundary = makeNode({
+      height: 100,
+      id: 'ss-1',
+      position: {x: 100, y: 80},
+      type: 'subsystem-boundary',
+      width: 200,
+    });
+    const child = makeNode({
+      height: 120,
+      id: 'sg-1',
+      parentId: 'ss-1',
+      position: {x: -8, y: -12},
+      type: 'subgraph',
+      width: 320,
+    });
+
+    const {nodes: out, resizedParents} = recalculateParentSizes([
+      boundary,
+      child,
+    ]);
+    const updatedBoundary = out.find((node) => node.id === 'ss-1')!;
+    const updatedChild = out.find((node) => node.id === 'sg-1')!;
+    const {sidePadding, topInset} = NODE_DIMENSIONS.subsystemBoundary;
+    const dx = sidePadding - child.position.x;
+    const dy = topInset - child.position.y;
+
+    expect(updatedChild.position).toEqual({x: sidePadding, y: topInset});
+    expect(updatedBoundary.position).toEqual({
+      x: boundary.position.x - dx,
+      y: boundary.position.y - dy,
+    });
+    expect(updatedBoundary.position.x + updatedChild.position.x).toBe(92);
+    expect(updatedBoundary.position.y + updatedChild.position.y).toBe(68);
+    expect(resizedParents['ss-1']).toEqual(
+      expect.objectContaining({
+        height: expect.any(Number),
+        width: expect.any(Number),
+      }),
+    );
   });
 });
 describe('recalculateParentSizes — subgraph parent', () => {

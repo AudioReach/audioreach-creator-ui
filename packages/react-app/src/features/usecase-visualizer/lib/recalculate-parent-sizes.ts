@@ -7,18 +7,61 @@ import type {Node} from '@xyflow/react';
 
 import {NODE_DIMENSIONS} from './node-dimensions';
 
-const PADDING_BY_KIND: Record<string, number> = {
-  container: NODE_DIMENSIONS.container.padding,
-  subgraph: NODE_DIMENSIONS.subgraph.padding,
-  // Use baseHeight as the top-offset guard for subsystem nodes.
-  subsystem: NODE_DIMENSIONS.subsystem.baseHeight,
+type ParentInsets = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
+
+const PARENT_INSETS: Record<string, ParentInsets> = {
+  container: {
+    bottom: NODE_DIMENSIONS.container.padding,
+    left: NODE_DIMENSIONS.container.padding,
+    right: NODE_DIMENSIONS.container.padding,
+    top: NODE_DIMENSIONS.container.padding,
+  },
+  subgraph: {
+    bottom: NODE_DIMENSIONS.subgraph.padding,
+    left: NODE_DIMENSIONS.subgraph.padding,
+    right: NODE_DIMENSIONS.subgraph.padding,
+    top: NODE_DIMENSIONS.subgraph.padding,
+  },
+  subsystem: {
+    bottom: NODE_DIMENSIONS.subsystem.baseHeight,
+    left: NODE_DIMENSIONS.subsystem.baseHeight,
+    right: NODE_DIMENSIONS.subsystem.baseHeight,
+    top: NODE_DIMENSIONS.subsystem.baseHeight,
+  },
+  'subsystem-boundary': {
+    bottom: NODE_DIMENSIONS.subsystemBoundary.bottomPadding,
+    left: NODE_DIMENSIONS.subsystemBoundary.sidePadding,
+    right: NODE_DIMENSIONS.subsystemBoundary.sidePadding,
+    top: NODE_DIMENSIONS.subsystemBoundary.topInset,
+  },
 };
 
 const MIN_WIDTH_BY_KIND: Record<string, number> = {
   subgraph: NODE_DIMENSIONS.subgraph.minWidth,
+  'subsystem-boundary': NODE_DIMENSIONS.subsystemBoundary.minWidth,
 };
 
-const PARENT_KINDS = new Set(Object.keys(PADDING_BY_KIND));
+const MIN_HEIGHT_BY_KIND: Record<string, number> = {
+  'subsystem-boundary': NODE_DIMENSIONS.subsystemBoundary.minHeight,
+};
+
+const PARENT_KINDS = new Set(Object.keys(PARENT_INSETS));
+
+function getBoundaryMinimumSize(node: Node): {height: number; width: number} {
+  if (node.type !== 'subsystem-boundary') {
+    return {height: 0, width: 0};
+  }
+
+  return {
+    height: NODE_DIMENSIONS.subsystemBoundary.minHeight,
+    width: NODE_DIMENSIONS.subsystemBoundary.minWidth,
+  };
+}
 
 /**
  * Bottom-up pass: for each parent-kind node, compute the bounding box of its
@@ -90,10 +133,20 @@ export function recalculateParentSizes(nodes: Node[]): {
       .filter((n): n is Node => n !== undefined);
 
     if (children.length === 0) {
+      const minimum = getBoundaryMinimumSize(parent);
+      if (minimum.width > 0 || minimum.height > 0) {
+        parent.height = minimum.height;
+        parent.width = minimum.width;
+      }
       continue;
     }
 
-    const padding = PADDING_BY_KIND[parent.type ?? ''] ?? 16;
+    const insets = PARENT_INSETS[parent.type ?? ''] ?? {
+      bottom: 16,
+      left: 16,
+      right: 16,
+      top: 16,
+    };
 
     let minX = Infinity;
     let minY = Infinity;
@@ -122,8 +175,8 @@ export function recalculateParentSizes(nodes: Node[]): {
     // Overflow correction: if children are closer to the top/left edge than
     // padding, shift children inward and move the parent outward by the same
     // amount so absolute screen positions are preserved.
-    const dx = minX < padding ? padding - minX : 0;
-    const dy = minY < padding ? padding - minY : 0;
+    const dx = minX < insets.left ? insets.left - minX : 0;
+    const dy = minY < insets.top ? insets.top - minY : 0;
 
     if (dx > 0 || dy > 0) {
       for (const child of children) {
@@ -141,10 +194,13 @@ export function recalculateParentSizes(nodes: Node[]): {
     }
 
     parent.width = Math.max(
-      maxRight + padding,
+      maxRight + insets.right,
       MIN_WIDTH_BY_KIND[parent.type ?? ''] ?? 0,
     );
-    parent.height = maxBottom + padding;
+    parent.height = Math.max(
+      maxBottom + insets.bottom,
+      MIN_HEIGHT_BY_KIND[parent.type ?? ''] ?? 0,
+    );
   }
 
   const result = nodes.map((n) => workingById.get(n.id) ?? n);

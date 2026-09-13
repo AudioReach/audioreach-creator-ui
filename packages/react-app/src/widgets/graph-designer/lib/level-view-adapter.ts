@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -21,6 +21,7 @@ import {
 } from '~entities/graph';
 import type {
   Connection,
+  Subsystem,
   UsecaseGraphData,
 } from '~features/graph-designer/model/graph-data-slice';
 import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
@@ -68,9 +69,47 @@ function dedupeConnectionsById(connections: Connection[]): Connection[] {
   return dedupedConnections;
 }
 
+function buildSubsystemNode(ss: Subsystem): SubsystemNode {
+  const ports: Port[] = [
+    ...ss.dataPorts
+      .filter((p) => p.direction === 'input')
+      .map((p): Port => ({
+        id: p.portId,
+        name: p.portName,
+        portIoType: PORT_IO_TYPE.INPUT,
+      })),
+    ...ss.dataPorts
+      .filter((p) => p.direction === 'output')
+      .map((p): Port => ({
+        id: p.portId,
+        name: p.portName,
+        portIoType: PORT_IO_TYPE.OUTPUT,
+      })),
+    ...ss.controlPorts.map((p): Port => ({
+      id: p.portId,
+      name: p.portName,
+      portIoType: PORT_IO_TYPE.CONTROL,
+    })),
+  ];
+
+  return {
+    height: NODE_DIMENSIONS.subsystem.baseHeight,
+    id: ss.subsystemId,
+    label: ss.subsystemName,
+    meta: {systemId: ss.subsystemId},
+    nodeKind: NODE_KIND.SUBSYSTEM,
+    ports,
+    subsystemId: ss.subsystemId,
+    width: NODE_DIMENSIONS.subsystem.width,
+    x: 0,
+    y: 0,
+  };
+}
+
 export function buildLevelViewFromGraphData(
   data: UsecaseGraphData,
   levelId: string,
+  options?: {boundarySubsystem?: Subsystem},
 ): LevelView {
   const allSubsystems = Object.values(data.subsystems);
   const childSubsystemIds = new Set(
@@ -93,6 +132,9 @@ export function buildLevelViewFromGraphData(
     ...visibleModuleInstances.map((m) => m.moduleInstanceId),
     ...visibleSubsystems.map((ss) => ss.subsystemId),
   ]);
+  if (options?.boundarySubsystem) {
+    visibleConnectionNodeIds.add(options.boundarySubsystem.subsystemId);
+  }
 
   const modules: ModuleNode[] = visibleModuleInstances.map((m) => {
     const ports: Port[] = [
@@ -144,7 +186,7 @@ export function buildLevelViewFromGraphData(
 
   // Derive containers from the unique (containerId, subgraphId) pairs present
   // in visible moduleInstances. data.containers provides metadata (label) keyed by
-  // containerId, but it has one entry per container entity â€” not one per
+  // containerId, but it has one entry per container entity - not one per
   // subgraph context. A container that spans multiple subgraphs needs a
   // separate ContainerNode per subgraph so every module has a valid parent.
   const containerMeta = new Map(
@@ -201,44 +243,7 @@ export function buildLevelViewFromGraphData(
       y: 0,
     }));
 
-  const subsystems: SubsystemNode[] = visibleSubsystems.map((ss) => {
-    const ports: Port[] = [
-      ...ss.dataPorts
-        .filter((p) => p.direction === 'input')
-        .map((p): Port => ({
-          id: p.portId,
-          name: p.portName,
-          portIoType: PORT_IO_TYPE.INPUT,
-        })),
-      ...ss.dataPorts
-        .filter((p) => p.direction === 'output')
-        .map((p): Port => ({
-          id: p.portId,
-          name: p.portName,
-          portIoType: PORT_IO_TYPE.OUTPUT,
-        })),
-      ...ss.controlPorts.map((p): Port => ({
-        id: p.portId,
-        name: p.portName,
-        portIoType: PORT_IO_TYPE.CONTROL,
-      })),
-    ];
-
-    return {
-      height: NODE_DIMENSIONS.subsystem.baseHeight,
-      // Subsystem systemIds are globally unique â€” no prefix needed unlike
-      // container or subgraph ids which share a numeric namespace.
-      id: ss.subsystemId,
-      label: ss.subsystemName,
-      meta: {systemId: ss.subsystemId},
-      nodeKind: NODE_KIND.SUBSYSTEM,
-      ports,
-      subsystemId: ss.subsystemId,
-      width: NODE_DIMENSIONS.subsystem.width,
-      x: 0,
-      y: 0,
-    };
-  });
+  const subsystems: SubsystemNode[] = visibleSubsystems.map(buildSubsystemNode);
 
   const dataLinks: DataLink[] = [];
   const controlLinks: ControlLink[] = [];
@@ -283,6 +288,9 @@ export function buildLevelViewFromGraphData(
     modules,
     subgraphs,
     subsystems,
+    ...(options?.boundarySubsystem
+      ? {boundarySubsystem: buildSubsystemNode(options.boundarySubsystem)}
+      : {}),
   };
 
   return levelView;
@@ -355,6 +363,7 @@ export function buildSubsystemLevelViewFromGraphData(
   const includedNodeIds = new Set([
     ...Object.keys(moduleInstances),
     ...descendantSubsystemIds,
+    subsystemId,
   ]);
 
   const connections = data.connections.filter(
@@ -393,5 +402,6 @@ export function buildSubsystemLevelViewFromGraphData(
       subsystems,
     },
     levelId,
+    {boundarySubsystem: subsystem},
   );
 }
