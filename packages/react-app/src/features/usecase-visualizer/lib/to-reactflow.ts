@@ -61,6 +61,14 @@ function toNode<TData extends AnyNode>(
 
 export function toReactFlowNodes(graph: LevelView): Node[] {
   const out: Node[] = [];
+  if (graph.boundarySubsystem) {
+    out.push({
+      ...toNode(graph.boundarySubsystem, 'subsystem-boundary'),
+      deletable: false,
+      draggable: false,
+      selectable: true,
+    });
+  }
   graph.subsystems?.forEach((n: SubsystemNode) => {
     out.push(toNode(n, 'subsystem'));
   });

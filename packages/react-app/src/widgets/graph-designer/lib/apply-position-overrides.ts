@@ -58,6 +58,11 @@ export function applyPositionOverrides(
   }
   return {
     ...level,
+    boundarySubsystem: overlay(
+      level.boundarySubsystem ? [level.boundarySubsystem] : undefined,
+      positions,
+      sizes,
+    )?.[0],
     containers: overlay(level.containers, positions, sizes),
     modules: overlay(level.modules, positions, sizes),
     subgraphProxies: overlay(level.subgraphProxies, positions, sizes),

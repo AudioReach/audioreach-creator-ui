@@ -621,6 +621,60 @@ export async function layoutLevelView(graph: LevelView): Promise<LevelView> {
     };
   });
 
+  let boundarySubsystem = graph.boundarySubsystem;
+  if (boundarySubsystem) {
+    const {bottomPadding, minHeight, minWidth, sidePadding, topInset} =
+      NODE_DIMENSIONS.subsystemBoundary;
+    const minX = Math.min(
+      ...finalSubgraphs.map((node) => node.x),
+      ...finalSubsystems.map((node) => node.x),
+    );
+    const minY = Math.min(
+      ...finalSubgraphs.map((node) => node.y),
+      ...finalSubsystems.map((node) => node.y),
+    );
+    const shiftX = Number.isFinite(minX) ? sidePadding - minX : 0;
+    const shiftY = Number.isFinite(minY) ? topInset - minY : 0;
+    const wrappedSubgraphs = finalSubgraphs.map((node) => ({
+      ...node,
+      parentId: boundarySubsystem!.id,
+      x: node.x + shiftX,
+      y: node.y + shiftY,
+    }));
+    const wrappedSubsystems = finalSubsystems.map((node) => ({
+      ...node,
+      parentId: boundarySubsystem!.id,
+      x: node.x + shiftX,
+      y: node.y + shiftY,
+    }));
+    const maxRight = Math.max(
+      0,
+      ...wrappedSubgraphs.map((node) => node.x + node.width),
+      ...wrappedSubsystems.map((node) => node.x + node.width),
+    );
+    const maxBottom = Math.max(
+      0,
+      ...wrappedSubgraphs.map((node) => node.y + node.height),
+      ...wrappedSubsystems.map((node) => node.y + node.height),
+    );
+    boundarySubsystem = {
+      ...boundarySubsystem,
+      height: Math.max(minHeight, maxBottom + bottomPadding),
+      width: Math.max(minWidth, maxRight + sidePadding),
+      x: 0,
+      y: 0,
+    };
+
+    return {
+      ...graph,
+      boundarySubsystem,
+      containers: allRelConts,
+      modules: allRelMods,
+      subgraphs: wrappedSubgraphs,
+      subsystems: wrappedSubsystems,
+    };
+  }
+
   return {
     ...graph,
     containers: allRelConts,

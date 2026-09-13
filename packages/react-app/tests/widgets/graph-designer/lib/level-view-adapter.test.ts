@@ -159,6 +159,203 @@ describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
   });
 });
 
+describe('scoped boundary links', () => {
+  it('exposes inner links through the focused subsystem boundary', () => {
+    const moduleInstance = (id: string, subgraphId: string) => ({
+      ...baseData.moduleInstances['sys-mod-1'],
+      moduleInstanceId: id,
+      subgraphId,
+    });
+    const link = (
+      connectionId: string,
+      connectionType: 'control' | 'data',
+      fromModuleId: string,
+      toModuleId: string,
+      fromPortId = `${fromModuleId}-port`,
+      toPortId = `${toModuleId}-port`,
+    ) => ({
+      connectionId,
+      connectionType,
+      fromModuleId,
+      fromPortId,
+      isDangling: false,
+      toModuleId,
+      toPortId,
+    });
+    const data: UsecaseGraphData = {
+      ...baseData,
+      connections: [
+        link(
+          'inner-m15-to-ss-out',
+          'data',
+          'M15',
+          'ss-1',
+          'M15-port',
+          'ss-out',
+        ),
+        link('inner-ss-in-1-to-m6', 'data', 'ss-1', 'M6', 'ss-in-1'),
+        link('inner-ss-in-2-to-m11', 'data', 'ss-1', 'M11', 'ss-in-2'),
+        link(
+          'inner-ss-control-1-to-m7',
+          'control',
+          'ss-1',
+          'M7',
+          'ss-control-1',
+        ),
+        link(
+          'inner-ss-control-2-to-m9',
+          'control',
+          'ss-1',
+          'M9',
+          'ss-control-2',
+        ),
+        link('outer-m3-to-ss-in', 'data', 'M3', 'ss-1'),
+        link('outer-ss-out-to-m5', 'data', 'ss-1', 'M5'),
+        link('outer-m16-to-m15', 'data', 'M16', 'M15'),
+      ],
+      moduleInstances: {
+        M3: moduleInstance('M3', 'sg-external'),
+        M5: moduleInstance('M5', 'sg-external'),
+        M6: moduleInstance('M6', 'sg-1'),
+        M7: moduleInstance('M7', 'sg-1'),
+        M9: moduleInstance('M9', 'sg-1'),
+        M11: moduleInstance('M11', 'sg-1'),
+        M15: moduleInstance('M15', 'sg-1'),
+        M16: moduleInstance('M16', 'sg-external'),
+      },
+      subgraphs: {
+        'sg-1': {
+          containers: [],
+          subgraphId: 'sg-1',
+          subgraphName: 'Scoped',
+          subgraphType: 'graph',
+        },
+        'sg-external': {
+          containers: [],
+          subgraphId: 'sg-external',
+          subgraphName: 'External',
+          subgraphType: 'graph',
+        },
+      },
+      subsystems: {
+        'ss-1': {
+          childSubsystemIds: [],
+          controlPorts: [
+            {
+              direction: 'input',
+              portId: 'ss-control-1',
+              portName: 'Control 1',
+              portType: 'control',
+            },
+            {
+              direction: 'input',
+              portId: 'ss-control-2',
+              portName: 'Control 2',
+              portType: 'control',
+            },
+          ],
+          dataPorts: [
+            {
+              direction: 'input',
+              portId: 'ss-in-1',
+              portName: 'Input 1',
+              portType: 'data',
+            },
+            {
+              direction: 'input',
+              portId: 'ss-in-2',
+              portName: 'Input 2',
+              portType: 'data',
+            },
+            {
+              direction: 'output',
+              portId: 'ss-out',
+              portName: 'Output',
+              portType: 'data',
+            },
+          ],
+          subgraphs: ['sg-1'],
+          subsystemId: 'ss-1',
+          subsystemName: 'Subsystem 1',
+        },
+      },
+    };
+    const level = buildSubsystemLevelViewFromGraphData(data, 'ss-1', 'scoped');
+
+    expect(level?.boundarySubsystem).toMatchObject({
+      id: 'ss-1',
+      subsystemId: 'ss-1',
+    });
+    expect(level?.modules?.map((node) => node.id)).toEqual([
+      'M6',
+      'M7',
+      'M9',
+      'M11',
+      'M15',
+    ]);
+    expect(level?.boundarySubsystem?.id).toBe('ss-1');
+    expect(level?.dataLinks?.map((edge) => edge.id).sort()).toEqual([
+      'inner-m15-to-ss-out',
+      'inner-ss-in-1-to-m6',
+      'inner-ss-in-2-to-m11',
+    ]);
+    expect(level?.controlLinks?.map((edge) => edge.id).sort()).toEqual([
+      'inner-ss-control-1-to-m7',
+      'inner-ss-control-2-to-m9',
+    ]);
+    expect(level?.dataLinks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'inner-m15-to-ss-out',
+          sourceNodeId: 'M15',
+          sourcePortId: 'M15-port',
+          targetNodeId: 'ss-1',
+          targetPortId: 'ss-out',
+        }),
+        expect.objectContaining({
+          id: 'inner-ss-in-1-to-m6',
+          sourceNodeId: 'ss-1',
+          sourcePortId: 'ss-in-1',
+          targetNodeId: 'M6',
+          targetPortId: 'M6-port',
+        }),
+      ]),
+    );
+    expect(level?.controlLinks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'inner-ss-control-1-to-m7',
+          sourceNodeId: 'ss-1',
+          sourcePortId: 'ss-control-1',
+          targetNodeId: 'M7',
+          targetPortId: 'M7-port',
+        }),
+        expect.objectContaining({
+          id: 'inner-ss-control-2-to-m9',
+          sourceNodeId: 'ss-1',
+          sourcePortId: 'ss-control-2',
+          targetNodeId: 'M9',
+          targetPortId: 'M9-port',
+        }),
+      ]),
+    );
+    expect(level?.dataLinks?.some((edge) => edge.id.startsWith('outer-'))).toBe(
+      false,
+    );
+    expect(
+      level?.boundarySubsystem?.ports
+        .filter((port) => port.portIoType === 'control')
+        .map((port) => port.id),
+    ).toEqual(['ss-control-1', 'ss-control-2']);
+    expect(
+      buildLevelViewFromGraphData(data, 'top').boundarySubsystem,
+    ).toBeUndefined();
+    expect(
+      buildSubsystemLevelViewFromGraphData(data, 'unknown', 'scoped'),
+    ).toBeNull();
+  });
+});
+
 describe('buildLevelViewFromGraphData — SubsystemNode dimensions', () => {
   it('sets visible default dimensions on subsystem nodes', () => {
     const lv = buildLevelViewFromGraphData(baseData, 'level-1');
@@ -607,7 +804,10 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
     expect(lv!.modules?.map((m) => m.id)).toEqual(['sys-mod-1']);
     const subsystemIds = lv!.subsystems?.map((ss) => ss.subsystemId) ?? [];
     expect(subsystemIds).toEqual(['sys-ss-21']);
-    expect(lv!.dataLinks?.map((link) => link.id)).toEqual(['module-to-child']);
+    expect(lv!.dataLinks?.map((link) => link.id)).toEqual([
+      'module-to-child',
+      'parent-boundary-link',
+    ]);
   });
 
   it('passes the given levelId through to the result', () => {
