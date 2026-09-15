@@ -68,27 +68,85 @@ describe('context-menu-config', () => {
     ).toEqual([]);
   });
 
-  it('returns port start/end items from connection state on the target', () => {
+  it('returns data-port start items when no connection is active', () => {
     const config = configFor(makeStore());
     const withoutConnection = config.getItems({
-      connectionInProgress: false,
+      connectionInProgress: null,
       kind: 'port',
       nodeId: 'module-1',
       port: {id: 'port-1', portIoType: 'input'},
     });
     expect(withoutConnection.map((item) => item.id)).toEqual([
       'start-connection',
+      'start-ec-link',
+      'start-dangling-data-link',
     ]);
+  });
 
-    const withConnection = config.getItems({
-      connectionInProgress: true,
+  it('returns control-port start items when no connection is active', () => {
+    const config = configFor(makeStore());
+    const items = config.getItems({
+      connectionInProgress: null,
+      kind: 'port',
+      nodeId: 'module-1',
+      port: {id: 'port-1', portIoType: 'control'},
+    });
+    expect(items.map((item) => item.id)).toEqual([
+      'start-connection',
+      'start-dangling-control-link',
+    ]);
+  });
+
+  it.each([
+    ['normal', 'end-connection'],
+    ['EC', 'complete-ec-link'],
+    ['dangling', 'complete-dangling-data-link'],
+  ] as const)('returns %s data completion item', (edgeMode, itemId) => {
+    const config = configFor(makeStore());
+    const items = config.getItems({
+      connectionInProgress: {edgeMode},
       kind: 'port',
       nodeId: 'module-1',
       port: {id: 'port-1', portIoType: 'input'},
     });
-    expect(withConnection.map((item) => item.id)).toEqual([
-      'end-connection',
+    expect(items.map((item) => item.id)).toEqual([itemId]);
+  });
+
+  it('returns the Dangling control completion item for a control port', () => {
+    const config = configFor(makeStore());
+    const items = config.getItems({
+      connectionInProgress: {edgeMode: 'dangling'},
+      kind: 'port',
+      nodeId: 'module-1',
+      port: {id: 'port-1', portIoType: 'control'},
+    });
+    expect(items).toEqual([
+      {
+        id: 'complete-dangling-control-link',
+        label: 'Complete Dangling Control Link',
+      },
     ]);
+  });
+
+  it.each([
+    ['start-connection', {command: 'start', edgeMode: 'normal'}],
+    ['start-ec-link', {command: 'start', edgeMode: 'EC'}],
+    ['start-dangling-data-link', {command: 'start', edgeMode: 'dangling'}],
+    ['start-dangling-control-link', {command: 'start', edgeMode: 'dangling'}],
+    ['end-connection', {command: 'complete'}],
+    ['complete-ec-link', {command: 'complete'}],
+    ['complete-dangling-data-link', {command: 'complete'}],
+    ['complete-dangling-control-link', {command: 'complete'}],
+  ] as const)('maps %s to a connection command', (actionId, command) => {
+    const config = configFor(makeStore());
+    const target = {
+      connectionInProgress: null,
+      kind: 'port',
+      nodeId: 'module-1',
+      port: {id: 'port-1', portIoType: 'input'},
+    } as const;
+
+    expect(config.onAction(actionId, target)).toEqual(command);
   });
 
   it('shows exclude-link only for pair-tracked edges', () => {

@@ -609,6 +609,7 @@ function VisualizerCanvas({
       const edgeKind = sourceIsControl ? EDGE_KIND.CONTROL : EDGE_KIND.DATA;
       store.getState().eventHandlers?.onEdgeConnected?.({
         edgeKind,
+        edgeMode: 'normal',
         sourceNodeId: source,
         sourcePortId,
         targetNodeId: target,
@@ -743,9 +744,11 @@ function VisualizerCanvas({
           if (port.locked === true) {
             return;
           }
+          const connectionInProgress = store.getState().connectionInProgress;
           openContextMenu(event, {
-            connectionInProgress:
-              store.getState().connectionInProgress !== null,
+            connectionInProgress: connectionInProgress
+              ? {edgeMode: connectionInProgress.edgeMode}
+              : null,
             kind: 'port',
             nodeId: node.id,
             port,
@@ -782,19 +785,16 @@ function VisualizerCanvas({
 
   const handleMenuAction = useCallback(
     (item: ContextMenuItem, target: ContextMenuTarget) => {
-      if (target.kind === 'port') {
-        if (item.id === 'start-connection') {
-          store.getState().startConnection(target.nodeId, target.port);
-          setOpenMenu(null);
-          return;
-        }
-        if (item.id === 'end-connection') {
+      const command = store.getState().contextMenu?.onAction(item.id, target);
+      if (target.kind === 'port' && command) {
+        if (command.command === 'start') {
+          store
+            .getState()
+            .startConnection(target.nodeId, target.port, command.edgeMode);
+        } else {
           store.getState().completeConnection(target.nodeId, target.port);
-          setOpenMenu(null);
-          return;
         }
       }
-      store.getState().contextMenu?.onAction(item.id, target);
       setOpenMenu(null);
     },
     [store],

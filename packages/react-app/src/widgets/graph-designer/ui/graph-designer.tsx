@@ -694,7 +694,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           open(target.nodeId, target.port);
           return;
         }
-        baseContextMenu.onAction(actionId, target);
+        return baseContextMenu.onAction(actionId, target);
       },
     };
   }, [open, store]);
@@ -866,6 +866,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             payload.targetNodeId,
             payload.targetPortId,
             payload.edgeKind,
+            payload.edgeMode,
           )
           .catch(() => {
             showToast(

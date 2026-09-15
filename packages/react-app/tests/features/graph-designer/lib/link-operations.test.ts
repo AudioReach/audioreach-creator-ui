@@ -108,6 +108,7 @@ describe('createLinkOperations — connectPorts', () => {
       'mod-B',
       '20',
       'data',
+      'normal',
     );
 
     expect(result).toBe(true);
@@ -116,6 +117,7 @@ describe('createLinkOperations — connectPorts', () => {
       destinationPortSystemId: '20',
       sourceNodeSystemId: 'mod-A',
       sourcePortSystemId: '10',
+      type: 'normal',
     });
     expect(mockCreateDataLinkWithSubsystems).not.toHaveBeenCalled();
     expect(
@@ -160,6 +162,7 @@ describe('createLinkOperations — connectPorts', () => {
       'mod-B',
       '20',
       'control',
+      'normal',
     );
 
     expect(result).toBe(true);
@@ -176,6 +179,58 @@ describe('createLinkOperations — connectPorts', () => {
         .getState()
         .graphData?.connections.find((c) => c.connectionId === 'link-1'),
     ).toBeDefined();
+  });
+
+  it('passes EC type to the data-link API', async () => {
+    const {get} = makeStore();
+    mockCreateDataLink.mockResolvedValue({
+      data: {controlLinks: [], dataLinks: [makeDataLinkDto()], spfModules: []},
+      message: 'ok',
+      success: true,
+    });
+
+    const {connectPorts} = createLinkOperations('proj-1');
+    await connectPorts(get, 'mod-A', '10', 'mod-B', '20', 'data', 'EC');
+
+    expect(mockCreateDataLink).toHaveBeenCalledWith('proj-1', {
+      destinationNodeSystemId: 'mod-B',
+      destinationPortSystemId: '20',
+      sourceNodeSystemId: 'mod-A',
+      sourcePortSystemId: '10',
+      type: 'EC',
+    });
+  });
+
+  it('uses the dangling field for Dangling control links', async () => {
+    const {get} = makeStore();
+    mockCreateControlLink.mockResolvedValue({
+      data: {
+        controlLinks: [makeControlLinkDto()],
+        dataLinks: [],
+        spfModules: [],
+      },
+      message: 'ok',
+      success: true,
+    });
+
+    const {connectPorts} = createLinkOperations('proj-1');
+    await connectPorts(
+      get,
+      'mod-A',
+      '10',
+      'mod-B',
+      '20',
+      'control',
+      'dangling',
+    );
+
+    expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {
+      endComponentSystemId: 'mod-B',
+      endPortSystemId: '20',
+      isDangling: true,
+      startComponentSystemId: 'mod-A',
+      startPortSystemId: '10',
+    });
   });
 
   it('calls createDataLinkWithSubsystems when the source node is a subsystem', async () => {
@@ -205,13 +260,14 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(get, 'sys-ss-1', '10', 'mod-B', '20', 'data');
+    await connectPorts(get, 'sys-ss-1', '10', 'mod-B', '20', 'data', 'normal');
 
     expect(mockCreateDataLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       destinationNodeSystemId: 'mod-B',
       destinationPortSystemId: '20',
       sourceNodeSystemId: 'sys-ss-1',
       sourcePortSystemId: '10',
+      type: 'normal',
     });
     expect(mockCreateDataLink).not.toHaveBeenCalled();
   });
@@ -247,18 +303,23 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(get, 'sys-ss-1', '10', 'mod-B', '20', 'control');
-
-    expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith(
-      'proj-1',
-      {
-        endComponentSystemId: 'mod-B',
-        endPortSystemId: '20',
-        isDangling: false,
-        startComponentSystemId: 'sys-ss-1',
-        startPortSystemId: '10',
-      },
+    await connectPorts(
+      get,
+      'sys-ss-1',
+      '10',
+      'mod-B',
+      '20',
+      'control',
+      'normal',
     );
+
+    expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
+      endComponentSystemId: 'mod-B',
+      endPortSystemId: '20',
+      isDangling: false,
+      startComponentSystemId: 'sys-ss-1',
+      startPortSystemId: '10',
+    });
     expect(mockCreateControlLink).not.toHaveBeenCalled();
   });
 
@@ -296,13 +357,22 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(get, 'sys-ss-1', '10', 'sys-ss-2', '20', 'data');
+    await connectPorts(
+      get,
+      'sys-ss-1',
+      '10',
+      'sys-ss-2',
+      '20',
+      'data',
+      'normal',
+    );
 
     expect(mockCreateDataLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       destinationNodeSystemId: 'sys-ss-2',
       destinationPortSystemId: '20',
       sourceNodeSystemId: 'sys-ss-1',
       sourcePortSystemId: '10',
+      type: 'normal',
     });
     expect(mockCreateDataLink).not.toHaveBeenCalled();
   });
@@ -345,18 +415,23 @@ describe('createLinkOperations — connectPorts', () => {
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
-    await connectPorts(get, 'sys-ss-1', '10', 'sys-ss-2', '20', 'control');
-
-    expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith(
-      'proj-1',
-      {
-        endComponentSystemId: 'sys-ss-2',
-        endPortSystemId: '20',
-        isDangling: false,
-        startComponentSystemId: 'sys-ss-1',
-        startPortSystemId: '10',
-      },
+    await connectPorts(
+      get,
+      'sys-ss-1',
+      '10',
+      'sys-ss-2',
+      '20',
+      'control',
+      'normal',
     );
+
+    expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
+      endComponentSystemId: 'sys-ss-2',
+      endPortSystemId: '20',
+      isDangling: false,
+      startComponentSystemId: 'sys-ss-1',
+      startPortSystemId: '10',
+    });
     expect(mockCreateControlLink).not.toHaveBeenCalled();
   });
 
@@ -375,6 +450,7 @@ describe('createLinkOperations — connectPorts', () => {
       'mod-B',
       '20',
       'data',
+      'normal',
     );
 
     expect(result).toBe(false);
@@ -392,7 +468,7 @@ describe('createLinkOperations — connectPorts', () => {
     const {connectPorts} = createLinkOperations('proj-1');
 
     await expect(
-      connectPorts(get, 'mod-A', '10', 'mod-B', '20', 'data'),
+      connectPorts(get, 'mod-A', '10', 'mod-B', '20', 'data', 'normal'),
     ).rejects.toThrow('withMutationLock called outside Edit mode');
   });
 });
