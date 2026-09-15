@@ -262,4 +262,99 @@ describe('HttpClient', () => {
       expect(mockStore.resetFailures).toHaveBeenCalled();
     });
   });
+
+  describe('auth token', () => {
+    it('adds the bearer token to requests when configured', async () => {
+      const client = makeClient();
+      client.setAuthToken('token-123');
+      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.get('/secure');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/arc-api\/v1\/secure$/),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token-123',
+          }),
+        }),
+      );
+    });
+
+    it('merges the bearer token with request override headers', async () => {
+      const client = makeClient();
+      client.setAuthToken('token-123');
+      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.put(
+        '/secure',
+        {name: 'test'},
+        {headers: {'X-Custom-Header': 'custom-value'}},
+      );
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/arc-api\/v1\/secure$/),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token-123',
+            'Content-Type': 'application/json',
+            'X-Custom-Header': 'custom-value',
+          }),
+        }),
+      );
+    });
+
+    it('does not add the bearer token when auth is skipped', async () => {
+      const client = makeClient();
+      client.setAuthToken('token-123');
+      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.post(
+        '/auth/register',
+        {clientName: 'audioreach-creator-ui'},
+        {skipAuth: true},
+      );
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+      expect(options.headers).toEqual({
+        'Content-Type': 'application/json',
+      });
+    });
+
+    it('preserves the bearer token after a backend connection failure', async () => {
+      const client = makeClient({maxRetries: 0});
+      client.setAuthToken('token-123');
+      (global.fetch as jest.Mock).mockRejectedValueOnce(
+        new Error('ECONNREFUSED'),
+      );
+
+      await client.get('/unreachable');
+
+      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.get('/after-failure');
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls[1];
+      expect(options.headers).toEqual({
+        Authorization: 'Bearer token-123',
+      });
+    });
+
+    it('clears the bearer token when explicitly requested', async () => {
+      const client = makeClient();
+      client.setAuthToken('token-123');
+      client.clearAuthToken();
+      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.get('/after-clear');
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+      expect(options.headers).toBeUndefined();
+    });
+  });
 });
