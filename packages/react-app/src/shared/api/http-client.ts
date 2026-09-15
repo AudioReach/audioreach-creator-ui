@@ -35,6 +35,7 @@ export interface RequestOverrides {
   retries?: number;
   retryBaseDelayMs?: number;
   retryJitterMs?: number;
+  skipAuth?: boolean;
   timeoutMs?: number;
 }
 
@@ -83,12 +84,14 @@ function composeHeaders(
 export class HttpClient {
   private apiVersion: string;
   private baseUrl: string;
+  private authToken: string | null;
   private maxRetries: number;
   private retryBaseDelayMs: number;
   private retryJitterMs: number;
   private timeoutMs: number;
 
   constructor(config: HttpClientConfig = {}) {
+    this.authToken = null;
     this.baseUrl = config.baseUrl ?? getBackendBaseUrl();
     this.timeoutMs = config.timeoutMs ?? 30000; // 30s default
     this.maxRetries = config.maxRetries ?? 3;
@@ -108,6 +111,7 @@ export class HttpClient {
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
+      skipAuth: overrides?.skipAuth,
       timeoutMs: overrides?.timeoutMs,
     });
   }
@@ -123,6 +127,7 @@ export class HttpClient {
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
+      skipAuth: overrides?.skipAuth,
       timeoutMs: overrides?.timeoutMs,
     });
   }
@@ -140,6 +145,7 @@ export class HttpClient {
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
+      skipAuth: overrides?.skipAuth,
       timeoutMs: overrides?.timeoutMs,
     });
   }
@@ -157,6 +163,7 @@ export class HttpClient {
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
+      skipAuth: overrides?.skipAuth,
       timeoutMs: overrides?.timeoutMs,
     });
   }
@@ -174,8 +181,17 @@ export class HttpClient {
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
       retryJitterMs: overrides?.retryJitterMs,
+      skipAuth: overrides?.skipAuth,
       timeoutMs: overrides?.timeoutMs,
     });
+  }
+
+  setAuthToken(token: string): void {
+    this.authToken = token;
+  }
+
+  clearAuthToken(): void {
+    this.authToken = null;
   }
 
   private async request<T>(
@@ -196,8 +212,8 @@ export class HttpClient {
     if (options.body !== undefined) {
       logger.verbose(`[request] body ${JSON.stringify(options.body)}`);
     }
+    const headers = this.composeRequestHeaders(options);
 
-    // Ensure backend is registered before making any request
     for (let attempt = 0; attempt <= retries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -213,7 +229,7 @@ export class HttpClient {
         }
         const response = await fetch(url, {
           body: requestBody,
-          headers: options.headers,
+          headers,
           method: options.method,
           signal: controller.signal,
         });
@@ -290,6 +306,19 @@ export class HttpClient {
     store.incrementFail(message);
 
     return {message, success: false};
+  }
+
+  private composeRequestHeaders(
+    options: RequestOptions,
+  ): Record<string, string> | undefined {
+    if (!this.authToken || options.skipAuth) {
+      return options.headers;
+    }
+
+    return {
+      ...(options.headers ?? {}),
+      Authorization: `Bearer ${this.authToken}`,
+    };
   }
 }
 

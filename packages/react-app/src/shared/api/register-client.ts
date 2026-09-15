@@ -53,6 +53,7 @@ export async function ensureRegistered(): Promise<boolean> {
       if (currentStore.registrationStatus === 'registered') {
         return true;
       }
+      currentStore.setRegistrationStatus('registering');
 
       // Attempt registration handshake
       const result: ApiResult<RegistrationResponseData> = await httpClient.post(
@@ -60,39 +61,43 @@ export async function ensureRegistered(): Promise<boolean> {
         {
           clientName: CLIENT_NAME_BASE,
         },
+        {skipAuth: true},
       );
 
       logger.verbose('Registration response received', {
         action: 'register_client',
         component: 'RegisterClient',
         tag: JSON.stringify({
-          data: result.data,
+          clientId: result.data?.clientId,
           message: result.message,
           success: result.success,
+          tokenReceived: Boolean(result.data?.token),
         }),
       });
 
       useGlobalStore.getState().setLastHealthCheckAt(Date.now());
 
       if (result.success) {
-        // Extract client ID from backend response
         const clientId = result.data?.clientId;
+        const token = result.data?.token;
 
-        if (!clientId) {
-          logger.error('Registration succeeded but no client ID received', {
-            action: 'register_no_client_id',
+        if (!clientId || !token) {
+          const message = !clientId
+            ? 'No client ID received from backend'
+            : 'No registration token received from backend';
+          logger.error('Registration succeeded with incomplete response', {
+            action: 'register_incomplete_response',
             component: 'RegisterClient',
+            error: message,
           });
-          useGlobalStore
-            .getState()
-            .incrementFail('No client ID received from backend');
-          useGlobalStore.getState().markUnavailable('No client ID received');
-          // TODO: Not returning false for the demo purpose. Backend does not have
-          // the registration logic implemented yet. return false
-        } else {
-          // Initialize logger with backend client ID (enables backend logging)
-          logger.setClientId(clientId);
+          useGlobalStore.getState().incrementFail(message);
+          useGlobalStore.getState().markUnavailable(message);
+          useGlobalStore.getState().setRegistrationStatus('error');
+          return false;
         }
+
+        httpClient.setAuthToken(token);
+        logger.setClientId(clientId);
 
         logger.verbose('Registration successful, updating store', {
           action: 'register_success',
@@ -122,6 +127,7 @@ export async function ensureRegistered(): Promise<boolean> {
         .getState()
         .incrementFail(result.message || 'Registration failed');
       useGlobalStore.getState().markUnavailable(result.message);
+      useGlobalStore.getState().setRegistrationStatus('error');
       return false;
     } catch (e) {
       // Network/timeout error propagated by httpClient
@@ -134,6 +140,7 @@ export async function ensureRegistered(): Promise<boolean> {
       useGlobalStore.getState().setLastHealthCheckAt(Date.now());
       useGlobalStore.getState().incrementFail(message);
       useGlobalStore.getState().markUnavailable(message);
+      useGlobalStore.getState().setRegistrationStatus('error');
       return false;
     } finally {
       // Clear the promise when done (success or failure)
