@@ -6,9 +6,12 @@
 export {
   fetchSubgraphProperties,
   patchSubgraph,
-  patchSubgraphProperties,
+  patchSubgraphProperty,
+  patchSubgraphScenario,
+  patchSubgraphVsid,
 } from './api/subgraphs-api';
 export type {
   PatchSubgraphRequestDto,
   PatchSubgraphResponseDto,
+  PatchSubgraphVsidResponseDto,
 } from './api/subgraphs-api';

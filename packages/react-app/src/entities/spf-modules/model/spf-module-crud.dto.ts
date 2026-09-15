@@ -4,7 +4,7 @@
  */
 
 import type {
-  PatchPropertiesRequestDto,
+  PropertyCollectionRequestDto,
   PropertyDto,
 } from '~shared/lib/property.dto';
 
@@ -36,6 +36,6 @@ export interface RemoveSpfModuleResponseDto {
   deleted: DeletedComponentIdsDto;
 }
 
-export type PatchSpfModulePropertiesRequestDto = PatchPropertiesRequestDto;
+export type PatchSpfModulePropertiesRequestDto = PropertyCollectionRequestDto;
 
 export type SpfModulePropertyDto = PropertyDto;

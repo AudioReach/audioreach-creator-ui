@@ -13,13 +13,12 @@ jest.mock('~shared/api/http-client', () => ({
 import {
   fetchContainerProperties,
   patchContainer,
-  patchContainerProperties,
+  patchContainerProperty,
 } from '~entities/containers';
 import {
   fetchControlLinkProperties,
   patchControlLinkProperties,
 } from '~entities/control-links';
-import type {ControlLinkResponseDto} from '~entities/control-links/api/control-links-api';
 import {
   fetchSpfModuleProperties,
   patchSpfModule,
@@ -28,7 +27,9 @@ import {
 import {
   fetchSubgraphProperties,
   patchSubgraph,
-  patchSubgraphProperties,
+  patchSubgraphProperty,
+  patchSubgraphScenario,
+  patchSubgraphVsid,
 } from '~entities/subgraphs';
 import {httpClient} from '~shared/api/http-client';
 import type {PropertyDto} from '~shared/lib/property.dto';
@@ -42,16 +43,6 @@ const propertyFixture: PropertyDto = {
   propertyId: 1,
   propertyName: 'Scenario ID',
   systemId: 'prop-1',
-};
-
-const controlLinkResponseFixture: ControlLinkResponseDto = {
-  connectionType: 'MODULE_MODULE',
-  destinationPortSystemId: 'dst-port-1',
-  destinationSystemId: 'dst-module-1',
-  isDangling: false,
-  sourcePortSystemId: 'src-port-1',
-  sourceSystemId: 'src-module-1',
-  systemId: 'cl-1',
 };
 
 describe('properties API clients', () => {
@@ -74,7 +65,21 @@ describe('properties API clients', () => {
 
     const result = await fetchSubgraphProperties('proj-1', 'sg-1');
     await patchSubgraph('proj-1', 'sg-1', {name: 'Main'});
-    await patchSubgraphProperties('proj-1', 'sg-1', {properties: []});
+    await patchSubgraphProperty('proj-1', 'sg-1', 'prop-1', {
+      elements: [],
+      name: 'Scenario ID',
+      systemId: 'prop-1',
+    });
+    await patchSubgraphScenario('proj-1', 'sg-1', {
+      elements: [],
+      name: 'Scenario ID',
+      systemId: 'prop-1',
+    });
+    await patchSubgraphVsid('proj-1', 'sg-1', {
+      elements: [],
+      name: 'VSID',
+      systemId: 'prop-vsid',
+    });
 
     expect(result.data).toEqual([propertyFixture]);
     expect(mockGet).toHaveBeenCalledWith(
@@ -84,8 +89,16 @@ describe('properties API clients', () => {
       name: 'Main',
     });
     expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/subgraphs/sg-1/properties',
-      {properties: []},
+      '/projects/proj-1/subgraphs/sg-1/properties/prop-1',
+      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/projects/proj-1/subgraphs/sg-1/scenario',
+      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/projects/proj-1/subgraphs/sg-1/vsid',
+      {elements: [], name: 'VSID', systemId: 'prop-vsid'},
     );
   });
 
@@ -98,7 +111,11 @@ describe('properties API clients', () => {
 
     const result = await fetchContainerProperties('proj-1', 'cnt-1');
     await patchContainer('proj-1', 'cnt-1', {containerId: 'cnt-2'});
-    await patchContainerProperties('proj-1', 'cnt-1', {properties: []});
+    await patchContainerProperty('proj-1', 'cnt-1', 'prop-1', {
+      elements: [],
+      name: 'Container Type',
+      systemId: 'prop-1',
+    });
 
     expect(result.data).toEqual([propertyFixture]);
     expect(mockGet).toHaveBeenCalledWith(
@@ -109,8 +126,8 @@ describe('properties API clients', () => {
       {containerId: 'cnt-2'},
     );
     expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/containers/cnt-1/properties',
-      {properties: []},
+      '/projects/proj-1/containers/cnt-1/properties/prop-1',
+      {elements: [], name: 'Container Type', systemId: 'prop-1'},
     );
   });
 
@@ -139,14 +156,14 @@ describe('properties API clients', () => {
     );
   });
 
-  it('unwraps control-link property responses and returns control-link patch responses', async () => {
+  it('unwraps control-link property fetch and patch responses', async () => {
     mockGet.mockResolvedValueOnce({
       data: {properties: [propertyFixture]},
       message: 'ok',
       success: true,
     });
     mockPatch.mockResolvedValueOnce({
-      data: [controlLinkResponseFixture],
+      data: {properties: [propertyFixture]},
       message: 'ok',
       success: true,
     });
@@ -157,7 +174,7 @@ describe('properties API clients', () => {
     });
 
     expect(fetchResult.data).toEqual([propertyFixture]);
-    expect(patchResult.data).toEqual([controlLinkResponseFixture]);
+    expect(patchResult.data).toEqual([propertyFixture]);
     expect(mockGet).toHaveBeenCalledWith(
       '/projects/proj-1/control-links/cl-1/properties',
     );
