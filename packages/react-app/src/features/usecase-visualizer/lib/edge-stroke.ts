@@ -11,6 +11,7 @@ export const STROKE_WIDTH_DEFAULT = 2;
 export const STROKE_WIDTH_EMPHASIZED = 3;
 
 export interface EdgeData {
+  boundaryId?: string;
   edgeKind?: EdgeKind;
 }
 

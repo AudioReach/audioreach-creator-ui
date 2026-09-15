@@ -71,6 +71,7 @@ import {
   VISUALIZER_MODE,
 } from '../model/visualizer.types';
 
+import {BoundaryAwareConnectionLine} from './edge-types/boundary-aware-connection-line';
 import {ControlLinkEdge} from './edge-types/control-link-edge';
 import {DataLinkEdge} from './edge-types/data-link-edge';
 import {ContainerNode} from './node-types/container-node';
@@ -853,6 +854,7 @@ function VisualizerCanvas({
       </svg>
       <ReactFlow
         colorMode={colorMode}
+        connectionLineComponent={BoundaryAwareConnectionLine}
         edgeTypes={edgeTypes}
         edges={rfEdges}
         minZoom={0.05}
