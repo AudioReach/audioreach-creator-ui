@@ -153,6 +153,31 @@ describe('toReactFlowEdges — DataLink', () => {
     expect(e.sourceHandle).toBe('Data:10');
     expect(e.targetHandle).toBe('Data:20');
   });
+
+  it('tags data.boundaryId with the LevelView boundary subsystem id', () => {
+    const boundary: SubsystemNode = {
+      height: 120,
+      id: 'ss-1',
+      label: 'Boundary subsystem',
+      nodeKind: 'subsystem',
+      ports: [],
+      subsystemId: 'ss-1',
+      width: 240,
+      x: 0,
+      y: 0,
+    };
+    const edges = toReactFlowEdges({
+      boundarySubsystem: boundary,
+      dataLinks: [data],
+      levelId: 'L',
+    });
+    expect((edges[0].data as {boundaryId?: string}).boundaryId).toBe('ss-1');
+  });
+
+  it('leaves data.boundaryId undefined when the level has no boundary', () => {
+    const edges = toReactFlowEdges({dataLinks: [data], levelId: 'L'});
+    expect((edges[0].data as {boundaryId?: string}).boundaryId).toBeUndefined();
+  });
 });
 
 describe('toReactFlowEdges — ControlLink', () => {
