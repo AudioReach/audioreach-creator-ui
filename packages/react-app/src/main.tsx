@@ -5,23 +5,27 @@
 
 import {createRoot} from 'react-dom/client';
 
-import {ThemeProvider} from '~shared/providers/theme-provider';
-import {EditorShell} from '~widgets/editor-shell';
+import {ensureRegistered} from '~shared/api';
 
 import './index.css';
 
-const App = () => {
-  // useEffect(() => {
-  //   ensureRegistered().catch((error) => {
-  //     logger.error(`Failed to register client: ${error}`)
-  //   })
-  // }, [])
+async function bootstrap(): Promise<void> {
+  await ensureRegistered();
 
-  return (
-    <ThemeProvider>
-      <EditorShell />
-    </ThemeProvider>
-  );
-};
+  const [{ThemeProvider}, {EditorShell}] = await Promise.all([
+    import('~shared/providers/theme-provider'),
+    import('~widgets/editor-shell'),
+  ]);
 
-createRoot(document.getElementById('root')!).render(<App />);
+  const App = () => {
+    return (
+      <ThemeProvider>
+        <EditorShell />
+      </ThemeProvider>
+    );
+  };
+
+  createRoot(document.getElementById('root')!).render(<App />);
+}
+
+void bootstrap();
