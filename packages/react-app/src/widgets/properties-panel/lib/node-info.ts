@@ -61,7 +61,7 @@ export function resolvePortLabel(
   const modulePort = [
     ...(module?.inputPorts ?? []),
     ...(module?.outputPorts ?? []),
-  ].find((port) => port.portId === portId);
+  ].find((port) => port.portSystemId === portId || port.portId === portId);
   if (modulePort) {
     return `${modulePort.portName} (${formatDisplayId(modulePort.portId)})`;
   }

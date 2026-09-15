@@ -1222,13 +1222,20 @@ export function createGraphDataSlice<
       if (!graphData || !current) {
         return;
       }
+      const moduleInstances = {
+        ...graphData.moduleInstances,
+        [moduleId]: {...current, containerId: newContainerId},
+      };
+      const {containers, subgraphs} = deriveContainersAndSubgraphs(
+        moduleInstances,
+        graphData.subgraphs,
+      );
       set({
         graphData: {
           ...graphData,
-          moduleInstances: {
-            ...graphData.moduleInstances,
-            [moduleId]: {...current, containerId: newContainerId},
-          },
+          containers,
+          moduleInstances,
+          subgraphs,
         },
       } as unknown as Partial<S>);
       get().markDirty();

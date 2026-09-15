@@ -5,6 +5,9 @@
 
 jest.mock('~shared/lib/logger');
 
+const mockVirtualControlLinkPropertiesCard = jest.fn();
+const mockVirtualDataLinkPropertiesCard = jest.fn();
+
 jest.mock(
   '~widgets/properties-panel/ui/entity-cards/subgraph-properties-card',
   () => ({
@@ -152,15 +155,14 @@ jest.mock(
 jest.mock(
   '~widgets/properties-panel/ui/entity-cards/virtual-data-link-properties-card',
   () => ({
-    VirtualDataLinkPropertiesCard: ({
-      isCollapsed,
-      onToggle,
-      proxyLink,
-    }: {
+    VirtualDataLinkPropertiesCard: (props: {
       isCollapsed?: boolean;
       onToggle?: () => void;
+      onVirtualDataLinkRowDelete?: (id: string) => void;
       proxyLink: {id: string};
     }) => {
+      mockVirtualDataLinkPropertiesCard(props);
+      const {isCollapsed, onToggle, proxyLink} = props;
       const {id} = proxyLink;
       return (
         <div>
@@ -179,15 +181,14 @@ jest.mock(
 jest.mock(
   '~widgets/properties-panel/ui/entity-cards/virtual-control-link-properties-card',
   () => ({
-    VirtualControlLinkPropertiesCard: ({
-      isCollapsed,
-      onToggle,
-      proxyLink,
-    }: {
+    VirtualControlLinkPropertiesCard: (props: {
       isCollapsed?: boolean;
       onToggle?: () => void;
+      onVirtualControlLinkRowDelete?: (id: string) => void;
       proxyLink: {id: string};
     }) => {
+      mockVirtualControlLinkPropertiesCard(props);
+      const {isCollapsed, onToggle, proxyLink} = props;
       const {id} = proxyLink;
       return (
         <div>
@@ -253,6 +254,10 @@ const proxyControlLink: ProxyControlLink = {
 };
 
 describe('PropertiesPanel', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders the empty state when no property groups resolve', () => {
     render(
       <PropertiesPanel
@@ -357,6 +362,39 @@ describe('PropertiesPanel', () => {
 
     expect(screen.queryByText('module-card:mod-1')).not.toBeInTheDocument();
     expect(screen.getByText('module-card:mod-2')).toBeInTheDocument();
+  });
+
+  it('withholds virtual link delete callbacks outside edit mode', () => {
+    render(
+      <PropertiesPanel
+        {...callbacks}
+        graphData={makeGraphData()}
+        isEditing={false}
+        projectId="proj-1"
+        selectedEdges={[
+          {edgeKind: EDGE_KIND.PROXY_DATA, id: 'proxy-dl-1', systemId: 'dl-1'},
+          {
+            edgeKind: EDGE_KIND.PROXY_CONTROL,
+            id: 'proxy-cl-1',
+            systemId: 'cl-1',
+          },
+        ]}
+        selectedNodes={[]}
+        virtualControlLinks={[proxyControlLink]}
+        virtualDataLinks={[proxyDataLink]}
+      />,
+    );
+
+    expect(mockVirtualDataLinkPropertiesCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onVirtualDataLinkRowDelete: undefined,
+      }),
+    );
+    expect(mockVirtualControlLinkPropertiesCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onVirtualControlLinkRowDelete: undefined,
+      }),
+    );
   });
 
   it('does not import host stores', () => {

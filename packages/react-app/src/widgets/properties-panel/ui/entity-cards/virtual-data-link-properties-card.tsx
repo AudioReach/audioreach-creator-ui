@@ -5,13 +5,13 @@
 
 import type {ProxyDataLink} from '~entities/graph';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
 import {
   buildMdfModuleRows,
   buildVirtualDataLinkRows,
 } from '../../lib/virtual-link-row-models';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {
   MdfModuleRow,
   MissingEntityAlert,
@@ -21,7 +21,7 @@ import {
 export interface VirtualDataLinkPropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
   onNavigateToNode: (nodeId: string) => void;
-  onVirtualDataLinkRowDelete: (realDataLinkId: string) => void;
+  onVirtualDataLinkRowDelete?: (realDataLinkId: string) => void;
   proxyLink: ProxyDataLink;
 }
 

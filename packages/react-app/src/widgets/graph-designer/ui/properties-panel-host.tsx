@@ -4,7 +4,6 @@
  */
 
 import type {LevelView} from '~entities/graph';
-import {fetchSpfModuleProperties} from '~entities/spf-modules';
 import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
@@ -45,12 +44,6 @@ export function PropertiesPanelHost({
     <PropertiesPanel
       graphData={props.graphData}
       isEditing={props.isEditing}
-      onContainerHeapUpdated={(containerId) =>
-        refreshContainerModuleProperties(
-          projectId,
-          props.graphData?.containers[containerId]?.moduleInstances ?? [],
-        )
-      }
       onContainerIdChange={props.updateContainerIdLocal}
       onModuleAliasChange={props.updateModuleAliasLocal}
       onModuleContainerChange={props.updateModuleContainerLocal}
@@ -70,14 +63,5 @@ export function PropertiesPanelHost({
       virtualControlLinks={effectiveGraph?.proxyControlLinks ?? []}
       virtualDataLinks={effectiveGraph?.proxyDataLinks ?? []}
     />
-  );
-}
-
-async function refreshContainerModuleProperties(
-  projectId: string,
-  moduleIds: string[],
-): Promise<void> {
-  await Promise.allSettled(
-    moduleIds.map((moduleId) => fetchSpfModuleProperties(projectId, moduleId)),
   );
 }

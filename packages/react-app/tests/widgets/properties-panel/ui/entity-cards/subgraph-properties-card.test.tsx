@@ -17,7 +17,9 @@ jest.mock('~features/generic-tree-view', () => ({
 jest.mock('~entities/subgraphs', () => ({
   fetchSubgraphProperties: jest.fn(),
   patchSubgraph: jest.fn(),
-  patchSubgraphProperties: jest.fn(),
+  patchSubgraphProperty: jest.fn(),
+  patchSubgraphScenario: jest.fn(),
+  patchSubgraphVsid: jest.fn(),
 }));
 
 import {render, screen, waitFor} from '@testing-library/react';

@@ -141,7 +141,7 @@ describe('link property cards', () => {
     expect(screen.queryByDisplayValue('999')).not.toBeInTheDocument();
   });
 
-  it('renders virtual control link row actions without wrapper delete', () => {
+  it('renders virtual control link row actions without wrapper delete', async () => {
     const proxyLink: ProxyControlLink = {
       edgeKind: 'proxy-control',
       id: 'proxy-cl-1',
@@ -157,6 +157,7 @@ describe('link property cards', () => {
         graphData={makeGraphData()}
         onNavigateToNode={jest.fn()}
         onVirtualControlLinkRowDelete={jest.fn()}
+        projectId="proj-1"
         proxyLink={proxyLink}
       />,
     );
@@ -173,5 +174,9 @@ describe('link property cards', () => {
     expect(
       screen.queryByRole('button', {name: 'Delete Virtual Control Link'}),
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(fetchControlLinkProperties).toHaveBeenCalledWith('proj-1', 'cl-1'),
+    );
+    expect(screen.getByDisplayValue('1')).toBeInTheDocument();
   });
 });

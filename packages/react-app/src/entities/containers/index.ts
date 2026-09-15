@@ -6,7 +6,7 @@
 export {
   fetchContainerProperties,
   patchContainer,
-  patchContainerProperties,
+  patchContainerProperty,
 } from './api/containers-api';
 export type {
   PatchContainerRequestDto,

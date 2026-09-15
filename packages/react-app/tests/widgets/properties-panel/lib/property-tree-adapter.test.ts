@@ -5,7 +5,8 @@
 
 import type {PropertyDto} from '~shared/lib/property.dto';
 import {
-  dirtyItemsToPatchPropertiesRequest,
+  dirtyItemsToProperties,
+  propertyDtoToUpdateRequest,
   propertyDtosToTreeViewData,
   propertyHasConfigName,
 } from '~widgets/properties-panel/lib/property-tree-adapter';
@@ -20,6 +21,7 @@ const visibleProperty: PropertyDto = {
       value: '1',
     },
   ],
+  hasDefinition: true,
   propertyId: 32,
   propertyName: 'Scenario',
   systemId: 'prop-scenario',
@@ -35,6 +37,7 @@ const hiddenProperty: PropertyDto = {
       value: 'x',
     },
   ],
+  hasDefinition: true,
   propertyId: 64,
   propertyName: 'Hidden',
   systemId: 'prop-hidden',
@@ -76,7 +79,7 @@ describe('propertyDtosToTreeViewData', () => {
   });
 
   it('builds patch requests from dirty tree items and original metadata', () => {
-    const request = dirtyItemsToPatchPropertiesRequest(
+    const properties = dirtyItemsToProperties(
       [
         {
           elements: [
@@ -95,7 +98,7 @@ describe('propertyDtosToTreeViewData', () => {
       [visibleProperty],
     );
 
-    expect(request.properties).toEqual([
+    expect(properties).toEqual([
       {
         elements: [
           {
@@ -112,5 +115,13 @@ describe('propertyDtosToTreeViewData', () => {
         systemId: 'prop-scenario',
       },
     ]);
+  });
+
+  it('builds a single-property update request', () => {
+    expect(propertyDtoToUpdateRequest(visibleProperty)).toEqual({
+      elements: visibleProperty.elements,
+      name: 'Scenario',
+      systemId: 'prop-scenario',
+    });
   });
 });

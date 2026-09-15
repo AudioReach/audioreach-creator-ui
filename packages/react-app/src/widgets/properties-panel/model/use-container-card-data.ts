@@ -7,11 +7,12 @@ import {useCallback} from 'react';
 
 import {
   fetchContainerProperties,
-  patchContainerProperties,
+  patchContainerProperty,
 } from '~entities/containers';
 import type {TreeViewItem} from '~features/generic-tree-view';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
+import {propertyDtoToUpdateRequest} from '../lib/property-tree-adapter';
 import {
   dirtyItemsHaveConfigName,
   propertyDtosHaveConfigName,
@@ -20,28 +21,48 @@ import {
   useSchemaCardData,
   type UseSchemaCardDataResult,
 } from './use-schema-card-data';
+import {refreshCachedModulePropertiesForContainer} from './module-properties-coordinator';
 
 export function useContainerCardData({
   containerId,
-  onContainerHeapUpdated,
+  moduleIds,
   projectId,
 }: {
   containerId: string;
-  onContainerHeapUpdated?: (containerId: string) => Promise<void> | void;
+  moduleIds: string[];
   projectId: string;
 }): UseSchemaCardDataResult {
   const fetchProperties = useCallback(
     (entityId: string) => fetchContainerProperties(projectId, entityId),
     [projectId],
   );
-  const patchProperties = useCallback(
-    (request: Parameters<typeof patchContainerProperties>[2]) =>
-      patchContainerProperties(projectId, containerId, request),
+  const saveProperty = useCallback(
+    async (property: PropertyDto) => {
+      const result = await patchContainerProperty(
+        projectId,
+        containerId,
+        property.systemId,
+        propertyDtoToUpdateRequest(property),
+      );
+      if (!result.success || !result.data) {
+        return {
+          message: result.message ?? 'Failed to save schema properties',
+          success: false as const,
+        };
+      }
+
+      return {
+        data: {property: result.data, type: 'replaceProperty' as const},
+        message: result.message,
+        success: true as const,
+      };
+    },
     [containerId, projectId],
   );
 
   return useSchemaCardData({
     entityId: containerId,
+    entityType: 'container',
     fetchProperties,
     onCommitSuccess: async (
       dirtyItems: TreeViewItem[],
@@ -51,9 +72,10 @@ export function useContainerCardData({
         dirtyItemsHaveConfigName(dirtyItems, 'Container Heap') ||
         propertyDtosHaveConfigName(nextProperties, 'Container Heap')
       ) {
-        await onContainerHeapUpdated?.(containerId);
+        await refreshCachedModulePropertiesForContainer(projectId, moduleIds);
       }
     },
-    patchProperties,
+    projectId,
+    saveProperty,
   });
 }

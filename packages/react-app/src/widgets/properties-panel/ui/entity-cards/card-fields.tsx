@@ -49,7 +49,7 @@ export function CopyableIdRow({label, value}: {label: string; value: string}) {
 
 export function MissingEntityAlert({message}: {message: string}) {
   return (
-    <div className="p-3 text-sm text-[var(--color-text-danger)]" role="alert">
+    <div className="text-status-error p-3 text-sm" role="alert">
       {message}
     </div>
   );
@@ -58,9 +58,7 @@ export function MissingEntityAlert({message}: {message: string}) {
 export function PortsList({ports, title}: {ports: Port[]; title: string}) {
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-[var(--color-text-secondary)]">
-        {title}
-      </h4>
+      <h4 className="text-neutral-secondary text-xs font-semibold">{title}</h4>
       <div className="grid grid-cols-[1fr_1fr_1fr_4rem] gap-2 text-xs">
         <span className="font-semibold">Port Name</span>
         <span className="font-semibold">Port ID</span>
@@ -95,7 +93,7 @@ export function VirtualDataLinkRow({
   row: VirtualDataLinkRowModel;
 }) {
   return (
-    <div className="space-y-1 border-b border-[var(--color-border-neutral-02)] py-2 last:border-b-0">
+    <div className="border-neutral-02 space-y-1 border-b py-2 last:border-b-0">
       <ReadOnlyProperty
         label="Source Component Info"
         value={`${row.sourceComponent.displayName} (${row.sourceComponent.id})`}
@@ -109,29 +107,35 @@ export function VirtualDataLinkRow({
         label="Destination Port ID"
         value={row.destinationPortLabel}
       />
-      {onNavigate && onDelete ? (
+      {onNavigate || onDelete ? (
         <div className="flex justify-end gap-2">
-          <IconButton
-            aria-label="Navigate to Source"
-            icon={LocateFixed}
-            onClick={() => onNavigate(row.sourceNodeId)}
-            size="sm"
-            variant="ghost"
-          />
-          <IconButton
-            aria-label="Navigate to Destination"
-            icon={LocateFixed}
-            onClick={() => onNavigate(row.destinationNodeId)}
-            size="sm"
-            variant="ghost"
-          />
-          <IconButton
-            aria-label="Delete Data Link"
-            icon={Trash2}
-            onClick={() => onDelete(row.deleteId)}
-            size="sm"
-            variant="ghost"
-          />
+          {onNavigate ? (
+            <>
+              <IconButton
+                aria-label="Navigate to Source"
+                icon={LocateFixed}
+                onClick={() => onNavigate(row.sourceNodeId)}
+                size="sm"
+                variant="ghost"
+              />
+              <IconButton
+                aria-label="Navigate to Destination"
+                icon={LocateFixed}
+                onClick={() => onNavigate(row.destinationNodeId)}
+                size="sm"
+                variant="ghost"
+              />
+            </>
+          ) : null}
+          {onDelete ? (
+            <IconButton
+              aria-label="Delete Data Link"
+              icon={Trash2}
+              onClick={() => onDelete(row.deleteId)}
+              size="sm"
+              variant="ghost"
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -140,7 +144,7 @@ export function VirtualDataLinkRow({
 
 export function MdfModuleRow({row}: {row: VirtualMdfModuleRowModel}) {
   return (
-    <div className="space-y-1 border-b border-[var(--color-border-neutral-02)] py-2 last:border-b-0">
+    <div className="border-neutral-02 space-y-1 border-b py-2 last:border-b-0">
       <ReadOnlyProperty label="MDF Module" value={row.moduleName} />
       <ReadOnlyProperty
         label="Processing Domain"
@@ -155,16 +159,24 @@ export function MdfModuleRow({row}: {row: VirtualMdfModuleRowModel}) {
 }
 
 export function VirtualControlLinkRow({
+  heapId,
+  intents,
+  isLoadingProperties,
   onDelete,
   onNavigate,
   row,
 }: {
-  onDelete: (id: string) => void;
+  heapId: string;
+  intents: string;
+  isLoadingProperties: boolean;
+  onDelete?: (id: string) => void;
   onNavigate: (nodeId: string) => void;
   row: VirtualControlLinkRowModel;
 }) {
+  const missingValue = isLoadingProperties ? 'Loading' : 'Unavailable';
+
   return (
-    <div className="space-y-1 border-b border-[var(--color-border-neutral-02)] py-2 last:border-b-0">
+    <div className="border-neutral-02 space-y-1 border-b py-2 last:border-b-0">
       <ReadOnlyProperty
         label="Peer1 Component Info"
         value={`${row.peer1Component.displayName} (${row.peer1Component.id})`}
@@ -175,8 +187,8 @@ export function VirtualControlLinkRow({
         value={`${row.peer2Component.displayName} (${row.peer2Component.id})`}
       />
       <ReadOnlyProperty label="Peer2 Port ID" value={row.peer2PortLabel} />
-      <ReadOnlyProperty label="Intents" value="-" />
-      <ReadOnlyProperty label="Heap ID" value="-" />
+      <ReadOnlyProperty label="Intents" value={intents || missingValue} />
+      <ReadOnlyProperty label="Heap ID" value={heapId || missingValue} />
       <div className="flex justify-end gap-2">
         <IconButton
           aria-label="Navigate to Peer1"
@@ -192,13 +204,15 @@ export function VirtualControlLinkRow({
           size="sm"
           variant="ghost"
         />
-        <IconButton
-          aria-label="Delete Control Link"
-          icon={Trash2}
-          onClick={() => onDelete(row.deleteId)}
-          size="sm"
-          variant="ghost"
-        />
+        {onDelete ? (
+          <IconButton
+            aria-label="Delete Control Link"
+            icon={Trash2}
+            onClick={() => onDelete(row.deleteId)}
+            size="sm"
+            variant="ghost"
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -8,10 +8,10 @@ import {useCallback} from 'react';
 import {patchSubsystem} from '~entities/subsystems';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {PropertyRow} from '~shared/controls/property-row';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
 import {useStaticFieldSave} from '../../model/use-static-field-save';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {CopyableIdRow, MissingEntityAlert} from './card-fields';
 
 export interface SubsystemPropertiesCardProps extends EntityCollapseProps {

@@ -59,10 +59,7 @@ export function PropertyRow({
           {isSaving === true && <ProgressRing size="xxs" />}
         </div>
         {error ? (
-          <div
-            className="mt-1 text-xs text-[var(--color-foreground-status-error)]"
-            role="alert"
-          >
+          <div className="text-status-error mt-1 text-xs" role="alert">
             {error}
           </div>
         ) : null}

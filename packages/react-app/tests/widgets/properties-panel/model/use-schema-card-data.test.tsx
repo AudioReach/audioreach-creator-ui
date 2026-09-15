@@ -10,7 +10,9 @@ import {act, renderHook, waitFor} from '@testing-library/react';
 import type {TreeViewItem} from '~features/generic-tree-view';
 import type {ApiResult} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
-import {useSchemaCardData} from '~widgets/properties-panel/model/use-schema-card-data';
+import {type SchemaPropertyCommitResult,useSchemaCardData} from '~widgets/properties-panel/model/use-schema-card-data';
+
+import {usePropertiesPanelStore} from '~widgets/properties-panel/model/use-properties-panel-store';
 
 function makeProperty(
   propertyId: number,
@@ -37,7 +39,17 @@ function successResult(data: PropertyDto[]): ApiResult<PropertyDto[]> {
   return {data, message: 'ok', success: true};
 }
 
+function saveResult(
+  data: SchemaPropertyCommitResult,
+): ApiResult<SchemaPropertyCommitResult> {
+  return {data, message: 'ok', success: true};
+}
+
 describe('useSchemaCardData', () => {
+  beforeEach(() => {
+    usePropertiesPanelStore.setState({entries: {}});
+  });
+
   it('fetches properties when entityId changes and exposes tree data', async () => {
     const property = makeProperty(1, 'Scenario ID');
     const fetchProperties = jest
@@ -48,8 +60,10 @@ describe('useSchemaCardData', () => {
       ({entityId}) =>
         useSchemaCardData({
           entityId,
+          entityType: 'subgraph',
           fetchProperties,
-          patchProperties: jest.fn(),
+          projectId: 'proj-1',
+          saveProperty: jest.fn(),
         }),
       {initialProps: {entityId: 'sg-1'}},
     );
@@ -79,8 +93,10 @@ describe('useSchemaCardData', () => {
       ({entityId}) =>
         useSchemaCardData({
           entityId,
+          entityType: 'subgraph',
           fetchProperties,
-          patchProperties: jest.fn(),
+          projectId: 'proj-1',
+          saveProperty: jest.fn(),
         }),
       {initialProps: {entityId: 'sg-1'}},
     );
@@ -105,8 +121,10 @@ describe('useSchemaCardData', () => {
     const {result} = renderHook(() =>
       useSchemaCardData({
         entityId: 'sg-1',
+        entityType: 'subgraph',
         fetchProperties,
-        patchProperties: jest.fn(),
+        projectId: 'proj-1',
+        saveProperty: jest.fn(),
       }),
     );
 
@@ -125,9 +143,11 @@ describe('useSchemaCardData', () => {
   it('patches dirty tree items and reconciles returned authoritative data', async () => {
     const property = makeProperty(1, 'Scenario ID');
     const nextProperty = makeProperty(1, 'Scenario ID', 'prop-1-next');
-    const patchProperties = jest
+    const saveProperty = jest
       .fn()
-      .mockResolvedValue(successResult([nextProperty]));
+      .mockResolvedValue(
+        saveResult({property: nextProperty, type: 'replaceProperty'}),
+      );
     const fetchProperties = jest
       .fn()
       .mockResolvedValue(successResult([property]));
@@ -135,9 +155,11 @@ describe('useSchemaCardData', () => {
     const {result} = renderHook(() =>
       useSchemaCardData({
         entityId: 'sg-1',
+        entityType: 'subgraph',
         fetchProperties,
         onCommitSuccess,
-        patchProperties,
+        projectId: 'proj-1',
+        saveProperty,
       }),
     );
     await waitFor(() => expect(result.current.data).not.toBeNull());
@@ -151,12 +173,14 @@ describe('useSchemaCardData', () => {
       await result.current.handleCommit([dirtyItem]);
     });
 
-    expect(patchProperties).toHaveBeenCalledWith({
-      properties: [expect.objectContaining({propertyId: 1})],
-    });
-    expect(result.current.data?.source).toBe('set');
+    expect(saveProperty).toHaveBeenCalledWith(
+      expect.objectContaining({propertyId: 1}),
+    );
     expect(result.current.data?.items[0]?.systemId).toBe('prop-1-next');
-    expect(onCommitSuccess).toHaveBeenCalledWith([dirtyItem], [nextProperty]);
+    expect(onCommitSuccess).toHaveBeenCalledWith(
+      [dirtyItem],
+      expect.arrayContaining([nextProperty]),
+    );
   });
 
   it('ignores stale patch responses for a previous entityId', async () => {
@@ -167,10 +191,10 @@ describe('useSchemaCardData', () => {
         successResult(entityId === 'sg-1' ? [firstProperty] : [secondProperty]),
       ),
     );
-    let resolvePatch!: (value: ApiResult<PropertyDto[]>) => void;
-    const patchProperties = jest.fn(
+    let resolvePatch!: (value: ApiResult<SchemaPropertyCommitResult>) => void;
+    const saveProperty = jest.fn(
       () =>
-        new Promise<ApiResult<PropertyDto[]>>((resolve) => {
+        new Promise<ApiResult<SchemaPropertyCommitResult>>((resolve) => {
           resolvePatch = resolve;
         }),
     );
@@ -179,9 +203,11 @@ describe('useSchemaCardData', () => {
       ({entityId}) =>
         useSchemaCardData({
           entityId,
+          entityType: 'subgraph',
           fetchProperties,
           onCommitSuccess,
-          patchProperties,
+          projectId: 'proj-1',
+          saveProperty,
         }),
       {initialProps: {entityId: 'sg-1'}},
     );
@@ -200,7 +226,9 @@ describe('useSchemaCardData', () => {
     await waitFor(() => expect(result.current.data?.systemId).toBe('sg-2'));
 
     await act(async () => {
-      resolvePatch(successResult([firstProperty]));
+      resolvePatch(
+        saveResult({property: firstProperty, type: 'replaceProperty'}),
+      );
     });
 
     expect(result.current.data?.systemId).toBe('sg-2');

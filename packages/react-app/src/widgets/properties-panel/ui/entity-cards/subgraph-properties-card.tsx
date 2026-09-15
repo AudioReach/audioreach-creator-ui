@@ -7,14 +7,14 @@ import {useCallback} from 'react';
 
 import {patchSubgraph} from '~entities/subgraphs';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
-import {CopyableIdRow} from '~widgets/properties-panel/ui/entity-cards/card-fields';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 import {PropertyRow} from '~shared/controls/property-row';
 
 import {useStaticFieldSave} from '../../model/use-static-field-save';
 import {useSubgraphCardData} from '../../model/use-subgraph-card-data';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {SchemaPropertiesTree} from '../shared/schema-properties-tree';
+import {CopyableIdRow, MissingEntityAlert} from './card-fields';
 
 export interface SubgraphPropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
@@ -36,7 +36,7 @@ export function SubgraphPropertiesCard({
   const subgraph = graphData.subgraphs[subgraphId];
 
   if (!subgraph) {
-    return <div role="alert">Subgraph no longer exists</div>;
+    return <MissingEntityAlert message="Subgraph no longer exists" />;
   }
 
   return (
@@ -114,7 +114,7 @@ function SubgraphPropertiesCardBody({
         title="Schema Properties"
       />
       {schemaData.saveError ? (
-        <div className="text-sm text-[var(--color-text-danger)]" role="alert">
+        <div className="text-status-error text-sm" role="alert">
           {schemaData.saveError}
         </div>
       ) : null}

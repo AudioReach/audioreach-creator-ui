@@ -1507,9 +1507,24 @@ describe('createGraphDataSlice - store-only property updates', () => {
 
     store.getState().updateModuleContainerLocal('mod-1', 'cnt-2');
 
-    expect(
-      store.getState().graphData?.moduleInstances['mod-1'].containerId,
-    ).toBe('cnt-2');
+    const graphData = store.getState().graphData!;
+    expect(graphData.moduleInstances['mod-1'].containerId).toBe('cnt-2');
+    expect(graphData.containers['cnt-1']).toEqual({
+      containerId: 'cnt-1',
+      moduleInstances: ['mod-2'],
+      subgraphId: 'sg-1',
+    });
+    expect(graphData.containers['cnt-2']).toEqual({
+      containerId: 'cnt-2',
+      moduleInstances: ['mod-1'],
+      subgraphId: 'sg-1',
+    });
+    expect(graphData.subgraphs['sg-1']).toEqual({
+      containers: ['cnt-2', 'cnt-1'],
+      subgraphId: 'sg-1',
+      subgraphName: 'Subgraph 1',
+      subgraphType: '',
+    });
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
   });

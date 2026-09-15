@@ -17,7 +17,7 @@ jest.mock('~features/generic-tree-view', () => ({
 jest.mock('~entities/containers', () => ({
   fetchContainerProperties: jest.fn(),
   patchContainer: jest.fn(),
-  patchContainerProperties: jest.fn(),
+  patchContainerProperty: jest.fn(),
 }));
 
 import {render, screen, waitFor} from '@testing-library/react';

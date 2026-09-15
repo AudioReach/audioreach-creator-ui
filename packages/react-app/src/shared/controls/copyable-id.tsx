@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {Copy} from 'lucide-react';
+import {useEffect, useState} from 'react';
+import {Check, Copy} from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
@@ -13,7 +14,29 @@ export interface CopyableIdProps {
   value: string;
 }
 
+const COPIED_TIMEOUT_MS = 1500;
+
 export function CopyableId({label, value}: CopyableIdProps) {
+  const [isCopied, setIsCopied] = useState(false);
+
+  useEffect(() => {
+    if (!isCopied) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(
+      () => setIsCopied(false),
+      COPIED_TIMEOUT_MS,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isCopied]);
+
+  const copyValue = async () => {
+    await navigator.clipboard.writeText(value);
+    setIsCopied(true);
+  };
+
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
       <span className="min-w-0 truncate font-mono text-xs">{value}</span>
@@ -22,14 +45,14 @@ export function CopyableId({label, value}: CopyableIdProps) {
           <IconButton
             aria-label={`Copy ${label}`}
             emphasis="neutral"
-            icon={Copy}
-            onClick={() => void navigator.clipboard.writeText(value)}
+            icon={isCopied ? Check : Copy}
+            onClick={() => void copyValue()}
             size="sm"
             variant="ghost"
           />
         }
       >
-        Copy
+        {isCopied ? 'Copied' : 'Copy'}
       </Tooltip>
     </span>
   );

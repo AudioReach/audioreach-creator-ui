@@ -9,6 +9,7 @@ import {
   fetchControlLinkProperties,
   patchControlLinkProperties,
 } from '~entities/control-links';
+import type {PropertyDto} from '~shared/lib/property.dto';
 
 import {
   useSchemaCardData,
@@ -26,15 +27,38 @@ export function useControlLinkCardData({
     (entityId: string) => fetchControlLinkProperties(projectId, entityId),
     [projectId],
   );
-  const patchProperties = useCallback(
-    (request: Parameters<typeof patchControlLinkProperties>[2]) =>
-      patchControlLinkProperties(projectId, controlLinkId, request),
+  const saveProperty = useCallback(
+    async (property: PropertyDto) => {
+      const result = await patchControlLinkProperties(
+        projectId,
+        controlLinkId,
+        {properties: [property]},
+      );
+      if (!result.success || !result.data) {
+        return {
+          message: result.message ?? 'Failed to save schema properties',
+          success: false as const,
+        };
+      }
+
+      const nextProperty =
+        result.data.find(
+          (candidate) => candidate.systemId === property.systemId,
+        ) ?? property;
+      return {
+        data: {property: nextProperty, type: 'replaceProperty' as const},
+        message: result.message,
+        success: true as const,
+      };
+    },
     [controlLinkId, projectId],
   );
 
   return useSchemaCardData({
     entityId: controlLinkId,
+    entityType: 'controlLink',
     fetchProperties,
-    patchProperties,
+    projectId,
+    saveProperty,
   });
 }

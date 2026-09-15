@@ -6,11 +6,11 @@
 import type {ReactNode} from 'react';
 
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
 import {buildDirectLinkInfo} from '../../lib/node-info';
 import {useControlLinkCardData} from '../../model/use-control-link-card-data';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {SchemaPropertiesTree} from '../shared/schema-properties-tree';
 import {MissingEntityAlert, ReadOnlyProperty} from './card-fields';
 
@@ -100,7 +100,7 @@ function ControlLinkPropertiesCardBody({
         title="Control Link Properties"
       />
       {schemaData.saveError ? (
-        <div className="text-sm text-[var(--color-text-danger)]" role="alert">
+        <div className="text-status-error text-sm" role="alert">
           {schemaData.saveError}
         </div>
       ) : null}

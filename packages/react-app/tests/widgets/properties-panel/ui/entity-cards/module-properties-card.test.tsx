@@ -5,18 +5,36 @@
 
 jest.mock('~shared/lib/logger');
 
+jest.mock('~features/generic-tree-view', () => ({
+  GenericTreeView: () => <div data-testid="generic-tree-view" />,
+}));
+
 jest.mock('~entities/spf-modules', () => ({
+  fetchSpfModuleProperties: jest.fn(),
   patchSpfModule: jest.fn(),
 }));
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 
+import {fetchSpfModuleProperties} from '~entities/spf-modules';
 import {ModulePropertiesCard} from '~widgets/properties-panel/ui/entity-cards/module-properties-card';
 
 import {makeGraphData} from './test-graph-data';
+import {makeProperty} from './test-properties';
+
+const mockFetchSpfModuleProperties = jest.mocked(fetchSpfModuleProperties);
 
 describe('ModulePropertiesCard', () => {
-  it('renders static fields and dynamic port editability', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchSpfModuleProperties.mockResolvedValue({
+      data: [makeProperty('Module Schema')],
+      message: 'ok',
+      success: true,
+    });
+  });
+
+  it('renders static fields, dynamic port editability, and schema data', async () => {
     const graphData = makeGraphData();
     graphData.moduleInstances['mod-1'].containerId = '1';
 
@@ -42,9 +60,13 @@ describe('ModulePropertiesCard', () => {
     ).toBeEnabled();
     expect(screen.getByDisplayValue('3')).toHaveAttribute('readOnly');
     expect(screen.getByDisplayValue('4')).not.toHaveAttribute('readOnly');
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', 'mod-1'),
+    );
+    expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument();
   });
 
-  it('supports card-level collapse controls', () => {
+  it('supports card-level collapse controls', async () => {
     const onToggle = jest.fn();
 
     render(
@@ -65,5 +87,8 @@ describe('ModulePropertiesCard', () => {
 
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Alias')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', 'mod-1'),
+    );
   });
 });

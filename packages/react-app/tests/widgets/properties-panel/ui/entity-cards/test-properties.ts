@@ -24,7 +24,8 @@ export function makeProperty(
         value,
       },
     ],
-    propertyId: name,
+    hasDefinition: true,
+    propertyId: name.length,
     propertyName: name,
     systemId: `${name}-system-id`,
   };

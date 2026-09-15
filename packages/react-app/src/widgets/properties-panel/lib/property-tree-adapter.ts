@@ -5,9 +5,9 @@
 
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
 import type {
-  PatchPropertiesRequestDto,
   PropertyDto,
   PropertyElement,
+  UpdatePropertyRequestDto,
 } from '~shared/lib/property.dto';
 
 type ConfigPropertyElement = Extract<PropertyElement, {type: 'CONFIG_ELEMENT'}>;
@@ -46,6 +46,22 @@ export function propertyHasConfigName(
   );
 }
 
+export function findPropertyConfigElement(
+  properties: PropertyDto[],
+  name: string,
+): ConfigPropertyElement | null {
+  for (const property of properties) {
+    const element = collectConfigElements(property.elements).find(
+      (candidate) => candidate.name === name,
+    );
+    if (element) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
 export function propertyDtosToTreeViewData(
   systemId: string,
   properties: PropertyDto[],
@@ -63,10 +79,10 @@ export function propertyDtosToTreeViewData(
   };
 }
 
-export function dirtyItemsToPatchPropertiesRequest(
+export function dirtyItemsToProperties(
   dirtyItems: TreeViewItem[],
   originalProperties: PropertyDto[],
-): PatchPropertiesRequestDto {
+): PropertyDto[] {
   const byId = new Map(
     originalProperties.map((property) => [
       String(property.propertyId),
@@ -74,20 +90,30 @@ export function dirtyItemsToPatchPropertiesRequest(
     ]),
   );
 
-  return {
-    properties: dirtyItems.flatMap((item) => {
-      const original = byId.get(item.id);
-      if (original) {
-        return [{
+  return dirtyItems.flatMap((item) => {
+    const original = byId.get(item.id);
+    if (original) {
+      return [
+        {
           elements: item.elements,
-          hasDefinition: true,
+          hasDefinition: original.hasDefinition,
           propertyId: original.propertyId,
           propertyName: original.propertyName,
           systemId: original.systemId,
-        }];
-      }
+        },
+      ];
+    }
 
-      return [];
-    }),
+    return [];
+  });
+}
+
+export function propertyDtoToUpdateRequest(
+  property: PropertyDto,
+): UpdatePropertyRequestDto {
+  return {
+    elements: property.elements,
+    name: property.propertyName,
+    systemId: property.systemId,
   };
 }

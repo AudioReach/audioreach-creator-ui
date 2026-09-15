@@ -12,11 +12,13 @@ import type {
   UsecaseGraphData,
 } from '~features/graph-designer/model/graph-data-slice';
 import {PropertyRow} from '~shared/controls/property-row';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
 import {formatDisplayId} from '../../lib/display-id';
+import {useModuleCardData} from '../../model/use-module-card-data';
 import {useStaticFieldSave} from '../../model/use-static-field-save';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
+import {SchemaPropertiesTree} from '../shared/schema-properties-tree';
 import {CopyableIdRow, MissingEntityAlert, PortsList} from './card-fields';
 
 type PortCountField = 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts';
@@ -94,6 +96,7 @@ function ModulePropertiesCardBody({
   onToggle?: () => void;
   projectId: string;
 }) {
+  const schemaData = useModuleCardData({moduleId, projectId});
   const aliasSave = useStaticFieldSave({
     delayMs: 300,
     onSave: useCallback(
@@ -222,6 +225,15 @@ function ModulePropertiesCardBody({
       />
       <PortsList ports={module.inputPorts} title="Input Ports" />
       <PortsList ports={module.outputPorts} title="Output Ports" />
+      <SchemaPropertiesTree
+        data={schemaData.data}
+        error={schemaData.error}
+        isEditing={false}
+        isLoading={schemaData.isLoading}
+        onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
+        onRetry={() => void schemaData.load()}
+        title="Schema Properties"
+      />
     </CollapsibleCard>
   );
 }

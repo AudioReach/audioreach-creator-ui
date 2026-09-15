@@ -7,11 +7,14 @@ import {useCallback, useRef} from 'react';
 
 import {
   fetchSubgraphProperties,
-  patchSubgraphProperties,
+  patchSubgraphProperty,
+  patchSubgraphScenario,
+  patchSubgraphVsid,
 } from '~entities/subgraphs';
 import type {TreeViewItem} from '~features/generic-tree-view';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
+import {propertyDtoToUpdateRequest} from '../lib/property-tree-adapter';
 import {
   dirtyItemsHaveConfigName,
   propertyDtosHaveConfigName,
@@ -20,6 +23,9 @@ import {
   useSchemaCardData,
   type UseSchemaCardDataResult,
 } from './use-schema-card-data';
+
+const SCENARIO_PROPERTY_ID = 0x08001010;
+const VSID_PROPERTY_ID = 0x080010cc;
 
 export function useSubgraphCardData({
   projectId,
@@ -33,14 +39,90 @@ export function useSubgraphCardData({
     (entityId: string) => fetchSubgraphProperties(projectId, entityId),
     [projectId],
   );
-  const patchProperties = useCallback(
-    (request: Parameters<typeof patchSubgraphProperties>[2]) =>
-      patchSubgraphProperties(projectId, subgraphId, request),
+  const saveProperty = useCallback(
+    async (property: PropertyDto) => {
+      const request = propertyDtoToUpdateRequest(property);
+
+      if (property.propertyId === SCENARIO_PROPERTY_ID) {
+        const result = await patchSubgraphScenario(
+          projectId,
+          subgraphId,
+          request,
+        );
+        if (!result.success) {
+          return {
+            message: result.message ?? 'Failed to save schema properties',
+            success: false as const,
+          };
+        }
+
+        const nextProperties = await fetchSubgraphProperties(
+          projectId,
+          subgraphId,
+        );
+        if (!nextProperties.success || !nextProperties.data) {
+          return {
+            message:
+              nextProperties.message ?? 'Failed to refresh schema properties',
+            success: false as const,
+          };
+        }
+
+        return {
+          data: {
+            properties: nextProperties.data,
+            type: 'replaceProperties' as const,
+          },
+          message: result.message,
+          success: true as const,
+        };
+      }
+
+      if (property.propertyId === VSID_PROPERTY_ID) {
+        const result = await patchSubgraphVsid(projectId, subgraphId, request);
+        if (!result.success || !result.data) {
+          return {
+            message: result.message ?? 'Failed to save schema properties',
+            success: false as const,
+          };
+        }
+
+        return {
+          data: {
+            affectedSubgraphSystemIds: result.data.affectedSubgraphSystemIds,
+            property,
+            type: 'propagateVsid' as const,
+          },
+          message: result.message,
+          success: true as const,
+        };
+      }
+
+      const result = await patchSubgraphProperty(
+        projectId,
+        subgraphId,
+        property.systemId,
+        request,
+      );
+      if (!result.success || !result.data) {
+        return {
+          message: result.message ?? 'Failed to save schema properties',
+          success: false as const,
+        };
+      }
+
+      return {
+        data: {property: result.data, type: 'replaceProperty' as const},
+        message: result.message,
+        success: true as const,
+      };
+    },
     [projectId, subgraphId],
   );
 
   const schemaData = useSchemaCardData({
     entityId: subgraphId,
+    entityType: 'subgraph',
     fetchProperties,
     onCommitSuccess: async (
       dirtyItems: TreeViewItem[],
@@ -53,7 +135,8 @@ export function useSubgraphCardData({
         await loadRef.current?.();
       }
     },
-    patchProperties,
+    projectId,
+    saveProperty,
   });
 
   loadRef.current = schemaData.load;

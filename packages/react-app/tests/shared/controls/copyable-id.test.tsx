@@ -5,7 +5,7 @@
 
 jest.mock('~shared/lib/logger');
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import {CopyableId} from '~shared/controls/copyable-id';
@@ -19,5 +19,6 @@ describe('CopyableId', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Copy Module ID'}));
 
     expect(writeText).toHaveBeenCalledWith('mod-1');
+    await waitFor(() => expect(screen.getByText('Copied')).toBeInTheDocument());
   });
 });

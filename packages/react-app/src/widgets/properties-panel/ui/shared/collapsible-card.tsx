@@ -24,8 +24,8 @@ export function CollapsibleCard({
   title,
 }: CollapsibleCardProps) {
   return (
-    <section className="rounded-sm border border-[var(--color-border-neutral-02)] bg-[var(--color-background-neutral-01)]">
-      <header className="flex min-h-10 items-center gap-2 border-b border-[var(--color-border-neutral-02)] px-3 py-2">
+    <section className="border-neutral-02 bg-primary rounded-sm border">
+      <header className="border-neutral-02 flex min-h-10 items-center gap-2 border-b px-3 py-2">
         {onToggle ? (
           <IconButton
             aria-label={isCollapsed ? `Expand ${title}` : `Collapse ${title}`}
@@ -35,13 +35,11 @@ export function CollapsibleCard({
             variant="ghost"
           />
         ) : null}
-        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-text-primary)]">
+        <h3 className="text-neutral-primary min-w-0 flex-1 truncate text-sm font-semibold">
           {title}
         </h3>
         {count !== undefined ? (
-          <span className="text-xs text-[var(--color-text-secondary)]">
-            {count}
-          </span>
+          <span className="text-neutral-secondary text-xs">{count}</span>
         ) : null}
       </header>
       {!isCollapsed ? <div className="space-y-3 p-3">{children}</div> : null}

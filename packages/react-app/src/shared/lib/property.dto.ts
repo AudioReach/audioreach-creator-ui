@@ -19,6 +19,12 @@ export interface PropertiesResponseDto {
   properties: PropertyDto[];
 }
 
-export interface PatchPropertiesRequestDto {
+export interface PropertyCollectionRequestDto {
   properties: PropertyDto[];
+}
+
+export interface UpdatePropertyRequestDto {
+  elements: PropertyElement[];
+  name: string;
+  systemId: string;
 }

@@ -11,13 +11,12 @@ import type {
   SelectedNodeRef,
 } from '~features/usecase-visualizer';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+
 import {
   buildPropertyGroups,
   type PropertyGroupItem,
   type PropertyGroupType,
-} from '~widgets/properties-panel/lib/selection-groups';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
-
+} from '../lib/selection-groups';
 import {
   ContainerPropertiesCard,
   ControlLinkPropertiesCard,
@@ -29,6 +28,7 @@ import {
   VirtualDataLinkPropertiesCard,
 } from './entity-cards';
 import {CollapsibleCard} from './shared/collapsible-card';
+import type {EntityCollapseProps} from './shared/entity-collapse-props';
 
 export type ModulePortCountField =
   'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts';
@@ -36,7 +36,6 @@ export type ModulePortCountField =
 export interface PropertiesPanelProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
-  onContainerHeapUpdated?: (containerId: string) => Promise<void> | void;
   onContainerIdChange: (containerId: string, newId: string) => void;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
@@ -60,7 +59,6 @@ export interface PropertiesPanelProps {
 export function PropertiesPanel({
   graphData,
   isEditing,
-  onContainerHeapUpdated,
   onContainerIdChange,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -102,7 +100,7 @@ export function PropertiesPanel({
 
   if (groups.length === 0) {
     return (
-      <div className="p-4 text-sm text-[var(--color-text-secondary)]">
+      <div className="text-neutral-secondary p-4 text-sm">
         Select a node or edge to view properties
       </div>
     );
@@ -138,7 +136,6 @@ export function PropertiesPanel({
                 graphData,
                 isEditing,
                 item,
-                onContainerHeapUpdated,
                 onContainerIdChange,
                 onModuleAliasChange,
                 onModuleContainerChange,
@@ -178,7 +175,6 @@ function renderPropertyCard({
   graphData,
   isEditing,
   item,
-  onContainerHeapUpdated,
   onContainerIdChange,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -195,7 +191,6 @@ function renderPropertyCard({
   graphData: UsecaseGraphData;
   isEditing: boolean;
   item: PropertyGroupItem;
-  onContainerHeapUpdated?: (containerId: string) => Promise<void> | void;
   onContainerIdChange: (containerId: string, newId: string) => void;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
@@ -233,7 +228,6 @@ function renderPropertyCard({
           containerId={item.systemId}
           graphData={graphData}
           isEditing={isEditing}
-          onContainerHeapUpdated={onContainerHeapUpdated}
           onContainerIdChange={onContainerIdChange}
           projectId={projectId}
         />
@@ -291,7 +285,9 @@ function renderPropertyCard({
           {...collapseProps}
           graphData={graphData}
           onNavigateToNode={onNavigateToNode}
-          onVirtualDataLinkRowDelete={onVirtualDataLinkRowDelete}
+          onVirtualDataLinkRowDelete={
+            isEditing ? onVirtualDataLinkRowDelete : undefined
+          }
           proxyLink={item.proxyDataLink}
         />
       ) : null;
@@ -302,7 +298,10 @@ function renderPropertyCard({
           {...collapseProps}
           graphData={graphData}
           onNavigateToNode={onNavigateToNode}
-          onVirtualControlLinkRowDelete={onVirtualControlLinkRowDelete}
+          onVirtualControlLinkRowDelete={
+            isEditing ? onVirtualControlLinkRowDelete : undefined
+          }
+          projectId={projectId}
           proxyLink={item.proxyControlLink}
         />
       ) : null;

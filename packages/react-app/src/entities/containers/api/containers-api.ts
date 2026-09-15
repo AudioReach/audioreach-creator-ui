@@ -5,9 +5,9 @@
 
 import {type ApiResult, httpClient} from '~shared/api';
 import type {
-  PatchPropertiesRequestDto,
   PropertiesResponseDto,
   PropertyDto,
+  UpdatePropertyRequestDto,
 } from '~shared/lib/property.dto';
 import {unwrapPropertiesResponse} from '~shared/lib/property-api';
 
@@ -43,13 +43,14 @@ export async function patchContainer(
   );
 }
 
-export async function patchContainerProperties(
+export async function patchContainerProperty(
   projectId: string,
   containerId: string,
-  request: PatchPropertiesRequestDto,
-): Promise<ApiResult<PropertyDto[]>> {
-  return httpClient.patch<PropertyDto[]>(
-    `/projects/${projectId}/containers/${containerId}/properties`,
+  propSystemId: string,
+  request: UpdatePropertyRequestDto,
+): Promise<ApiResult<PropertyDto>> {
+  return httpClient.patch<PropertyDto>(
+    `/projects/${projectId}/containers/${containerId}/properties/${propSystemId}`,
     request,
   );
 }

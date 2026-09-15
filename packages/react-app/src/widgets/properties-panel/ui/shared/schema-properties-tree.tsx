@@ -33,7 +33,7 @@ export function SchemaPropertiesTree({
 }: SchemaPropertiesTreeProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-secondary)]">
+      <div className="text-neutral-secondary flex items-center gap-2 py-3 text-sm">
         <ProgressRing size="sm" />
         <span>Loading schema properties</span>
       </div>
@@ -43,7 +43,7 @@ export function SchemaPropertiesTree({
   if (error) {
     return (
       <div className="space-y-2 py-3" role="alert">
-        <p className="text-sm text-[var(--color-text-danger)]">{error}</p>
+        <p className="text-status-error text-sm">{error}</p>
         <Button onClick={onRetry} size="sm" variant="outline">
           Retry
         </Button>
@@ -53,7 +53,7 @@ export function SchemaPropertiesTree({
 
   if (!data || data.items.length === 0) {
     return (
-      <p className="py-3 text-sm text-[var(--color-text-secondary)]">
+      <p className="text-neutral-secondary py-3 text-sm">
         No schema properties
       </p>
     );

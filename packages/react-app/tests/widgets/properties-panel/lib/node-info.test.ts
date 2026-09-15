@@ -17,16 +17,16 @@ function makeGraphData(): UsecaseGraphData {
         connectionId: 'dl-1',
         connectionType: 'data',
         fromModuleId: 'm-1',
-        fromPortId: '101',
+        fromPortId: 'out-system-1',
         isDangling: false,
         toModuleId: 'm-2',
-        toPortId: 'in-1',
+        toPortId: 'in-system-1',
       },
       {
         connectionId: 'cl-1',
         connectionType: 'control',
         fromModuleId: 'm-1',
-        fromPortId: 'ctrl-1',
+        fromPortId: 'ctrl-system-1',
         isDangling: false,
         toModuleId: 'ss-1',
         toPortId: 'ss-ctrl-1',
@@ -43,6 +43,7 @@ function makeGraphData(): UsecaseGraphData {
             isStatic: false,
             portId: 'ctrl-1',
             portName: 'Control 1',
+            portSystemId: 'ctrl-system-1',
             portType: 'control',
             totalLinksAtPort: 1,
           },
@@ -57,6 +58,7 @@ function makeGraphData(): UsecaseGraphData {
             isStatic: false,
             portId: '101',
             portName: 'Output 1',
+            portSystemId: 'out-system-1',
             portType: 'data',
             totalLinksAtPort: 1,
           },
@@ -73,6 +75,7 @@ function makeGraphData(): UsecaseGraphData {
             isStatic: false,
             portId: 'in-1',
             portName: 'Input 1',
+            portSystemId: 'in-system-1',
             portType: 'data',
             totalLinksAtPort: 1,
           },
@@ -140,6 +143,9 @@ describe('node-info', () => {
     const graphData = makeGraphData();
 
     expect(resolvePortLabel(graphData, 'm-1', '101')).toBe('Output 1 (0x65)');
+    expect(resolvePortLabel(graphData, 'm-1', 'out-system-1')).toBe(
+      'Output 1 (0x65)',
+    );
     expect(resolvePortLabel(graphData, 'ss-1', 'ss-ctrl-1')).toBe(
       'Subsystem Control (ss-ctrl-1)',
     );
@@ -152,13 +158,13 @@ describe('node-info', () => {
     expect(buildDirectLinkInfo(graphData, 'dl-1')).toEqual({
       destination: expect.objectContaining({
         nodeId: 'm-2',
-        portId: 'in-1',
+        portId: 'in-system-1',
         portLabel: 'Input 1 (in-1)',
       }),
       id: 'dl-1',
       source: expect.objectContaining({
         nodeId: 'm-1',
-        portId: '101',
+        portId: 'out-system-1',
         portLabel: 'Output 1 (0x65)',
       }),
       type: 'data',

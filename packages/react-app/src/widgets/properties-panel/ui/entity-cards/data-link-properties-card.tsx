@@ -4,10 +4,10 @@
  */
 
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
 import {buildDirectLinkInfo} from '../../lib/node-info';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {MissingEntityAlert, ReadOnlyProperty} from './card-fields';
 
 export interface DataLinkPropertiesCardProps extends EntityCollapseProps {

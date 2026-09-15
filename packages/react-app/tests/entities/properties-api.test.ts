@@ -13,7 +13,7 @@ jest.mock('~shared/api/http-client', () => ({
 import {
   fetchContainerProperties,
   patchContainer,
-  patchContainerProperties,
+  patchContainerProperty,
 } from '~entities/containers';
 import {
   fetchControlLinkProperties,
@@ -27,7 +27,9 @@ import {
 import {
   fetchSubgraphProperties,
   patchSubgraph,
-  patchSubgraphProperties,
+  patchSubgraphProperty,
+  patchSubgraphScenario,
+  patchSubgraphVsid,
 } from '~entities/subgraphs';
 import {httpClient} from '~shared/api/http-client';
 import type {PropertyDto} from '~shared/lib/property.dto';
@@ -63,7 +65,21 @@ describe('properties API clients', () => {
 
     const result = await fetchSubgraphProperties('proj-1', 'sg-1');
     await patchSubgraph('proj-1', 'sg-1', {name: 'Main'});
-    await patchSubgraphProperties('proj-1', 'sg-1', {properties: []});
+    await patchSubgraphProperty('proj-1', 'sg-1', 'prop-1', {
+      elements: [],
+      name: 'Scenario ID',
+      systemId: 'prop-1',
+    });
+    await patchSubgraphScenario('proj-1', 'sg-1', {
+      elements: [],
+      name: 'Scenario ID',
+      systemId: 'prop-1',
+    });
+    await patchSubgraphVsid('proj-1', 'sg-1', {
+      elements: [],
+      name: 'VSID',
+      systemId: 'prop-vsid',
+    });
 
     expect(result.data).toEqual([propertyFixture]);
     expect(mockGet).toHaveBeenCalledWith(
@@ -73,8 +89,16 @@ describe('properties API clients', () => {
       name: 'Main',
     });
     expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/subgraphs/sg-1/properties',
-      {properties: []},
+      '/projects/proj-1/subgraphs/sg-1/properties/prop-1',
+      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/projects/proj-1/subgraphs/sg-1/scenario',
+      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/projects/proj-1/subgraphs/sg-1/vsid',
+      {elements: [], name: 'VSID', systemId: 'prop-vsid'},
     );
   });
 
@@ -87,7 +111,11 @@ describe('properties API clients', () => {
 
     const result = await fetchContainerProperties('proj-1', 'cnt-1');
     await patchContainer('proj-1', 'cnt-1', {containerId: 'cnt-2'});
-    await patchContainerProperties('proj-1', 'cnt-1', {properties: []});
+    await patchContainerProperty('proj-1', 'cnt-1', 'prop-1', {
+      elements: [],
+      name: 'Container Type',
+      systemId: 'prop-1',
+    });
 
     expect(result.data).toEqual([propertyFixture]);
     expect(mockGet).toHaveBeenCalledWith(
@@ -98,8 +126,8 @@ describe('properties API clients', () => {
       {containerId: 'cnt-2'},
     );
     expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/containers/cnt-1/properties',
-      {properties: []},
+      '/projects/proj-1/containers/cnt-1/properties/prop-1',
+      {elements: [], name: 'Container Type', systemId: 'prop-1'},
     );
   });
 

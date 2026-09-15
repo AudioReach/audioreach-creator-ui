@@ -8,25 +8,24 @@ import {useCallback} from 'react';
 import {patchContainer} from '~entities/containers';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {PropertyRow, type PropertyOption} from '~shared/controls/property-row';
-import type {EntityCollapseProps} from '~widgets/properties-panel/ui/shared/entity-collapse-props';
 
+import {formatDisplayId} from '../../lib/display-id';
 import {
   buildConfigElementValueDirtyItem,
   findConfigElement,
   toNameValueOptions,
 } from '../../lib/schema-property-fields';
-import {formatDisplayId} from '../../lib/display-id';
 import {useContainerCardData} from '../../model/use-container-card-data';
 import {useStaticFieldSave} from '../../model/use-static-field-save';
-import {MissingEntityAlert} from './card-fields';
 import {CollapsibleCard} from '../shared/collapsible-card';
+import type {EntityCollapseProps} from '../shared/entity-collapse-props';
 import {SchemaPropertiesTree} from '../shared/schema-properties-tree';
+import {MissingEntityAlert} from './card-fields';
 
 export interface ContainerPropertiesCardProps extends EntityCollapseProps {
   containerId: string;
   graphData: UsecaseGraphData;
   isEditing: boolean;
-  onContainerHeapUpdated?: (containerId: string) => Promise<void> | void;
   onContainerIdChange: (containerId: string, newId: string) => void;
   projectId: string;
 }
@@ -36,7 +35,6 @@ export function ContainerPropertiesCard({
   graphData,
   isCollapsed,
   isEditing,
-  onContainerHeapUpdated,
   onContainerIdChange,
   onToggle,
   projectId,
@@ -52,7 +50,7 @@ export function ContainerPropertiesCard({
       containerId={container.containerId}
       isCollapsed={isCollapsed}
       isEditing={isEditing}
-      onContainerHeapUpdated={onContainerHeapUpdated}
+      moduleIds={container.moduleInstances ?? []}
       onContainerIdChange={onContainerIdChange}
       onToggle={onToggle}
       projectId={projectId}
@@ -64,7 +62,7 @@ function ContainerPropertiesCardBody({
   containerId,
   isCollapsed,
   isEditing,
-  onContainerHeapUpdated,
+  moduleIds,
   onContainerIdChange,
   onToggle,
   projectId,
@@ -72,14 +70,14 @@ function ContainerPropertiesCardBody({
   containerId: string;
   isCollapsed?: boolean;
   isEditing: boolean;
-  onContainerHeapUpdated?: (containerId: string) => Promise<void> | void;
+  moduleIds: string[];
   onContainerIdChange: (containerId: string, newId: string) => void;
   onToggle?: () => void;
   projectId: string;
 }) {
   const schemaData = useContainerCardData({
     containerId,
-    onContainerHeapUpdated,
+    moduleIds,
     projectId,
   });
   const saveContainerId = useCallback(
@@ -150,7 +148,7 @@ function ContainerPropertiesCardBody({
         title="Schema Properties"
       />
       {schemaData.saveError ? (
-        <div className="text-sm text-[var(--color-text-danger)]" role="alert">
+        <div className="text-status-error text-sm" role="alert">
           {schemaData.saveError}
         </div>
       ) : null}
