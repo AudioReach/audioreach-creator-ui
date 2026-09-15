@@ -147,8 +147,8 @@ export interface DataLinkDto {
   systemId: string;
 }
 
-/** Data link kind. The backend defaults to `normal` when omitted. */
-export type DataLinkType = 'EC' | 'interUsecase' | 'normal';
+/** Data link mode. The backend defaults to `normal` when omitted. */
+export type DataLinkType = 'EC' | 'dangling' | 'normal';
 
 export interface CreateDataLinkRequest {
   destinationNodeSystemId: string;

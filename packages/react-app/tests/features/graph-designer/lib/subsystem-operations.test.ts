@@ -771,7 +771,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'data-in',
             destinationSystemId: 'mod-b',
-            isInterUsecase: false,
+            isDangling: false,
             sourcePortSystemId: 'data-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-data-link',
@@ -865,7 +865,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'ctrl-in',
             destinationSystemId: 'ss-1',
-            isInterUsecase: false,
+            isDangling: false,
             sourcePortSystemId: 'ctrl-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-control-link',
@@ -875,7 +875,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'data-in',
             destinationSystemId: 'ss-1',
-            isInterUsecase: false,
+            isDangling: false,
             sourcePortSystemId: 'data-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-data-link',

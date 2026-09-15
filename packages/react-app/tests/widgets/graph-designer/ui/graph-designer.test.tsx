@@ -9,10 +9,19 @@ import {NODE_KIND, type LevelView} from '~entities/graph';
 
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
+const mockConnectPorts = jest.fn().mockResolvedValue(true);
 
 interface MockUsecaseVisualizerProps {
   contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: {
+    onEdgeConnected?: (payload: {
+      edgeKind: 'control' | 'data';
+      edgeMode: 'EC' | 'dangling' | 'normal';
+      sourceNodeId: string;
+      sourcePortId: string;
+      targetNodeId: string;
+      targetPortId: string;
+    }) => void;
     onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
     onNodeDropped?: (payload: {
       dropData: string;
@@ -76,6 +85,10 @@ jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
     getItems: jest.fn(() => []),
     onAction: jest.fn(),
   })),
+}));
+
+jest.mock('~features/graph-designer/lib/link-operations', () => ({
+  createLinkOperations: jest.fn(() => ({connectPorts: mockConnectPorts})),
 }));
 
 jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
@@ -674,6 +687,8 @@ describe('GraphDesigner - visualizer wiring', () => {
     expect(buildContextMenuConfig).toHaveBeenCalledWith(expect.any(Function));
     const baseConfig = jest.mocked(buildContextMenuConfig).mock.results[0]
       .value as VisualizerContextMenuConfig;
+    const command = {command: 'complete'} as const;
+    jest.mocked(baseConfig.onAction).mockReturnValue(command);
 
     const moduleTarget = {
       kind: 'module',
@@ -684,6 +699,14 @@ describe('GraphDesigner - visualizer wiring', () => {
 
     mockVisualizerProps?.contextMenu?.onAction('delete', moduleTarget);
     expect(baseConfig.onAction).toHaveBeenCalledWith('delete', moduleTarget);
+    expect(
+      mockVisualizerProps?.contextMenu?.onAction('end-connection', {
+        connectionInProgress: {edgeMode: 'normal'},
+        kind: 'port',
+        nodeId: 'module-1',
+        port: {id: 'port-1', portIoType: 'input'},
+      }),
+    ).toEqual(command);
   });
 
   it('calls deleteSelection for node delete payloads', async () => {
@@ -721,6 +744,35 @@ describe('GraphDesigner - visualizer wiring', () => {
       graphDesignerStore.getState,
       [],
       ['link-1'],
+    );
+  });
+
+  it('forwards edge mode from visualizer edge events to link operations', async () => {
+    mockConnectPorts.mockClear();
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeGraphData(),
+    });
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onEdgeConnected?.({
+        edgeKind: 'data',
+        edgeMode: 'EC',
+        sourceNodeId: 'source',
+        sourcePortId: 'out',
+        targetNodeId: 'target',
+        targetPortId: 'in',
+      });
+    });
+
+    expect(mockConnectPorts).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      'source',
+      'out',
+      'target',
+      'in',
+      'data',
+      'EC',
     );
   });
 });

@@ -64,7 +64,7 @@ export interface NormalizedMoveSubsystemComponentsResponseDto {
 export interface MoveSubsystemLinkDto {
   destinationPortSystemId: string;
   destinationSystemId: string;
-  isInterUsecase: boolean;
+  isDangling: boolean;
   sourcePortSystemId: string;
   sourceSystemId: string;
   systemId: string;

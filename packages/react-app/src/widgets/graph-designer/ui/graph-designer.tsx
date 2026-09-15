@@ -570,7 +570,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       ? `subsystem:${activeSubsystemId}`
       : selectedUsecases.join(',');
     const unpositioned = activeSubsystemId
-      ? buildSubsystemLevelViewFromGraphData(graphData, activeSubsystemId, levelId)
+      ? buildSubsystemLevelViewFromGraphData(
+          graphData,
+          activeSubsystemId,
+          levelId,
+        )
       : buildLevelViewFromGraphData(graphData, levelId);
     if (!unpositioned) {
       return;
@@ -649,7 +653,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           open(target.nodeId, target.port);
           return;
         }
-        baseContextMenu.onAction(actionId, target);
+        return baseContextMenu.onAction(actionId, target);
       },
     };
   }, [open, store]);
@@ -805,6 +809,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             payload.targetNodeId,
             payload.targetPortId,
             payload.edgeKind,
+            payload.edgeMode,
           )
           .catch(() => {
             showToast(

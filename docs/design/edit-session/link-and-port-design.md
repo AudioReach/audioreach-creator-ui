@@ -156,6 +156,7 @@ async function connectPorts(
   targetNodeId: string,
   targetPortId: string,
   edgeKind: 'control' | 'data',
+  edgeMode: 'normal' | 'EC' | 'dangling',
 ): Promise<boolean>
 ```
 
@@ -163,13 +164,14 @@ async function connectPorts(
   performs its own inline type-compatibility/lock check and calls
   `eventHandlers.onEdgeConnected`. This doc wires `graph-designer.tsx`'s
   `onEdgeConnected` handler to call `connectPorts` directly with the
-  payload's `sourceNodeId`/`sourcePortId`/`targetNodeId`/`targetPortId` — no
-  change to `usecase-visualizer.tsx` itself.
+  payload's `sourceNodeId`/`sourcePortId`/`targetNodeId`/`targetPortId` and
+  `edgeMode: 'normal'` — no change to the normal drag behavior.
 - **Two-click** — new Visualizer-internal state (not `EditSessionSlice` —
   see [§2.2](#22-two-click-state-visualizer-internal)) tracks
-  `connectionInProgress`. Right-clicking a second port while a connection is
-  in progress calls `completeConnection`, which calls `connectPorts` with
-  the stored source and the just-clicked target.
+  `connectionInProgress`, including the selected `edgeMode`. Right-clicking a
+  second port while a connection is in progress calls `completeConnection`,
+  which emits the stored source, target, and edge mode through
+  `onEdgeConnected`.
 
 Because both paths call the same function, FR-LINK-05's client-eager
 validation and the FR-LINK-06 backend call exist in exactly one place.
@@ -184,9 +186,17 @@ store (`usecase-visualizer-store.ts`), outside `EditSessionSlice`/
 something this doc relocates. Added to `VisualizerInternalStore`:
 
 ```typescript
-connectionInProgress: {nodeId: string; portId: string} | null;
-startConnection: (nodeId: string, portId: string) => void;
-completeConnection: (nodeId: string, portId: string) => void; // clears state, then invokes connectPorts via eventHandlers
+connectionInProgress: {
+  edgeMode: 'normal' | 'EC' | 'dangling';
+  nodeId: string;
+  port: Port;
+} | null;
+startConnection: (
+  nodeId: string,
+  port: Port,
+  edgeMode: 'normal' | 'EC' | 'dangling',
+) => void;
+completeConnection: (nodeId: string, port: Port) => void; // clears state, then emits the link payload via onEdgeConnected
 cancelConnection: () => void; // Escape — clears state, no API call
 ```
 
@@ -199,34 +209,38 @@ satisfied by construction, since `cancelConnection` only clears state.
 `completeConnection` cannot call `connectPorts` directly (the Visualizer
 feature has no access to `GraphDesignerStore` — that would violate FSD,
 since `usecase-visualizer` sits below `graph-designer` in the dependency
-direction). Instead, `completeConnection` invokes a new event handler,
-`onTwoClickConnectionComplete?: (payload: EdgeConnectPayload) => void`,
-added to `VisualizerEventHandlers` alongside the existing `onEdgeConnected`
-— `graph-designer.tsx` wires both to the same `connectPorts` call.
+direction). Instead, `completeConnection` invokes the existing
+`onEdgeConnected` handler with the selected `edgeMode`; `graph-designer.tsx`
+wires the same handler to `connectPorts` for both drag and context-menu
+connections.
 
-**Same FSD boundary, second crossing — the port context menu's "End
-connection" visibility.** Canvas UI Mechanics'
+**Same FSD boundary, second crossing — the port context menu's completion-item
+visibility.** Canvas UI Mechanics'
 [`buildContextMenuConfig`](canvas-ui-mechanics-design.md#2-context-menu)
 closes only over `get: () => GraphDesignerStore` — it has no access to
 `VisualizerInternalStore`, for the same reason `completeConnection` above
 can't call `connectPorts` directly. So `getItems` cannot read
-`connectionInProgress` itself to decide whether "End connection" should
+`connectionInProgress` itself to decide which completion item should
 appear for a `'port'` target. Resolved by adding the field directly to the
 target payload instead of reaching into the Visualizer's store:
 
 ```typescript
 export type ContextMenuTarget =
   | ...
-  | {connectionInProgress: boolean; kind: 'port'; nodeId: string; port: Port}
+  | {
+      connectionInProgress: {edgeMode: 'normal' | 'EC' | 'dangling'} | null;
+      kind: 'port';
+      nodeId: string;
+      port: Port;
+    }
   | ...;
 ```
 
 `usecase-visualizer.tsx`'s own `handleNodeContextMenu` (which already owns
 `store` and already builds the `{kind: 'port', ...}` target at its one call
-site) sets `connectionInProgress: store.getState().connectionInProgress !== null`
-when constructing the target — no new prop, no store reference threaded
-outward; the Visualizer answers the question about its own state before
-handing the target to `getItems`. Canvas UI Mechanics'
+site) passes the active edge mode, or `null`, when constructing the target —
+no new prop, no store reference threaded outward; the Visualizer answers the
+question about its own state before handing the target to `getItems`. Canvas UI Mechanics'
 `getItems(target: ContextMenuTarget)` then reads
 `target.connectionInProgress` directly, the same as any other field on the
 target union.
@@ -251,9 +265,9 @@ target union.
    belongs to a subgraph-proxy node, reusing Node Operations'
    `CAN_CONNECT_TO_PROXY_NODE` constant. Fails **silently** (no toast) — a
    mismatch reaching this function means the UI already should have
-   prevented the gesture (locked port, mismatched handle color for
-   drag-connect; the port context menu wouldn't offer "End connection" on
-   an incompatible port for two-click), so this is a defensive check, not
+   prevented the gesture (locked port or mismatched handle color for
+   drag-connect; `completeConnection` clears an incompatible two-click
+   selection), so this is a defensive check, not
    a user-facing failure path.
 2. **Endpoint variant selection (FR-LINK-03):** if either `sourceNodeId` or
    `targetNodeId` resolves to a `SubsystemNode` in `graphData.subsystems`,
@@ -354,13 +368,19 @@ specified).
 
 ## 4. Port Context Menu
 
-FR-PORT-06's menu items are mutually exclusive:
+FR-PORT-06's menu items are determined by port type and active edge mode:
 
-- `"Start connection"` appears only when no two-click connection is active.
-- `"End connection"` appears only when `target.connectionInProgress` is `true`.
+- For a data port with no active connection: `Start connection`, `Start EC
+Link`, and `Start Dangling Data Link` appear.
+- For a control port with no active connection: `Start connection` and `Start
+Dangling Control Link` appear.
+- With an active connection, exactly one completion item appears. Normal uses
+  `End connection` / `end-connection`; EC uses `Complete EC Link`
+  / `complete-ec-link`; Dangling uses the data or control completion item
+  matching the target port.
 
-`"End connection"` invokes Visualizer-internal
-`completeConnection(nodeId, port)`, which invokes `connectPorts` via
+The start items store `edgeMode` in the Visualizer. Every completion invokes
+`completeConnection(nodeId, port)`, which emits `edgeMode` via
 `onEdgeConnected`.
 
 ---
@@ -471,7 +491,7 @@ interface CreateDataLinkRequest {
   sourceNodeSystemId: string;
   sourcePortSystemId: string;
   /** Defaults to 'normal' server-side when omitted. */
-  type?: 'EC' | 'interUsecase' | 'normal';
+  type?: 'EC' | 'dangling' | 'normal';
 }
 ```
 
@@ -504,12 +524,12 @@ sequenceDiagram
   participant G as GraphDataSlice
 
   U->>V: right-click source port
-  V->>V: startConnection(nodeId, portId)
-  Note over V: connectionInProgress set — canvas shows in-progress indicator
+  V->>V: startConnection(nodeId, portId, edgeMode)
+  Note over V: connectionInProgress stores edgeMode and shows the in-progress indicator
   U->>U: expand subsystem, navigate to target module
-  U->>V: right-click target port ("End connection")
+  U->>V: right-click target port (matching completion item)
   V->>V: completeConnection(nodeId, portId)
-  V->>L: onTwoClickConnectionComplete → connectPorts(...)
+  V->>L: onEdgeConnected(edgeMode) → connectPorts(...)
   L->>L: canConnectPorts — client-eager check
   L->>L: withMutationLock — beginMutation
   L->>B: createDataLinkWithSubsystems (or plain variant)
@@ -549,13 +569,15 @@ to this doc:
 - **Unit — `canConnectPorts`**: data↔data allowed, control↔control allowed,
   data↔control rejected, either-side-proxy-node rejected (reusing Node
   Operations' constant), locked-port rejected.
-- **Unit — convergence**: both `onEdgeConnected` (drag path) and
-  `onTwoClickConnectionComplete` (two-click path) call `connectPorts` with
-  equivalent arguments and produce identical reconciliation — asserted by a
-  shared test helper invoked from both paths' test cases.
+- **Unit — convergence**: both drag and two-click paths emit
+  `onEdgeConnected` and call `connectPorts` with equivalent arguments and
+  produce identical reconciliation — asserted by a shared test helper invoked
+  from both paths' test cases.
 - **Unit — endpoint selection**: module↔module uses the plain endpoint;
   module↔subsystem-port and subsystem↔subsystem use the `-with-subsystems`
   variant.
+- **Unit — edge mode propagation**: normal, EC, and Dangling data links
+  send the selected `type`; control links send `isDangling: false`.
 - **Unit — control-port warning**: `totalLinksAtPort > maxConnections`
   triggers a warning toast only when `edgeKind === 'control'`; the
   identical over-limit condition on a data port triggers nothing.

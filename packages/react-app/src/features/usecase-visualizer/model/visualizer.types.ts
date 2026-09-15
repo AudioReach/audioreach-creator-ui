@@ -37,6 +37,11 @@ export const VISUALIZER_MODE = {
 export type VisualizerMode =
   (typeof VISUALIZER_MODE)[keyof typeof VISUALIZER_MODE];
 
+export type EdgeMode = 'EC' | 'dangling' | 'normal';
+
+export type ConnectionCommand =
+  {command: 'complete'} | {command: 'start'; edgeMode: EdgeMode};
+
 // ── Context menu ──────────────────────────────────────────────────────────────
 
 export type ContextMenuTarget =
@@ -45,7 +50,12 @@ export type ContextMenuTarget =
   | {kind: 'subgraph-proxy'; node: SubgraphProxyNode}
   | {kind: 'container'; node: ContainerNode}
   | {kind: 'subsystem'; node: SubsystemNode}
-  | {connectionInProgress: boolean; kind: 'port'; nodeId: string; port: Port}
+  | {
+      connectionInProgress: {edgeMode: EdgeMode} | null;
+      kind: 'port';
+      nodeId: string;
+      port: Port;
+    }
   | {edge: DataLink; kind: 'data-link'}
   | {edge: ControlLink; kind: 'control-link'}
   | {edge: ProxyDataLink; kind: 'proxy-data-link'}
@@ -111,6 +121,7 @@ export interface NodeDropPayload {
 
 export interface EdgeConnectPayload {
   edgeKind: EdgeKind;
+  edgeMode: EdgeMode;
   sourceNodeId: string;
   sourcePortId: string;
   targetNodeId: string;
@@ -184,7 +195,10 @@ export interface VisualizerRenderingConfig {
 
 export interface VisualizerContextMenuConfig {
   getItems: (target: ContextMenuTarget) => ContextMenuItem[];
-  onAction: (actionId: string, target: ContextMenuTarget) => void;
+  onAction: (
+    actionId: string,
+    target: ContextMenuTarget,
+  ) => ConnectionCommand | void;
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────

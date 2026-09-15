@@ -197,7 +197,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenCalledWith({
-      connectionInProgress: false,
+      connectionInProgress: null,
       kind: 'port',
       nodeId: node.id,
       port: {id: 'p1', portIoType: 'input'},
@@ -209,9 +209,14 @@ describe('context menu', () => {
       {id: 'start-connection', label: 'Start connection'},
     ]);
     const node = makeModule({ports: [{id: 'p1', portIoType: 'input'}]});
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-connection'
+        ? {command: 'start' as const, edgeMode: 'normal' as const}
+        : undefined,
+    );
     const {container} = render(
       <UsecaseVisualizer
-        contextMenu={{getItems, onAction: jest.fn()}}
+        contextMenu={{getItems, onAction}}
         graph={makeGraph([node])}
       />,
     );
@@ -234,7 +239,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenCalledWith({
-      connectionInProgress: true,
+      connectionInProgress: {edgeMode: 'normal'},
       kind: 'port',
       nodeId: node.id,
       port: {id: 'p1', portIoType: 'input'},
@@ -242,7 +247,11 @@ describe('context menu', () => {
   });
 
   it('handles end-connection inside the visualizer', async () => {
-    const onAction = jest.fn();
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-connection'
+        ? {command: 'start' as const, edgeMode: 'normal' as const}
+        : {command: 'complete' as const},
+    );
     const onEdgeConnected = jest.fn();
     const getItems = jest
       .fn<ContextMenuItem[], [ContextMenuTarget]>()
@@ -279,13 +288,130 @@ describe('context menu', () => {
     });
     fireEvent.click(screen.getByText('End'));
 
-    expect(onAction).not.toHaveBeenCalled();
+    expect(onAction).toHaveBeenCalledTimes(2);
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'data',
+      edgeMode: 'normal',
       sourceNodeId: 'source',
       sourcePortId: 'out',
       targetNodeId: 'target',
       targetPortId: 'in',
+    });
+  });
+
+  it('passes EC edge mode through the two-click context-menu flow', async () => {
+    const onEdgeConnected = jest.fn();
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-ec-link'
+        ? {command: 'start' as const, edgeMode: 'EC' as const}
+        : {command: 'complete' as const},
+    );
+    const getItems = jest
+      .fn<ContextMenuItem[], [ContextMenuTarget]>()
+      .mockReturnValueOnce([{id: 'start-ec-link', label: 'Start EC Link'}])
+      .mockReturnValueOnce([
+        {id: 'complete-ec-link', label: 'Complete EC Link'},
+      ]);
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'out', portIoType: 'output'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'in', portIoType: 'input'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="out"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start EC Link'));
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="in"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Complete EC Link'));
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'data',
+      edgeMode: 'EC',
+      sourceNodeId: 'source',
+      sourcePortId: 'out',
+      targetNodeId: 'target',
+      targetPortId: 'in',
+    });
+  });
+
+  it('passes Dangling control edge mode through the context-menu flow', async () => {
+    const onEdgeConnected = jest.fn();
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-dangling-control-link'
+        ? {command: 'start' as const, edgeMode: 'dangling' as const}
+        : {command: 'complete' as const},
+    );
+    const getItems = jest
+      .fn<ContextMenuItem[], [ContextMenuTarget]>()
+      .mockReturnValueOnce([
+        {
+          id: 'start-dangling-control-link',
+          label: 'Start Dangling Control Link',
+        },
+      ])
+      .mockReturnValueOnce([
+        {
+          id: 'complete-dangling-control-link',
+          label: 'Complete Dangling Control Link',
+        },
+      ]);
+    const source = makeModule({
+      id: 'source',
+      ports: [{id: 'start', portIoType: 'control'}],
+    });
+    const target = makeModule({
+      id: 'target',
+      ports: [{id: 'end', portIoType: 'control'}],
+    });
+    const {container} = render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction}}
+        eventHandlers={{onEdgeConnected}}
+        graph={makeGraph([source, target])}
+      />,
+    );
+
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="start"]') as Element),
+        {data: source, id: source.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Start Dangling Control Link'));
+    await act(async () => {
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(container.querySelector('[data-port-id="end"]') as Element),
+        {data: target, id: target.id, type: 'module'},
+      );
+    });
+    fireEvent.click(screen.getByText('Complete Dangling Control Link'));
+
+    expect(onEdgeConnected).toHaveBeenCalledWith({
+      edgeKind: 'control',
+      edgeMode: 'dangling',
+      sourceNodeId: 'source',
+      sourcePortId: 'start',
+      targetNodeId: 'target',
+      targetPortId: 'end',
     });
   });
 
@@ -297,6 +423,11 @@ describe('context menu', () => {
           : [{id: 'start-connection', label: 'Start'}],
     );
     const onEdgeConnected = jest.fn();
+    const onAction = jest.fn((actionId: string) =>
+      actionId === 'start-connection'
+        ? {command: 'start' as const, edgeMode: 'normal' as const}
+        : undefined,
+    );
     const source = makeModule({
       id: 'source',
       ports: [{id: 'out', portIoType: 'output'}],
@@ -307,7 +438,7 @@ describe('context menu', () => {
     });
     const {container} = render(
       <UsecaseVisualizer
-        contextMenu={{getItems, onAction: jest.fn()}}
+        contextMenu={{getItems, onAction}}
         eventHandlers={{onEdgeConnected}}
         graph={makeGraph([source, target])}
       />,
@@ -333,7 +464,7 @@ describe('context menu', () => {
     });
 
     expect(getItems).toHaveBeenLastCalledWith({
-      connectionInProgress: false,
+      connectionInProgress: null,
       kind: 'port',
       nodeId: target.id,
       port: {id: 'in', portIoType: 'input'},
@@ -350,7 +481,10 @@ describe('context menu', () => {
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [{id: 'start-connection', label: 'Start'}],
-          onAction: jest.fn(),
+          onAction: (actionId) =>
+            actionId === 'start-connection'
+              ? {command: 'start', edgeMode: 'normal'}
+              : undefined,
         }}
         graph={makeGraph([node])}
       />,
