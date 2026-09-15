@@ -213,6 +213,33 @@ Annotations: **(V)** = Visualizer-owned, **(O)** = consumer-provided via render 
   ports[] from node drives handle placement (filtered by portIoType)
 ```
 
+### Subsystem boundary in drilled view
+
+```
+              ▲  control port handles (V)
+              │  one marker with colocated source/target handles
+◄ Data input ──┤  ┌──────────────────────────────────────────────┐  ├── Data output ►
+               │  │  boundarySubsystem: SubsystemNode        (V) │
+               │  │  ┌────────────────────────────────────────┐  │
+               │  │  │  subsystems[] — ordinary opaque blocks │  │
+               │  │  │  ┌────────────┐  ┌────────────┐        │  │
+               │  │  │  │ Subsystem  │  │ Subsystem  │        │  │
+               │  │  │  └────────────┘  └────────────┘        │  │
+               │  │  └────────────────────────────────────────┘  │
+               │  └──────────────────────────────────────────────┘
+               │  enclosing parent frame resizes around descendants
+```
+
+- `boundarySubsystem` is the focused subsystem rendered as an enclosing parent frame.
+- `subsystems[]` contains only ordinary opaque subsystem blocks.
+- Data input handles are sources and data output handles are targets in the inner view.
+- Each control port remains one visible marker with colocated React Flow source/target handles.
+- Domain port direction remains unchanged; context-menu connections use rendered endpoint roles.
+- Draggable descendants resize the boundary with a header-only top inset and expanded side/bottom link clearance.
+- The active boundary cannot be moved, deleted, or nested and has no structural subsystem
+  actions. Its ports and visible edges remain selectable, editable, and deletable through
+  the existing flows.
+
 ### SubgraphProxyNode
 
 ```
@@ -709,6 +736,7 @@ interface LevelView {
   // detects a collapse/expand and calls fitView automatically.
   levelId: string;
 
+  boundarySubsystem?: SubsystemNode;
   subsystems?: SubsystemNode[];
   subgraphs?: SubgraphNode[]; // expanded subgraphs
   subgraphProxies?: SubgraphProxyNode[]; // collapsed subgraphs (consumer-computed)
@@ -1196,11 +1224,19 @@ adjustments are permitted even when content editing is not. The consumer sets `l
 per-node in the adapter — useful for read-only reference nodes or system-managed nodes
 that should not be modified in a given editing context.
 
+The active `boundarySubsystem` is a structural exception to these generic node rules. It
+is not movable, deletable, nestable, or implicitly locked: its frame has no structural
+subsystem actions, while its ports and visible edges retain the existing selection,
+connection, and deletion flows.
+
 **Locked ports (`Port.locked === true`):** A locked port is excluded from context menus
 and the Visualizer internally prevents new connections to or from it. The consumer is
 responsible for setting `locked: true` on ports that should not be modified — for
 example, ports on SubgraphProxy nodes where connections through the proxy boundary
 cannot be changed.
+
+Boundary ports are not implicitly locked. `Port.locked` still applies when the consumer
+explicitly sets it, but otherwise boundary ports remain selectable and editable.
 
 **Locked edges (`EdgeBase.locked === true`):** A locked edge is excluded from
 Delete-key deletion and has no context menu. The consumer sets `locked` on edges that
@@ -1332,6 +1368,13 @@ sequenceDiagram
 The Visualizer fires one event on drill-in and manages viewport history internally.
 Navigation stack, level switching, and breadcrumb rendering are all consumer concerns.
 
+The consumer owns `activeSubsystemId` as the source-neutral navigation state. Canvas
+double-click and the existing subsystem browser both set that same active ID and call the
+shared scoped resolver. The resolver produces the same scoped `LevelView`, with the
+selected subsystem represented by `boundarySubsystem`, regardless of which source
+selected the ID. Future breadcrumbs must derive from parent ancestry and select the same
+state. Breadcrumb UI and wiring are outside this implementation.
+
 **Consumers that do not need drill-in** simply omit `SubsystemNode` entries from their
 `LevelView`. `onNodeDoubleClick` still fires for any node double-click, but with no
 Subsystem nodes present there is nothing to navigate into. The event need not be wired
@@ -1348,10 +1391,11 @@ sequenceDiagram
   U->>V: double-click SubsystemNode (id: sys-42)
   V->>V: save current viewport to viewportCache[currentLevelId]
   V->>O: onNodeDoubleClick('sys-42')
-  O->>O: push DrillEntry, pass levelViews.get('sys-42') as new graph prop
+  O->>O: set activeSubsystemId = 'sys-42'
+  O->>O: shared resolver(activeSubsystemId) → scoped LevelView
   O->>V: new graph prop (levelId: 'sys-42')
   Note over V: new levelId → fitView after DOM commit
-  Note over O: Breadcrumb re-renders from consumer's navigation stack
+  Note over O: subsystem browser uses the same active ID and resolver
 ```
 
 ### Drill-out sequence
@@ -1508,8 +1552,10 @@ const captureRef = useRef<(() => Promise<string | null>) | null>(null);
 
 <UsecaseVisualizer
   graph={currentLevel}
-  onScreenshotApiReady={(capture) => { captureRef.current = capture; }}
-/>
+  onScreenshotApiReady={(capture) => {
+    captureRef.current = capture;
+  }}
+/>;
 
 // Later, e.g. on save:
 const dataUrl = await captureRef.current?.();
@@ -1759,6 +1805,13 @@ ReactFlow which end of an edge this handle represents (`'source'` = edge origina
 `'target'` = edge terminates here). Output ports sit on the right; input ports on the
 left. Edges reference these via `sourcePortId` / `targetPortId` (already stored as strings).
 
+The ordinary contract above applies to modules, proxies, and ordinary `SubsystemNode`
+entries. The scoped boundary is the exception: in the inner view, a domain input port
+with `portIoType: 'input'` is rendered as a React Flow source, and a domain output port
+with `portIoType: 'output'` is rendered as a React Flow target. The domain
+`portIoType` remains unchanged. The inner-view conversion and edge mapping must use
+these rendered endpoint roles rather than inferring direction from the domain type.
+
 Each control port renders **two** Handles stacked at the same top position — one
 `type="source"` and one `type="target"`. This is required because control links are
 semantically directionless: either port in a connection can be the initiating end.
@@ -1782,6 +1835,11 @@ targetHandle: `Data:${edge.targetPortId}`;
 sourceHandle: `Control:${edge.sourcePortId}-source`;
 targetHandle: `Control:${edge.targetPortId}-target`;
 ```
+
+For a scoped boundary data edge, `sourceHandle` identifies the rendered source role on
+the inner-view input endpoint and `targetHandle` identifies the rendered target role on
+the inner-view output endpoint, while `sourcePortId` and `targetPortId` retain their
+domain port identities.
 
 ---
 
@@ -1890,14 +1948,14 @@ interface VisualizerInternalStore {
 }
 ```
 
-| Action                  | Called by                                | When                                                 |
-| ----------------------- | ---------------------------------------- | ---------------------------------------------------- |
-| `setLodZoom`            | `onMove` ReactFlow handler               | Every viewport move                                  |
-| `setViewportCache`      | Drill-in handler                         | Before firing `onNodeDoubleClick` on a SubsystemNode |
-| `setHoverState`         | Node `onMouseEnter` / `onMouseLeave`     | On node hover                                        |
-| `setSelection`          | ReactFlow `onSelectionChange` handler    | On any selection change                              |
-| `clearSelection`        | Drill-in/out and collapse/expand effects | After level or structure change                      |
-| `syncSearchHighlights`  | Effect on `searchHighlights` prop change | Whenever the prop reference changes                  |
+| Action                 | Called by                                | When                                                 |
+| ---------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `setLodZoom`           | `onMove` ReactFlow handler               | Every viewport move                                  |
+| `setViewportCache`     | Drill-in handler                         | Before firing `onNodeDoubleClick` on a SubsystemNode |
+| `setHoverState`        | Node `onMouseEnter` / `onMouseLeave`     | On node hover                                        |
+| `setSelection`         | ReactFlow `onSelectionChange` handler    | On any selection change                              |
+| `clearSelection`       | Drill-in/out and collapse/expand effects | After level or structure change                      |
+| `syncSearchHighlights` | Effect on `searchHighlights` prop change | Whenever the prop reference changes                  |
 
 ---
 
