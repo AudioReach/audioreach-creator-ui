@@ -129,6 +129,12 @@ const minimalDto = {
 };
 
 describe('toConnection', () => {
+  it('maps the EC flag from a DataLinkDto', () => {
+    const link = makeDataLinkDto({isEcLink: true});
+
+    expect(toConnection(link, 'data').isEcLink).toBe(true);
+  });
+
   it('maps a DataLinkDto to a Connection with connectionType "data"', () => {
     const link = makeDataLinkDto({
       destinationPortSystemId: 'port-2',

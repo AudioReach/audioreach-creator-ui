@@ -55,6 +55,8 @@ export function DataLinkEdge(props: EdgeProps) {
     <EdgeBody
       arrowMarkerId={DATA_ARROW_MARKER_ID}
       edgeId={id}
+      isDangling={(data as {isDangling?: boolean} | undefined)?.isDangling}
+      isEcLink={(data as {isEcLink?: boolean} | undefined)?.isEcLink}
       label={label}
       labelX={labelX}
       labelY={labelY}

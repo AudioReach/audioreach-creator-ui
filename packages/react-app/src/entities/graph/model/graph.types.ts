@@ -158,6 +158,7 @@ export interface EdgeBase {
 
 export interface DataLink extends EdgeBase {
   edgeKind: 'data';
+  isEcLink?: boolean;
 }
 
 export interface ControlLink extends EdgeBase {
