@@ -6,6 +6,7 @@
 jest.mock('~shared/lib/logger');
 
 import {NODE_KIND, type LevelView, type NodeKind} from '~entities/graph';
+import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/level-view-adapter';
 import type {
   ContextMenuTarget,
   NodeDisplayConfig,
@@ -14,16 +15,31 @@ import type {
 
 const mockWorkflowUsecaseData = {isLoading: false, resolvedData: []};
 let mockVisualizerProps: MockUsecaseVisualizerProps | null = null;
+const mockConnectPorts = jest.fn().mockResolvedValue(true);
 
 interface MockUsecaseVisualizerProps {
   contextMenu?: VisualizerContextMenuConfig;
   eventHandlers?: {
+    onEdgeConnected?: (payload: {
+      edgeKind: 'control' | 'data';
+      edgeMode: 'EC' | 'dangling' | 'normal';
+      sourceNodeId: string;
+      sourcePortId: string;
+      targetNodeId: string;
+      targetPortId: string;
+    }) => void;
     onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
     onNodeDoubleClick?: (
       nodeId: string,
       nodeKind: NodeKind,
       label: string,
     ) => void;
+    onNodeDragEnd?: (payload: {
+      correctedPositions?: Record<string, {x: number; y: number}>;
+      nodeId: string;
+      position: {x: number; y: number};
+      resizedParents?: Record<string, {height: number; width: number}>;
+    }) => void;
     onNodeDropped?: (payload: {
       dropData: string;
       position: {x: number; y: number};
@@ -89,6 +105,10 @@ jest.mock('~widgets/graph-designer/lib/context-menu-config', () => ({
   })),
 }));
 
+jest.mock('~features/graph-designer/lib/link-operations', () => ({
+  createLinkOperations: jest.fn(() => ({connectPorts: mockConnectPorts})),
+}));
+
 jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
   deleteSelection: jest.fn().mockResolvedValue(undefined),
 }));
@@ -111,8 +131,10 @@ const mockUsecaseVisualizer = (props: MockUsecaseVisualizerProps) => {
 jest.mock('~features/usecase-visualizer', () => ({
   NODE_DIMENSIONS: {
     container: {headerHeight: 32, padding: 16},
+    module: {minWidth: 160},
     subgraph: {headerHeight: 40, padding: 16},
     subgraphProxy: {height: 72, width: 160},
+    subsystem: {baseHeight: 120, width: 240},
   },
   UsecaseVisualizer: (props: MockUsecaseVisualizerProps) =>
     mockUsecaseVisualizer(props),
@@ -147,33 +169,23 @@ jest.mock('~features/search-component', () => ({
 }));
 
 jest.mock('~widgets/graph-designer/lib/level-view-layout', () => ({
-  layoutLevelView: jest.fn().mockResolvedValue({
-    containers: [],
-    levelId: 'uc-1',
-    modules: [],
-    subgraphs: [],
-    subsystems: [],
-  }),
+  layoutLevelView: jest.fn((levelView: LevelView) => ({
+    then: (resolve: (view: LevelView) => void) => resolve(levelView),
+  })),
 }));
 
-jest.mock('~widgets/graph-designer/lib/level-view-adapter', () => ({
-  buildLevelViewFromGraphData: jest.fn(() => ({
-    containers: [],
-    levelId: 'uc-1',
-    modules: [],
-    subgraphs: [],
-    subsystems: [],
-  })),
-  buildSubsystemLevelViewFromGraphData: jest.fn(
-    (_graphData: unknown, _subsystemId: string, levelId: string) => ({
-      containers: [],
-      levelId,
-      modules: [],
-      subgraphs: [],
-      subsystems: [],
-    }),
-  ),
-}));
+jest.mock('~widgets/graph-designer/lib/level-view-adapter', () => {
+  const actual = jest.requireActual(
+    '~widgets/graph-designer/lib/level-view-adapter',
+  );
+  return {
+    ...actual,
+    buildLevelViewFromGraphData: jest.fn(actual.buildLevelViewFromGraphData),
+    buildSubsystemLevelViewFromGraphData: jest.fn(
+      actual.buildSubsystemLevelViewFromGraphData,
+    ),
+  };
+});
 
 jest.mock('~widgets/module-data-tab', () => ({
   ModuleDataTab: () => <div data-testid="module-data-tab" />,
@@ -208,7 +220,6 @@ import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
 import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
-import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/level-view-adapter';
 import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
 import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 import GraphDesigner from '~widgets/graph-designer/ui/graph-designer';
@@ -286,7 +297,46 @@ function makeSubsystemGraphData(): UsecaseGraphData {
   };
 }
 
+function makeBoundaryGraphData(): UsecaseGraphData {
+  const graphData = makeSubsystemGraphData();
+  return {
+    ...graphData,
+    connections: [
+      {
+        connectionId: 'inner-boundary-link',
+        connectionType: 'data',
+        fromModuleId: 'mod-1',
+        fromPortId: 'out-1',
+        isDangling: false,
+        toModuleId: 'mod-1',
+        toPortId: 'in-1',
+      },
+    ],
+    subsystems: {
+      'child-ss': {
+        childSubsystemIds: [],
+        controlPorts: [],
+        dataPorts: [],
+        parentSubsystemId: 'ss-1',
+        subgraphs: [],
+        subsystemId: 'child-ss',
+        subsystemName: 'Child Subsystem',
+      },
+      'ss-1': {
+        childSubsystemIds: ['child-ss'],
+        controlPorts: [],
+        dataPorts: [],
+        id: 'ss-1',
+        subgraphs: ['sg-1'],
+        subsystemId: 'ss-1',
+        subsystemName: 'Boundary Subsystem',
+      },
+    },
+  };
+}
+
 function renderGraphDesigner(options?: {
+  activeSubsystemId?: string | null;
   addModuleToEmptyCanvas?: GraphDesignerStore['addModuleToEmptyCanvas'];
   graphData?: UsecaseGraphData;
   placeSubgraphFromPalette?: GraphDesignerStore['placeSubgraphFromPalette'];
@@ -297,6 +347,9 @@ function renderGraphDesigner(options?: {
   const projectStore = createProjectStore(PROJECT_ID);
   if (options?.userPreferences) {
     projectStore.setState({userPreferences: options.userPreferences});
+  }
+  if (options?.activeSubsystemId !== undefined) {
+    projectStore.setState({activeSubsystemId: options.activeSubsystemId});
   }
   projectStore.setState({editModeState: 'edit'});
   graphDesignerStore.setState({
@@ -312,6 +365,9 @@ function renderGraphDesigner(options?: {
       : {}),
     ...(options?.placeSubgraphFromPalette
       ? {placeSubgraphFromPalette: options.placeSubgraphFromPalette}
+      : {}),
+    ...(options?.activeSubsystemId !== undefined
+      ? {activeSubsystemId: options.activeSubsystemId}
       : {}),
   });
 
@@ -332,6 +388,131 @@ function renderGraphDesigner(options?: {
 
   return {graphDesignerStore, projectStore, rendered};
 }
+
+beforeEach(() => {
+  mockVisualizerProps = null;
+});
+
+describe('GraphDesigner - active boundary navigation', () => {
+  it('keeps the active boundary scoped and does not navigate on self-double-click', async () => {
+    const boundaryGraphData = makeBoundaryGraphData();
+    const {graphDesignerStore} = renderGraphDesigner({
+      activeSubsystemId: null,
+      graphData: boundaryGraphData,
+    });
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph).toBeDefined();
+      expect(mockVisualizerProps?.graph?.levelId).toBe('uc-1');
+    });
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('ss-1');
+    });
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'ss-1',
+        NODE_KIND.SUBSYSTEM,
+        'Boundary Subsystem',
+      );
+    });
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBe('ss-1');
+      expect(mockVisualizerProps?.graph?.boundarySubsystem?.id).toBe('ss-1');
+      expect(
+        [
+          ...(mockVisualizerProps?.graph?.dataLinks ?? []),
+          ...(mockVisualizerProps?.graph?.controlLinks ?? []),
+        ].map((link) => link.id),
+      ).toContain('inner-boundary-link');
+    });
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'ss-1',
+        NODE_KIND.SUBSYSTEM,
+        'Boundary Subsystem',
+      );
+    });
+    expect(graphDesignerStore.getState().activeSubsystemId).toBe('ss-1');
+    expect(mockVisualizerProps?.graph?.boundarySubsystem?.id).toBe('ss-1');
+    expect(
+      [
+        ...(mockVisualizerProps?.graph?.dataLinks ?? []),
+        ...(mockVisualizerProps?.graph?.controlLinks ?? []),
+      ].map((link) => link.id),
+    ).toContain('inner-boundary-link');
+  });
+
+  it('navigates to a child subsystem from the active boundary', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      activeSubsystemId: 'ss-1',
+      graphData: makeBoundaryGraphData(),
+    });
+
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph).toBeDefined();
+    });
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'child-ss',
+        NODE_KIND.SUBSYSTEM,
+        'Child Subsystem',
+      );
+    });
+    expect(graphDesignerStore.getState().activeSubsystemId).toBe('child-ss');
+  });
+
+  it('does not leak an inner boundary resize into the outer opaque node', async () => {
+    const boundaryGraphData = makeBoundaryGraphData();
+    const {graphDesignerStore} = renderGraphDesigner({
+      activeSubsystemId: null,
+      graphData: boundaryGraphData,
+    });
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph?.levelId).toBe('uc-1');
+    });
+
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('ss-1');
+    });
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph?.boundarySubsystem?.id).toBe('ss-1');
+    });
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDragEnd?.({
+        correctedPositions: {
+          'ss-1': {x: -104, y: -52},
+          'ss-sibling': {x: 264, y: 232},
+        },
+        nodeId: 'sg-1',
+        position: {x: 10, y: 10},
+        resizedParents: {'ss-1': {height: 999, width: 999}},
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph?.boundarySubsystem).toEqual(
+        expect.objectContaining({x: -104, y: -52}),
+      );
+    });
+
+    act(() => {
+      graphDesignerStore.getState().clearActiveSubsystem();
+    });
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph?.levelId).toBe('uc-1');
+    });
+
+    const outerSubsystem = mockVisualizerProps?.graph?.subsystems?.find(
+      (node) => node.id === 'ss-1',
+    );
+    expect(outerSubsystem).toBeDefined();
+    expect(outerSubsystem?.width).not.toBe(999);
+    expect(outerSubsystem?.height).not.toBe(999);
+  });
+});
 
 async function renderWithGraphReady() {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
@@ -765,6 +946,8 @@ describe('GraphDesigner - visualizer wiring', () => {
     expect(buildContextMenuConfig).toHaveBeenCalledWith(expect.any(Function));
     const baseConfig = jest.mocked(buildContextMenuConfig).mock.results[0]
       .value as VisualizerContextMenuConfig;
+    const command = {command: 'complete'} as const;
+    jest.mocked(baseConfig.onAction).mockReturnValue(command);
 
     const moduleTarget = {
       kind: 'module',
@@ -775,6 +958,14 @@ describe('GraphDesigner - visualizer wiring', () => {
 
     mockVisualizerProps?.contextMenu?.onAction('delete', moduleTarget);
     expect(baseConfig.onAction).toHaveBeenCalledWith('delete', moduleTarget);
+    expect(
+      mockVisualizerProps?.contextMenu?.onAction('end-connection', {
+        connectionInProgress: {edgeMode: 'normal'},
+        kind: 'port',
+        nodeId: 'module-1',
+        port: {id: 'port-1', portIoType: 'input'},
+      }),
+    ).toEqual(command);
   });
 
   it('calls deleteSelection for node delete payloads', async () => {
@@ -812,6 +1003,35 @@ describe('GraphDesigner - visualizer wiring', () => {
       graphDesignerStore.getState,
       [],
       ['link-1'],
+    );
+  });
+
+  it('forwards edge mode from visualizer edge events to link operations', async () => {
+    mockConnectPorts.mockClear();
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeGraphData(),
+    });
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onEdgeConnected?.({
+        edgeKind: 'data',
+        edgeMode: 'EC',
+        sourceNodeId: 'source',
+        sourcePortId: 'out',
+        targetNodeId: 'target',
+        targetPortId: 'in',
+      });
+    });
+
+    expect(mockConnectPorts).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      'source',
+      'out',
+      'target',
+      'in',
+      'data',
+      'EC',
     );
   });
 });

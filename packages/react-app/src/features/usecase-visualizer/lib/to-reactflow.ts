@@ -61,6 +61,14 @@ function toNode<TData extends AnyNode>(
 
 export function toReactFlowNodes(graph: LevelView): Node[] {
   const out: Node[] = [];
+  if (graph.boundarySubsystem) {
+    out.push({
+      ...toNode(graph.boundarySubsystem, 'subsystem-boundary'),
+      deletable: false,
+      draggable: false,
+      selectable: true,
+    });
+  }
   graph.subsystems?.forEach((n: SubsystemNode) => {
     out.push(toNode(n, 'subsystem'));
   });
@@ -85,11 +93,12 @@ export function toReactFlowNodes(graph: LevelView): Node[] {
 function toDataEdge<TData extends DataLink | ProxyDataLink>(
   edge: TData,
   type: string,
+  boundaryId: string | undefined,
 ): ReactFlowEdge<TData> {
   // Domain invariant: each (sourcePortId, targetPortId) pair has at most one
   // DataLink, so Bezier paths cannot overlap — no per-edge offset is needed.
   return {
-    data: edge as TData & Record<string, unknown>,
+    data: {...edge, boundaryId} as unknown as TData & Record<string, unknown>,
     id: edge.id,
     label: edge.label,
     source: edge.sourceNodeId,
@@ -118,14 +127,15 @@ function toControlEdge<TData extends ControlLink | ProxyControlLink>(
 
 export function toReactFlowEdges(graph: LevelView): Edge[] {
   const out: Edge[] = [];
+  const boundaryId = graph.boundarySubsystem?.id;
   graph.dataLinks?.forEach((e: DataLink) => {
-    out.push(toDataEdge(e, 'data-link'));
+    out.push(toDataEdge(e, 'data-link', boundaryId));
   });
   graph.controlLinks?.forEach((e: ControlLink) => {
     out.push(toControlEdge(e, 'control-link'));
   });
   graph.proxyDataLinks?.forEach((e: ProxyDataLink) => {
-    out.push(toDataEdge(e, 'proxy-data-link'));
+    out.push(toDataEdge(e, 'proxy-data-link', boundaryId));
   });
   graph.proxyControlLinks?.forEach((e: ProxyControlLink) => {
     out.push(toControlEdge(e, 'proxy-control-link'));

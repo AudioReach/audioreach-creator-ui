@@ -6,8 +6,8 @@
 import type {SpfModuleDto} from '~entities/usecases/model/usecase-component.dto';
 import {type ApiResult, httpClient} from '~shared/api';
 import type {
-  PatchPropertiesRequestDto,
   PropertiesResponseDto,
+  PropertyCollectionRequestDto,
   PropertyDto,
 } from '~shared/lib/property.dto';
 import {unwrapPropertiesResponse} from '~shared/lib/property-api';
@@ -79,7 +79,7 @@ export async function fetchSpfModuleProperties(
 export async function patchSpfModuleProperties(
   projectId: string,
   moduleSystemId: string,
-  request: PatchPropertiesRequestDto,
+  request: PropertyCollectionRequestDto,
 ): Promise<ApiResult<PropertyDto[]>> {
   return httpClient.patch<PropertyDto[]>(
     `/projects/${projectId}/spf-modules/${moduleSystemId}/properties`,

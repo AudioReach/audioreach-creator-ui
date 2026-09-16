@@ -5,7 +5,7 @@
 
 import {ChevronRight, Link, Trash2} from 'lucide-react';
 
-import {EDGE_KIND} from '~entities/graph';
+import {EDGE_KIND, PORT_IO_TYPE, type PortIoType} from '~entities/graph';
 import {
   DELETE_HANDLERS,
   resolveGraphDesignerNodeId,
@@ -13,10 +13,37 @@ import {
   type UsecaseGraphData,
 } from '~features/graph-designer';
 import type {
+  ConnectionCommand,
   ContextMenuItem,
   ContextMenuTarget,
+  EdgeMode,
   VisualizerContextMenuConfig,
 } from '~features/usecase-visualizer';
+
+const LINK_MENU_ACTIONS = {
+  completeDanglingControlLink: 'complete-dangling-control-link',
+  completeDanglingDataLink: 'complete-dangling-data-link',
+  completeEcLink: 'complete-ec-link',
+  endConnection: 'end-connection',
+  startConnection: 'start-connection',
+  startDanglingControlLink: 'start-dangling-control-link',
+  startDanglingDataLink: 'start-dangling-data-link',
+  startEcLink: 'start-ec-link',
+} as const;
+
+const START_EDGE_MODES = {
+  [LINK_MENU_ACTIONS.startConnection]: 'normal',
+  [LINK_MENU_ACTIONS.startDanglingControlLink]: 'dangling',
+  [LINK_MENU_ACTIONS.startDanglingDataLink]: 'dangling',
+  [LINK_MENU_ACTIONS.startEcLink]: 'EC',
+} as const satisfies Record<string, EdgeMode>;
+
+const COMPLETE_LINK_ACTIONS: ReadonlySet<string> = new Set([
+  LINK_MENU_ACTIONS.completeEcLink,
+  LINK_MENU_ACTIONS.completeDanglingControlLink,
+  LINK_MENU_ACTIONS.completeDanglingDataLink,
+  LINK_MENU_ACTIONS.endConnection,
+]);
 
 type EdgeTarget = Extract<
   ContextMenuTarget,
@@ -76,11 +103,52 @@ function parentSubsystemIdOf(
   );
 }
 
-function buildPortItems(connectionInProgress: boolean): ContextMenuItem[] {
+function buildPortItems(
+  connectionInProgress: {edgeMode: EdgeMode} | null,
+  portIoType: PortIoType,
+): ContextMenuItem[] {
   if (connectionInProgress) {
-    return [{id: 'end-connection', label: 'End connection'}];
+    const completeItems = {
+      dangling: {
+        id:
+          portIoType === PORT_IO_TYPE.CONTROL
+            ? LINK_MENU_ACTIONS.completeDanglingControlLink
+            : LINK_MENU_ACTIONS.completeDanglingDataLink,
+        label:
+          portIoType === PORT_IO_TYPE.CONTROL
+            ? 'Complete Dangling Control Link'
+            : 'Complete Dangling Data Link',
+      },
+      EC: {id: LINK_MENU_ACTIONS.completeEcLink, label: 'Complete EC Link'},
+      normal: {id: LINK_MENU_ACTIONS.endConnection, label: 'End connection'},
+    } satisfies Record<EdgeMode, ContextMenuItem>;
+    return [completeItems[connectionInProgress.edgeMode]];
   }
-  return [{icon: Link, id: 'start-connection', label: 'Start connection'}];
+  const startConnection = {
+    icon: Link,
+    id: LINK_MENU_ACTIONS.startConnection,
+    label: 'Start connection',
+  };
+  if (portIoType === PORT_IO_TYPE.CONTROL) {
+    return [
+      startConnection,
+      {
+        id: LINK_MENU_ACTIONS.startDanglingControlLink,
+        label: 'Start Dangling Control Link',
+      },
+    ];
+  }
+  if (portIoType === PORT_IO_TYPE.INPUT || portIoType === PORT_IO_TYPE.OUTPUT) {
+    return [
+      startConnection,
+      {id: LINK_MENU_ACTIONS.startEcLink, label: 'Start EC Link'},
+      {
+        id: LINK_MENU_ACTIONS.startDanglingDataLink,
+        label: 'Start Dangling Data Link',
+      },
+    ];
+  }
+  return [];
 }
 
 export function buildContextMenuConfig(
@@ -106,6 +174,9 @@ export function buildContextMenuConfig(
               : []),
           ];
         case 'subsystem': {
+          if (target.node.id === store.activeSubsystemId) {
+            return [];
+          }
           const hasChildren = hasAnySubsystemChildren(store, target.node.id);
           return [
             {
@@ -125,7 +196,10 @@ export function buildContextMenuConfig(
           ];
         }
         case 'port':
-          return buildPortItems(target.connectionInProgress);
+          return buildPortItems(
+            target.connectionInProgress,
+            target.port.portIoType,
+          );
         case 'control-link':
         case 'data-link':
         case 'proxy-control-link':
@@ -138,8 +212,19 @@ export function buildContextMenuConfig(
           ];
       }
     },
-    onAction: (actionId, target) => {
+    onAction: (actionId, target): ConnectionCommand | void => {
       const store = get();
+      if (target.kind === 'port') {
+        const edgeMode =
+          START_EDGE_MODES[actionId as keyof typeof START_EDGE_MODES];
+        if (edgeMode) {
+          return {command: 'start', edgeMode};
+        }
+        if (COMPLETE_LINK_ACTIONS.has(actionId)) {
+          return {command: 'complete'};
+        }
+        return;
+      }
       if ('node' in target) {
         const nodeId = resolveContextMenuNodeId(target);
         if (actionId === 'delete') {
@@ -161,9 +246,6 @@ export function buildContextMenuConfig(
         if (actionId === 'expand') {
           void store.expandSubsystem(get, nodeId);
         }
-        return;
-      }
-      if (target.kind === 'port') {
         return;
       }
       if (actionId === 'delete') {

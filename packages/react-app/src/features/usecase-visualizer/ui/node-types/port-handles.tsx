@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {Handle} from '@xyflow/react';
+import type {CSSProperties} from 'react';
+
+import {Handle, type Position} from '@xyflow/react';
 
 import type {ModuleShape, Port} from '~entities/graph';
 
@@ -28,6 +30,17 @@ interface PortHandlesProps {
   showLinkCountColor?: boolean;
 }
 
+interface PortHandleProps {
+  fillClass?: string;
+  id: string;
+  isConnectable: boolean;
+  nodeId: string;
+  port: Port;
+  position: Position;
+  style?: CSSProperties;
+  type: 'source' | 'target';
+}
+
 const HANDLE_BORDER_CLASS = 'port-handle !border-neutral-10';
 const FIXED_FILL_CLASS = '!bg-[var(--node-shade-strong)]';
 
@@ -50,15 +63,48 @@ export function portFillClass(port: Port): string {
   return PORT_FILL_TOKENS.PARTIALLY_COVERED;
 }
 
+export function PortHandle({
+  fillClass,
+  id,
+  isConnectable,
+  nodeId,
+  port,
+  position,
+  style,
+  type,
+}: PortHandleProps) {
+  const connectionInProgress = useVisualizerStore(
+    (state) => state.connectionInProgress,
+  );
+  const isConnectionSource =
+    connectionInProgress?.nodeId === nodeId &&
+    connectionInProgress.port.id === port.id;
+  const sourceClass = isConnectionSource
+    ? 'port-handle-connection-source border-support-info bg-support-info-subtle shadow-[0_0_0_3px_var(--color-border-support-info)]'
+    : '';
+
+  return (
+    <Handle
+      className={`${HANDLE_BORDER_CLASS} ${fillClass ?? FIXED_FILL_CLASS} ${portStatusClass(
+        port,
+      )} ${sourceClass}`.trim()}
+      data-connection-source={isConnectionSource || undefined}
+      data-port-id={port.id}
+      id={id}
+      isConnectable={isConnectable && !port.locked}
+      position={position}
+      style={style}
+      type={type}
+    />
+  );
+}
+
 export function PortHandles({
   anchorHeight,
   node,
   showLinkCountColor,
 }: PortHandlesProps) {
   const connectable = node.locked !== true;
-  const connectionInProgress = useVisualizerStore(
-    (state) => state.connectionInProgress,
-  );
   const anchors = getPortAnchors(
     node.shape,
     node.ports,
@@ -69,23 +115,16 @@ export function PortHandles({
   return (
     <>
       {anchors.map((anchor) => {
-        const isConnectionSource =
-          connectionInProgress?.nodeId === node.id &&
-          connectionInProgress.port.id === anchor.port.id;
-        const sourceClass = isConnectionSource
-          ? 'port-handle-connection-source border-support-info bg-support-info-subtle shadow-[0_0_0_3px_var(--color-border-support-info)]'
-          : '';
-
         return (
-          <Handle
+          <PortHandle
             key={anchor.handleId}
-            className={`${HANDLE_BORDER_CLASS} ${
-              showLinkCountColor ? portFillClass(anchor.port) : FIXED_FILL_CLASS
-            } ${portStatusClass(anchor.port)} ${sourceClass}`.trim()}
-            data-connection-source={isConnectionSource || undefined}
-            data-port-id={anchor.port.id}
+            fillClass={
+              showLinkCountColor ? portFillClass(anchor.port) : undefined
+            }
             id={anchor.handleId}
-            isConnectable={connectable && !anchor.port.locked}
+            isConnectable={connectable}
+            nodeId={node.id}
+            port={anchor.port}
             position={anchor.position}
             style={anchorStyle(anchor)}
             type={anchor.handleKind}

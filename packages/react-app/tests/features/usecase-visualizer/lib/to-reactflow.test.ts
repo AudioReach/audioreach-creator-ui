@@ -153,6 +153,31 @@ describe('toReactFlowEdges — DataLink', () => {
     expect(e.sourceHandle).toBe('Data:10');
     expect(e.targetHandle).toBe('Data:20');
   });
+
+  it('tags data.boundaryId with the LevelView boundary subsystem id', () => {
+    const boundary: SubsystemNode = {
+      height: 120,
+      id: 'ss-1',
+      label: 'Boundary subsystem',
+      nodeKind: 'subsystem',
+      ports: [],
+      subsystemId: 'ss-1',
+      width: 240,
+      x: 0,
+      y: 0,
+    };
+    const edges = toReactFlowEdges({
+      boundarySubsystem: boundary,
+      dataLinks: [data],
+      levelId: 'L',
+    });
+    expect((edges[0].data as {boundaryId?: string}).boundaryId).toBe('ss-1');
+  });
+
+  it('leaves data.boundaryId undefined when the level has no boundary', () => {
+    const edges = toReactFlowEdges({dataLinks: [data], levelId: 'L'});
+    expect((edges[0].data as {boundaryId?: string}).boundaryId).toBeUndefined();
+  });
 });
 
 describe('toReactFlowEdges — ControlLink', () => {
@@ -275,5 +300,38 @@ describe('toReactFlowEdges — flatten', () => {
 
   it('returns empty array for empty LevelView', () => {
     expect(toReactFlowEdges({levelId: 'L'})).toEqual([]);
+  });
+});
+
+describe('toReactFlowNodes — subsystem boundary', () => {
+  it('maps the boundary slot without changing its identity or data', () => {
+    const boundary: SubsystemNode = {
+      height: 120,
+      id: 'ss-1',
+      label: 'Boundary subsystem',
+      meta: {systemId: 'system-1'},
+      nodeKind: 'subsystem',
+      ports: [{id: 'in-1', portIoType: 'input'}],
+      subsystemId: 'subsystem-1',
+      width: 240,
+      x: 10,
+      y: 20,
+    };
+
+    expect(
+      toReactFlowNodes({boundarySubsystem: boundary, levelId: 'ss-1'}),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          data: boundary,
+          deletable: false,
+          draggable: false,
+          id: 'ss-1',
+          position: {x: 10, y: 20},
+          selectable: true,
+          type: 'subsystem-boundary',
+        }),
+      ]),
+    );
   });
 });

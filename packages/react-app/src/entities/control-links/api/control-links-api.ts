@@ -4,16 +4,14 @@
  */
 
 import {type ApiResult, httpClient} from '~shared/api';
-import type {ControlLinkDto} from '~entities/usecases/model/usecase-component.dto';
 import type {
-  PatchPropertiesRequestDto,
   PropertiesResponseDto,
+  PropertyCollectionRequestDto,
   PropertyDto,
 } from '~shared/lib/property.dto';
 import {unwrapPropertiesResponse} from '~shared/lib/property-api';
 
 export type ControlLinkPropertiesResponseDto = PropertiesResponseDto;
-export type ControlLinkResponseDto = ControlLinkDto;
 
 export async function fetchControlLinkProperties(
   projectId: string,
@@ -28,10 +26,11 @@ export async function fetchControlLinkProperties(
 export async function patchControlLinkProperties(
   projectId: string,
   controlLinkId: string,
-  request: PatchPropertiesRequestDto,
-): Promise<ApiResult<ControlLinkResponseDto[]>> {
-  return httpClient.patch<ControlLinkResponseDto[]>(
+  request: PropertyCollectionRequestDto,
+): Promise<ApiResult<PropertyDto[]>> {
+  const result = await httpClient.patch<ControlLinkPropertiesResponseDto>(
     `/projects/${projectId}/control-links/${controlLinkId}/properties`,
     request,
   );
+  return unwrapPropertiesResponse(result);
 }

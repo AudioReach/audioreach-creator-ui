@@ -15,8 +15,10 @@ export type {
   // Context menu
   ContextMenuItem,
   ContextMenuTarget,
+  ConnectionCommand,
   // Event payloads
   EdgeConnectPayload,
+  EdgeMode,
   NodeDragEndPayload,
   NodeDropPayload,
   SelectedEdgeRef,

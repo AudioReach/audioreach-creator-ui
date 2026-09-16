@@ -32,8 +32,12 @@ callbacks through props.
 - The host tab owns the edit toggle; the panel receives `isEditing` as a prop.
 - API-fetched property values are widget-local state, not persisted in the tab
   store.
-- Subgraph and container property PATCH endpoints are defined by the backend
-  team and are in scope.
+- Schema property updates use one backend PATCH per edited property; bulk
+  property PATCH requests are out of scope.
+- Generic schema updates for subgraphs, containers, and control links use the
+  corresponding entity endpoint and return the authoritative patched property.
+- Scenario and VSID are reserved subgraph properties and use their dedicated
+  endpoints rather than the generic property endpoint. ASoC is out of scope.
 - Container Type options come from the container properties GET payload.
 - Schema-property payloads shall be rendered through the existing Generic Tree
   View rather than through a Properties View-specific display-type mapper.
@@ -416,6 +420,33 @@ property data for that entity.
 When a selected or cached entity is deleted from graph data, the panel shall
 discard stale cached data and ignore any in-flight fetch response for that
 entity.
+
+#### FR-PV-40: Single-property schema updates
+
+When a user changes one editable schema property on a subgraph, container, or
+control link, the panel shall immediately issue exactly one PATCH for that
+property. The panel shall not construct or send bulk property PATCH requests;
+the control-link endpoint shall receive a one-item `properties` array.
+
+#### FR-PV-41: Authoritative schema reconciliation
+
+After a successful generic schema-property PATCH, the panel shall replace only
+the matching cached property with the authoritative property returned by the
+backend, preserving the card's other cached property data.
+
+#### FR-PV-42: Reserved Scenario update
+
+When a user changes a Scenario property, the panel shall call the dedicated
+subgraph Scenario endpoint with the edited property data. After success, the
+panel shall fetch and replace the edited subgraph card's complete schema tree.
+
+#### FR-PV-43: Reserved VSID update
+
+When a user changes a VSID property, the panel shall call the dedicated
+subgraph VSID endpoint with the edited property data. After success, the panel
+shall update the cached VSID property for every currently displayed subgraph
+card whose ID appears in `affectedSubgraphSystemIds` to the submitted value,
+without making further backend API calls for those affected cards.
 
 ---
 

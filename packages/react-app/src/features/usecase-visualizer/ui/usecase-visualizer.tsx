@@ -49,6 +49,7 @@ import {useTheme} from '~shared/providers/theme-provider';
 import '@xyflow/react/dist/style.css';
 
 import {captureScreenshot} from '../lib/capture-screenshot';
+import {connectionRoleForPort} from '../lib/connection-role';
 import {resolveDropTarget} from '../lib/drop-target';
 import {DATA_ARROW_MARKER_ID} from '../lib/edge-stroke';
 import {parsePortIdFromHandleId} from '../lib/port-geometry';
@@ -70,12 +71,14 @@ import {
   VISUALIZER_MODE,
 } from '../model/visualizer.types';
 
+import {BoundaryAwareConnectionLine} from './edge-types/boundary-aware-connection-line';
 import {ControlLinkEdge} from './edge-types/control-link-edge';
 import {DataLinkEdge} from './edge-types/data-link-edge';
 import {ContainerNode} from './node-types/container-node';
 import {ModuleNode} from './node-types/module-node';
 import {SubgraphNode} from './node-types/subgraph-node';
 import {SubgraphProxyNode} from './node-types/subgraph-proxy-node';
+import {SubsystemBoundaryNode} from './node-types/subsystem-boundary-node';
 import {SubsystemNode} from './node-types/subsystem-node';
 
 const nodeTypes = {
@@ -84,6 +87,7 @@ const nodeTypes = {
   subgraph: withGhostFallback(SubgraphNode),
   'subgraph-proxy': withGhostFallback(SubgraphProxyNode),
   subsystem: withGhostFallback(SubsystemNode),
+  'subsystem-boundary': withGhostFallback(SubsystemBoundaryNode),
 };
 const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
 
@@ -283,6 +287,9 @@ function VisualizerCanvas({
   const resizedParentsRef = useRef<
     Record<string, {height: number; width: number}>
   >({});
+  const correctedPositionsRef = useRef<Record<string, {x: number; y: number}>>(
+    {},
+  );
   // Capture initialViewport at mount only — changes after mount are ignored by
   // design.
   const initialViewportRef = useRef(initialViewport);
@@ -509,11 +516,10 @@ function VisualizerCanvas({
         }
         const sel = state.selection;
         const nodeIds = sel.selectedNodes
-          .filter(
-            (ref) =>
-              rfNodesRef.current.find((n) => n.id === ref.id)?.data.locked !==
-              true,
-          )
+          .filter((ref) => {
+            const node = rfNodesRef.current.find((n) => n.id === ref.id);
+            return node?.data.locked !== true && node?.deletable !== false;
+          })
           .map((ref) => ref.systemId);
         const edgeIds = sel.selectedEdges
           .map((ref) => ref.id)
@@ -609,6 +615,7 @@ function VisualizerCanvas({
       const edgeKind = sourceIsControl ? EDGE_KIND.CONTROL : EDGE_KIND.DATA;
       store.getState().eventHandlers?.onEdgeConnected?.({
         edgeKind,
+        edgeMode: 'normal',
         sourceNodeId: source,
         sourcePortId,
         targetNodeId: target,
@@ -633,7 +640,15 @@ function VisualizerCanvas({
       // the drag. resizedParentsRef is read only once on dragStop.
       // Ref write is outside the updater to keep the updater pure.
       const applied = applyNodeChanges(changes, rfNodesRef.current);
-      const {nodes: resized, resizedParents} = recalculateParentSizes(applied);
+      const {
+        correctedPositions,
+        nodes: resized,
+        resizedParents,
+      } = recalculateParentSizes(applied);
+      correctedPositionsRef.current = {
+        ...correctedPositionsRef.current,
+        ...correctedPositions,
+      };
       resizedParentsRef.current = resizedParents;
       rfNodesRef.current = resized;
       setRfNodes(resized);
@@ -643,12 +658,20 @@ function VisualizerCanvas({
 
   const handleNodeDragStop = useCallback(
     (_e: MouseEvent | TouchEvent, node: Node) => {
+      const correctedPositions = correctedPositionsRef.current;
       const rp = resizedParentsRef.current;
+      const settledNode = rfNodesRef.current.find(
+        (candidate) => candidate.id === node.id,
+      );
       store.getState().eventHandlers?.onNodeDragEnd?.({
         nodeId: node.id,
-        position: node.position,
+        position: settledNode?.position ?? node.position,
+        ...(Object.keys(correctedPositions).length > 0
+          ? {correctedPositions}
+          : {}),
         ...(Object.keys(rp).length > 0 ? {resizedParents: rp} : {}),
       });
+      correctedPositionsRef.current = {};
       resizedParentsRef.current = {};
     },
     [store],
@@ -743,9 +766,11 @@ function VisualizerCanvas({
           if (port.locked === true) {
             return;
           }
+          const connectionInProgress = store.getState().connectionInProgress;
           openContextMenu(event, {
-            connectionInProgress:
-              store.getState().connectionInProgress !== null,
+            connectionInProgress: connectionInProgress
+              ? {edgeMode: connectionInProgress.edgeMode}
+              : null,
             kind: 'port',
             nodeId: node.id,
             port,
@@ -782,19 +807,23 @@ function VisualizerCanvas({
 
   const handleMenuAction = useCallback(
     (item: ContextMenuItem, target: ContextMenuTarget) => {
-      if (target.kind === 'port') {
-        if (item.id === 'start-connection') {
-          store.getState().startConnection(target.nodeId, target.port);
-          setOpenMenu(null);
-          return;
-        }
-        if (item.id === 'end-connection') {
-          store.getState().completeConnection(target.nodeId, target.port);
-          setOpenMenu(null);
-          return;
+      const command = store.getState().contextMenu?.onAction(item.id, target);
+      if (target.kind === 'port' && command) {
+        const node = rfNodesRef.current.find((n) => n.id === target.nodeId);
+        const role = connectionRoleForPort(node?.type, target.port);
+        if (command.command === 'start') {
+          store
+            .getState()
+            .startConnection(
+              target.nodeId,
+              target.port,
+              command.edgeMode,
+              role,
+            );
+        } else {
+          store.getState().completeConnection(target.nodeId, target.port, role);
         }
       }
-      store.getState().contextMenu?.onAction(item.id, target);
       setOpenMenu(null);
     },
     [store],
@@ -825,6 +854,7 @@ function VisualizerCanvas({
       </svg>
       <ReactFlow
         colorMode={colorMode}
+        connectionLineComponent={BoundaryAwareConnectionLine}
         edgeTypes={edgeTypes}
         edges={rfEdges}
         minZoom={0.05}

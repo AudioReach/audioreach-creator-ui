@@ -109,6 +109,26 @@ describe('DataLinkEdge', () => {
     );
     expect(queryByTestId('edge-label-d1')).toBeNull();
   });
+
+  it('renders a bezier path regardless of boundary involvement', () => {
+    const {container} = renderEdge(
+      <DataLinkEdge {...makeEdgeProps({data: {boundaryId: 's'}, id: 'd1'})} />,
+    );
+    const path = findEdgePath(container);
+    expect(path.getAttribute('d')).toContain('C');
+  });
+
+  it('renders a different path when the source is the boundary, mirroring its position', () => {
+    const {container: plain} = renderEdge(
+      <DataLinkEdge {...makeEdgeProps({id: 'd1'})} />,
+    );
+    const {container: mirrored} = renderEdge(
+      <DataLinkEdge {...makeEdgeProps({data: {boundaryId: 's'}, id: 'd1'})} />,
+    );
+    expect(findEdgePath(mirrored).getAttribute('d')).not.toBe(
+      findEdgePath(plain).getAttribute('d'),
+    );
+  });
 });
 
 describe('ControlLinkEdge', () => {

@@ -33,8 +33,10 @@ function overlay<T extends AnyNode>(
   }
   let changed = false;
   const next = nodes.map((n) => {
-    const pos = positions[n.id];
-    const size = sizes[n.id];
+    const overrideId =
+      n.nodeKind === 'container' ? (n.logicalContainerId ?? n.id) : n.id;
+    const pos = positions[overrideId];
+    const size = sizes[overrideId];
     if (!pos && !size) {
       return n;
     }
@@ -58,6 +60,11 @@ export function applyPositionOverrides(
   }
   return {
     ...level,
+    boundarySubsystem: overlay(
+      level.boundarySubsystem ? [level.boundarySubsystem] : undefined,
+      positions,
+      sizes,
+    )?.[0],
     containers: overlay(level.containers, positions, sizes),
     modules: overlay(level.modules, positions, sizes),
     subgraphProxies: overlay(level.subgraphProxies, positions, sizes),
