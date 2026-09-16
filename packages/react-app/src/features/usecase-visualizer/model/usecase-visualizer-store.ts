@@ -11,6 +11,7 @@ import {
   type AnyNode,
   type Port,
 } from '~entities/graph';
+import {showToast} from '~shared/controls/global-toaster';
 
 import type {ConnectionEndpointRole} from '../lib/connection-role';
 
@@ -158,6 +159,17 @@ export function createVisualizerStore(): CreatedVisualizerStore {
             (source.role === 'source' && role === 'target') ||
             (source.role === 'target' && role === 'source');
           if (!complementaryRoles || source.nodeId === nodeId) {
+            if (
+              source.nodeId !== nodeId &&
+              source.port.portIoType === port.portIoType
+            ) {
+              showToast(
+                source.port.portIoType === PORT_IO_TYPE.INPUT
+                  ? "Can't connect two input ports connect an input to an output."
+                  : "Can't connect two output ports connect an input to an output.",
+                'warning',
+              );
+            }
             return {connectionInProgress: null};
           }
           const sourceIsRenderedSource = source.role === 'source';

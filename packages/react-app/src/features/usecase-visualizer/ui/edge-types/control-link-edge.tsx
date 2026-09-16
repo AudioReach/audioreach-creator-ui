@@ -11,6 +11,7 @@ import {EdgeBody} from './edge-body';
 
 export function ControlLinkEdge(props: EdgeProps) {
   const {
+    data,
     id,
     label,
     selected,
@@ -37,6 +38,7 @@ export function ControlLinkEdge(props: EdgeProps) {
     <EdgeBody
       dashed
       edgeId={id}
+      isDangling={(data as {isDangling?: boolean} | undefined)?.isDangling}
       label={label}
       labelX={labelX}
       labelY={labelY}
