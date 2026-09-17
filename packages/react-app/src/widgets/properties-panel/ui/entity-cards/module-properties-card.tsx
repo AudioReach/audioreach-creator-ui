@@ -102,8 +102,11 @@ function ModulePropertiesCardBody({
     onSave: useCallback(
       async (alias: string) => {
         const result = await patchSpfModule(projectId, moduleId, {alias});
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {
+            message: getIssueMessage(result, 'Failed to save module'),
+            ok: false,
+          };
         }
 
         const committedAlias = result.data?.alias ?? alias;
@@ -121,8 +124,11 @@ function ModulePropertiesCardBody({
         const result = await patchSpfModule(projectId, moduleId, {
           containerSystemId,
         });
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {
+            message: getIssueMessage(result, 'Failed to save module'),
+            ok: false,
+          };
         }
 
         const committedContainerId =
@@ -230,6 +236,7 @@ function ModulePropertiesCardBody({
         error={schemaData.error}
         isEditing={false}
         isLoading={schemaData.isLoading}
+        loadWarning={schemaData.loadWarning}
         onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
         onRetry={() => void schemaData.load()}
         title="Schema Properties"
@@ -301,8 +308,11 @@ function usePortCountSave({
           [requestField]: nextValue,
         });
 
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {
+            message: getIssueMessage(result, 'Failed to save module'),
+            ok: false,
+          };
         }
 
         onModulePortCountChange(moduleId, field, nextValue);

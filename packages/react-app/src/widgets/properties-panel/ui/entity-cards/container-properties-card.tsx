@@ -86,8 +86,11 @@ function ContainerPropertiesCardBody({
         containerId: nextId,
       });
 
-      if (!result.success) {
-        return {message: result.message, ok: false};
+      if (hasBlockingIssues(result)) {
+        return {
+          message: getIssueMessage(result, 'Failed to save container'),
+          ok: false,
+        };
       }
 
       const committedId = result.data?.containerId ?? nextId;
@@ -143,6 +146,7 @@ function ContainerPropertiesCardBody({
         error={schemaData.error}
         isEditing={isEditing}
         isLoading={schemaData.isLoading}
+        loadWarning={schemaData.loadWarning}
         onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
         onRetry={() => void schemaData.load()}
         title="Schema Properties"

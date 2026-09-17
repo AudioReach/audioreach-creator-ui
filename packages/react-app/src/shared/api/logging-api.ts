@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {hasBlockingIssues} from './api-result-utils';
 import {httpClient} from './http-client';
 import type {UserLogRequestDto} from './logging.types';
 
@@ -19,7 +20,7 @@ export class LoggingApiService {
   async sendLog(log: UserLogRequestDto): Promise<boolean> {
     try {
       const result = await httpClient.post<void>('/log', log);
-      return result.success;
+      return !hasBlockingIssues(result);
     } catch (error) {
       console.warn('[LoggingAPI] Failed to send log:', error);
       return false;

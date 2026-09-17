@@ -1304,9 +1304,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       },
     });
     mockPutCalData.mockResolvedValueOnce({
-      data: undefined,
-      message: 'boom',
-      success: false,
+      issues: [{code: 'SAVE_FAILED', message: 'boom', severity: 'ERROR'}],
     });
 
     await store.getState().setModuleEnable(MODULE_ID, true);

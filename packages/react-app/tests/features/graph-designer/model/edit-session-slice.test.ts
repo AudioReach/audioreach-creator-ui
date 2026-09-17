@@ -65,7 +65,7 @@ function makeGraphData(subgraphIds: string[]): UsecaseGraphData {
   for (const subgraphId of subgraphIds) {
     subgraphs[subgraphId] = {
       containers: [],
-      subgraphId,
+      systemId: subgraphId,
       subgraphName: subgraphId,
       subgraphType: '',
     };
@@ -134,7 +134,9 @@ describe('EditSessionSlice', () => {
 
   it('does not carry session-local state from a prior session into a new one', async () => {
     const {store} = createTestStore();
-    mockEndSession.mockResolvedValue({message: 'ok', success: true});
+    mockEndSession.mockResolvedValue({
+      data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+    });
     mockStartSession.mockResolvedValue({
       data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
       message: 'ok',
@@ -363,7 +365,9 @@ describe('EditSessionSlice', () => {
 
   describe('enterEditMode provenance seeding', () => {
     beforeEach(() => {
-      mockEndSession.mockResolvedValue({message: 'ok', success: true});
+      mockEndSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+      });
       mockStartSession.mockResolvedValue({
         data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
         message: 'ok',
@@ -404,7 +408,9 @@ describe('EditSessionSlice', () => {
 
     it('ends the session, starts designer mode, and updates the real project store', async () => {
       const {projectStore, store} = createTestStore();
-      mockEndSession.mockResolvedValue({message: 'ok', success: true});
+      mockEndSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+      });
       mockStartSession.mockResolvedValue({
         data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
         message: 'ok',
@@ -420,7 +426,9 @@ describe('EditSessionSlice', () => {
 
     it('proceeds when endSession fails but getProjectById confirms READONLY', async () => {
       const {projectStore, store} = createTestStore();
-      mockEndSession.mockResolvedValue({message: 'failed', success: false});
+      mockEndSession.mockResolvedValue({
+        issues: [{code: 'END_FAILED', message: 'failed', severity: 'ERROR'}],
+      });
       mockGetProjectById.mockResolvedValue({
         data: {
           description: '',
@@ -444,7 +452,9 @@ describe('EditSessionSlice', () => {
 
     it('releases the lock and returns false when endSession fails and getProjectById reports a non-READONLY mode', async () => {
       const {projectStore, store} = createTestStore();
-      mockEndSession.mockResolvedValue({message: 'failed', success: false});
+      mockEndSession.mockResolvedValue({
+        issues: [{code: 'END_FAILED', message: 'failed', severity: 'ERROR'}],
+      });
       mockGetProjectById.mockResolvedValue({
         data: {
           description: '',
@@ -465,7 +475,9 @@ describe('EditSessionSlice', () => {
 
     it('releases the lock and returns false when startSession fails', async () => {
       const {projectStore, store} = createTestStore();
-      mockEndSession.mockResolvedValue({message: 'ok', success: true});
+      mockEndSession.mockResolvedValue({
+        data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+      });
       mockStartSession.mockResolvedValue({message: 'failed', success: false});
 
       expect(await store.getState().enterEditMode()).toBe(false);

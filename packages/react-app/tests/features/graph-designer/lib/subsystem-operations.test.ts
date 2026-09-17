@@ -202,7 +202,9 @@ beforeEach(() => {
   mockMoveSubsystemComponents.mockReset();
   mockPatchSubsystem.mockReset();
   mockShowToast.mockClear();
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-subsystem-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {
       projectId: 'proj-ss-ops-1',
@@ -374,8 +376,7 @@ describe('createSubsystemOperations - moveToSubsystem new destination', () => {
       success: true,
     });
     mockMoveSubsystemComponents.mockResolvedValueOnce({
-      message: 'boom',
-      success: false,
+      issues: [{code: 'MOVE_FAILED', message: 'boom', severity: 'ERROR'}],
     });
 
     const ok = await subsystemOperations.moveToSubsystem(get, 'sg-1', {
@@ -521,8 +522,7 @@ describe('createSubsystemOperations - deleteSubsystem', () => {
     });
     await enterEditMode(store);
     mockDeleteSubsystemApi.mockResolvedValueOnce({
-      message: 'Subsystem is not empty',
-      success: false,
+      issues: [{code: 'NOT_EMPTY', message: 'Subsystem is not empty', severity: 'ERROR'}],
     });
 
     const ok = await subsystemOperations.deleteSubsystem(get, 'ss-1');

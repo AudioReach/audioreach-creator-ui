@@ -113,8 +113,13 @@ describe('useSchemaCardData', () => {
     const fetchProperties = jest
       .fn()
       .mockResolvedValueOnce({
-        message: 'Backend unavailable',
-        success: false,
+        issues: [
+          {
+            code: 'BACKEND_UNAVAILABLE',
+            message: 'Backend unavailable',
+            severity: 'ERROR',
+          },
+        ],
       })
       .mockResolvedValueOnce(successResult([property]));
 
@@ -138,6 +143,37 @@ describe('useSchemaCardData', () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.data?.items[0]?.name).toBe('Scenario ID');
+  });
+
+  it('keeps partial load data and exposes the issue as a warning', async () => {
+    const property = makeProperty(1, 'Scenario ID');
+    const fetchProperties = jest.fn().mockResolvedValue({
+      data: [property],
+      issues: [
+        {
+          code: 'PROPERTY_PAYLOAD_NOT_FOUND',
+          message:
+            'No payload found for property definition with systemId 5410652176 (propertyId 134222028)',
+          severity: 'ERROR',
+        },
+      ],
+    });
+
+    const {result} = renderHook(() =>
+      useSchemaCardData({
+        entityId: 'sg-1',
+        entityType: 'subgraph',
+        fetchProperties,
+        projectId: 'proj-1',
+        saveProperty: jest.fn(),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.data?.items[0]?.name).toBe('Scenario ID'),
+    );
+    expect(result.current.error).toBeNull();
+    expect(result.current.loadWarning).toContain('No payload found');
   });
 
   it('patches dirty tree items and reconciles returned authoritative data', async () => {

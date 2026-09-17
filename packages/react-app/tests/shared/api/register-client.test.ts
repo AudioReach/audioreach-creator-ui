@@ -49,8 +49,6 @@ describe('ensureRegistered', () => {
         clientName: 'audioreach-creator-ui',
         token: 'token-123',
       },
-      message: 'OK',
-      success: true,
     });
 
     const result = await ensureRegistered();
@@ -77,8 +75,6 @@ describe('ensureRegistered', () => {
         clientId: 'client-1',
         clientName: 'audioreach-creator-ui',
       },
-      message: 'OK',
-      success: true,
     });
 
     const result = await ensureRegistered();
@@ -101,8 +97,6 @@ describe('ensureRegistered', () => {
         clientName: 'audioreach-creator-ui',
         token: 'token-123',
       },
-      message: 'OK',
-      success: true,
     });
 
     const result = await ensureRegistered();
@@ -116,6 +110,26 @@ describe('ensureRegistered', () => {
     expect(mockStore.markUnavailable).toHaveBeenCalledWith(
       'No client ID received from backend',
     );
+    expect(mockStore.setRegistrationStatus).toHaveBeenCalledWith('error');
+  });
+
+  it('does not register when the backend returns a transport issue', async () => {
+    mockHttpClient.post.mockResolvedValue({
+      issues: [
+        {
+          code: 'TRANSPORT_HTTP_422',
+          message: 'Unprocessable',
+          severity: 'ERROR',
+        },
+      ],
+    });
+
+    const result = await ensureRegistered();
+
+    expect(result).toBe(false);
+    expect(mockHttpClient.setAuthToken).not.toHaveBeenCalled();
+    expect(mockStore.incrementFail).toHaveBeenCalledWith('Unprocessable');
+    expect(mockStore.markUnavailable).toHaveBeenCalledWith('Unprocessable');
     expect(mockStore.setRegistrationStatus).toHaveBeenCalledWith('error');
   });
 

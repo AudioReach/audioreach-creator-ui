@@ -47,7 +47,9 @@ beforeEach(() => {
     message: undefined as never,
     success: true,
   });
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
     message: 'ok',
@@ -255,7 +257,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
                 } as never,
               ],
               id: 2,
-              moduleId: 300,
+              moduleDefinitionSystemId: 'mod-def-300',
               name: 'Mod B',
               subgraphId: '2',
               systemId: 'mod-B',

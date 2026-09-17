@@ -332,7 +332,7 @@ beforeEach(() => {
   useUsecaseSelectionControlStore.setState({stateByProject: {}});
   // Default: no search active
   mockUseUsecaseSearch.mockReturnValue({isSearching: false, searchData: null});
-  mockDeleteUsecases.mockResolvedValue({success: true});
+  mockDeleteUsecases.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -392,7 +392,9 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   // ── 4. Singular error toast on 1 item failure ─────────────────────────────
 
   it('shows singular error toast when 1 usecase fails to delete', async () => {
-    mockDeleteUsecases.mockResolvedValue({success: false});
+    mockDeleteUsecases.mockResolvedValue({
+      issues: [{code: 'DELETE_FAILED', message: 'Failed', severity: 'ERROR'}],
+    });
     const user = userEvent.setup();
     renderControl(['Speaker_Mic']);
 
@@ -410,7 +412,9 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   // ── 5. Plural error toast on multiple items failure ───────────────────────
 
   it('shows plural error toast when multiple usecases fail to delete', async () => {
-    mockDeleteUsecases.mockResolvedValue({success: false});
+    mockDeleteUsecases.mockResolvedValue({
+      issues: [{code: 'DELETE_FAILED', message: 'Failed', severity: 'ERROR'}],
+    });
     const user = userEvent.setup();
     renderControl(['Speaker_Mic', 'HFP_Rx_Playback']);
 
@@ -428,9 +432,9 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   // ── 6. Progress UI visible while in flight ────────────────────────────────
 
   it('shows progress UI while delete is in flight and removes it after resolution', async () => {
-    let resolveDelete!: (value: {success: boolean}) => void;
+    let resolveDelete!: (value: Record<never, never>) => void;
     mockDeleteUsecases.mockReturnValue(
-      new Promise<{success: boolean}>((resolve) => {
+      new Promise<Record<never, never>>((resolve) => {
         resolveDelete = resolve;
       }),
     );
@@ -447,7 +451,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
     expect(mockDeleteUsecases).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveDelete({success: true});
+      resolveDelete({});
     });
 
     await waitFor(() => {
@@ -458,7 +462,9 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
   // ── 7. UI unchanged on failure ────────────────────────────────────────────
 
   it('leaves list and selection unchanged when backend returns failure', async () => {
-    mockDeleteUsecases.mockResolvedValue({success: false});
+    mockDeleteUsecases.mockResolvedValue({
+      issues: [{code: 'DELETE_FAILED', message: 'Failed', severity: 'ERROR'}],
+    });
     const user = userEvent.setup();
     renderControl(['Speaker_Mic']);
 

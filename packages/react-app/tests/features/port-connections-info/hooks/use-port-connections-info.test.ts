@@ -294,8 +294,7 @@ describe('usePortConnectionsInfo — failures', () => {
 
   it('stage-A failure toasts and returns to closed, never reaching error', async () => {
     mockGetDataLinkWithUsecases.mockResolvedValue({
-      message: 'link fetch failed',
-      success: false,
+      issues: [{code: 'LINK_FETCH_FAILED', message: 'link fetch failed', severity: 'ERROR'}],
     });
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
@@ -309,7 +308,7 @@ describe('usePortConnectionsInfo — failures', () => {
   });
 
   it('a stage-A failure with no message falls back to a default toast message', async () => {
-    mockGetDataLinkWithUsecases.mockResolvedValue({success: false});
+    mockGetDataLinkWithUsecases.mockResolvedValue({issues: []});
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
     await act(async () => {
@@ -337,8 +336,7 @@ describe('usePortConnectionsInfo — failures', () => {
     ];
     mockGetDataLinkWithUsecases.mockResolvedValue({data: links, success: true});
     mockGetModulesBySystemIds.mockResolvedValue({
-      message: 'module lookup failed',
-      success: false,
+      issues: [{code: 'MODULE_LOOKUP_FAILED', message: 'module lookup failed', severity: 'ERROR'}],
     });
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
@@ -369,7 +367,7 @@ describe('usePortConnectionsInfo — failures', () => {
       },
     ];
     mockGetDataLinkWithUsecases.mockResolvedValue({data: links, success: true});
-    mockGetModulesBySystemIds.mockResolvedValue({success: false});
+    mockGetModulesBySystemIds.mockResolvedValue({issues: []});
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
     await act(async () => {
