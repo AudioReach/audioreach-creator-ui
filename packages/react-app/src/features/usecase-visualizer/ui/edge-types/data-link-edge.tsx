@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {EdgeProps} from '@xyflow/react';
+import type {Edge, EdgeProps} from '@xyflow/react';
+
+import type {DataLink} from '~entities/graph';
 
 import {
   getBoundaryAwareBezierPath,
@@ -12,7 +14,9 @@ import {
 import {DATA_ARROW_MARKER_ID, pickEdgeStrokeWidth} from '../../lib/edge-stroke';
 import {EdgeBody} from './edge-body';
 
-export function DataLinkEdge(props: EdgeProps) {
+type DataLinkEdgeProps = EdgeProps<Edge<DataLink & Record<string, unknown>>>;
+
+export function DataLinkEdge(props: DataLinkEdgeProps) {
   const {
     data,
     id,
@@ -27,6 +31,7 @@ export function DataLinkEdge(props: EdgeProps) {
     targetX,
     targetY,
   } = props;
+  const {isDangling, isEcLink} = data ?? {};
 
   const boundaryId =
     typeof data?.boundaryId === 'string' ? data.boundaryId : undefined;
@@ -55,8 +60,8 @@ export function DataLinkEdge(props: EdgeProps) {
     <EdgeBody
       arrowMarkerId={DATA_ARROW_MARKER_ID}
       edgeId={id}
-      isDangling={(data as {isDangling?: boolean} | undefined)?.isDangling}
-      isEcLink={(data as {isEcLink?: boolean} | undefined)?.isEcLink}
+      isDangling={isDangling}
+      isEcLink={isEcLink}
       label={label}
       labelX={labelX}
       labelY={labelY}
