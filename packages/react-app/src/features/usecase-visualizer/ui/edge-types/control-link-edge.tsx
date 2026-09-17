@@ -3,13 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type EdgeProps, getBezierPath} from '@xyflow/react';
+import {type Edge, type EdgeProps, getBezierPath} from '@xyflow/react';
+
+import type {ControlLink} from '~entities/graph';
 
 import {pickEdgeStrokeWidth} from '../../lib/edge-stroke';
 
 import {EdgeBody} from './edge-body';
 
-export function ControlLinkEdge(props: EdgeProps) {
+type ControlLinkEdgeProps = EdgeProps<
+  Edge<ControlLink & Record<string, unknown>>
+>;
+
+export function ControlLinkEdge(props: ControlLinkEdgeProps) {
   const {
     data,
     id,
@@ -22,6 +28,7 @@ export function ControlLinkEdge(props: EdgeProps) {
     targetX,
     targetY,
   } = props;
+  const {isDangling} = data ?? {};
 
   const [path, labelX, labelY] = getBezierPath({
     sourcePosition,
@@ -38,7 +45,7 @@ export function ControlLinkEdge(props: EdgeProps) {
     <EdgeBody
       dashed
       edgeId={id}
-      isDangling={(data as {isDangling?: boolean} | undefined)?.isDangling}
+      isDangling={isDangling}
       label={label}
       labelX={labelX}
       labelY={labelY}

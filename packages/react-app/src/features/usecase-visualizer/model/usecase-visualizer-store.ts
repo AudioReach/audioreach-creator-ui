@@ -165,8 +165,8 @@ export function createVisualizerStore(): CreatedVisualizerStore {
             ) {
               showToast(
                 source.port.portIoType === PORT_IO_TYPE.INPUT
-                  ? "Can't connect two input ports connect an input to an output."
-                  : "Can't connect two output ports connect an input to an output.",
+                  ? "Can't connect two input ports. Connect an input to an output."
+                  : "Can't connect two output ports. Connect an input to an output.",
                 'warning',
               );
             }
