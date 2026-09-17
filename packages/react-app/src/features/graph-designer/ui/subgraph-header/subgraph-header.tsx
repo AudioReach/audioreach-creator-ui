@@ -35,7 +35,7 @@ export function SubgraphHeader({subgraphId}: SubgraphHeaderProps) {
   const subgraphModules = useMemo(
     () =>
       Object.values(moduleInstances).filter(
-        (module) => module.subgraphId === subgraphId,
+        (module) => module.subgraphSystemId === subgraphId,
       ),
     [moduleInstances, subgraphId],
   );

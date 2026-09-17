@@ -72,10 +72,10 @@ function setupTableMock() {
 }
 
 const rowA: ConnectionRow = {
-  connectionType: 'MODULE_MODULE',
-  isDangling: false,
-  moduleId: '0x100',
+  isInterUsecase: false,
+  linkKind: 'MODULE_MODULE',
   moduleName: 'ModuleA',
+  moduleNaturalId: '0x100',
   otherModuleSystemId: 'mod-a',
   otherPortId: '0x10',
   subgraphSystemId: 'sg-sys-1',
@@ -83,10 +83,10 @@ const rowA: ConnectionRow = {
   usecases: [],
 };
 const rowB: ConnectionRow = {
-  connectionType: 'SUBSYSTEM_MODULE',
-  isDangling: true,
-  moduleId: '0x200',
+  isInterUsecase: true,
+  linkKind: 'SUBSYSTEM_MODULE',
   moduleName: 'ModuleB',
+  moduleNaturalId: '0x200',
   otherModuleSystemId: 'mod-b',
   otherPortId: '0x20',
   subgraphSystemId: 'sg-sys-2',
@@ -186,7 +186,7 @@ describe('ConnectionsTable', () => {
     );
     expect(screen.queryByText('Module Id')).not.toBeInTheDocument();
     expect(screen.queryByText('Subgraph Id')).not.toBeInTheDocument();
-    expect(screen.queryByText(rowA.moduleId)).not.toBeInTheDocument();
+    expect(screen.queryByText(rowA.moduleNaturalId)).not.toBeInTheDocument();
   });
 
   it('shows Module Id and resolved Subgraph Id when showAdvancedDetails is true', () => {
@@ -201,7 +201,7 @@ describe('ConnectionsTable', () => {
     );
     expect(screen.getByText('Module Id')).toBeInTheDocument();
     expect(screen.getByText('Subgraph Id')).toBeInTheDocument();
-    expect(screen.getByText(rowA.moduleId)).toBeInTheDocument();
+    expect(screen.getByText(rowA.moduleNaturalId)).toBeInTheDocument();
     expect(resolveSubgraphDisplayMock).toHaveBeenCalledWith(
       rowA.subgraphSystemId,
     );

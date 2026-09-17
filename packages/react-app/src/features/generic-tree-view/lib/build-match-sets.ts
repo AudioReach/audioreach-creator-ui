@@ -22,23 +22,23 @@ export function buildMatchSets(data: TreeViewData, search: string): MatchSets {
   function walkElems(
     elems: AnyElementDto[],
     itemId: string,
-    prefix: string[],
+    prefix: Array<string | undefined>,
   ): boolean {
     let anyMatch = false;
     for (const elem of elems) {
       const name =
-        elem.type === 'CONFIG_ELEMENT' ||
-        elem.type === 'STRUCT' ||
-        elem.type === 'ELEMENT_TEMPLATE_ARRAY'
-          ? elem.name
+        elem.type === 'ConfigElement' ||
+        elem.type === 'Struct' ||
+        elem.type === 'ElementTemplateArray'
+          ? (elem.name ?? '')
           : '';
       const selfMatch = name.toLowerCase().includes(lower);
       let childMatch = false;
-      if (elem.type === 'STRUCT') {
+      if (elem.type === 'Struct') {
         childMatch = walkElems(elem.value, itemId, [...prefix, elem.name]);
-      } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+      } else if (elem.type === 'ElementTemplateArray') {
         for (const inst of elem.value) {
-          if (inst.type === 'STRUCT') {
+          if (inst.type === 'Struct') {
             if (walkElems(inst.value, itemId, [...prefix, inst.name])) {
               childMatch = true;
             }

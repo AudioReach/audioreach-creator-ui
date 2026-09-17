@@ -15,6 +15,7 @@ import type {
   ControlLinkDto,
   DataLinkDto,
 } from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 
@@ -86,10 +87,10 @@ export function createSubgraphOperations(
     connection: GraphDesignerStore['excludedLinks'][number],
   ): LinkEndpoints {
     return {
-      destinationPortSystemId: connection.toPortId,
-      destinationSystemId: connection.toModuleId,
-      sourcePortSystemId: connection.fromPortId,
-      sourceSystemId: connection.fromModuleId,
+      destinationPortSystemId: connection.destinationPortSystemId,
+      destinationSystemId: connection.destinationSystemId,
+      sourcePortSystemId: connection.sourcePortSystemId,
+      sourceSystemId: connection.sourceSystemId,
     };
   }
 
@@ -105,7 +106,7 @@ export function createSubgraphOperations(
     const droppedModuleIds = new Set<string>();
     const moduleInstances: typeof graphData.moduleInstances = {};
     for (const [id, m] of Object.entries(graphData.moduleInstances)) {
-      if (m.subgraphId === subgraphId) {
+      if (m.subgraphSystemId === subgraphId) {
         droppedModuleIds.add(id);
         continue;
       }
@@ -115,8 +116,8 @@ export function createSubgraphOperations(
     const touchesDroppedModule = (
       c: GraphDesignerStore['excludedLinks'][number],
     ): boolean =>
-      droppedModuleIds.has(c.fromModuleId) ||
-      droppedModuleIds.has(c.toModuleId);
+      droppedModuleIds.has(c.sourceSystemId) ||
+      droppedModuleIds.has(c.destinationSystemId);
 
     const removedConnections =
       graphData.connections.filter(touchesDroppedModule);
@@ -132,7 +133,7 @@ export function createSubgraphOperations(
 
     const containers: typeof graphData.containers = {};
     for (const [id, c] of Object.entries(graphData.containers)) {
-      if (c.subgraphId === subgraphId) {
+      if (c.subgraphSystemId === subgraphId) {
         continue;
       }
       containers[id] = c;
@@ -157,7 +158,7 @@ export function createSubgraphOperations(
         .filter(
           (connection, index, self) =>
             self.findIndex(
-              (c) => c.connectionId === connection.connectionId,
+              (c) => c.systemId === connection.systemId,
             ) === index,
         )
         .map(connectionToLinkEndpoints),
@@ -170,10 +171,12 @@ export function createSubgraphOperations(
     subgraphId: string,
   ): Promise<void> {
     const result = await getSubgraphPairs(projectId, subgraphId);
-    if (!result.success || !result.data) {
+    if (hasBlockingIssues(result) || !result.data) {
       showToast(
-        result.message ??
+        getIssueMessage(
+          result,
           'Could not load linked-subgraph connections for this subgraph',
+        ),
         'danger',
       );
       return;
@@ -230,14 +233,17 @@ export function createSubgraphOperations(
     }
 
     const moduleIds = Object.values(get().graphData!.moduleInstances)
-      .filter((m) => m.subgraphId === subgraphId)
-      .map((m) => m.moduleInstanceId);
+      .filter((m) => m.subgraphSystemId === subgraphId)
+      .map((m) => m.systemId);
 
     for (const moduleId of moduleIds) {
       const result = await deleteSpfModule(projectId, moduleId);
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         if (!options?.suppressToast) {
-          showToast(result.message ?? 'Failed to delete subgraph', 'danger');
+          showToast(
+            getIssueMessage(result, 'Failed to delete subgraph'),
+            'danger',
+          );
         }
         return false;
       }
@@ -270,7 +276,7 @@ export function createSubgraphOperations(
         return;
       }
       const connection = graphData.connections.find(
-        (c) => c.connectionId === connectionId,
+        (c) => c.systemId === connectionId,
       );
       if (!connection) {
         return;
@@ -280,7 +286,7 @@ export function createSubgraphOperations(
         graphData: s.graphData && {
           ...s.graphData,
           connections: s.graphData.connections.filter(
-            (c) => c.connectionId !== connectionId,
+            (c) => c.systemId !== connectionId,
           ),
         },
       }));
@@ -290,9 +296,9 @@ export function createSubgraphOperations(
     placeSubgraphFromPalette: (get, subgraphId, position) =>
       withMutationLock(get, async () => {
         const result = await getSubgraphContents(projectId, subgraphId);
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           showToast(
-            result.message ?? 'Failed to load subgraph contents',
+            getIssueMessage(result, 'Failed to load subgraph contents'),
             'danger',
           );
           return false;
@@ -305,7 +311,7 @@ export function createSubgraphOperations(
         }
 
         const defModuleTypeById = new Map(
-          get().moduleList.map((d) => [d.moduleId, d.moduleType]),
+          get().moduleList.map((d) => [d.moduleDefinitionSystemId, d.moduleType]),
         );
 
         set((s) => {
@@ -327,7 +333,7 @@ export function createSubgraphOperations(
             moduleInstances = upsertModule(
               moduleInstances,
               m,
-              defModuleTypeById.get(String(m.moduleId)) ?? '',
+              defModuleTypeById.get(m.moduleDefinitionSystemId) ?? '',
               connections,
             );
             // A module already on canvas keeps its dragged position;
@@ -355,14 +361,14 @@ export function createSubgraphOperations(
     reincludeLink: (get, connectionId) => {
       const {excludedLinks} = get();
       const connection = excludedLinks.find(
-        (c) => c.connectionId === connectionId,
+        (c) => c.systemId === connectionId,
       );
       if (!connection) {
         return;
       }
       set((s) => ({
         excludedLinks: s.excludedLinks.filter(
-          (c) => c.connectionId !== connectionId,
+          (c) => c.systemId !== connectionId,
         ),
         graphData: s.graphData && {
           ...s.graphData,
@@ -377,8 +383,11 @@ export function createSubgraphOperations(
         const result = await renameSubgraphApi(projectId, subgraphId, {
           name: newName,
         });
-        if (!result.success || !result.data) {
-          showToast(result.message ?? 'Failed to rename subgraph', 'danger');
+        if (hasBlockingIssues(result) || !result.data) {
+          showToast(
+            getIssueMessage(result, 'Failed to rename subgraph'),
+            'danger',
+          );
           return;
         }
         if (result.data.systemId !== subgraphId) {
@@ -396,7 +405,7 @@ export function createSubgraphOperations(
           return;
         }
 
-        const {name} = result.data;
+        const name = result.data.name ?? '';
         set((s) => ({
           graphData: s.graphData && {
             ...s.graphData,

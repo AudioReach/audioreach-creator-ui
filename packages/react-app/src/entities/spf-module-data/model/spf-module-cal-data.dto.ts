@@ -19,7 +19,7 @@ export interface CalDataDto {
 }
 
 export interface CkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }

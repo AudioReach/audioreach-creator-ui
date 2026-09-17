@@ -12,7 +12,7 @@ import type {
   BitFieldDto,
   ConfigElementDto,
   ElementTemplateArrayDto,
-  NameValuePairDto,
+  NameValueDto,
   StructDto,
 } from '~entities/spf-module-data';
 
@@ -36,12 +36,12 @@ export interface RenderElementContext {
   dirtyPaths: Set<string>;
   elementValues: Map<string, string>;
   invalidPaths: Set<string>;
+  itemId: string;
   matchElementKeys?: Set<string>;
   onAutoCommit?: () => void;
   onValueChange: (key: string, value: string) => void;
-  parameterId: string;
   paramReadOnly: boolean;
-  pathPrefix: string[];
+  pathPrefix: Array<string | undefined>;
   policyFilter: Set<'BASIC' | 'ADVANCED'>;
   setPaths: Set<string>;
   showRanges: boolean;
@@ -52,10 +52,10 @@ export function renderElement(
   ctx: RenderElementContext,
   indexPath: number[],
 ): React.ReactNode {
-  if (elem.type === 'STRUCT') {
+  if (elem.type === 'Struct') {
     return renderStruct(elem, ctx, indexPath);
   }
-  if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+  if (elem.type === 'ElementTemplateArray') {
     return renderArray(elem, ctx, indexPath);
   }
   return renderLeaf(elem, ctx, indexPath);
@@ -66,7 +66,7 @@ function renderStruct(
   ctx: RenderElementContext,
   indexPath: number[],
 ): React.ReactNode {
-  const nodeId = elementKey(ctx.parameterId, ...ctx.pathPrefix, elem.name);
+  const nodeId = elementKey(ctx.itemId, ...ctx.pathPrefix, elem.name);
   const childCtx: RenderElementContext = {
     ...ctx,
     pathPrefix: [...ctx.pathPrefix, elem.name],
@@ -101,7 +101,7 @@ function renderArray(
   ctx: RenderElementContext,
   indexPath: number[],
 ): React.ReactNode {
-  const arrayPath = elementKey(ctx.parameterId, ...ctx.pathPrefix, elem.name);
+  const arrayPath = elementKey(ctx.itemId, ...ctx.pathPrefix, elem.name);
 
   if (elem.length !== undefined && !elem.lengthFormula) {
     const tableKey = arrayPath;
@@ -109,20 +109,18 @@ function renderArray(
       index: i,
       value:
         ctx.elementValues.get(
-          elementKey(ctx.parameterId, ...ctx.pathPrefix, inst.name),
+          elementKey(ctx.itemId, ...ctx.pathPrefix, inst.name),
         ) ?? inst.value,
     }));
     const originalRows = (elem.value as ConfigElementDto[]).map((inst, i) => ({
       index: i,
       value:
         ctx.committedValues.get(
-          elementKey(ctx.parameterId, ...ctx.pathPrefix, inst.name),
+          elementKey(ctx.itemId, ...ctx.pathPrefix, inst.name),
         ) ?? inst.value,
     }));
     const isTableDirty = rows.some((r, i) => r.value !== originalRows[i].value);
-    const barClassName = isTableDirty
-      ? 'bg-support-warning'
-      : 'bg-transparent';
+    const barClassName = isTableDirty ? 'bg-support-warning' : 'bg-transparent';
 
     return (
       <Tree.NodeProvider
@@ -146,7 +144,7 @@ function renderArray(
                 onCellChange={(rowIndex, value) => {
                   const inst = (elem.value as ConfigElementDto[])[rowIndex];
                   const instKey = elementKey(
-                    ctx.parameterId,
+                    ctx.itemId,
                     ...ctx.pathPrefix,
                     inst.name,
                   );
@@ -179,7 +177,7 @@ function renderArray(
   }
 
   const instanceNodes = instances.map((inst, i) => {
-    const instName = inst.type === 'STRUCT' ? inst.name : `${elem.name}[${i}]`;
+    const instName = inst.type === 'Struct' ? inst.name : `${elem.name}[${i}]`;
     const childCtx: RenderElementContext = {
       ...ctx,
       pathPrefix: [...ctx.pathPrefix, instName],
@@ -215,11 +213,16 @@ function renderLeaf(
   ctx: RenderElementContext,
   indexPath: number[],
 ): React.ReactNode {
-  if (!isPolicyVisible(elem.policy, ctx.policyFilter)) {
+  if (
+    !isPolicyVisible(
+      elem.policy as 'ADVANCED' | 'BASIC' | 'HIDDEN' | undefined,
+      ctx.policyFilter,
+    )
+  ) {
     return null;
   }
 
-  const key = elementKey(ctx.parameterId, ...ctx.pathPrefix, elem.name);
+  const key = elementKey(ctx.itemId, ...ctx.pathPrefix, elem.name);
 
   if (ctx.matchElementKeys && !ctx.matchElementKeys.has(key)) {
     return null;
@@ -426,9 +429,9 @@ function renderControl(
   if (
     elem.allowedValues &&
     elem.allowedValues.length > 0 &&
-    elem.allowedValues[0].type === 'NAME_VALUE_PAIR'
+    !('bitMask' in elem.allowedValues[0])
   ) {
-    const options = elem.allowedValues as NameValuePairDto[];
+    const options = elem.allowedValues as NameValueDto[];
     return (
       <SelectControl
         currentValue={currentValue}

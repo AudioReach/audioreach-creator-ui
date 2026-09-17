@@ -6,7 +6,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
-import type {ApiResult} from '~shared/api';
+import {getIssueMessage, hasBlockingIssues, type ApiResult} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
 import {
@@ -113,13 +113,13 @@ export function useSchemaCardData({
         return;
       }
 
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         replaceProperties(projectId, entityType, entityId, []);
         setEntryError(
           projectId,
           entityType,
           entityId,
-          result.message ?? 'Failed to load schema properties',
+          getIssueMessage(result, 'Failed to load schema properties'),
         );
         return;
       }
@@ -206,8 +206,10 @@ export function useSchemaCardData({
             return;
           }
 
-          if (!result.success || !result.data) {
-            setSaveError(result.message ?? 'Failed to save schema properties');
+          if (hasBlockingIssues(result) || !result.data) {
+            setSaveError(
+              getIssueMessage(result, 'Failed to save schema properties'),
+            );
             return;
           }
 
@@ -224,7 +226,7 @@ export function useSchemaCardData({
               applySubgraphVsidUpdate(
                 projectId,
                 commitResult.affectedSubgraphSystemIds,
-                commitResult.property.elements,
+                commitResult.property.elements ?? [],
               );
               break;
             case 'replaceProperties':
@@ -251,7 +253,7 @@ export function useSchemaCardData({
                 const index = committedProperties.findIndex(
                   (candidate) =>
                     candidate.systemId === commitResult.property.systemId ||
-                    candidate.propertyId === commitResult.property.propertyId,
+                    candidate.naturalId === commitResult.property.naturalId,
                 );
                 if (index === -1) {
                   committedProperties.push(commitResult.property);

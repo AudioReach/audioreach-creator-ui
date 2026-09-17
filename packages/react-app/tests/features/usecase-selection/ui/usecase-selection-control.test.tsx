@@ -220,10 +220,10 @@ const PROJECT_ID = 'project-1';
 /** Leaf item: Speaker_Mic */
 const ITEM_SPEAKER: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 1, keyLabel: 'DeviceTX', keySystemId: 'k1'},
-      valueInfo: {valueId: 1, valueLabel: 'Speaker_Mic', valueSystemId: 'v1'},
+      key: {name: 'DeviceTX', naturalId: 1, systemId: 'k1'},
+      value: {name: 'Speaker_Mic', naturalId: 1, systemId: 'v1'},
     },
   ],
   name: 'Speaker_Mic',
@@ -233,13 +233,13 @@ const ITEM_SPEAKER: any = {
 /** Leaf item: HFP_Rx_Playback */
 const ITEM_HFP: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 2, keyLabel: 'StreamRX', keySystemId: 'k2'},
-      valueInfo: {
-        valueId: 2,
-        valueLabel: 'HFP_Rx_Playback',
-        valueSystemId: 'v2',
+      key: {name: 'StreamRX', naturalId: 2, systemId: 'k2'},
+      value: {
+        name: 'HFP_Rx_Playback',
+        naturalId: 2,
+        systemId: 'v2',
       },
     },
   ],
@@ -264,13 +264,13 @@ const mockSubsystemData: any[] = [
       {
         children: [ITEM_SPEAKER, ITEM_HFP],
         expanded: true,
-        keyValueCollection: [
+        keyValuePairs: [
           {
-            keyInfo: {keyId: 3, keyLabel: 'StreamPP_RX', keySystemId: 'k3'},
-            valueInfo: {
-              valueId: 3,
-              valueLabel: 'StreamPP_RX',
-              valueSystemId: 'v3',
+            key: {name: 'StreamPP_RX', naturalId: 3, systemId: 'k3'},
+            value: {
+              name: 'StreamPP_RX',
+              naturalId: 3,
+              systemId: 'v3',
             },
           },
         ],
@@ -753,21 +753,21 @@ describe('UsecaseSelectionControl — frontend vs backend search routing', () =>
         items: [
           {
             expanded: false,
-            keyValueCollection: [
+            keyValuePairs: [
               {
-                keyInfo: {keyId: 10, keyLabel: 'DeviceRX', keySystemId: 'k10'},
-                valueInfo: {
-                  valueId: 10,
-                  valueLabel: 'BT_Rx',
-                  valueSystemId: 'v10',
+                key: {name: 'DeviceRX', naturalId: 10, systemId: 'k10'},
+                value: {
+                  name: 'BT_Rx',
+                  naturalId: 10,
+                  systemId: 'v10',
                 },
               },
               {
-                keyInfo: {keyId: 11, keyLabel: 'BtProfile', keySystemId: 'k11'},
-                valueInfo: {
-                  valueId: 11,
-                  valueLabel: 'SCO',
-                  valueSystemId: 'v11',
+                key: {name: 'BtProfile', naturalId: 11, systemId: 'k11'},
+                value: {
+                  name: 'SCO',
+                  naturalId: 11,
+                  systemId: 'v11',
                 },
               },
             ],
@@ -776,13 +776,13 @@ describe('UsecaseSelectionControl — frontend vs backend search routing', () =>
           },
           {
             expanded: false,
-            keyValueCollection: [
+            keyValuePairs: [
               {
-                keyInfo: {keyId: 12, keyLabel: 'DeviceRX', keySystemId: 'k12'},
-                valueInfo: {
-                  valueId: 12,
-                  valueLabel: 'BT_Rx',
-                  valueSystemId: 'v12',
+                key: {name: 'DeviceRX', naturalId: 12, systemId: 'k12'},
+                value: {
+                  name: 'BT_Rx',
+                  naturalId: 12,
+                  systemId: 'v12',
                 },
               },
             ],
@@ -896,7 +896,7 @@ describe('UsecaseSelectionControl — placeholder text', () => {
           {
             children: [ITEM_SPEAKER], // duplicate of Speaker_Mic
             expanded: true,
-            keyValueCollection: [],
+            keyValuePairs: [],
             name: 'SubGroup',
           },
         ],

@@ -14,28 +14,28 @@ function makeGraphData(): UsecaseGraphData {
   return {
     connections: [
       {
-        connectionId: 'dl-1',
-        connectionType: 'data',
-        fromModuleId: 'm-1',
-        fromPortId: 'out-system-1',
-        isDangling: false,
-        toModuleId: 'm-2',
-        toPortId: 'in-system-1',
+        destinationPortSystemId: 'in-system-1',
+        destinationSystemId: 'm-2',
+        isInterUsecase: false,
+        linkKind: 'data',
+        sourcePortSystemId: 'out-system-1',
+        sourceSystemId: 'm-1',
+        systemId: 'dl-1',
       },
       {
-        connectionId: 'cl-1',
-        connectionType: 'control',
-        fromModuleId: 'm-1',
-        fromPortId: 'ctrl-system-1',
-        isDangling: false,
-        toModuleId: 'ss-1',
-        toPortId: 'ss-ctrl-1',
+        destinationPortSystemId: 'ss-ctrl-1',
+        destinationSystemId: 'ss-1',
+        isInterUsecase: false,
+        linkKind: 'control',
+        sourcePortSystemId: 'ctrl-system-1',
+        sourceSystemId: 'm-1',
+        systemId: 'cl-1',
       },
     ],
     containers: {},
     moduleInstances: {
       'm-1': {
-        containerId: 'cnt-1',
+        containerSystemId: 'cnt-1',
         displayName: 'Source Module',
         inputPorts: [
           {
@@ -48,10 +48,10 @@ function makeGraphData(): UsecaseGraphData {
             totalLinksAtPort: 1,
           },
         ],
-        moduleId: 'module-def-1',
-        moduleInstanceId: '101',
+        moduleDefinitionSystemId: 'module-def-1',
         moduleName: 'Source',
         moduleType: 'audio',
+        naturalId: 101,
         outputPorts: [
           {
             direction: 'output',
@@ -64,10 +64,11 @@ function makeGraphData(): UsecaseGraphData {
           },
         ],
         position: {x: 0, y: 0},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'm-1',
       },
       'm-2': {
-        containerId: 'cnt-1',
+        containerSystemId: 'cnt-1',
         displayName: 'Destination Module',
         inputPorts: [
           {
@@ -80,13 +81,14 @@ function makeGraphData(): UsecaseGraphData {
             totalLinksAtPort: 1,
           },
         ],
-        moduleId: 'module-def-2',
-        moduleInstanceId: 'm-2',
+        moduleDefinitionSystemId: 'module-def-2',
         moduleName: 'Destination',
         moduleType: 'voice',
+        naturalId: 102,
         outputPorts: [],
         position: {x: 10, y: 20},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'm-2',
       },
     },
     selectedUsecases: [],
@@ -124,7 +126,7 @@ describe('node-info', () => {
 
     expect(resolveComponentInfo(graphData, 'm-1')).toEqual({
       displayName: 'Source Module',
-      id: '0x65',
+      id: 'm-1',
       kind: 'module',
     });
     expect(resolveComponentInfo(graphData, 'ss-1')).toEqual({

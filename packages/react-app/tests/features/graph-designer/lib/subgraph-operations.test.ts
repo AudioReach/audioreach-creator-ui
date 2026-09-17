@@ -155,7 +155,7 @@ describe('parseSubgraphDropPayload', () => {
   });
 
   it('returns null when kind does not match', () => {
-    const payload = JSON.stringify({kind: 'module', subgraphId: 'sg-1'});
+    const payload = JSON.stringify({kind: 'module', subgraphSystemId: 'sg-1'});
     expect(parseSubgraphDropPayload(payload)).toBeNull();
   });
 });
@@ -170,8 +170,8 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         dataLinks: [],
         spfModules: [
           makeSpfModuleDto({
-            containerId: 10,
-            subgraphId: 'sg-1',
+            containerSystemId: 10,
+            subgraphSystemId: 'sg-1',
             systemId: 'mod-1',
           }),
         ],
@@ -211,8 +211,8 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         dataLinks: [],
         spfModules: [
           makeSpfModuleDto({
-            containerId: 10,
-            subgraphId: 'sg-1',
+            containerSystemId: 10,
+            subgraphSystemId: 'sg-1',
             systemId: 'mod-1',
           }),
         ],
@@ -241,7 +241,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
     expect(store.getState().graphData!.moduleInstances['mod-1']).toEqual(
       expect.objectContaining({
         position: {x: 12, y: 34},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
       }),
     );
     expect(store.getState().graphData!.subgraphs['sg-1']).toBeDefined();
@@ -255,16 +255,16 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 99, y: 99},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
         },
       },
@@ -275,13 +275,13 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         dataLinks: [],
         spfModules: [
           makeSpfModuleDto({
-            containerId: 10,
-            subgraphId: 'sg-1',
+            containerSystemId: 10,
+            subgraphSystemId: 'sg-1',
             systemId: 'mod-1',
           }),
           makeSpfModuleDto({
-            containerId: 10,
-            subgraphId: 'sg-1',
+            containerSystemId: 10,
+            subgraphSystemId: 'sg-1',
             systemId: 'mod-2',
           }),
         ],
@@ -364,7 +364,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       data: {
         controlLinks: [],
         dataLinks: [],
-        spfModules: [makeSpfModuleDto({subgraphId: 'sg-1', systemId: 'mod-1'})],
+        spfModules: [makeSpfModuleDto({subgraphSystemId: 'sg-1', systemId: 'mod-1'})],
       },
       message: 'ok',
       success: true,
@@ -394,7 +394,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       data: {
         controlLinks: [],
         dataLinks: [],
-        spfModules: [makeSpfModuleDto({subgraphId: 'sg-1', systemId: 'mod-1'})],
+        spfModules: [makeSpfModuleDto({subgraphSystemId: 'sg-1', systemId: 'mod-1'})],
       },
       message: 'ok',
       success: true,
@@ -437,14 +437,14 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         ...EMPTY_GRAPH_DATA,
         containers: {
           'cnt-2': {
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             moduleInstances: ['mod-2'],
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
           },
         },
         moduleInstances: {
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             inputPorts: [
               {
                 activeLinks: 0,
@@ -457,15 +457,15 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
                 totalLinksAtPort: 0,
               },
             ],
-            moduleInstanceId: 'mod-2',
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-2',
           }),
         },
         subgraphs: {
           'sg-2': {
             containers: ['cnt-2'],
-            subgraphId: 'sg-2',
             subgraphName: 'SG2',
+            subgraphSystemId: 'sg-2',
             subgraphType: '',
           },
         },
@@ -475,7 +475,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       data: {
         controlLinks: [],
         dataLinks: [],
-        spfModules: [makeSpfModuleDto({subgraphId: 'sg-1', systemId: 'mod-1'})],
+        spfModules: [makeSpfModuleDto({subgraphSystemId: 'sg-1', systemId: 'mod-1'})],
       },
       message: 'ok',
       success: true,
@@ -530,7 +530,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       store
         .getState()
         .graphData!.connections.some(
-          (connection) => connection.connectionId === 'pair-link-stale',
+          (connection) => connection.systemId === 'pair-link-stale',
         ),
     ).toBe(false);
     expect(store.getState().pairLinksById['sg-1:sg-2']).toBeUndefined();
@@ -548,14 +548,14 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         ...EMPTY_GRAPH_DATA,
         containers: {
           'cnt-2': {
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             moduleInstances: ['mod-2'],
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
           },
         },
         moduleInstances: {
           'mod-2': {
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             displayName: 'Mod B',
             inputPorts: [
               {
@@ -570,19 +570,19 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
               },
             ],
             moduleId: '200',
-            moduleInstanceId: 'mod-2',
             moduleName: 'Mod B',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-2',
           },
         },
         subgraphs: {
           'sg-2': {
             containers: ['cnt-2'],
-            subgraphId: 'sg-2',
             subgraphName: 'SG2',
+            subgraphSystemId: 'sg-2',
             subgraphType: '',
           },
         },
@@ -592,7 +592,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       data: {
         controlLinks: [],
         dataLinks: [],
-        spfModules: [makeSpfModuleDto({subgraphId: 'sg-1', systemId: 'mod-1'})],
+        spfModules: [makeSpfModuleDto({subgraphSystemId: 'sg-1', systemId: 'mod-1'})],
       },
       message: 'ok',
       success: true,
@@ -627,11 +627,11 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       y: 0,
     });
 
-    const connectionIds = store
+    const systemIds = store
       .getState()
-      .graphData!.connections.map((c) => c.connectionId);
-    expect(connectionIds).toContain('pair-link-1');
-    expect(connectionIds).not.toContain('pair-link-2');
+      .graphData!.connections.map((c) => c.systemId);
+    expect(systemIds).toContain('pair-link-1');
+    expect(systemIds).not.toContain('pair-link-2');
     expect(store.getState().pairLinksById['sg-1:sg-2']).toBeDefined();
     expect(
       store.getState().graphData!.moduleInstances['mod-2'].inputPorts[0]
@@ -644,13 +644,13 @@ describe('createSubgraphOperations — excludeLink / reincludeLink', () => {
   it('moves a connection into excludedLinks and back', () => {
     const {get, store, subgraphOperations} = makeTestStore();
     const connection = {
-      connectionId: 'conn-1',
-      connectionType: 'data' as const,
-      fromModuleId: 'mod-1',
-      fromPortId: 'port-1',
-      isDangling: false,
-      toModuleId: 'mod-2',
-      toPortId: 'port-2',
+      destinationPortSystemId: 'port-2',
+      destinationSystemId: 'mod-2',
+      isInterUsecase: false,
+      linkKind: 'data' as const,
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'conn-1',
     };
     store.setState({
       graphData: {...EMPTY_GRAPH_DATA, connections: [connection]},
@@ -679,30 +679,30 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
         },
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
         },
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'SG1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },
@@ -727,31 +727,31 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
         },
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             diffState: 'added',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
         },
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'SG1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },
@@ -776,42 +776,42 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         connections: [
           {
-            connectionId: 'conn-1',
-            connectionType: 'data',
+            destinationPortSystemId: 'port-2',
+            destinationSystemId: 'mod-2',
             diffState: 'added',
-            fromModuleId: 'mod-1',
-            fromPortId: 'port-1',
-            isDangling: false,
-            toModuleId: 'mod-2',
-            toPortId: 'port-2',
+            isInterUsecase: false,
+            linkKind: 'data',
+            sourcePortSystemId: 'port-1',
+            sourceSystemId: 'mod-1',
+            systemId: 'conn-1',
           },
         ],
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
         },
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
         },
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'SG1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },
@@ -833,22 +833,22 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
     const {get, store, subgraphOperations} = makeTestStore();
     await store.getState().enterEditMode();
     const droppedConnection = {
-      connectionId: 'excluded-dropped',
-      connectionType: 'data' as const,
-      fromModuleId: 'mod-1',
-      fromPortId: 'port-1',
-      isDangling: false,
-      toModuleId: 'mod-2',
-      toPortId: 'port-2',
+      destinationPortSystemId: 'port-2',
+      destinationSystemId: 'mod-2',
+      isInterUsecase: false,
+      linkKind: 'data' as const,
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'excluded-dropped',
     };
     const survivingConnection = {
-      connectionId: 'excluded-surviving',
-      connectionType: 'data' as const,
-      fromModuleId: 'mod-2',
-      fromPortId: 'port-2',
-      isDangling: false,
-      toModuleId: 'mod-3',
-      toPortId: 'port-3',
+      destinationPortSystemId: 'port-3',
+      destinationSystemId: 'mod-3',
+      isInterUsecase: false,
+      linkKind: 'data' as const,
+      sourcePortSystemId: 'port-2',
+      sourceSystemId: 'mod-2',
+      systemId: 'excluded-surviving',
     };
     store.setState({
       excludedLinks: [droppedConnection, survivingConnection],
@@ -856,39 +856,39 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
           'cnt-2': {
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             moduleInstances: ['mod-2'],
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
           },
         },
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
-            subgraphId: 'sg-1',
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-2',
-            moduleInstanceId: 'mod-2',
-            subgraphId: 'sg-2',
+            containerSystemId: 'cnt-2',
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-2',
           }),
         },
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'SG1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
           'sg-2': {
             containers: ['cnt-2'],
-            subgraphId: 'sg-2',
             subgraphName: 'SG2',
+            subgraphSystemId: 'sg-2',
             subgraphType: '',
           },
         },
@@ -911,35 +911,35 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         connections: [
           {
-            connectionId: 'conn-cross-subgraph',
-            connectionType: 'data',
-            fromModuleId: 'mod-1',
-            fromPortId: 'port-1',
-            isDangling: false,
-            toModuleId: 'mod-2',
-            toPortId: 'port-2',
+            destinationPortSystemId: 'port-2',
+            destinationSystemId: 'mod-2',
+            isInterUsecase: false,
+            linkKind: 'data',
+            sourcePortSystemId: 'port-1',
+            sourceSystemId: 'mod-1',
+            systemId: 'conn-cross-subgraph',
           },
         ],
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
           'cnt-2': {
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             moduleInstances: ['mod-2'],
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
           },
         },
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
-            subgraphId: 'sg-1',
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-2',
+            containerSystemId: 'cnt-2',
             inputPorts: [
               {
                 activeLinks: 1,
@@ -952,21 +952,21 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
                 totalLinksAtPort: 1,
               },
             ],
-            moduleInstanceId: 'mod-2',
-            subgraphId: 'sg-2',
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-2',
           }),
         },
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'SG1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
           'sg-2': {
             containers: ['cnt-2'],
-            subgraphId: 'sg-2',
             subgraphName: 'SG2',
+            subgraphSystemId: 'sg-2',
             subgraphType: '',
           },
         },
@@ -992,16 +992,16 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
         },
       },
@@ -1033,28 +1033,28 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod A',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
           'mod-2': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Mod B',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-2',
             moduleName: 'Mod B',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-2',
           },
         },
       },
@@ -1097,8 +1097,8 @@ describe('createSubgraphOperations — renameSubgraph', () => {
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'Old',
+            subgraphSystemId: 'sg-1',
             subgraphType: 'A',
           },
         },
@@ -1135,8 +1135,8 @@ describe('createSubgraphOperations — renameSubgraph', () => {
         subgraphs: {
           'sg-1': {
             containers: [],
-            subgraphId: 'sg-1',
             subgraphName: 'Old',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },
@@ -1167,8 +1167,8 @@ describe('createSubgraphOperations — renameSubgraph', () => {
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'Old',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },

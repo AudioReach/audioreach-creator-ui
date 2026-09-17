@@ -19,10 +19,10 @@ import {
 const mockFetchSpfModuleProperties = jest.mocked(fetchSpfModuleProperties);
 
 function makeProperty(
-  propertyId: number,
+  naturalId: number,
   propertyName: string,
-  systemId = `prop-${  String(propertyId)}`,
-  value = String(propertyId),
+  systemId = `prop-${String(naturalId)}`,
+  value = String(naturalId),
 ): PropertyDto {
   return {
     elements: [
@@ -30,12 +30,12 @@ function makeProperty(
         isReadOnly: false,
         name: propertyName,
         policy: 'BASIC',
-        type: 'CONFIG_ELEMENT',
+        type: 'ConfigElement',
         value,
       },
     ],
     hasDefinition: true,
-    propertyId,
+    naturalId,
     propertyName,
     systemId,
   };

@@ -13,6 +13,7 @@ import {
 } from '~entities/spf-modules';
 import type {CreateSpfModuleRequestDto} from '~entities/spf-modules/model/spf-module-crud.dto';
 import type {ComponentCollectionDto} from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 
@@ -139,8 +140,8 @@ export function createModuleOperations(
     position: {x: number; y: number},
   ): Promise<string | null> {
     const result = await createSpfModule(projectId, request);
-    if (!result.success || !result.data) {
-      showToast(result.message ?? 'Failed to add module', 'danger');
+    if (hasBlockingIssues(result) || !result.data) {
+      showToast(getIssueMessage(result, 'Failed to add module'), 'danger');
       return null;
     }
 
@@ -176,9 +177,12 @@ export function createModuleOperations(
     options?: InnerActionOptions,
   ): Promise<boolean> {
     const result = await deleteSpfModule(projectId, moduleInstanceId);
-    if (!result.success || !result.data) {
+    if (hasBlockingIssues(result) || !result.data) {
       if (!options?.suppressToast) {
-        showToast(result.message ?? 'Failed to delete module', 'danger');
+        showToast(
+          getIssueMessage(result, 'Failed to delete module'),
+          'danger',
+        );
       }
       return false;
     }
@@ -240,7 +244,7 @@ export function createModuleOperations(
           return null;
         }
         const subgraphId =
-          get().graphData!.moduleInstances[newModuleId].subgraphId;
+          get().graphData!.moduleInstances[newModuleId].subgraphSystemId;
         get().setSubgraphProvenance(subgraphId, 'newly-created');
         return newModuleId;
       }),
@@ -277,8 +281,8 @@ export function createModuleOperations(
         const result = await patchSpfModule(projectId, moduleInstanceId, {
           alias: newAlias,
         });
-        if (!result.success || !result.data) {
-          showToast(result.message ?? 'Failed to rename module', 'danger');
+        if (hasBlockingIssues(result) || !result.data) {
+          showToast(getIssueMessage(result, 'Failed to rename module'), 'danger');
           return;
         }
         if (result.data.systemId !== moduleInstanceId) {

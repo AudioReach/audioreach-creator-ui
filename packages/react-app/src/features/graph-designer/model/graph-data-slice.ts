@@ -19,6 +19,7 @@ import type {
   SpfModuleDto,
   SubsystemDto,
 } from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
 import type {SubsystemSlice} from '~shared/store/tab-store-slices/subsystem-slice';
@@ -43,7 +44,7 @@ export interface Port {
 
 export interface ModuleInstance {
   ckvs?: CkvDto[];
-  containerId: string;
+  containerSystemId: string;
   diffChangedFields?: string[];
   diffState?: DiffState;
   displayName: string;
@@ -51,39 +52,40 @@ export interface ModuleInstance {
   maxControlPorts?: number;
   maxInputPorts?: number;
   maxOutputPorts?: number;
-  moduleId: string;
-  moduleInstanceId: string;
+  moduleDefinitionSystemId: string;
   moduleName: string;
   moduleType: string;
+  naturalId: number;
   outputPorts: Port[];
   position: {x: number; y: number};
-  subgraphId: string;
+  subgraphSystemId: string;
+  systemId: string;
   tags?: TagInfoDto[];
 }
 
 export interface Connection {
-  connectionId: string;
-  connectionType: 'control' | 'data';
+  destinationPortSystemId: string;
+  destinationSystemId: string;
   diffState?: DiffState;
-  fromModuleId: string;
-  fromPortId: string;
-  isDangling: boolean;
-  toModuleId: string;
-  toPortId: string;
+  isInterUsecase: boolean;
+  linkKind: 'control' | 'data';
+  sourcePortSystemId: string;
+  sourceSystemId: string;
+  systemId: string;
 }
 
 export interface Subgraph {
   containers: string[];
   diffState?: DiffState;
-  subgraphId: string;
   subgraphName: string;
   subgraphType: string;
+  systemId: string;
 }
 
 export interface Container {
-  containerId: string;
   moduleInstances: string[];
-  subgraphId: string;
+  subgraphSystemId: string;
+  systemId: string;
 }
 
 /**
@@ -111,7 +113,7 @@ export interface LinkEndpoints {
 }
 
 export interface PortRefreshEndpoint {
-  moduleInstanceId: string;
+  moduleSystemId: string;
   portSystemId: string;
 }
 
@@ -175,34 +177,19 @@ export interface GraphDataSlice {
   markDirty: () => void;
   pruneDeletedLinkBookkeeping: (deletedLinkIds: string[]) => void;
   recomputeContainersAndSubgraphs: () => Promise<void>;
-  updateContainerIdLocal: (containerId: string, newId: string) => void;
-  updateModuleAliasLocal: (moduleId: string, alias: string) => void;
+  updateContainerIdLocal: (containerSystemId: string, newId: string) => void;
+  updateModuleAliasLocal: (moduleSystemId: string, alias: string) => void;
   updateModuleContainerLocal: (
-    moduleId: string,
-    newContainerId: string,
+    moduleSystemId: string,
+    newContainerSystemId: string,
   ) => void;
   updateModulePortCountLocal: (
-    moduleId: string,
+    moduleSystemId: string,
     field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
     value: number,
   ) => void;
-  updateSubgraphNameLocal: (subgraphId: string, name: string) => void;
+  updateSubgraphNameLocal: (subgraphSystemId: string, name: string) => void;
   updateSubsystemNameLocal: (subsystemId: string, name: string) => void;
-}
-
-function toDiffState(changeType: string): DiffState | undefined {
-  switch (changeType) {
-    case 'CREATE':
-      return 'added';
-    case 'DELETE':
-      return 'removed';
-    case 'UPDATE':
-      return 'modified';
-    case 'NONE':
-      return 'common';
-    default:
-      return undefined;
-  }
 }
 
 /**
@@ -229,32 +216,33 @@ function deriveContainersAndSubgraphs(
   const subgraphs: Record<string, Subgraph> = {};
   const newSubgraphs: Record<string, Subgraph> = {};
 
-  for (const [moduleInstanceId, m] of Object.entries(moduleInstances)) {
-    if (!(m.containerId in containers)) {
-      containers[m.containerId] = {
-        containerId: m.containerId,
+  for (const [moduleSystemId, m] of Object.entries(moduleInstances)) {
+    if (!(m.containerSystemId in containers)) {
+      containers[m.containerSystemId] = {
         moduleInstances: [],
-        subgraphId: m.subgraphId,
+        subgraphSystemId: m.subgraphSystemId,
+        systemId: m.containerSystemId,
       };
     }
-    containers[m.containerId].moduleInstances.push(moduleInstanceId);
+    containers[m.containerSystemId].moduleInstances.push(moduleSystemId);
 
-    if (!(m.subgraphId in subgraphs)) {
-      const existing = existingSubgraphs?.[m.subgraphId];
+    if (!(m.subgraphSystemId in subgraphs)) {
+      const existing = existingSubgraphs?.[m.subgraphSystemId];
       const sg: Subgraph = {
         containers: [],
-        subgraphId: m.subgraphId,
-        subgraphName: existing?.subgraphName ?? `Subgraph ${m.subgraphId}`,
+        subgraphName:
+          existing?.subgraphName ?? `Subgraph ${m.subgraphSystemId}`,
         subgraphType: existing?.subgraphType ?? '',
+        systemId: m.subgraphSystemId,
       };
-      subgraphs[m.subgraphId] = sg;
+      subgraphs[m.subgraphSystemId] = sg;
       if (!existing) {
-        newSubgraphs[m.subgraphId] = sg;
+        newSubgraphs[m.subgraphSystemId] = sg;
       }
     }
-    const sg = subgraphs[m.subgraphId];
-    if (!sg.containers.includes(m.containerId)) {
-      sg.containers.push(m.containerId);
+    const sg = subgraphs[m.subgraphSystemId];
+    if (!sg.containers.includes(m.containerSystemId)) {
+      sg.containers.push(m.containerSystemId);
     }
     if (m.diffState && !sg.diffState) {
       sg.diffState = m.diffState;
@@ -280,11 +268,11 @@ async function applyRealSubgraphNames(
   }
 
   const result = await getSubgraphsByIds(projectId, subgraphIds);
-  if (!result.success || !result.data) {
+  if (hasBlockingIssues(result) || !result.data) {
     logger.error('graphDataSlice: applyRealSubgraphNames — API error', {
       action: 'loadGraphData',
       component: 'graphDataSlice',
-      error: result.message,
+      error: getIssueMessage(result, 'Failed to load subgraph names'),
     });
     return;
   }
@@ -292,7 +280,7 @@ async function applyRealSubgraphNames(
   for (const dto of result.data) {
     const sg = subgraphs[dto.systemId];
     if (sg) {
-      sg.subgraphName = dto.name;
+      sg.subgraphName = dto.name ?? '';
       sg.subgraphType = dto.subGraphSharedType;
     }
   }
@@ -324,7 +312,7 @@ function toModuleInstance(
       activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
       direction: 'input' as const,
       isStatic: p.portType === 'Static',
-      portId: String(p.id),
+      portId: String(p.naturalId),
       portName: p.name,
       portSystemId: p.systemId,
       portType: 'data' as const,
@@ -334,7 +322,7 @@ function toModuleInstance(
     activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
     direction: 'input' as const,
     isStatic: p.portType === 'Static',
-    portId: String(p.id),
+    portId: String(p.naturalId),
     portName: p.controlPortName,
     portSystemId: p.systemId,
     portType: 'control' as const,
@@ -346,23 +334,24 @@ function toModuleInstance(
       activeLinks: activeLinksByPortId.get(p.systemId) ?? 0,
       direction: 'output' as const,
       isStatic: p.portType === 'Static',
-      portId: String(p.id),
+      portId: String(p.naturalId),
       portName: p.name,
       portSystemId: p.systemId,
       portType: 'data' as const,
       totalLinksAtPort: p.totalLinksAtPort,
     }));
   return {
-    containerId: String(m.containerId),
+    containerSystemId: m.containerSystemId,
     displayName: m.alias || m.name,
     inputPorts: [...inputPorts, ...controlPorts],
-    moduleId: String(m.moduleId),
-    moduleInstanceId: m.systemId,
+    moduleDefinitionSystemId: m.moduleDefinitionSystemId,
     moduleName: m.name,
     moduleType,
+    naturalId: m.naturalId,
     outputPorts,
     position: existing?.position ?? {x: 0, y: 0},
-    subgraphId: m.subgraphId,
+    subgraphSystemId: m.subgraphSystemId,
+    systemId: m.systemId,
   };
 }
 
@@ -397,33 +386,33 @@ function removeById<T>(
 
 export function toConnection(
   link: ControlLinkDto | DataLinkDto,
-  connectionType: 'control' | 'data',
+  linkKind: 'control' | 'data',
 ): Connection {
   return {
-    connectionId: link.systemId,
-    connectionType,
-    fromModuleId: link.sourceSystemId,
-    fromPortId: link.sourcePortSystemId,
-    isDangling: link.isDangling,
-    toModuleId: link.destinationSystemId,
-    toPortId: link.destinationPortSystemId,
+    destinationPortSystemId: link.destinationPortSystemId,
+    destinationSystemId: link.destinationSystemId,
+    isInterUsecase: link.isInterUsecase,
+    linkKind,
+    sourcePortSystemId: link.sourcePortSystemId,
+    sourceSystemId: link.sourceSystemId,
+    systemId: link.systemId,
   };
 }
 
 export function upsertLink(
   connections: Connection[],
   link: ControlLinkDto | DataLinkDto,
-  connectionType: 'control' | 'data',
+  linkKind: 'control' | 'data',
 ): Connection[] {
-  const conn = toConnection(link, connectionType);
+  const conn = toConnection(link, linkKind);
   return [
-    ...connections.filter((c) => c.connectionId !== conn.connectionId),
+    ...connections.filter((c) => c.systemId !== conn.systemId),
     conn,
   ];
 }
 
 function removeLink(connections: Connection[], linkId: string): Connection[] {
-  return connections.filter((c) => c.connectionId !== linkId);
+  return connections.filter((c) => c.systemId !== linkId);
 }
 
 /**
@@ -453,7 +442,7 @@ function toSubsystem(
     parentSubsystemId: ss.parentSystemId,
     subgraphs: existing?.subgraphs ?? [],
     subsystemId: ss.systemId,
-    subsystemName: ss.name,
+    subsystemName: ss.name ?? '',
   };
 }
 
@@ -541,12 +530,12 @@ function resolveLinkEndpoints(
   }
   const linkIdSet = new Set(linkIds);
   return connections
-    .filter((c) => linkIdSet.has(c.connectionId))
+    .filter((c) => linkIdSet.has(c.systemId))
     .map((c) => ({
-      destinationPortSystemId: c.toPortId,
-      destinationSystemId: c.toModuleId,
-      sourcePortSystemId: c.fromPortId,
-      sourceSystemId: c.fromModuleId,
+      destinationPortSystemId: c.destinationPortSystemId,
+      destinationSystemId: c.destinationSystemId,
+      sourcePortSystemId: c.sourcePortSystemId,
+      sourceSystemId: c.sourceSystemId,
     }));
 }
 
@@ -560,7 +549,9 @@ function countActiveLinks(
   portSystemId: string,
 ): number {
   return connections.filter(
-    (c) => c.fromPortId === portSystemId || c.toPortId === portSystemId,
+    (c) =>
+      c.sourcePortSystemId === portSystemId ||
+      c.destinationPortSystemId === portSystemId,
   ).length;
 }
 
@@ -574,12 +565,12 @@ function buildActiveLinksByPortId(
   const activeLinksByPortId = new Map<string, number>();
   for (const c of connections) {
     activeLinksByPortId.set(
-      c.fromPortId,
-      (activeLinksByPortId.get(c.fromPortId) ?? 0) + 1,
+      c.sourcePortSystemId,
+      (activeLinksByPortId.get(c.sourcePortSystemId) ?? 0) + 1,
     );
     activeLinksByPortId.set(
-      c.toPortId,
-      (activeLinksByPortId.get(c.toPortId) ?? 0) + 1,
+      c.destinationPortSystemId,
+      (activeLinksByPortId.get(c.destinationPortSystemId) ?? 0) + 1,
     );
   }
   return activeLinksByPortId;
@@ -637,17 +628,17 @@ function computeRefreshedModuleInstances(
   endpoints: PortRefreshEndpoint[],
 ): Record<string, ModuleInstance> {
   const uniqueEndpoints = new Map(
-    endpoints.map((e) => [`${e.moduleInstanceId}:${e.portSystemId}`, e]),
+    endpoints.map((e) => [`${e.moduleSystemId}:${e.portSystemId}`, e]),
   );
   let next = moduleInstances;
-  for (const {moduleInstanceId, portSystemId} of uniqueEndpoints.values()) {
-    const module = next[moduleInstanceId];
+  for (const {moduleSystemId, portSystemId} of uniqueEndpoints.values()) {
+    const module = next[moduleSystemId];
     if (!module) {
       continue;
     }
     next = {
       ...next,
-      [moduleInstanceId]: withRefreshedPort(
+      [moduleSystemId]: withRefreshedPort(
         module,
         portSystemId,
         countActiveLinks(connections, portSystemId),
@@ -710,7 +701,7 @@ export function createGraphDataSlice<
         return;
       }
       const defModuleTypeById = new Map(
-        moduleList.map((d) => [d.moduleId, d.moduleType]),
+        moduleList.map((d) => [d.moduleDefinitionSystemId, d.moduleType]),
       );
       // Connections must be merged before modules are upserted below —
       // upsertModule recomputes activeLinks from this same list
@@ -726,7 +717,7 @@ export function createGraphDataSlice<
         moduleInstances = upsertModule(
           moduleInstances,
           m,
-          defModuleTypeById.get(String(m.moduleId)) ?? '',
+          defModuleTypeById.get(m.moduleDefinitionSystemId) ?? '',
           connections,
         );
       }
@@ -803,11 +794,11 @@ export function createGraphDataSlice<
       for (const link of addedLinks) {
         portRefreshEndpoints.push(
           {
-            moduleInstanceId: link.sourceSystemId,
+            moduleSystemId: link.sourceSystemId,
             portSystemId: link.sourcePortSystemId,
           },
           {
-            moduleInstanceId: link.destinationSystemId,
+            moduleSystemId: link.destinationSystemId,
             portSystemId: link.destinationPortSystemId,
           },
         );
@@ -815,11 +806,11 @@ export function createGraphDataSlice<
       for (const endpoints of deletedLinkEndpoints) {
         portRefreshEndpoints.push(
           {
-            moduleInstanceId: endpoints.sourceSystemId,
+            moduleSystemId: endpoints.sourceSystemId,
             portSystemId: endpoints.sourcePortSystemId,
           },
           {
-            moduleInstanceId: endpoints.destinationSystemId,
+            moduleSystemId: endpoints.destinationSystemId,
             portSystemId: endpoints.destinationPortSystemId,
           },
         );
@@ -941,14 +932,14 @@ export function createGraphDataSlice<
           ? await getUsecaseComponentsFilteredBySubsystem(projectId, usecases)
           : await getUsecaseComponents(projectId, usecases);
 
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           logger.error('graphDataSlice: loadGraphData — API error', {
             action: 'loadGraphData',
             component: 'graphDataSlice',
-            error: result.message,
+            error: getIssueMessage(result, 'API error'),
           });
           set({
-            graphDataError: result.message ?? 'API error',
+            graphDataError: getIssueMessage(result, 'API error'),
             graphDataStatus: 'error',
           } as unknown as Partial<S>);
           return;
@@ -960,14 +951,14 @@ export function createGraphDataSlice<
 
         // Build moduleId → moduleType lookup from already-loaded module definitions.
         const defModuleTypeById = new Map(
-          get().moduleList.map((d) => [d.moduleId, d.moduleType]),
+        get().moduleList.map((d) => [d.moduleDefinitionSystemId, d.moduleType]),
         );
 
         const subsystemIdToSubgraphs = new Map<string, string[]>();
         for (const m of spfModules) {
           const ssId = m.parentSystemId;
           if (ssId) {
-            const sgId = m.subgraphId;
+            const sgId = m.subgraphSystemId;
             const list = subsystemIdToSubgraphs.get(ssId);
             if (list) {
               list.push(sgId);
@@ -991,14 +982,10 @@ export function createGraphDataSlice<
         for (const m of spfModules) {
           const instance = toModuleInstance(
             m,
-            defModuleTypeById.get(String(m.moduleId)) ?? '',
+            defModuleTypeById.get(m.moduleDefinitionSystemId) ?? '',
             undefined,
             activeLinksByPortId,
           );
-          const diffState = toDiffState(m.changeInfo?.changeType);
-          if (diffState) {
-            instance.diffState = diffState;
-          }
           if (m.ckvs) {
             instance.ckvs = m.ckvs;
           }
@@ -1047,7 +1034,7 @@ export function createGraphDataSlice<
             parentSubsystemId: ss.parentSystemId,
             subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,
-            subsystemName: ss.name,
+            subsystemName: ss.name ?? '',
           };
         }
 
@@ -1128,7 +1115,7 @@ export function createGraphDataSlice<
         nextPairLinksById[pairKey] = {...pair, controlLinks, dataLinks};
       }
       set({
-        excludedLinks: excludedLinks.filter((l) => !idSet.has(l.connectionId)),
+        excludedLinks: excludedLinks.filter((l) => !idSet.has(l.systemId)),
         pairLinksById: nextPairLinksById,
       } as unknown as Partial<S>);
     },
@@ -1161,22 +1148,25 @@ export function createGraphDataSlice<
       } as unknown as Partial<S>);
     },
 
-    updateContainerIdLocal: (containerId: string, newId: string): void => {
+    updateContainerIdLocal: (
+      containerSystemId: string,
+      newId: string,
+    ): void => {
       const {graphData} = get();
-      const current = graphData?.containers[containerId];
+      const current = graphData?.containers[containerSystemId];
       if (!graphData || !current) {
         return;
       }
 
       const containers = {...graphData.containers};
-      delete containers[containerId];
-      containers[newId] = {...current, containerId: newId};
+      delete containers[containerSystemId];
+      containers[newId] = {...current, systemId: newId};
 
       const moduleInstances = Object.fromEntries(
         Object.entries(graphData.moduleInstances).map(([id, module]) => [
           id,
-          module.containerId === containerId
-            ? {...module, containerId: newId}
+          module.containerSystemId === containerSystemId
+            ? {...module, containerSystemId: newId}
             : module,
         ]),
       );
@@ -1187,9 +1177,9 @@ export function createGraphDataSlice<
       get().markDirty();
     },
 
-    updateModuleAliasLocal: (moduleId: string, alias: string): void => {
+    updateModuleAliasLocal: (moduleSystemId: string, alias: string): void => {
       const {graphData} = get();
-      const current = graphData?.moduleInstances[moduleId];
+      const current = graphData?.moduleInstances[moduleSystemId];
       if (!graphData || !current) {
         return;
       }
@@ -1198,7 +1188,7 @@ export function createGraphDataSlice<
           ...graphData,
           moduleInstances: {
             ...graphData.moduleInstances,
-            [moduleId]: {...current, displayName: alias},
+        [moduleSystemId]: {...current, displayName: alias},
           },
         },
       } as unknown as Partial<S>);
@@ -1206,17 +1196,20 @@ export function createGraphDataSlice<
     },
 
     updateModuleContainerLocal: (
-      moduleId: string,
-      newContainerId: string,
+      moduleSystemId: string,
+      newContainerSystemId: string,
     ): void => {
       const {graphData} = get();
-      const current = graphData?.moduleInstances[moduleId];
+      const current = graphData?.moduleInstances[moduleSystemId];
       if (!graphData || !current) {
         return;
       }
       const moduleInstances = {
         ...graphData.moduleInstances,
-        [moduleId]: {...current, containerId: newContainerId},
+        [moduleSystemId]: {
+          ...current,
+          containerSystemId: newContainerSystemId,
+        },
       };
       const {containers, subgraphs} = deriveContainersAndSubgraphs(
         moduleInstances,
@@ -1234,12 +1227,12 @@ export function createGraphDataSlice<
     },
 
     updateModulePortCountLocal: (
-      moduleId: string,
+      moduleSystemId: string,
       field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
       value: number,
     ): void => {
       const {graphData} = get();
-      const current = graphData?.moduleInstances[moduleId];
+      const current = graphData?.moduleInstances[moduleSystemId];
       if (!graphData || !current) {
         return;
       }
@@ -1248,16 +1241,19 @@ export function createGraphDataSlice<
           ...graphData,
           moduleInstances: {
             ...graphData.moduleInstances,
-            [moduleId]: {...current, [field]: value},
+        [moduleSystemId]: {...current, [field]: value},
           },
         },
       } as unknown as Partial<S>);
       get().markDirty();
     },
 
-    updateSubgraphNameLocal: (subgraphId: string, name: string): void => {
+    updateSubgraphNameLocal: (
+      subgraphSystemId: string,
+      name: string,
+    ): void => {
       const {graphData} = get();
-      const current = graphData?.subgraphs[subgraphId];
+      const current = graphData?.subgraphs[subgraphSystemId];
       if (!graphData || !current) {
         return;
       }
@@ -1266,7 +1262,7 @@ export function createGraphDataSlice<
           ...graphData,
           subgraphs: {
             ...graphData.subgraphs,
-            [subgraphId]: {...current, subgraphName: name},
+            [subgraphSystemId]: {...current, subgraphName: name},
           },
         },
       } as unknown as Partial<S>);

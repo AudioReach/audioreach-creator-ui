@@ -6,7 +6,7 @@
 import type {
   ControlPortDto,
   DataPortDto,
-  KeyInfo,
+  KeyInfoDto,
   PortIOType,
   PortType,
 } from '~entities/usecases/model/usecase-component.dto';
@@ -64,7 +64,7 @@ export interface NormalizedMoveSubsystemComponentsResponseDto {
 export interface MoveSubsystemLinkDto {
   destinationPortSystemId: string;
   destinationSystemId: string;
-  isDangling: boolean;
+  isInterUsecase: boolean;
   sourcePortSystemId: string;
   sourceSystemId: string;
   systemId: string;
@@ -110,7 +110,7 @@ export interface PatchSubsystemRequestDto {
 export interface UpdateSubsystemResponseDto {
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
-  filteredKeys: KeyInfo[];
+  filteredKeys: KeyInfoDto[];
   name?: string;
   naturalId: number;
   parentSystemId?: string;

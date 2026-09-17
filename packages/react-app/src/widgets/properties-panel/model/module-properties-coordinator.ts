@@ -4,6 +4,7 @@
  */
 
 import {fetchSpfModuleProperties} from '~entities/spf-modules';
+import {hasBlockingIssues} from '~shared/api';
 
 import {
   propertiesEntryKey,
@@ -23,7 +24,7 @@ export async function refreshCachedModulePropertiesForContainer(
   await Promise.allSettled(
     cachedModuleIds.map(async (moduleId) => {
       const result = await fetchSpfModuleProperties(projectId, moduleId);
-      if (result.success && result.data) {
+      if (!hasBlockingIssues(result) && result.data) {
         usePropertiesPanelStore
           .getState()
           .replaceProperties(projectId, 'module', moduleId, result.data);

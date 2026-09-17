@@ -192,7 +192,7 @@ describe('resolveModuleDropTarget', () => {
     const target = baseNode({
       nodeKind: NODE_KIND.SUBGRAPH_PROXY,
       ports: [],
-      subgraphId: 1,
+      subgraphSystemId: 1,
     });
     expect(resolveModuleDropTarget(target)).toEqual({kind: 'rejected'});
   });
@@ -247,8 +247,8 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-1',
       }),
       message: 'ok',
@@ -282,8 +282,8 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-1',
       }),
       message: 'ok',
@@ -348,8 +348,8 @@ describe('createModuleOperations — addModuleToContainer', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-2',
       }),
       message: 'ok',
@@ -388,8 +388,8 @@ describe('createModuleOperations — addModuleToSubgraphNoContainer', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 20,
-        subgraphId: '5',
+        containerSystemId: 20,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-3',
       }),
       message: 'ok',
@@ -464,7 +464,7 @@ describe('createModuleOperations — delete', () => {
       graphData: {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
-          'sys-mod-1': makeModuleInstance({subgraphId: '1'}),
+          'sys-mod-1': makeModuleInstance({subgraphSystemId: '1'}),
         },
       },
       kvSelectionsById: {

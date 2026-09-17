@@ -15,9 +15,9 @@ const ENABLE_PARAM_SYSTEM_ID = 'PARAM_ID_MODULE_ENABLE_SYS_ID';
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
@@ -29,7 +29,7 @@ function makeModuleDefinitionDto(
 ): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
+    customModuleData: {
       entryPointTag: '',
       fileName: '',
       interfaceTypeId: 0,
@@ -42,7 +42,6 @@ function makeModuleDefinitionDto(
     isOffloadable: false,
     modSearchKeys: '',
     moduleDirectionType: 'SOURCE',
-    moduleId: 200,
     moduleInfo: {
       containerTypeInfo: [],
       dynamicIntents: [],
@@ -66,6 +65,7 @@ function makeModuleDefinitionDto(
       },
     },
     name: 'AudioDecoder',
+    naturalId: 200,
     paramDefinitionsSummaryInfo: [],
     processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
     systemId: 'def-1',
@@ -76,16 +76,17 @@ function makeModuleDefinitionDto(
 
 function makeModule(overrides?: Partial<ModuleInstance>): ModuleInstance {
   return {
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
-    moduleId: 'mod-1',
-    moduleInstanceId: 'inst-1',
+    moduleDefinitionSystemId: 'mod-1',
     moduleName: 'Module',
     moduleType: '',
+    naturalId: 200,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: 'inst-1',
     ...overrides,
   };
 }
@@ -103,7 +104,7 @@ function makeCalDataDto(overrides?: Partial<CalDataDto>): CalDataDto {
 function makeState(options: {
   headerSelectionsBySubgraphId?: GraphDesignerStore['headerSelectionsBySubgraphId'];
   moduleDataByInstanceId?: Record<string, ModuleDataEntry>;
-  moduleDefinitionsById?: Record<string, SpfModuleDefinitionResponseDto>;
+  moduleDefinitionsBySystemId?: Record<string, SpfModuleDefinitionResponseDto>;
   moduleInstances?: Record<string, ModuleInstance>;
 }): GraphDesignerStore {
   return {
@@ -117,7 +118,7 @@ function makeState(options: {
     },
     headerSelectionsBySubgraphId: options.headerSelectionsBySubgraphId ?? {},
     moduleDataByInstanceId: options.moduleDataByInstanceId ?? {},
-    moduleDefinitionsById: options.moduleDefinitionsById ?? {},
+    moduleDefinitionsBySystemId: options.moduleDefinitionsBySystemId ?? {},
   } as unknown as GraphDesignerStore;
 }
 
@@ -130,7 +131,7 @@ function makeStateWithEnableModule(options: {
     headerSelectionsBySubgraphId: {
       'sg-1': {
         keyValues: {'key-device': options.resolvedCkvSystemId},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
       },
     },
     moduleDataByInstanceId: {
@@ -144,17 +145,17 @@ function makeStateWithEnableModule(options: {
                 elements: [
                   {
                     allowedValues: [
-                      {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
-                      {name: 'Disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+                      {name: 'Enable', value: '0x1'},
+                      {name: 'Disable', value: '0x0'},
                     ],
                     isReadOnly: false,
                     name: 'Enable',
-                    type: 'CONFIG_ELEMENT',
+                    type: 'ConfigElement',
                     value: options.enableValue,
                   },
                 ],
                 name: 'Enable',
-                parameterId: '0x8001026',
+                naturalId: '0x8001026',
                 systemId: ENABLE_PARAM_SYSTEM_ID,
               },
             ],
@@ -166,7 +167,7 @@ function makeStateWithEnableModule(options: {
         moduleName: 'Module',
       },
     },
-    moduleDefinitionsById: {
+    moduleDefinitionsBySystemId: {
       'mod-1': makeModuleDefinitionDto({
         paramDefinitionsSummaryInfo: [
           {
@@ -190,7 +191,7 @@ function makeStateWithEnableModule(options: {
             ['key-device', 'ckv-devicerx-headset'],
           ]),
         ],
-        moduleInstanceId: 'mod-2012',
+        systemId: 'mod-2012',
       }),
     },
   });
@@ -207,7 +208,7 @@ describe('selectModuleEnable', () => {
 
   it('returns isPresent: false when the definition lacks the enable param', () => {
     const state = makeState({
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({paramDefinitionsSummaryInfo: []}),
       },
       moduleInstances: {'inst-1': makeModule()},
@@ -218,7 +219,7 @@ describe('selectModuleEnable', () => {
 
   it('returns isPresent: false when the definition has a param whose systemId looks right but whose paramId does not match', () => {
     const state = makeState({
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: [
             {
@@ -242,7 +243,7 @@ describe('selectModuleEnable', () => {
 
   it('returns isCkvResolved: false when the module CKV is unresolved', () => {
     const state = makeState({
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: [
             {
@@ -272,7 +273,7 @@ describe('selectModuleEnable', () => {
   it('returns isReady: false when the enable item is not yet in calData', () => {
     const state = makeState({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleDataByInstanceId: {
         'inst-1': {
@@ -286,7 +287,7 @@ describe('selectModuleEnable', () => {
           moduleName: 'Module',
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: [
             {
@@ -317,7 +318,7 @@ describe('selectModuleEnable', () => {
   it('returns isReady: true with the decoded boolean value when the enable item is loaded', () => {
     const state = makeState({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleDataByInstanceId: {
         'inst-1': {
@@ -330,21 +331,20 @@ describe('selectModuleEnable', () => {
                   elements: [
                     {
                       allowedValues: [
-                        {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+                        {name: 'Enable', value: '0x1'},
                         {
                           name: 'Disable',
-                          type: 'NAME_VALUE_PAIR',
                           value: '0x0',
                         },
                       ],
                       isReadOnly: false,
                       name: 'Enable',
-                      type: 'CONFIG_ELEMENT',
+                      type: 'ConfigElement',
                       value: '0x1',
                     },
                   ],
                   name: 'Enable',
-                  parameterId: '0x8001026',
+                  naturalId: '0x8001026',
                   systemId: ENABLE_PARAM_SYSTEM_ID,
                 },
               ],
@@ -356,7 +356,7 @@ describe('selectModuleEnable', () => {
           moduleName: 'Module',
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: [
             {
@@ -388,7 +388,7 @@ describe('selectModuleEnable', () => {
   it('resolves the enable param by a definition whose systemId differs from the conventional name, as long as its paramId matches', () => {
     const state = makeState({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleDataByInstanceId: {
         'inst-1': {
@@ -401,21 +401,20 @@ describe('selectModuleEnable', () => {
                   elements: [
                     {
                       allowedValues: [
-                        {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+                        {name: 'Enable', value: '0x1'},
                         {
                           name: 'Disable',
-                          type: 'NAME_VALUE_PAIR',
                           value: '0x0',
                         },
                       ],
                       isReadOnly: false,
                       name: 'Enable',
-                      type: 'CONFIG_ELEMENT',
+                      type: 'ConfigElement',
                       value: '0x1',
                     },
                   ],
                   name: 'Enable',
-                  parameterId: '0x8001026',
+                  naturalId: '0x8001026',
                   systemId: 'unconventional-enable-sys-id',
                 },
               ],
@@ -427,7 +426,7 @@ describe('selectModuleEnable', () => {
           moduleName: 'Module',
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: [
             {

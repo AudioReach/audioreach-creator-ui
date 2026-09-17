@@ -40,7 +40,7 @@ export function transformTagsToConfiguredTKVs(
       const configuredTKV = transformTkvToConfiguredTKV(
         tkv,
         tag.tagName,
-        tag.tagId,
+        tag.naturalId,
       );
       configuredTKVs.push(configuredTKV);
     });
@@ -57,14 +57,14 @@ function transformTkvToConfiguredTKV(
   tagGroupName: string,
   tagGroupId: number,
 ): ConfiguredTkv {
-  const keyValuePairs = tkv.keyValueCollection.map((kv) => ({
+  const keyValuePairs = tkv.keyValuePairs.map((kv) => ({
     key: {
-      id: kv.keyInfo.keyId,
-      name: kv.keyInfo.keyLabel,
+      id: kv.key.naturalId,
+      name: kv.key.name,
     },
     value: {
-      id: kv.valueInfo.valueId,
-      name: kv.valueInfo.valueLabel,
+      id: kv.value.naturalId,
+      name: kv.value.name,
     },
   }));
 
@@ -128,7 +128,7 @@ function transformTagValueDefinition(valueDto: TagValueDefinitionInfo): {
   name: string;
 } {
   return {
-    id: valueDto.valueId,
+    id: valueDto.naturalId,
     name: valueDto.name,
   };
 }
@@ -142,7 +142,7 @@ function transformTagKeyDefinitionToModuleTagKey(
   keyDto: TagKeyDefinitionInfo,
 ): ModuleTagKey {
   return {
-    id: keyDto.keyId,
+    id: keyDto.naturalId,
     name: keyDto.name,
     values: keyDto.values.map(transformTagValueDefinition),
   };
@@ -174,7 +174,7 @@ function transformTagDefinitionToTagGroup(
   tagDto: TagDefinitionResponseDto,
 ): TagGroup {
   return {
-    id: tagDto.tagId,
+    id: tagDto.naturalId,
     keys: transformTagKeyDefinitionsToModuleTagKeys(tagDto.keyDefinitions),
     name: tagDto.name,
   };

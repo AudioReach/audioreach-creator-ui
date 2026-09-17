@@ -651,7 +651,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Effect — proactively fetch enable-parameter values so canvas enable
   // overlays reflect real state without opening a module data tab
   // (design.md §21.8). Gated on both graph data and module definitions being
-  // ready — syncEnableOverlays uses moduleDefinitionsById to identify
+  // ready — syncEnableOverlays uses moduleDefinitionsBySystemId to identify
   // enable-capable modules, so running before definitions load silently
   // skips every module and never retries. Safe to re-run because
   // syncEnableOverlays is idempotent per resolved CKV.

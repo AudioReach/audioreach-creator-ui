@@ -8,7 +8,7 @@ import {useState} from 'react';
 import {selectCollection} from '@qualcomm-ui/core/select';
 import {Select} from '@qualcomm-ui/react/select';
 
-import type {NameValuePairDto} from '~entities/spf-module-data';
+import type {NameValueDto} from '~entities/spf-module-data';
 
 import {findOptionName} from '../../lib/find-option-name';
 
@@ -18,7 +18,7 @@ export interface SelectControlProps {
   elementKey: string;
   onAutoCommit?: () => void;
   onValueChange: (key: string, value: string) => void;
-  options: NameValuePairDto[];
+  options: NameValueDto[];
 }
 
 export function SelectControl({

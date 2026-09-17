@@ -20,24 +20,28 @@ export function buildLengthFormulaMap(
     {arrayName: string; arrayPath: string; template: AnyElementDto[]}[]
   >();
 
-  function walk(elems: AnyElementDto[], itemId: string, prefix: string[]) {
+  function walk(
+    elems: AnyElementDto[],
+    itemId: string,
+    prefix: Array<string | undefined>,
+  ) {
     for (const elem of elems) {
-      if (elem.type === 'ELEMENT_TEMPLATE_ARRAY' && elem.lengthFormula) {
+      if (elem.type === 'ElementTemplateArray' && elem.lengthFormula) {
         const controllerName = elem.lengthFormula;
         const controllerPath = elementKey(itemId, ...prefix, controllerName);
         const arrayPath = elementKey(itemId, ...prefix, elem.name);
         const existing = map.get(controllerPath) ?? [];
         map.set(controllerPath, [
           ...existing,
-          {arrayName: elem.name, arrayPath, template: elem.template},
+          {arrayName: elem.name ?? '', arrayPath, template: elem.template},
         ]);
       }
-      if (elem.type === 'STRUCT') {
+      if (elem.type === 'Struct') {
         walk(elem.value, itemId, [...prefix, elem.name]);
       }
-      if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+      if (elem.type === 'ElementTemplateArray') {
         for (const inst of elem.value) {
-          if (inst.type === 'STRUCT') {
+          if (inst.type === 'Struct') {
             walk(inst.value, itemId, [...prefix, inst.name]);
           }
         }

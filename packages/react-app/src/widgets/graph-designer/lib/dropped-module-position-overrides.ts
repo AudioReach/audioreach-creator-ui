@@ -35,8 +35,8 @@ export function buildDroppedModulePositionOverrides(
   }
 
   const containerId = containerNodeId(
-    moduleInstance.containerId,
-    moduleInstance.subgraphId,
+    moduleInstance.containerSystemId,
+    moduleInstance.subgraphSystemId,
   );
 
   if (placement === 'container') {
@@ -53,6 +53,6 @@ export function buildDroppedModulePositionOverrides(
   return {
     [containerId]: CONTAINER_INSET,
     [createdModuleId]: MODULE_INSET,
-    [subgraphNodeId(moduleInstance.subgraphId)]: position,
+    [subgraphNodeId(moduleInstance.subgraphSystemId)]: position,
   };
 }

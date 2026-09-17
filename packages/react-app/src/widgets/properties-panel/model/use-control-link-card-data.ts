@@ -9,6 +9,7 @@ import {
   fetchControlLinkProperties,
   patchControlLinkProperties,
 } from '~entities/control-links';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
 import {
@@ -34,9 +35,9 @@ export function useControlLinkCardData({
         controlLinkId,
         {properties: [property]},
       );
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         return {
-          message: result.message ?? 'Failed to save schema properties',
+          message: getIssueMessage(result, 'Failed to save schema properties'),
           success: false as const,
         };
       }
@@ -47,7 +48,7 @@ export function useControlLinkCardData({
         ) ?? property;
       return {
         data: {property: nextProperty, type: 'replaceProperty' as const},
-        message: result.message,
+        message: getIssueMessage(result, ''),
         success: true as const,
       };
     },

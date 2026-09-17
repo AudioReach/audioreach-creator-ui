@@ -15,16 +15,17 @@ export function makeModuleInstance(
   overrides: Partial<ModuleInstance> = {},
 ): ModuleInstance {
   return {
-    containerId: '10',
+    containerSystemId: '10',
     displayName: 'AudioDecoder',
     inputPorts: [],
-    moduleId: '200',
-    moduleInstanceId: 'sys-mod-1',
+    moduleDefinitionSystemId: 'mod-def-200',
     moduleName: 'AudioDecoder',
     moduleType: '',
+    naturalId: 200,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: '1',
+    subgraphSystemId: '1',
+    systemId: 'sys-mod-1',
     ...overrides,
   };
 }
@@ -34,29 +35,26 @@ export function makeSpfModuleDto(
 ): SpfModuleDto {
   return {
     alias: '',
-    changeInfo: {changeType: 'CREATE'},
-    containerId: 10,
+    containerSystemId: '10',
     controlPorts: [],
     dataPorts: [],
-    heapId: 0,
-    id: 1,
     maxControlPortsSupported: 0,
     maxInputPortsSupported: 0,
     maxOutputPortsSupported: 0,
-    moduleId: 200,
+    moduleDefinitionSystemId: 'mod-def-200',
     name: 'AudioDecoder',
+    naturalId: 200,
     relatedEndPointLinks: [],
-    subgraphId: 'sys-sg-1',
+    subgraphSystemId: 'sys-sg-1',
     systemId: 'sys-mod-1',
     ...overrides,
   };
 }
 
 const DEFAULT_LINK_DTO = {
-  connectionType: 'MODULE_MODULE',
   destinationPortSystemId: '20',
   destinationSystemId: '2',
-  isDangling: false,
+  isInterUsecase: false,
   sourcePortSystemId: '10',
   sourceSystemId: '1',
   systemId: 'link-1',
@@ -78,12 +76,11 @@ export function makeSubsystemDto(
   overrides: Partial<SubsystemDto> = {},
 ): SubsystemDto {
   return {
-    changeInfo: {changeType: 'CREATE'},
     controlPorts: [],
     dataPorts: [],
     filteredKeys: [],
-    id: 99,
     name: 'Subsystem A',
+    naturalId: 99,
     relatedEndPointLinks: [],
     systemId: 'sys-ss-1',
     ...overrides,

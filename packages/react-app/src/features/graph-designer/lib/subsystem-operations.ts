@@ -20,6 +20,7 @@ import type {
   ControlLinkDto,
   DataLinkDto,
 } from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 
 import {withMutationLock} from '../model/edit-session-slice';
@@ -77,34 +78,33 @@ export function canMoveToSubsystem(
 
 function toConnection(
   link: MoveSubsystemLinkDto,
-  connectionType: 'control' | 'data',
+  linkKind: 'control' | 'data',
 ): Connection {
   return {
-    connectionId: link.systemId,
-    connectionType,
-    fromModuleId: link.sourceSystemId,
-    fromPortId: link.sourcePortSystemId,
-    isDangling: false,
-    toModuleId: link.destinationSystemId,
-    toPortId: link.destinationPortSystemId,
+    destinationPortSystemId: link.destinationPortSystemId,
+    destinationSystemId: link.destinationSystemId,
+    isInterUsecase: false,
+    linkKind,
+    sourcePortSystemId: link.sourcePortSystemId,
+    sourceSystemId: link.sourceSystemId,
+    systemId: link.systemId,
   };
 }
 
 function toLinkEndpoints(connection: Connection): LinkEndpoints {
   return {
-    destinationPortSystemId: connection.toPortId,
-    destinationSystemId: connection.toModuleId,
-    sourcePortSystemId: connection.fromPortId,
-    sourceSystemId: connection.fromModuleId,
+    destinationPortSystemId: connection.destinationPortSystemId,
+    destinationSystemId: connection.destinationSystemId,
+    sourcePortSystemId: connection.sourcePortSystemId,
+    sourceSystemId: connection.sourceSystemId,
   };
 }
 
 function toControlLinkDto(link: MoveSubsystemLinkDto): ControlLinkDto {
   return {
-    connectionType: 'MODULE_MODULE',
     destinationPortSystemId: link.destinationPortSystemId,
     destinationSystemId: link.destinationSystemId,
-    isDangling: false,
+    isInterUsecase: false,
     sourcePortSystemId: link.sourcePortSystemId,
     sourceSystemId: link.sourceSystemId,
     systemId: link.systemId,
@@ -113,10 +113,9 @@ function toControlLinkDto(link: MoveSubsystemLinkDto): ControlLinkDto {
 
 function toDataLinkDto(link: MoveSubsystemLinkDto): DataLinkDto {
   return {
-    connectionType: 'MODULE_MODULE',
     destinationPortSystemId: link.destinationPortSystemId,
     destinationSystemId: link.destinationSystemId,
-    isDangling: false,
+    isInterUsecase: false,
     sourcePortSystemId: link.sourcePortSystemId,
     sourceSystemId: link.sourceSystemId,
     systemId: link.systemId,
@@ -128,7 +127,7 @@ function upsertConnection(
   connection: Connection,
 ): Connection[] {
   return [
-    ...connections.filter((c) => c.connectionId !== connection.connectionId),
+    ...connections.filter((c) => c.systemId !== connection.systemId),
     connection,
   ];
 }
@@ -161,9 +160,12 @@ export function createSubsystemOperations(
     options?: InnerActionOptions,
   ): Promise<boolean> {
     const result = await deleteSubsystemApi(projectId, subsystemId);
-    if (!result.success || !result.data) {
+    if (hasBlockingIssues(result) || !result.data) {
       if (!options?.suppressToast) {
-        showToast(result.message ?? 'Failed to delete subsystem', 'danger');
+        showToast(
+          getIssueMessage(result, 'Failed to delete subsystem'),
+          'danger',
+        );
       }
       return false;
     }
@@ -252,7 +254,7 @@ export function createSubsystemOperations(
     const requestedSubsystems = new Set(request.subsystemSystemIds ?? []);
     const movedSubgraphs = new Set(
       response.updatedModules
-        .map((module) => moduleInstances[module.systemId]?.subgraphId)
+        .map((module) => moduleInstances[module.systemId]?.subgraphSystemId)
         .filter(
           (subgraphId): subgraphId is string =>
             subgraphId !== undefined && requestedSubgraphs.has(subgraphId),
@@ -328,7 +330,7 @@ export function createSubsystemOperations(
     ];
     const removedLinkIdSet = new Set(removedLinkIds);
     const deletedLinkEndpoints = (get().graphData?.connections ?? [])
-      .filter((connection) => removedLinkIdSet.has(connection.connectionId))
+      .filter((connection) => removedLinkIdSet.has(connection.systemId))
       .map(toLinkEndpoints);
 
     set((s) => {
@@ -338,8 +340,8 @@ export function createSubsystemOperations(
 
       let connections = s.graphData.connections.filter(
         (connection) =>
-          !response.removedControlLinks.includes(connection.connectionId) &&
-          !response.removedDataLinks.includes(connection.connectionId),
+          !response.removedControlLinks.includes(connection.systemId) &&
+          !response.removedDataLinks.includes(connection.systemId),
       );
       for (const link of response.addedDataLinks) {
         connections = upsertConnection(connections, toConnection(link, 'data'));
@@ -406,8 +408,8 @@ export function createSubsystemOperations(
     failureMessage: string,
   ): Promise<boolean> {
     const result = await moveSubsystemComponents(projectId, request);
-    if (!result.success || !result.data) {
-      showToast(result.message ?? failureMessage, 'danger');
+    if (hasBlockingIssues(result) || !result.data) {
+      showToast(getIssueMessage(result, failureMessage), 'danger');
       return false;
     }
     applySubsystemMoveResponse(get, request, result.data);
@@ -464,9 +466,9 @@ export function createSubsystemOperations(
         const createResult = await createSubsystem(projectId, {
           name: destination.name,
         });
-        if (!createResult.success || !createResult.data) {
+        if (hasBlockingIssues(createResult) || !createResult.data) {
           showToast(
-            createResult.message ?? 'Failed to create subsystem',
+            getIssueMessage(createResult, 'Failed to create subsystem'),
             'danger',
           );
           return false;
@@ -514,8 +516,11 @@ export function createSubsystemOperations(
         const result = await patchSubsystem(projectId, subsystemId, {
           name: newName,
         });
-        if (!result.success || !result.data) {
-          showToast(result.message ?? 'Failed to rename subsystem', 'danger');
+        if (hasBlockingIssues(result) || !result.data) {
+          showToast(
+            getIssueMessage(result, 'Failed to rename subsystem'),
+            'danger',
+          );
           return;
         }
 

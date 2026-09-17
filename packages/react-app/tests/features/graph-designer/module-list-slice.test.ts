@@ -33,7 +33,7 @@ function makeModuleDefinitionDto(
 ): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
+    customModuleData: {
       entryPointTag: '',
       fileName: '',
       interfaceTypeId: 0,
@@ -43,10 +43,11 @@ function makeModuleDefinitionDto(
     deprecated: false,
     description: '',
     displayName: 'AudioDecoder',
+    isCustomModule: false,
+    isLoadedAtBootup: true,
     isOffloadable: false,
     modSearchKeys: '',
     moduleDirectionType: 'SOURCE',
-    moduleId: 200,
     moduleInfo: {
       containerTypeInfo: [],
       dynamicIntents: [],
@@ -63,13 +64,14 @@ function makeModuleDefinitionDto(
       reserved: 0,
       stackSize: 0,
       staticCtrlPorts: {
-        portId: 0,
+        naturalId: 0,
         portIntents: [],
         portName: '',
         systemId: 'ctrl',
       },
     },
     name: 'AudioDecoder',
+    naturalId: 200,
     paramDefinitionsSummaryInfo: [],
     processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
     systemId: 'def-1',
@@ -83,30 +85,26 @@ beforeEach(() => {
 });
 
 describe('createModuleListSlice — loadModuleList', () => {
-  it('populates moduleDefinitionsById keyed by String(moduleId)', async () => {
-    const dto = makeModuleDefinitionDto({moduleId: 200});
+  it('populates moduleDefinitionsBySystemId keyed by systemId', async () => {
+    const dto = makeModuleDefinitionDto({naturalId: 200});
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
       data: [dto],
-      message: undefined,
-      success: true,
     });
 
     const store = makeStore();
     await store.getState().loadModuleList();
 
-    expect(store.getState().moduleDefinitionsById['200']).toEqual(dto);
+    expect(store.getState().moduleDefinitionsBySystemId['def-1']).toEqual(dto);
   });
 
   it('keeps natural module IDs and processor labels separate from system IDs', async () => {
     const dto = makeModuleDefinitionDto({
-      moduleId: 200,
+      naturalId: 200,
       processorInfo: {name: 'ADSP', processorId: 1, systemId: 'proc-1'},
       systemId: 'mod-def-200',
     });
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
       data: [dto],
-      message: undefined,
-      success: true,
     });
 
     const store = makeStore();
@@ -121,17 +119,15 @@ describe('createModuleListSlice — loadModuleList', () => {
     expect(store.getState().selectedDspTypes).toEqual(['ADSP']);
   });
 
-  it('leaves moduleDefinitionsById empty when the API call fails', async () => {
+  it('leaves moduleDefinitionsBySystemId empty when the API call fails', async () => {
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
-      data: undefined,
-      message: 'boom',
-      success: false,
+      issues: [{code: 'LOAD_FAILED', message: 'boom', severity: 'ERROR'}],
     });
 
     const store = makeStore();
     await store.getState().loadModuleList();
 
-    expect(store.getState().moduleDefinitionsById).toEqual({});
+    expect(store.getState().moduleDefinitionsBySystemId).toEqual({});
     expect(store.getState().moduleListStatus).toBe('error');
   });
 });

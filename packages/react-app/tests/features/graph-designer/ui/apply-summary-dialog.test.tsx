@@ -130,7 +130,7 @@ const makeRow = (
   overrides: Partial<CreateUsecasesResponseDto['created'][number]> = {},
 ): CreateUsecasesResponseDto['created'][number] => ({
   changeId: 'change-1',
-  keyValueCollection: [],
+  keyValuePairs: [],
   systemId: 'sys-1',
   usecaseType: 'Regular',
   ...overrides,

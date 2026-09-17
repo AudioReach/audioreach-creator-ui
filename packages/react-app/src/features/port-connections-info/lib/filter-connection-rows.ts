@@ -13,10 +13,10 @@ export function filterConnectionRows(
   filter: ConnectionFilter,
 ): ConnectionRow[] {
   if (filter === 'sg') {
-    return rows.filter((r) => !r.isDangling);
+    return rows.filter((r) => !r.isInterUsecase);
   }
   if (filter === 'dangling') {
-    return rows.filter((r) => r.isDangling);
+    return rows.filter((r) => r.isInterUsecase);
   }
   return rows;
 }

@@ -4,45 +4,45 @@
  */
 
 export interface KeyDefinitionResponseDto {
-  cHeaderCalibrationKeyEnumValue: string;
-  cHeaderEnumName: string;
-  cHeaderEnumValue: string;
-  cHeaderGraphKeyEnumValue: string;
+  calKeyEnumMember: string;
   description: string;
+  enumMember: string;
+  enumName: string;
+  graphKeyEnumMember: string;
   isCalibrationKey: boolean;
   isDynamic: boolean;
   isGraphKey: boolean;
   isVoice: boolean;
-  keyId: number;
   name: string;
+  naturalId: number;
   specialKey: string;
   systemId: string;
   values: ValueDefinitionDto[];
 }
 
 export interface ValueDefinitionDto {
-  cHeaderEnumValue: string;
   description: string;
+  enumMember: string;
   name: string;
+  naturalId: number;
   specialValue: string;
   systemId: string;
-  valueId: number;
 }
 
 export interface TagDefinitionResponseDto {
-  cHeaderEnumName: string;
-  cHeaderEnumValue: string;
+  enumMember: string;
+  enumName: string;
   keyDefinitions: TagKeyDefinitionInfo[];
   name: string;
+  naturalId: number;
   systemId: string;
-  tagId: number;
 }
 
 export interface TagKeyDefinitionInfo {
-  cHeaderEnumValue: string;
   description: string;
-  keyId: number;
+  enumMember: string;
   name: string;
+  naturalId: number;
   systemId: string;
   values: TagValueDefinitionInfo[];
 }
@@ -50,6 +50,6 @@ export interface TagKeyDefinitionInfo {
 export interface TagValueDefinitionInfo {
   description: string;
   name: string;
+  naturalId: number;
   systemId: string;
-  valueId: number;
 }

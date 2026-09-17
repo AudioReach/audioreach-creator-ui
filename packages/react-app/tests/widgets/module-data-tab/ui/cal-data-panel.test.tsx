@@ -107,12 +107,12 @@ interface TestStoreShape {
   updateCalData: jest.Mock;
 }
 
-function makeCkvDto(systemId: string, valueLabel: string): CkvDto {
+function makeCkvDto(systemId: string, valueName: string): CkvDto {
   return {
-    keyValueCollection: [
+    keyValuePairs: [
       {
-        keyInfo: {keyId: 1, keyLabel: 'Volume', keySystemId: 'key-1'},
-        valueInfo: {valueId: 1, valueLabel, valueSystemId: 'val-1'},
+        key: {name: 'Volume', naturalId: 1, systemId: 'key-1'},
+        value: {name: valueName, naturalId: 1, systemId: 'val-1'},
       },
     ],
     supportedParameters: [],
@@ -125,7 +125,7 @@ function makeParam(id: string): ParameterDetailDto {
     changeInfo: {changeType: 'NONE'},
     elements: [],
     name: `Param ${id}`,
-    parameterId: id,
+    naturalId: id,
     systemId: id,
   };
 }

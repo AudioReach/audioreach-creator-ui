@@ -11,9 +11,7 @@ jest.mock('~shared/lib/logger');
 
 function makeItem(id: string, value: string): TreeViewItem {
   return {
-    elements: [
-      {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value},
-    ],
+    elements: [{isReadOnly: false, name: 'gain', type: 'ConfigElement', value}],
     id,
     name: `Param ${id}`,
   };

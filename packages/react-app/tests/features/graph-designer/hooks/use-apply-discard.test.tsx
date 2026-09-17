@@ -111,7 +111,7 @@ function makeReviewResponse(
     created: [
       {
         changeId: 'change-1',
-        keyValueCollection: [],
+        keyValuePairs: [],
         systemId: 'uc-new-1',
         usecaseType: 'Regular',
       },

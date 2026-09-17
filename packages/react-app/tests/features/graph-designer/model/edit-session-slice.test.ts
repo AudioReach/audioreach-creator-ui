@@ -65,9 +65,9 @@ function makeGraphData(subgraphIds: string[]): UsecaseGraphData {
   for (const subgraphId of subgraphIds) {
     subgraphs[subgraphId] = {
       containers: [],
-      systemId: subgraphId,
       subgraphName: subgraphId,
       subgraphType: '',
+      systemId: subgraphId,
     };
   }
   return {
@@ -99,13 +99,13 @@ describe('EditSessionSlice', () => {
     store.setState({
       excludedLinks: [
         {
-          connectionId: 'c1',
-          connectionType: 'data',
-          fromModuleId: 'm1',
-          fromPortId: 'p1',
-          isDangling: false,
-          toModuleId: 'm2',
-          toPortId: 'p2',
+          destinationPortSystemId: 'p2',
+          destinationSystemId: 'm2',
+          isInterUsecase: false,
+          linkKind: 'data',
+          sourcePortSystemId: 'p1',
+          sourceSystemId: 'm1',
+          systemId: 'c1',
         },
       ],
       kvSelectionsById: {

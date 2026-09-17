@@ -18,7 +18,7 @@ import type {GenericTreeViewHandle} from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
 import {isUiStateDirty} from '~shared/lib/tree-view-ui-state';
 
-import {keyValueCollectionToLabel} from '../lib/key-value-label';
+import {keyValuePairsToLabel} from '../lib/key-value-label';
 import {compareByKeyValueSystemIds} from '../lib/sort-by-key-value';
 import {
   dirtyItemsToTagDataRequest,
@@ -35,7 +35,7 @@ interface TagDataPanelProps {
 }
 
 interface TkvOption {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   label: string;
   tagSystemId: string;
   tkvSystemId: string;
@@ -43,8 +43,8 @@ interface TkvOption {
 
 function tagToOptions(tag: TagInfoDto): TkvOption[] {
   return (tag.tkvs ?? []).map((tkv) => ({
-    keyValueCollection: tkv.keyValueCollection,
-    label: `${tag.tagName}: ${keyValueCollectionToLabel(tkv.keyValueCollection)}`,
+    keyValuePairs: tkv.keyValuePairs,
+    label: `${tag.tagName}: ${keyValuePairsToLabel(tkv.keyValuePairs)}`,
     tagSystemId: tag.systemId,
     tkvSystemId: tkv.systemId,
   }));
@@ -84,10 +84,7 @@ function TagDataPanelInner(
       (tagData?.availableTagIndices ?? [])
         .flatMap(tagToOptions)
         .sort((a, b) =>
-          compareByKeyValueSystemIds(
-            a.keyValueCollection,
-            b.keyValueCollection,
-          ),
+          compareByKeyValueSystemIds(a.keyValuePairs, b.keyValuePairs),
         ),
     [tagData?.availableTagIndices],
   );

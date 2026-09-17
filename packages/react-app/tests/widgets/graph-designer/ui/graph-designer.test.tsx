@@ -236,32 +236,33 @@ function makeGraphData(): UsecaseGraphData {
     connections: [],
     containers: {
       'cnt-1': {
-        containerId: 'cnt-1',
         moduleInstances: ['mod-1'],
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'cnt-1',
       },
     },
     moduleInstances: {
       'mod-1': {
-        containerId: 'cnt-1',
+        containerSystemId: 'cnt-1',
         displayName: 'Module 1',
         inputPorts: [],
-        moduleId: 'module-1',
-        moduleInstanceId: 'mod-1',
+        moduleDefinitionSystemId: 'module-1',
         moduleName: 'Module 1',
         moduleType: '',
+        naturalId: 1,
         outputPorts: [],
         position: {x: 0, y: 0},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'mod-1',
       },
     },
     selectedUsecases: ['uc-1'],
     subgraphs: {
       'sg-1': {
         containers: ['cnt-1'],
-        subgraphId: 'sg-1',
         subgraphName: 'Subgraph 1',
         subgraphType: '',
+        systemId: 'sg-1',
       },
     },
     subsystems: {},
@@ -303,13 +304,13 @@ function makeBoundaryGraphData(): UsecaseGraphData {
     ...graphData,
     connections: [
       {
-        connectionId: 'inner-boundary-link',
-        connectionType: 'data',
-        fromModuleId: 'mod-1',
-        fromPortId: 'out-1',
-        isDangling: false,
-        toModuleId: 'mod-1',
-        toPortId: 'in-1',
+        destinationPortSystemId: 'in-1',
+        destinationSystemId: 'mod-1',
+        isInterUsecase: false,
+        linkKind: 'data',
+        sourcePortSystemId: 'out-1',
+        sourceSystemId: 'mod-1',
+        systemId: 'inner-boundary-link',
       },
     ],
     subsystems: {
@@ -573,13 +574,13 @@ function makePortTarget(
   };
 }
 
-function makeUsecase(systemId: string, valueLabel: string): UsecaseDto {
+function makeUsecase(systemId: string, valueName: string): UsecaseDto {
   return {
     changeInfo: {changeType: 'NONE'},
-    keyValueCollection: [
+    keyValuePairs: [
       {
-        keyInfo: {keyId: 1, keyLabel: 'DeviceRX', keySystemId: 'key-1'},
-        valueInfo: {valueId: 1, valueLabel, valueSystemId: 'val-1'},
+        key: {name: 'DeviceRX', naturalId: 1, systemId: 'key-1'},
+        value: {name: valueName, naturalId: 1, systemId: 'val-1'},
       },
     ],
     systemId,

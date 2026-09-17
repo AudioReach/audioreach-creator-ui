@@ -11,6 +11,7 @@ import {
   getSpfModuleDefinition,
   type SpfModuleDefinitionResponseDto,
 } from '~entities/module-definitions';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import {
@@ -90,11 +91,11 @@ class ModuleInstanceCoordinator {
         moduleInstanceSystemId,
       );
 
-      if (!defResult.success || !defResult.data) {
-        const errorMessage =
-          defResult.errors?.[0] ||
-          defResult.message ||
-          'Failed to fetch module definition';
+      if (hasBlockingIssues(defResult) || !defResult.data) {
+        const errorMessage = getIssueMessage(
+          defResult,
+          'Failed to fetch module definition',
+        );
         logger.error(
           `Failed to fetch module definition for module ${moduleId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
           {
@@ -113,11 +114,11 @@ class ModuleInstanceCoordinator {
         moduleInstanceSystemId,
       );
 
-      if (!result.success || !result.data) {
-        const errorMessage =
-          result.errors?.[0] ||
-          result.message ||
-          'Failed to fetch module instance data';
+      if (hasBlockingIssues(result) || !result.data) {
+        const errorMessage = getIssueMessage(
+          result,
+          'Failed to fetch module instance data',
+        );
         logger.error(
           `Failed to fetch module instance data for module ${moduleId}, instance ${instanceId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
           {

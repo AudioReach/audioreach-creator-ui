@@ -22,7 +22,7 @@ import {
   calDataDtoToTreeViewData,
   dirtyItemsToCalDataRequest,
 } from '../lib/cal-data-adapter';
-import {keyValueCollectionToLabel} from '../lib/key-value-label';
+import {keyValuePairsToLabel} from '../lib/key-value-label';
 import {compareByKeyValueSystemIds} from '../lib/sort-by-key-value';
 import {useIndexSwitchDialog} from '../use-index-switch-dialog';
 
@@ -66,7 +66,7 @@ function CalDataPanelInner(
   const sortedCalIndices = useMemo(
     () =>
       [...(calData?.availableCalIndices ?? [])].sort((a, b) =>
-        compareByKeyValueSystemIds(a.keyValueCollection, b.keyValueCollection),
+        compareByKeyValueSystemIds(a.keyValuePairs, b.keyValuePairs),
       ),
     [calData?.availableCalIndices],
   );
@@ -93,8 +93,7 @@ function CalDataPanelInner(
   const collection = useMemo(
     () =>
       selectCollection({
-        itemLabel: (item: CkvDto) =>
-          keyValueCollectionToLabel(item.keyValueCollection),
+        itemLabel: (item: CkvDto) => keyValuePairsToLabel(item.keyValuePairs),
         items: sortedCalIndices,
         itemValue: (item: CkvDto) => item.systemId,
       }),
