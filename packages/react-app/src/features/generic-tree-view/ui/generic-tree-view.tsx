@@ -369,7 +369,10 @@ function GenericTreeViewInner(
         const elem = findElementByKey(item.elements, itemId, [], key);
         if (
           elem &&
-          isPolicyVisible(elem.policy, policyFilter) &&
+          isPolicyVisible(
+            elem.policy as 'ADVANCED' | 'BASIC' | 'HIDDEN' | undefined,
+            policyFilter,
+          ) &&
           elem.min !== undefined &&
           elem.max !== undefined
         ) {

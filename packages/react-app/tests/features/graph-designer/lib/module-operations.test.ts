@@ -10,6 +10,9 @@ jest.mock('~shared/controls/global-toaster', () => ({
 jest.mock('~entities/usecases', () => ({
   getSubgraphsByIds: jest.fn(),
 }));
+jest.mock('~entities/containers', () => ({
+  getContainersBySystemIds: jest.fn(),
+}));
 jest.mock('~entities/spf-modules', () => ({
   createSpfModule: jest.fn(),
   deleteSpfModule: jest.fn(),
@@ -36,6 +39,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 
 import {createStore} from 'zustand';
 
+import {getContainersBySystemIds} from '~entities/containers';
 import {endSession, startSession} from '~entities/edit-session';
 import {type AnyNode, NODE_KIND} from '~entities/graph';
 import {getProjectById} from '~entities/project/api/projects-api';
@@ -72,6 +76,7 @@ import {
 
 const mockCreateSpfModule = jest.mocked(createSpfModule);
 const mockDeleteSpfModule = jest.mocked(deleteSpfModule);
+const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockPatchSpfModule = jest.mocked(patchSpfModule);
 const mockShowToast = jest.mocked(showToast);
@@ -80,6 +85,11 @@ const mockStartSession = jest.mocked(startSession);
 const mockGetProjectById = jest.mocked(getProjectById);
 
 beforeEach(() => {
+  mockGetContainersBySystemIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -192,7 +202,7 @@ describe('resolveModuleDropTarget', () => {
     const target = baseNode({
       nodeKind: NODE_KIND.SUBGRAPH_PROXY,
       ports: [],
-      subgraphId: 1,
+      subgraphSystemId: 1,
     });
     expect(resolveModuleDropTarget(target)).toEqual({kind: 'rejected'});
   });
@@ -247,8 +257,8 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-1',
       }),
       message: 'ok',
@@ -282,8 +292,8 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-1',
       }),
       message: 'ok',
@@ -348,8 +358,8 @@ describe('createModuleOperations — addModuleToContainer', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 10,
-        subgraphId: '5',
+        containerSystemId: 10,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-2',
       }),
       message: 'ok',
@@ -388,8 +398,8 @@ describe('createModuleOperations — addModuleToSubgraphNoContainer', () => {
 
     mockCreateSpfModule.mockResolvedValueOnce({
       data: makeSpfModuleDto({
-        containerId: 20,
-        subgraphId: '5',
+        containerSystemId: 20,
+        subgraphSystemId: '5',
         systemId: 'sys-mod-3',
       }),
       message: 'ok',
@@ -464,7 +474,7 @@ describe('createModuleOperations — delete', () => {
       graphData: {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
-          'sys-mod-1': makeModuleInstance({subgraphId: '1'}),
+          'sys-mod-1': makeModuleInstance({subgraphSystemId: '1'}),
         },
       },
       kvSelectionsById: {

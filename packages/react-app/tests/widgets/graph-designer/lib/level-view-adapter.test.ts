@@ -16,32 +16,35 @@ const baseData: UsecaseGraphData = {
   connections: [],
   containers: {
     '10': {
-      containerId: '10',
       moduleInstances: ['sys-mod-1'],
-      subgraphId: '5',
+      naturalId: 10,
+      subgraphSystemId: '5',
+      systemId: '10',
     },
   },
   moduleInstances: {
     'sys-mod-1': {
-      containerId: '10',
+      containerSystemId: '10',
       displayName: 'AudioDecoder',
       inputPorts: [],
-      moduleId: '200',
-      moduleInstanceId: 'sys-mod-1',
+      moduleDefinitionSystemId: '200',
       moduleName: 'AudioDecoder',
       moduleType: 'WR_SHARED_MEM_EP',
+      naturalId: 200,
       outputPorts: [],
       position: {x: 0, y: 0},
-      subgraphId: '5',
+      subgraphSystemId: '5',
+      systemId: 'sys-mod-1',
     },
   },
   selectedUsecases: [],
   subgraphs: {
     '5': {
       containers: ['10'],
-      subgraphId: '5',
+      naturalId: 5,
       subgraphName: 'SG5',
       subgraphType: '',
+      systemId: '5',
     },
   },
   subsystems: {
@@ -57,6 +60,24 @@ const baseData: UsecaseGraphData = {
 };
 
 describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
+  it('uses natural IDs for subgraph nodes with opaque system IDs', () => {
+    const lv = buildLevelViewFromGraphData(
+      {
+        ...baseData,
+        subgraphs: {
+          'subgraph-system-5': {
+            ...baseData.subgraphs['5'],
+            naturalId: 5,
+            systemId: 'subgraph-system-5',
+          },
+        },
+      },
+      'level-1',
+    );
+
+    expect(lv.subgraphs?.[0]?.subgraphId).toBe(5);
+  });
+
   it('populates backend systemId metadata for selectable graph elements', () => {
     const dataWithoutSubsystemOwnership: UsecaseGraphData = {
       ...baseData,
@@ -67,13 +88,13 @@ describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
         ...dataWithoutSubsystemOwnership,
         connections: [
           {
-            connectionId: 'conn-1',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'p-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'p-in',
+            destinationPortSystemId: 'p-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'p-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'conn-1',
           },
         ],
       },
@@ -89,19 +110,31 @@ describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
     expect(subsystemLv.subsystems?.[0]?.meta?.systemId).toBe('sys-ss-20');
   });
 
+  it('uses container natural IDs for node labels and IDs', () => {
+    const lv = buildLevelViewFromGraphData(
+      {...baseData, subsystems: {}},
+      'level-1',
+    );
+
+    expect(lv.containers?.[0]).toMatchObject({
+      containerId: 10,
+      label: 'Container 10',
+    });
+  });
+
   it('omits child subgraphs, containers, and modules when a subsystem owns the subgraph', () => {
     const lv = buildLevelViewFromGraphData(
       {
         ...baseData,
         connections: [
           {
-            connectionId: 'conn-1',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'p-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'p-in',
+            destinationPortSystemId: 'p-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'p-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'conn-1',
           },
         ],
       },
@@ -161,26 +194,26 @@ describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
 
 describe('scoped boundary links', () => {
   it('exposes inner links through the focused subsystem boundary', () => {
-    const moduleInstance = (id: string, subgraphId: string) => ({
+    const moduleInstance = (id: string, subgraphSystemId: string) => ({
       ...baseData.moduleInstances['sys-mod-1'],
-      moduleInstanceId: id,
-      subgraphId,
+      subgraphSystemId,
+      systemId: id,
     });
     const link = (
-      connectionId: string,
-      connectionType: 'control' | 'data',
-      fromModuleId: string,
-      toModuleId: string,
-      fromPortId = `${fromModuleId}-port`,
-      toPortId = `${toModuleId}-port`,
+      systemId: string,
+      linkKind: 'control' | 'data',
+      sourceSystemId: string,
+      destinationSystemId: string,
+      sourcePortSystemId = `${sourceSystemId}-port`,
+      destinationPortSystemId = `${destinationSystemId}-port`,
     ) => ({
-      connectionId,
-      connectionType,
-      fromModuleId,
-      fromPortId,
-      isDangling: false,
-      toModuleId,
-      toPortId,
+      destinationPortSystemId,
+      destinationSystemId,
+      linkKind,
+      linkType: 'NORMAL',
+      sourcePortSystemId,
+      sourceSystemId,
+      systemId,
     });
     const data: UsecaseGraphData = {
       ...baseData,
@@ -226,14 +259,14 @@ describe('scoped boundary links', () => {
       subgraphs: {
         'sg-1': {
           containers: [],
-          subgraphId: 'sg-1',
           subgraphName: 'Scoped',
+          subgraphSystemId: 'sg-1',
           subgraphType: 'graph',
         },
         'sg-external': {
           containers: [],
-          subgraphId: 'sg-external',
           subgraphName: 'External',
+          subgraphSystemId: 'sg-external',
           subgraphType: 'graph',
         },
       },
@@ -375,40 +408,40 @@ describe('buildLevelViewFromGraphData - duplicate connections', () => {
         ...baseData,
         connections: [
           {
-            connectionId: 'duplicate-data-link',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'p-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'p-in',
+            destinationPortSystemId: 'p-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'p-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'duplicate-data-link',
           },
           {
-            connectionId: 'duplicate-data-link',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'p-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'p-in',
+            destinationPortSystemId: 'p-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'p-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'duplicate-data-link',
           },
           {
-            connectionId: 'duplicate-control-link',
-            connectionType: 'control',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'ctrl-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'ctrl-in',
+            destinationPortSystemId: 'ctrl-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'control',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'ctrl-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'duplicate-control-link',
           },
           {
-            connectionId: 'duplicate-control-link',
-            connectionType: 'control',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'ctrl-out',
-            isDangling: false,
-            toModuleId: 'sys-mod-1',
-            toPortId: 'ctrl-in',
+            destinationPortSystemId: 'ctrl-in',
+            destinationSystemId: 'sys-mod-1',
+            linkKind: 'control',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'ctrl-out',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'duplicate-control-link',
           },
         ],
         subsystems: {},
@@ -438,32 +471,32 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
       containers: {
         ...baseData.containers,
         '11': {
-          containerId: '11',
+          containerSystemId: '11',
           moduleInstances: ['sys-mod-2'],
-          subgraphId: '6',
+          subgraphSystemId: '6',
         },
       },
       moduleInstances: {
         ...baseData.moduleInstances,
         'sys-mod-2': {
-          containerId: '11',
+          containerSystemId: '11',
           displayName: 'OtherModule',
           inputPorts: [],
           moduleId: '201',
-          moduleInstanceId: 'sys-mod-2',
           moduleName: 'OtherModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '6',
+          subgraphSystemId: '6',
+          systemId: 'sys-mod-2',
         },
       },
       subgraphs: {
         ...baseData.subgraphs,
         '6': {
           containers: ['11'],
-          subgraphId: '6',
           subgraphName: 'SG6',
+          subgraphSystemId: '6',
           subgraphType: '',
         },
       },
@@ -496,44 +529,44 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
       ...baseData,
       connections: [
         {
-          connectionId: 'cross-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-2',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-2',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'cross-link',
         },
       ],
       containers: {
         ...baseData.containers,
         '11': {
-          containerId: '11',
+          containerSystemId: '11',
           moduleInstances: ['sys-mod-2'],
-          subgraphId: '6',
+          subgraphSystemId: '6',
         },
       },
       moduleInstances: {
         ...baseData.moduleInstances,
         'sys-mod-2': {
-          containerId: '11',
+          containerSystemId: '11',
           displayName: 'OtherModule',
           inputPorts: [],
           moduleId: '201',
-          moduleInstanceId: 'sys-mod-2',
           moduleName: 'OtherModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '6',
+          subgraphSystemId: '6',
+          systemId: 'sys-mod-2',
         },
       },
       subgraphs: {
         ...baseData.subgraphs,
         '6': {
           containers: ['11'],
-          subgraphId: '6',
           subgraphName: 'SG6',
+          subgraphSystemId: '6',
           subgraphType: '',
         },
       },
@@ -565,36 +598,36 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
       ...baseData,
       connections: [
         {
-          connectionId: 'inner-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-3',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-3',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'inner-link',
         },
       ],
       containers: {
         ...baseData.containers,
         '12': {
-          containerId: '12',
+          containerSystemId: '12',
           moduleInstances: ['sys-mod-3'],
-          subgraphId: '5',
+          subgraphSystemId: '5',
         },
       },
       moduleInstances: {
         ...baseData.moduleInstances,
         'sys-mod-3': {
-          containerId: '12',
+          containerSystemId: '12',
           displayName: 'InnerModule',
           inputPorts: [],
           moduleId: '202',
-          moduleInstanceId: 'sys-mod-3',
           moduleName: 'InnerModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '5',
+          subgraphSystemId: '5',
+          systemId: 'sys-mod-3',
         },
       },
     };
@@ -614,45 +647,45 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
       ...baseData,
       connections: [
         {
-          connectionId: 'inner-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-3',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-3',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'inner-link',
         },
         {
-          connectionId: 'inner-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-3',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-3',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'inner-link',
         },
       ],
       containers: {
         ...baseData.containers,
         '12': {
-          containerId: '12',
+          containerSystemId: '12',
           moduleInstances: ['sys-mod-3'],
-          subgraphId: '5',
+          subgraphSystemId: '5',
         },
       },
       moduleInstances: {
         ...baseData.moduleInstances,
         'sys-mod-3': {
-          containerId: '12',
+          containerSystemId: '12',
           displayName: 'InnerModule',
           inputPorts: [],
           moduleId: '202',
-          moduleInstanceId: 'sys-mod-3',
           moduleName: 'InnerModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '5',
+          subgraphSystemId: '5',
+          systemId: 'sys-mod-3',
         },
       },
     };
@@ -671,103 +704,103 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
       ...baseData,
       connections: [
         {
-          connectionId: 'module-to-child',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-ss-21',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-ss-21',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'module-to-child',
         },
         {
-          connectionId: 'child-to-module',
-          connectionType: 'data',
-          fromModuleId: 'sys-ss-21',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-2',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-2',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-ss-21',
+          systemId: 'child-to-module',
         },
         {
-          connectionId: 'child-to-grandchild',
-          connectionType: 'data',
-          fromModuleId: 'sys-ss-21',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-ss-22',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-ss-22',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-ss-21',
+          systemId: 'child-to-grandchild',
         },
         {
-          connectionId: 'outside-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-mod-1',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'outside-module',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'outside-module',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-mod-1',
+          systemId: 'outside-link',
         },
         {
-          connectionId: 'parent-boundary-link',
-          connectionType: 'data',
-          fromModuleId: 'sys-ss-20',
-          fromPortId: 'p-out',
-          isDangling: false,
-          toModuleId: 'sys-mod-1',
-          toPortId: 'p-in',
+          destinationPortSystemId: 'p-in',
+          destinationSystemId: 'sys-mod-1',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p-out',
+          sourceSystemId: 'sys-ss-20',
+          systemId: 'parent-boundary-link',
         },
       ],
       containers: {
         ...baseData.containers,
         '11': {
-          containerId: '11',
+          containerSystemId: '11',
           moduleInstances: ['sys-mod-2'],
-          subgraphId: '6',
+          subgraphSystemId: '6',
         },
         '12': {
-          containerId: '12',
+          containerSystemId: '12',
           moduleInstances: ['sys-mod-3'],
-          subgraphId: '7',
+          subgraphSystemId: '7',
         },
       },
       moduleInstances: {
         ...baseData.moduleInstances,
         'sys-mod-2': {
-          containerId: '11',
+          containerSystemId: '11',
           displayName: 'ChildModule',
           inputPorts: [],
           moduleId: '201',
-          moduleInstanceId: 'sys-mod-2',
           moduleName: 'ChildModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '6',
+          subgraphSystemId: '6',
+          systemId: 'sys-mod-2',
         },
         'sys-mod-3': {
-          containerId: '12',
+          containerSystemId: '12',
           displayName: 'GrandchildModule',
           inputPorts: [],
           moduleId: '202',
-          moduleInstanceId: 'sys-mod-3',
           moduleName: 'GrandchildModule',
           moduleType: '',
           outputPorts: [],
           position: {x: 0, y: 0},
-          subgraphId: '7',
+          subgraphSystemId: '7',
+          systemId: 'sys-mod-3',
         },
       },
       subgraphs: {
         ...baseData.subgraphs,
         '6': {
           containers: ['11'],
-          subgraphId: '6',
           subgraphName: 'SG6',
+          subgraphSystemId: '6',
           subgraphType: '',
         },
         '7': {
           containers: ['12'],
-          subgraphId: '7',
           subgraphName: 'SG7',
+          subgraphSystemId: '7',
           subgraphType: '',
         },
       },
@@ -821,21 +854,21 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
   });
 });
 
-describe('buildLevelViewFromGraphData — isDangling passthrough', () => {
+describe('buildLevelViewFromGraphData — dangling link passthrough', () => {
   const dataWithConnection = (
-    connectionType: 'control' | 'data',
-    isDangling: boolean,
+    linkKind: 'control' | 'data',
+    isInterUsecase: boolean,
   ): UsecaseGraphData => ({
     ...baseData,
     connections: [
       {
-        connectionId: 'conn-1',
-        connectionType,
-        fromModuleId: 'sys-mod-1',
-        fromPortId: 'p-out',
-        isDangling,
-        toModuleId: 'sys-mod-1',
-        toPortId: 'p-in',
+        destinationPortSystemId: 'p-in',
+        destinationSystemId: 'sys-mod-1',
+        linkKind,
+        linkType: isInterUsecase ? 'INTER_USECASE' : 'NORMAL',
+        sourcePortSystemId: 'p-out',
+        sourceSystemId: 'sys-mod-1',
+        systemId: 'conn-1',
       },
     ],
     subsystems: {},
@@ -847,16 +880,16 @@ describe('buildLevelViewFromGraphData — isDangling passthrough', () => {
     ['control', true],
     ['control', false],
   ] as const)(
-    'copies isDangling: %s from a %s Connection onto the matching link',
-    (connectionType, isDangling) => {
+    'derives isDangling: %s from a %s Connection linkType',
+    (linkKind, isInterUsecase) => {
       const lv = buildLevelViewFromGraphData(
-        dataWithConnection(connectionType, isDangling),
+        dataWithConnection(linkKind, isInterUsecase),
         'level-1',
       );
 
       const link =
-        connectionType === 'data' ? lv.dataLinks?.[0] : lv.controlLinks?.[0];
-      expect(link?.isDangling).toBe(isDangling);
+        linkKind === 'data' ? lv.dataLinks?.[0] : lv.controlLinks?.[0];
+      expect(link?.isDangling).toBe(isInterUsecase);
     },
   );
 });

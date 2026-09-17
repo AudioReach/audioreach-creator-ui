@@ -7,6 +7,7 @@ import {useCallback} from 'react';
 
 import {patchSubgraph} from '~entities/subgraphs';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow} from '~shared/controls/property-row';
 
 import {useStaticFieldSave} from '../../model/use-static-field-save';

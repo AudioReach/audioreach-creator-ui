@@ -69,7 +69,7 @@ type TestStore = ModuleDataSlice &
 
 function makeWidenedStore(options: {
   headerSelectionsBySubgraphId?: SubgraphHeaderSelectionSlice['headerSelectionsBySubgraphId'];
-  moduleDefinitionsById?: ModuleListSlice['moduleDefinitionsById'];
+  moduleDefinitionsBySystemId?: ModuleListSlice['moduleDefinitionsBySystemId'];
   moduleInstances?: Record<string, ModuleInstance>;
   withEnableDefinition?: boolean;
 }) {
@@ -93,7 +93,7 @@ function makeWidenedStore(options: {
     loadModuleList: async () => {},
     markClean: () => {},
     markDirty: () => {},
-    moduleDefinitionsById: options.moduleDefinitionsById ?? {},
+    moduleDefinitionsBySystemId: options.moduleDefinitionsBySystemId ?? {},
     moduleList: [],
     moduleListSearchQuery: '',
     moduleListStatus: 'ready',
@@ -109,11 +109,11 @@ function makeWidenedStore(options: {
     });
   }
   if (
-    !options.moduleDefinitionsById &&
+    !options.moduleDefinitionsBySystemId &&
     (options.withEnableDefinition ?? true)
   ) {
     store.setState({
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         [MODULE_DEFINITION_ID]: makeModuleDefinitionDtoWithEnable(),
       },
     });
@@ -124,43 +124,31 @@ function makeWidenedStore(options: {
 function makeModuleDefinitionDtoWithEnable(): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
-      entryPointTag: '',
-      fileName: '',
-      interfaceTypeId: 0,
-      interfaceVersionId: 0,
-      majorTypeId: 0,
-    },
+    customModuleData: undefined,
     deprecated: false,
     description: '',
     displayName: MODULE_NAME,
     isOffloadable: false,
     modSearchKeys: '',
     moduleDirectionType: 'SOURCE',
-    moduleId: 1,
     moduleInfo: {
       containerTypeInfo: [],
       dynamicIntents: [],
       inputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-in'},
-      mdfModuleType: '',
-      metaData: 0,
-      moduleTypeInfo: {
-        buildType: '',
-        islandFriendly: false,
-        majorModuleType: '',
-      },
       outputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-out'},
       pidFramework: 0,
-      reserved: 0,
       stackSize: 0,
-      staticCtrlPorts: {
-        portId: 0,
-        portIntents: [],
-        portName: '',
-        systemId: 'ctrl',
-      },
+      staticCtrlPorts: [
+        {
+          naturalId: 0,
+          portIntents: [],
+          portName: '',
+          systemId: 'ctrl',
+        },
+      ],
     },
     name: MODULE_NAME,
+    naturalId: 1,
     paramDefinitionsSummaryInfo: [
       {
         deprecated: false,
@@ -168,12 +156,12 @@ function makeModuleDefinitionDtoWithEnable(): SpfModuleDefinitionResponseDto {
         isHidden: false,
         isReadOnly: false,
         name: 'Enable',
-        paramId: PARAM_ID_MODULE_ENABLE,
+        naturalId: PARAM_ID_MODULE_ENABLE,
         pidType: '',
         systemId: ENABLE_PARAM_SYSTEM_ID,
       },
     ],
-    processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
+    processorInfo: {name: 'DSP', naturalId: 1, systemId: 'proc-1'},
     systemId: MODULE_DEFINITION_ID,
     vocoderModuleType: '',
   };
@@ -183,25 +171,26 @@ function makeModuleInstance(
   overrides?: Partial<ModuleInstance>,
 ): ModuleInstance {
   return {
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
-    moduleId: MODULE_DEFINITION_ID,
-    moduleInstanceId: MODULE_ID,
+    moduleDefinitionSystemId: MODULE_DEFINITION_ID,
     moduleName: MODULE_NAME,
     moduleType: '',
+    naturalId: 1,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: MODULE_ID,
     ...overrides,
   };
 }
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
@@ -229,16 +218,16 @@ function makeTagDataDto(overrides?: Partial<TagDataDto>): TagDataDto {
 }
 
 function makeCkvDto(systemId: string): CkvDto {
-  return {keyValueCollection: [], supportedParameters: [], systemId};
+  return {keyValuePairs: [], supportedParameters: [], systemId};
 }
 
 function makeTagInfoDto(systemId: string, tkvSystemIds: string[]): TagInfoDto {
   return {
+    naturalId: 1,
     systemId,
-    tagId: 1,
     tagName: 'tag',
     tkvs: tkvSystemIds.map((tkvSystemId) => ({
-      keyValueCollection: [],
+      keyValuePairs: [],
       supportedParameters: [],
       systemId: tkvSystemId,
     })),
@@ -246,15 +235,15 @@ function makeTagInfoDto(systemId: string, tkvSystemIds: string[]): TagInfoDto {
 }
 
 function makeParam(
-  parameterId: string,
+  naturalId: string,
   overrides?: Partial<ParameterDetailDto>,
 ): ParameterDetailDto {
   return {
     changeInfo: {changeType: 'NONE'},
     elements: [],
-    name: parameterId,
-    parameterId,
-    systemId: parameterId,
+    name: naturalId,
+    naturalId,
+    systemId: naturalId,
     ...overrides,
   };
 }
@@ -264,41 +253,28 @@ function makeModuleDefinitionWithEnable(
 ): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
-      entryPointTag: '',
-      fileName: '',
-      interfaceTypeId: 0,
-      interfaceVersionId: 0,
-      majorTypeId: 0,
-    },
+    customModuleData: undefined,
     deprecated: false,
     description: '',
     displayName: 'Splitter',
     isOffloadable: false,
     modSearchKeys: '',
     moduleDirectionType: 'SOURCE',
-    moduleId: 2012,
     moduleInfo: {
       containerTypeInfo: [],
       dynamicIntents: [],
       inputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-in'},
-      mdfModuleType: '',
-      metaData: 0,
-      moduleTypeInfo: {
-        buildType: '',
-        islandFriendly: false,
-        majorModuleType: '',
-      },
       outputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-out'},
       pidFramework: 0,
-      reserved: 0,
       stackSize: 0,
-      staticCtrlPorts: {
-        portId: 0,
-        portIntents: [],
-        portName: '',
-        systemId: 'ctrl',
-      },
+      staticCtrlPorts: [
+        {
+          naturalId: 0,
+          portIntents: [],
+          portName: '',
+          systemId: 'ctrl',
+        },
+      ],
     },
     name: 'Splitter',
     paramDefinitionsSummaryInfo: [
@@ -308,13 +284,13 @@ function makeModuleDefinitionWithEnable(
         isHidden: false,
         isReadOnly: false,
         name: 'Enable',
-        paramId: 0x8001026,
+        naturalId: 0x8001026,
         pidType: '',
         systemId: ENABLE_PARAM_SYSTEM_ID,
         toolPolicy: '',
       },
     ],
-    processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
+    processorInfo: {name: 'DSP', naturalId: 1, systemId: 'proc-1'},
     systemId: 'def-2012',
     vocoderModuleType: '',
     ...overrides,
@@ -331,17 +307,17 @@ function enableDtoFixture(value: string): CalDataDto {
         elements: [
           {
             allowedValues: [
-              {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
-              {name: 'Disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+              {name: 'Enable', value: '0x1'},
+              {name: 'Disable', value: '0x0'},
             ],
             isReadOnly: false,
             name: 'Enable',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value,
           },
         ],
         name: 'Enable',
-        parameterId: '0x8001026',
+        naturalId: '0x8001026',
         systemId: ENABLE_PARAM_SYSTEM_ID,
       },
     ],
@@ -354,9 +330,9 @@ const ENABLE_MODULE_ID = 'mod-2012';
 function makeStoreWithEnableModule() {
   return makeWidenedStore({
     headerSelectionsBySubgraphId: {
-      'sg-502': {keyValues: {'key-device': 'v-btrx'}, subgraphId: 'sg-502'},
+      'sg-502': {keyValues: {'key-device': 'v-btrx'}, subgraphSystemId: 'sg-502'},
     },
-    moduleDefinitionsById: {
+    moduleDefinitionsBySystemId: {
       'mod-def-2012': makeModuleDefinitionWithEnable(),
     },
     moduleInstances: {
@@ -365,9 +341,9 @@ function makeStoreWithEnableModule() {
           makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']]),
           makeCkv('ckv-devicerx-headset', [['key-device', 'v-headset']]),
         ],
-        moduleId: 'mod-def-2012',
-        moduleInstanceId: ENABLE_MODULE_ID,
-        subgraphId: 'sg-502',
+        moduleDefinitionSystemId: 'mod-def-2012',
+        subgraphSystemId: 'sg-502',
+        systemId: ENABLE_MODULE_ID,
       }),
     },
   });
@@ -376,9 +352,9 @@ function makeStoreWithEnableModule() {
 function makeStoreWithUnresolvedHeader() {
   return makeWidenedStore({
     headerSelectionsBySubgraphId: {
-      'sg-502': {keyValues: {'key-device': 'NA'}, subgraphId: 'sg-502'},
+      'sg-502': {keyValues: {'key-device': 'NA'}, subgraphSystemId: 'sg-502'},
     },
-    moduleDefinitionsById: {
+    moduleDefinitionsBySystemId: {
       'mod-def-2012': makeModuleDefinitionWithEnable(),
     },
     moduleInstances: {
@@ -387,9 +363,9 @@ function makeStoreWithUnresolvedHeader() {
           makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']]),
           makeCkv('ckv-devicerx-headset', [['key-device', 'v-headset']]),
         ],
-        moduleId: 'mod-def-2012',
-        moduleInstanceId: ENABLE_MODULE_ID,
-        subgraphId: 'sg-502',
+        moduleDefinitionSystemId: 'mod-def-2012',
+        subgraphSystemId: 'sg-502',
+        systemId: ENABLE_MODULE_ID,
       }),
     },
   });
@@ -398,12 +374,12 @@ function makeStoreWithUnresolvedHeader() {
 function makeStoreWithTwoSubgraphs() {
   return makeWidenedStore({
     headerSelectionsBySubgraphId: {
-      '502': {keyValues: {'key-device': 'v-a'}, subgraphId: '502'},
-      '503': {keyValues: {'key-device': 'v-btrx'}, subgraphId: '503'},
+      '502': {keyValues: {'key-device': 'v-a'}, subgraphSystemId: '502'},
+      '503': {keyValues: {'key-device': 'v-btrx'}, subgraphSystemId: '503'},
     },
-    moduleDefinitionsById: {
+    moduleDefinitionsBySystemId: {
       'mod-def-2011': makeModuleDefinitionWithEnable({
-        moduleId: 2011,
+        naturalId: 2011,
         systemId: 'def-2011',
       }),
       'mod-def-2012': makeModuleDefinitionWithEnable(),
@@ -411,15 +387,15 @@ function makeStoreWithTwoSubgraphs() {
     moduleInstances: {
       [ENABLE_MODULE_ID]: makeModuleInstance({
         ckvs: [makeCkv('ckv-devicerx-btrx', [['key-device', 'v-btrx']])],
-        moduleId: 'mod-def-2012',
-        moduleInstanceId: ENABLE_MODULE_ID,
-        subgraphId: '503',
+        moduleDefinitionSystemId: 'mod-def-2012',
+        subgraphSystemId: '503',
+        systemId: ENABLE_MODULE_ID,
       }),
       'mod-2011': makeModuleInstance({
         ckvs: [makeCkv('ckv-a', [['key-device', 'v-a']])],
-        moduleId: 'mod-def-2011',
-        moduleInstanceId: 'mod-2011',
-        subgraphId: '502',
+        moduleDefinitionSystemId: 'mod-def-2011',
+        subgraphSystemId: '502',
+        systemId: 'mod-2011',
       }),
     },
   });
@@ -456,7 +432,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v2'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v2'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -507,7 +483,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'NA'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'NA'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -552,7 +528,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -605,7 +581,7 @@ describe('createModuleDataSlice — queryModuleData', () => {
 
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -956,7 +932,7 @@ describe('createModuleDataSlice — updateCalData', () => {
       data: makeCalDataDto({
         parameters: [
           makeParam('param-1', {
-            elements: [{type: 'NAME_VALUE_PAIR', value: 'updated'}],
+            elements: [{value: 'updated'}],
           }),
         ],
       }),
@@ -966,12 +942,12 @@ describe('createModuleDataSlice — updateCalData', () => {
 
     const store = makeStore();
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
-    await store.getState().updateCalData(MODULE_ID, {data: []});
+    await store.getState().updateCalData(MODULE_ID, {parameters: []});
 
     const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.calData?.dto?.parameters).toEqual([
       makeParam('param-1', {
-        elements: [{type: 'NAME_VALUE_PAIR', value: 'updated'}],
+        elements: [{value: 'updated'}],
       }),
       makeParam('param-2'),
     ]);
@@ -980,7 +956,9 @@ describe('createModuleDataSlice — updateCalData', () => {
 
   it('toasts and returns void when no calData is loaded', async () => {
     const store = makeStore();
-    const result = await store.getState().updateCalData(MODULE_ID, {data: []});
+    const result = await store
+      .getState()
+      .updateCalData(MODULE_ID, {parameters: []});
 
     expect(result).toBeUndefined();
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'danger');
@@ -1008,10 +986,12 @@ describe('createModuleDataSlice — updateCalData', () => {
     const store = makeStore();
     await store.getState().fetchCalData(MODULE_ID, 'ckv-1');
 
-    const firstSet = store.getState().updateCalData(MODULE_ID, {data: []});
+    const firstSet = store
+      .getState()
+      .updateCalData(MODULE_ID, {parameters: []});
     const secondResult = await store
       .getState()
-      .updateCalData(MODULE_ID, {data: []});
+      .updateCalData(MODULE_ID, {parameters: []});
 
     expect(secondResult).toBeUndefined();
     expect(mockPutCalData).toHaveBeenCalledTimes(1);
@@ -1024,18 +1004,18 @@ describe('createModuleDataSlice — updateCalData', () => {
 describe('createModuleDataSlice — setModuleEnable', () => {
   const ENABLE_ELEMENT = {
     allowedValues: [
-      {name: 'Enable', type: 'NAME_VALUE_PAIR' as const, value: '0x1'},
-      {name: 'Disable', type: 'NAME_VALUE_PAIR' as const, value: '0x0'},
+      {name: 'Enable', value: '0x1'},
+      {name: 'Disable', value: '0x0'},
     ],
     isReadOnly: false,
     name: 'Enable',
-    type: 'CONFIG_ELEMENT' as const,
+    type: 'ConfigElement' as const,
     value: '0x0',
   };
   const OTHER_ELEMENT = {
     isReadOnly: false,
     name: 'Gain',
-    type: 'CONFIG_ELEMENT' as const,
+    type: 'ConfigElement' as const,
     value: '10',
   };
 
@@ -1046,24 +1026,24 @@ describe('createModuleDataSlice — setModuleEnable', () => {
           changeInfo: {changeType: 'NONE'},
           elements: [ENABLE_ELEMENT],
           name: 'Enable',
-          parameterId: '0x8001026',
+          naturalId: '0x8001026',
           systemId: ENABLE_PARAM_SYSTEM_ID,
         },
         {
           changeInfo: {changeType: 'NONE'},
           elements: [OTHER_ELEMENT],
           name: 'Gain',
-          parameterId: '0x8001099',
+          naturalId: '0x8001099',
           systemId: 'PARAM_ID_GAIN_SYS_ID',
         },
       ],
     });
   }
 
-  it('PUTs a single-item payload filtered to the enable param and merges the response by parameterId, flagging lastMutation as set', async () => {
+  it('PUTs a single-item payload filtered to the enable param and merges the response by naturalId, flagging lastMutation as set', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1093,7 +1073,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
             changeInfo: {changeType: 'UPDATE'},
             elements: [{...ENABLE_ELEMENT, value: '0x1'}],
             name: 'Enable',
-            parameterId: '0x8001026',
+            naturalId: '0x8001026',
             systemId: ENABLE_PARAM_SYSTEM_ID,
           },
         ],
@@ -1109,24 +1089,24 @@ describe('createModuleDataSlice — setModuleEnable', () => {
       MODULE_ID,
       'ckv-1',
       {
-        data: [
+        parameters: [
           expect.objectContaining({
             elements: [{...ENABLE_ELEMENT, value: '0x1'}],
-            parameterId: '0x8001026',
+            naturalId: '0x8001026',
           }),
         ],
       },
       [ENABLE_PARAM_SYSTEM_ID],
     );
-    expect(mockPutCalData.mock.calls[0][3].data).toHaveLength(1);
+    expect(mockPutCalData.mock.calls[0][3].parameters).toHaveLength(1);
 
     const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     const parameters = entry.calData?.dto?.parameters ?? [];
     expect(parameters).toHaveLength(2);
     expect(
-      parameters.find((p) => p.parameterId === '0x8001026')?.elements[0],
+      parameters.find((p) => p.naturalId === '0x8001026')?.elements[0],
     ).toEqual({...ENABLE_ELEMENT, value: '0x1'});
-    expect(parameters.find((p) => p.parameterId === '0x8001099')).toEqual(
+    expect(parameters.find((p) => p.naturalId === '0x8001099')).toEqual(
       expect.objectContaining({elements: [OTHER_ELEMENT], name: 'Gain'}),
     );
     expect(entry.calData?.lastMutation).toBe('set');
@@ -1137,7 +1117,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
     const unconventionalSystemId = 'unconventional-enable-sys-id';
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1157,7 +1137,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
                   changeInfo: {changeType: 'NONE'},
                   elements: [ENABLE_ELEMENT],
                   name: 'Enable',
-                  parameterId: '0x8001026',
+                  naturalId: '0x8001026',
                   systemId: unconventionalSystemId,
                 },
               ],
@@ -1169,7 +1149,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
           moduleName: MODULE_NAME,
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         [MODULE_DEFINITION_ID]: {
           ...makeModuleDefinitionDtoWithEnable(),
           paramDefinitionsSummaryInfo: [
@@ -1179,7 +1159,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
               isHidden: false,
               isReadOnly: false,
               name: 'Enable',
-              paramId: PARAM_ID_MODULE_ENABLE,
+              naturalId: PARAM_ID_MODULE_ENABLE,
               pidType: '',
               systemId: unconventionalSystemId,
             },
@@ -1194,7 +1174,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
             changeInfo: {changeType: 'UPDATE'},
             elements: [{...ENABLE_ELEMENT, value: '0x1'}],
             name: 'Enable',
-            parameterId: '0x8001026',
+            naturalId: '0x8001026',
             systemId: unconventionalSystemId,
           },
         ],
@@ -1217,7 +1197,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('aborts before calling putCalData when the module definition has no enable param', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1249,7 +1229,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('aborts before calling putCalData when the active CKV is unresolved', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'NA'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'NA'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1280,7 +1260,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('shows a toast and leaves dto untouched when the PUT fails', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1317,7 +1297,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('does not write when the cached DTO belongs to a different CKV', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1348,7 +1328,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('ignores a second toggle while a save is already in flight', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1381,7 +1361,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
   it('applies the later call intent when two saves resolve out of order', async () => {
     const store = makeWidenedStore({
       headerSelectionsBySubgraphId: {
-        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'},
+        'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'},
       },
       moduleInstances: {
         [MODULE_ID]: makeModuleInstance({
@@ -1450,7 +1430,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
             changeInfo: {changeType: 'UPDATE'},
             elements: [{...ENABLE_ELEMENT, value: '0x0'}],
             name: 'Enable',
-            parameterId: '0x8001026',
+            naturalId: '0x8001026',
             systemId: ENABLE_PARAM_SYSTEM_ID,
           },
         ],
@@ -1465,7 +1445,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
             changeInfo: {changeType: 'UPDATE'},
             elements: [{...ENABLE_ELEMENT, value: '0x1'}],
             name: 'Enable',
-            parameterId: '0x8001026',
+            naturalId: '0x8001026',
             systemId: ENABLE_PARAM_SYSTEM_ID,
           },
         ],
@@ -1476,7 +1456,7 @@ describe('createModuleDataSlice — setModuleEnable', () => {
 
     const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     const enableElement = entry.calData?.dto?.parameters.find(
-      (p) => p.parameterId === '0x8001026',
+      (p) => p.naturalId === '0x8001026',
     )?.elements[0];
     expect(enableElement).toEqual({...ENABLE_ELEMENT, value: '0x0'}); // second call's intent wins
   });
@@ -1570,7 +1550,7 @@ describe('createModuleDataSlice — syncEnableOverlays', () => {
     );
   });
 
-  it('scopes to a single subgraph when subgraphId is passed', () => {
+  it('scopes to a single subgraph when subgraphSystemId is passed', () => {
     const store = makeStoreWithTwoSubgraphs(); // 502 and 503 each with an enable module
     const fetchSpy = jest.spyOn(store.getState(), 'fetchCalData');
 
@@ -1646,14 +1626,14 @@ describe('createModuleDataSlice — updateTagData', () => {
 
     const store = makeStore();
     await store.getState().fetchTagData(MODULE_ID, 'tag-1', 'tkv-1');
-    await store.getState().updateTagData(MODULE_ID, {data: []});
+    await store.getState().updateTagData(MODULE_ID, {parameters: []});
 
     expect(mockPutTagData).toHaveBeenCalledWith(
       PROJECT_ID,
       MODULE_ID,
       'tag-1',
       'tkv-1',
-      {data: []},
+      {parameters: []},
     );
   });
 
@@ -1669,7 +1649,7 @@ describe('createModuleDataSlice — updateTagData', () => {
       data: makeTagDataDto({
         parameters: [
           makeParam('param-2', {
-            elements: [{type: 'NAME_VALUE_PAIR', value: 'updated'}],
+            elements: [{value: 'updated'}],
           }),
         ],
       }),
@@ -1679,13 +1659,13 @@ describe('createModuleDataSlice — updateTagData', () => {
 
     const store = makeStore();
     await store.getState().fetchTagData(MODULE_ID, 'tag-1', 'tkv-1');
-    await store.getState().updateTagData(MODULE_ID, {data: []});
+    await store.getState().updateTagData(MODULE_ID, {parameters: []});
 
     const entry = store.getState().moduleDataByInstanceId[MODULE_ID];
     expect(entry.tagData?.dto?.parameters).toEqual([
       makeParam('param-1'),
       makeParam('param-2', {
-        elements: [{type: 'NAME_VALUE_PAIR', value: 'updated'}],
+        elements: [{value: 'updated'}],
       }),
     ]);
     expect(entry.tagData?.lastMutation).toBe('set');
@@ -1693,7 +1673,9 @@ describe('createModuleDataSlice — updateTagData', () => {
 
   it('toasts and returns void when no tagData is loaded', async () => {
     const store = makeStore();
-    const result = await store.getState().updateTagData(MODULE_ID, {data: []});
+    const result = await store
+      .getState()
+      .updateTagData(MODULE_ID, {parameters: []});
 
     expect(result).toBeUndefined();
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'danger');
@@ -1702,7 +1684,7 @@ describe('createModuleDataSlice — updateTagData', () => {
 });
 
 describe('createModuleDataSlice — clearModuleData', () => {
-  it('removes the entry for the given moduleInstanceId', async () => {
+  it('removes the entry for the given systemId', async () => {
     mockGetCalData.mockResolvedValueOnce({
       data: makeCalDataDto(),
       message: undefined,

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {BitFieldDto, NameValuePairDto} from '~entities/spf-module-data';
+import type {BitFieldDto, NameValueDto} from '~entities/spf-module-data';
 
 export const BOOL_SYNONYMS = [
   ['enable', 'disable'],
@@ -15,12 +15,9 @@ export const BOOL_SYNONYMS = [
 
 /** Two-option NameValuePair → Switch only when the names look like a boolean. */
 export function isBooleanSwitch(
-  allowedValues: (NameValuePairDto | BitFieldDto)[],
-): allowedValues is [NameValuePairDto, NameValuePairDto] {
-  if (
-    allowedValues.length !== 2 ||
-    !allowedValues.every((av) => av.type === 'NAME_VALUE_PAIR')
-  ) {
+  allowedValues: (NameValueDto | BitFieldDto)[],
+): allowedValues is [NameValueDto, NameValueDto] {
+  if (allowedValues.length !== 2) {
     return false;
   }
   const names = allowedValues.map((av) => av.name.toLowerCase());
@@ -33,9 +30,10 @@ export function isBooleanSwitch(
  * `[off, on]` only if neither name matches a known synonym (defensive; a
  * pair reaching here has already passed `isBooleanSwitch`).
  */
-export function resolveBooleanPair(
-  pair: [NameValuePairDto, NameValuePairDto],
-): {off: NameValuePairDto; on: NameValuePairDto} {
+export function resolveBooleanPair(pair: [NameValueDto, NameValueDto]): {
+  off: NameValueDto;
+  on: NameValueDto;
+} {
   const [a, b] = pair;
   for (const [onWord, offWord] of BOOL_SYNONYMS) {
     const an = a.name.toLowerCase();

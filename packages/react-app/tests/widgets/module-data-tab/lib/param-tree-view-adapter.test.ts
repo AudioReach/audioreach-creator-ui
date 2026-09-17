@@ -14,26 +14,24 @@ function makeParam(
   overrides?: Partial<ParameterDetailDto>,
 ): ParameterDetailDto {
   return {
-    changeInfo: {changeType: 'NONE'},
     elements: [],
     name: 'Param',
-    parameterId: 'param-1',
+    naturalId: 'param-1',
     systemId: 'sys-param-1',
     ...overrides,
   };
 }
 
 describe('paramContainerToTreeViewData', () => {
-  it('maps parameterId to id and preserves all metadata fields', () => {
+  it('maps naturalId to id and preserves all metadata fields', () => {
     const container = {
-      changeInfo: {changeType: 'NONE' as const},
       parameters: [
         makeParam({
           deprecated: true,
           description: 'desc',
           isHidden: true,
           name: 'Gain',
-          parameterId: 'param-42',
+          naturalId: 'param-42',
         }),
       ],
       systemId: 'sys-1',
@@ -54,7 +52,6 @@ describe('paramContainerToTreeViewData', () => {
 
   it('maps an empty parameter list to an empty items array', () => {
     const result = paramContainerToTreeViewData({
-      changeInfo: {changeType: 'NONE'},
       parameters: [],
       systemId: 'sys-1',
     });
@@ -64,9 +61,9 @@ describe('paramContainerToTreeViewData', () => {
 });
 
 describe('dirtyItemsToParamUpdateRequest', () => {
-  it('overlays dirty items onto the original params and marks them UPDATE', () => {
+  it('overlays dirty items onto the original params', () => {
     const originalParams = [
-      makeParam({name: 'Gain', parameterId: 'param-1', systemId: 'sys-1'}),
+      makeParam({name: 'Gain', naturalId: 'param-1', systemId: 'sys-1'}),
     ];
     const dirtyItems: TreeViewItem[] = [
       {elements: [], id: 'param-1', name: 'Gain'},
@@ -74,11 +71,10 @@ describe('dirtyItemsToParamUpdateRequest', () => {
 
     const result = dirtyItemsToParamUpdateRequest(dirtyItems, originalParams);
 
-    expect(result.data[0]).toEqual({
-      changeInfo: {changeType: 'UPDATE'},
+    expect(result.parameters[0]).toEqual({
       elements: [],
       name: 'Gain',
-      parameterId: 'param-1',
+      naturalId: 'param-1',
       systemId: 'sys-1',
     });
   });
@@ -90,11 +86,10 @@ describe('dirtyItemsToParamUpdateRequest', () => {
 
     const result = dirtyItemsToParamUpdateRequest(dirtyItems, []);
 
-    expect(result.data[0]).toEqual({
-      changeInfo: {changeType: 'UPDATE'},
+    expect(result.parameters[0]).toEqual({
       elements: [],
       name: 'New Param',
-      parameterId: 'param-unknown',
+      naturalId: 'param-unknown',
       systemId: 'param-unknown',
     });
   });

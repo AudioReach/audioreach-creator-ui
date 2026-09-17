@@ -28,10 +28,10 @@ export function buildSubsystemTree(
     }
   }
   const uniqueSubsystemDtos = Array.from(subsystemDtoBySystemId.values());
-  const subsystemIdSet = new Set(uniqueSubsystemDtos.map((s) => s.id));
+  const subsystemIdSet = new Set(uniqueSubsystemDtos.map((s) => s.naturalId));
   const systemIdToId = new Map<string, number>();
   for (const [systemId, subsystem] of subsystemDtoBySystemId.entries()) {
-    systemIdToId.set(systemId, subsystem.id);
+    systemIdToId.set(systemId, subsystem.naturalId);
   }
 
   const subsystemSubgraphIds = new Map<number, Set<string>>();
@@ -44,18 +44,18 @@ export function buildSubsystemTree(
       if (!subsystemSubgraphIds.has(parentId)) {
         subsystemSubgraphIds.set(parentId, new Set());
       }
-      subsystemSubgraphIds.get(parentId)!.add(m.subgraphId);
+      subsystemSubgraphIds.get(parentId)!.add(m.subgraphSystemId);
     }
   }
 
   // Build node map.
   const nodeMap = new Map<number, SubsystemBrowserTreeNode>();
   for (const ss of uniqueSubsystemDtos) {
-    nodeMap.set(ss.id, {
+    nodeMap.set(ss.naturalId, {
       children: [],
-      id: ss.id,
-      name: ss.name,
-      subgraphIds: Array.from(subsystemSubgraphIds.get(ss.id) ?? []),
+      id: ss.naturalId,
+      name: ss.name ?? '',
+      subgraphIds: Array.from(subsystemSubgraphIds.get(ss.naturalId) ?? []),
       systemId: ss.systemId,
     });
   }
@@ -63,7 +63,7 @@ export function buildSubsystemTree(
   // Wire parent → child relationships; collect roots.
   const roots: SubsystemBrowserTreeNode[] = [];
   for (const ss of uniqueSubsystemDtos) {
-    const node = nodeMap.get(ss.id)!;
+    const node = nodeMap.get(ss.naturalId)!;
     const parentId =
       ss.parentSystemId === undefined
         ? undefined

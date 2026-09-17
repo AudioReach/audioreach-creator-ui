@@ -8,10 +8,10 @@ import type {ConnectionRow} from '~features/port-connections-info/model/port-con
 
 function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
   return {
-    connectionType: 'MODULE_MODULE',
-    isDangling: false,
-    moduleId: '0x00000001',
+    isInterUsecase: false,
+    linkKind: 'MODULE_MODULE',
     moduleName: 'AudioDecoder',
+    moduleNaturalId: '0x00000001',
     otherModuleSystemId: 'sys-mod-2',
     otherPortId: '0x00000002',
     subgraphSystemId: 'sys-sg-1',
@@ -24,28 +24,28 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
 describe('filterConnectionRows', () => {
   it('"all" returns every row unchanged', () => {
     const rows = [
-      makeRow({isDangling: false, systemId: 'link-1'}),
-      makeRow({isDangling: true, systemId: 'link-2'}),
+      makeRow({isInterUsecase: false, systemId: 'link-1'}),
+      makeRow({isInterUsecase: true, systemId: 'link-2'}),
     ];
     expect(filterConnectionRows(rows, 'all')).toEqual(rows);
   });
 
-  it('"sg" returns only rows where isDangling is false', () => {
-    const sgRow = makeRow({isDangling: false, systemId: 'link-1'});
-    const danglingRow = makeRow({isDangling: true, systemId: 'link-2'});
+  it('"sg" returns only rows where isInterUsecase is false', () => {
+    const sgRow = makeRow({isInterUsecase: false, systemId: 'link-1'});
+    const danglingRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
     const result = filterConnectionRows([sgRow, danglingRow], 'sg');
     expect(result).toEqual([sgRow]);
   });
 
-  it('"dangling" returns only rows where isDangling is true', () => {
-    const sgRow = makeRow({isDangling: false, systemId: 'link-1'});
-    const danglingRow = makeRow({isDangling: true, systemId: 'link-2'});
+  it('"dangling" returns only rows where isInterUsecase is true', () => {
+    const sgRow = makeRow({isInterUsecase: false, systemId: 'link-1'});
+    const danglingRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
     const result = filterConnectionRows([sgRow, danglingRow], 'dangling');
     expect(result).toEqual([danglingRow]);
   });
 
   it('returns an empty array when no rows match "dangling"', () => {
-    const rows = [makeRow({isDangling: false})];
+    const rows = [makeRow({isInterUsecase: false})];
     expect(filterConnectionRows(rows, 'dangling')).toEqual([]);
   });
 

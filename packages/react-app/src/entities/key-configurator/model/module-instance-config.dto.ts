@@ -10,20 +10,20 @@ export interface ModuleInstanceTuningConfigDto {
 }
 
 export interface CkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }
 
 export interface TkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }
 
 export interface TagInfoDto {
+  naturalId: number;
   systemId: string;
-  tagId: number;
   tagName: string;
   tkvs: TkvDto[];
 }
@@ -31,23 +31,23 @@ export interface TagInfoDto {
 export interface ParamInfo {
   description: string;
   name: string;
-  paramId: number;
-  paramSystemId: string;
+  naturalId: number;
+  systemId: string;
 }
 
 export interface KeyValueInfo {
-  keyInfo: KeyInfo;
-  valueInfo: ValueInfo;
+  key: KeyInfo;
+  value: ValueInfo;
 }
 
 export interface KeyInfo {
-  keyId: number;
-  keyLabel: string;
-  keySystemId: string;
+  name: string;
+  naturalId: number;
+  systemId: string;
 }
 
 export interface ValueInfo {
-  valueId: number;
-  valueLabel: string;
-  valueSystemId: string;
+  name: string;
+  naturalId: number;
+  systemId: string;
 }

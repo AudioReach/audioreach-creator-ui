@@ -23,7 +23,7 @@ export function matchesSearch(
       .includes(needle);
   }
   if (lower.startsWith('iid:')) {
-    return row.moduleId.toLowerCase().includes(lower.slice(4));
+    return row.moduleNaturalId.toLowerCase().includes(lower.slice(4));
   }
   if (lower.startsWith('mod:')) {
     return row.moduleName.toLowerCase().includes(lower.slice(4));

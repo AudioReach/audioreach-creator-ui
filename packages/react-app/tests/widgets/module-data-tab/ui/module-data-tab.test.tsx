@@ -316,7 +316,7 @@ describe('ModuleDataTab — tab badges', () => {
       makeEntry({
         tagData: {
           availableTagIndices: [
-            {systemId: 'tag-1', tagId: 1, tagName: 'Tag 1'},
+            {naturalId: 1, systemId: 'tag-1', tagName: 'Tag 1'},
           ],
           selectedTagIndex: 'tkv-1',
           selectedTagSystemId: 'tag-1',
@@ -338,7 +338,7 @@ describe('ModuleDataTab — tab badges', () => {
       makeEntry({
         tagData: {
           availableTagIndices: [
-            {systemId: 'tag-1', tagId: 1, tagName: 'Tag 1'},
+            {naturalId: 1, systemId: 'tag-1', tagName: 'Tag 1'},
           ],
           selectedTagIndex: 'tkv-1',
           selectedTagSystemId: 'tag-1',
@@ -429,7 +429,7 @@ describe('ModuleDataTab — action bar Get/Set', () => {
 
     expect(store.getState().updateCalData).toHaveBeenCalledWith(
       MODULE_ID,
-      expect.objectContaining({data: expect.any(Array)}),
+      expect.objectContaining({parameters: expect.any(Array)}),
     );
   });
 
@@ -510,7 +510,7 @@ describe.skip('ModuleDataTab — Batch Copy', () => {
 
     expect(store.getState().updateCalData).toHaveBeenCalledWith(
       MODULE_ID,
-      expect.objectContaining({data: expect.any(Array)}),
+      expect.objectContaining({parameters: expect.any(Array)}),
     );
     expect(screen.queryByText('Set & Copy')).not.toBeInTheDocument();
   });
@@ -660,12 +660,12 @@ describe('ModuleDataTab — tab-close confirmation via confirmClose()', () => {
             {
               isReadOnly: false,
               name: 'gain',
-              type: 'CONFIG_ELEMENT' as const,
+              type: 'ConfigElement' as const,
               value: '0x00000010',
             },
           ],
           name: 'Param param-1',
-          parameterId: 'param-1',
+          naturalId: 'param-1',
           systemId: 'param-1',
         },
       ],
@@ -702,7 +702,7 @@ describe('ModuleDataTab — tab-close confirmation via confirmClose()', () => {
 
     expect(store.getState().updateCalData).toHaveBeenCalledWith(
       MODULE_ID,
-      expect.objectContaining({data: expect.any(Array)}),
+      expect.objectContaining({parameters: expect.any(Array)}),
     );
     expect(mockCalGetEditedTreeViewItems).not.toHaveBeenCalled();
     expect(store.getState().setModuleOpenTab).toHaveBeenCalledWith(

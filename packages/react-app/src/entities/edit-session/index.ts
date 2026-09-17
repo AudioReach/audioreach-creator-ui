@@ -14,7 +14,8 @@ export type {
   CreateUsecasesRequestDto,
   CreateUsecasesResponseDto,
   SubgraphKvSelectionDto,
-  UsecaseIdentifierWithChangeInfoDto,
+  UsecaseChangeDetailsDto,
+  UsecaseChangeSnapshotDto,
 } from './model/create-usecases.dto';
 export type {
   DiscardChangesRequestDto,

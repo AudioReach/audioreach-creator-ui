@@ -12,6 +12,7 @@ import {
   patchSubgraphVsid,
 } from '~entities/subgraphs';
 import type {TreeViewItem} from '~features/generic-tree-view';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
 import {propertyDtoToUpdateRequest} from '../lib/property-tree-adapter';
@@ -43,15 +44,15 @@ export function useSubgraphCardData({
     async (property: PropertyDto) => {
       const request = propertyDtoToUpdateRequest(property);
 
-      if (property.propertyId === SCENARIO_PROPERTY_ID) {
+      if (property.naturalId === SCENARIO_PROPERTY_ID) {
         const result = await patchSubgraphScenario(
           projectId,
           subgraphId,
           request,
         );
-        if (!result.success) {
+        if (hasBlockingIssues(result) || !result.data) {
           return {
-            message: result.message ?? 'Failed to save schema properties',
+            message: getIssueMessage(result, 'Failed to save schema properties'),
             success: false as const,
           };
         }
@@ -60,10 +61,12 @@ export function useSubgraphCardData({
           projectId,
           subgraphId,
         );
-        if (!nextProperties.success || !nextProperties.data) {
+        if (hasBlockingIssues(nextProperties) || !nextProperties.data) {
           return {
-            message:
-              nextProperties.message ?? 'Failed to refresh schema properties',
+            message: getIssueMessage(
+              nextProperties,
+              'Failed to refresh schema properties',
+            ),
             success: false as const,
           };
         }
@@ -73,16 +76,16 @@ export function useSubgraphCardData({
             properties: nextProperties.data,
             type: 'replaceProperties' as const,
           },
-          message: result.message,
+          message: getIssueMessage(result, ''),
           success: true as const,
         };
       }
 
-      if (property.propertyId === VSID_PROPERTY_ID) {
+      if (property.naturalId === VSID_PROPERTY_ID) {
         const result = await patchSubgraphVsid(projectId, subgraphId, request);
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           return {
-            message: result.message ?? 'Failed to save schema properties',
+            message: getIssueMessage(result, 'Failed to save schema properties'),
             success: false as const,
           };
         }
@@ -93,7 +96,7 @@ export function useSubgraphCardData({
             property,
             type: 'propagateVsid' as const,
           },
-          message: result.message,
+          message: getIssueMessage(result, ''),
           success: true as const,
         };
       }
@@ -104,16 +107,16 @@ export function useSubgraphCardData({
         property.systemId,
         request,
       );
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         return {
-          message: result.message ?? 'Failed to save schema properties',
+          message: getIssueMessage(result, 'Failed to save schema properties'),
           success: false as const,
         };
       }
 
       return {
         data: {property: result.data, type: 'replaceProperty' as const},
-        message: result.message,
+        message: getIssueMessage(result, ''),
         success: true as const,
       };
     },

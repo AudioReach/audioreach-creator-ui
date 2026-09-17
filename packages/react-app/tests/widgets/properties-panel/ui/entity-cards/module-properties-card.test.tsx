@@ -36,7 +36,7 @@ describe('ModulePropertiesCard', () => {
 
   it('renders static fields, dynamic port editability, and schema data', async () => {
     const graphData = makeGraphData();
-    graphData.moduleInstances['mod-1'].containerId = '1';
+    graphData.moduleInstances['mod-1'].containerSystemId = '1';
 
     render(
       <ModulePropertiesCard
@@ -61,7 +61,7 @@ describe('ModulePropertiesCard', () => {
     expect(screen.getByDisplayValue('3')).toHaveAttribute('readOnly');
     expect(screen.getByDisplayValue('4')).not.toHaveAttribute('readOnly');
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', 'mod-1'),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
     );
     expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('ModulePropertiesCard', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Alias')).not.toBeInTheDocument();
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', 'mod-1'),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
     );
   });
 });

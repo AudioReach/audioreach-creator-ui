@@ -28,12 +28,12 @@ import {searchItems} from '~shared/utils/search-utils';
 const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
 
 function handleDragStart(
-  subgraph: {subgraphId: string},
+  subgraph: {systemId: string},
   event: DragEvent,
 ): void {
   const draggedSubgraphInfo = {
     kind: 'subgraph',
-    subgraphId: subgraph.subgraphId,
+    subgraphId: subgraph.systemId,
   };
 
   event.dataTransfer.setData(
@@ -240,7 +240,7 @@ export function SubgraphList(): ReactElement {
           <ul className="flex flex-col gap-1">
             {filteredSubgraphs.map((subgraph) => {
               const isAlreadyPresent = presentSubgraphIdSet.has(
-                subgraph.subgraphId,
+                subgraph.systemId,
               );
               const disabledReason = !isEditable
                 ? 'Switch to edit mode to drag subgraphs'
@@ -255,7 +255,7 @@ export function SubgraphList(): ReactElement {
 
               return (
                 <Tooltip
-                  key={subgraph.subgraphId}
+                  key={subgraph.systemId}
                   trigger={
                     <li
                       aria-disabled={disabledReason !== null}

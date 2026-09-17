@@ -39,22 +39,22 @@ function makeGraphData(): UsecaseGraphData {
   return {
     connections: [
       {
-        connectionId: 'dl-1',
-        connectionType: EDGE_KIND.DATA,
-        fromModuleId: 'mod-1',
-        fromPortId: 'out-1',
-        isDangling: false,
-        toModuleId: 'mod-2',
-        toPortId: 'in-1',
+        destinationPortSystemId: 'in-1',
+        destinationSystemId: 'mod-2',
+        linkKind: EDGE_KIND.DATA,
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'out-1',
+        sourceSystemId: 'mod-1',
+        systemId: 'dl-1',
       },
       {
-        connectionId: 'cl-1',
-        connectionType: EDGE_KIND.CONTROL,
-        fromModuleId: 'mod-1',
-        fromPortId: 'ctl-1',
-        isDangling: false,
-        toModuleId: 'mod-2',
-        toPortId: 'ctl-2',
+        destinationPortSystemId: 'ctl-2',
+        destinationSystemId: 'mod-2',
+        linkKind: EDGE_KIND.CONTROL,
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'ctl-1',
+        sourceSystemId: 'mod-1',
+        systemId: 'cl-1',
       },
     ],
     containers: {},
@@ -136,14 +136,14 @@ describe('PropertiesPanelHost', () => {
 
     act(() => latestPropertiesPanelProps?.onVirtualDataLinkRowDelete('dl-1'));
     expect(
-      store.getState().excludedLinks.map((link) => link.connectionId),
+      store.getState().excludedLinks.map((link) => link.systemId),
     ).toContain('dl-1');
 
     act(() =>
       latestPropertiesPanelProps?.onVirtualControlLinkRowDelete('cl-1'),
     );
     expect(
-      store.getState().excludedLinks.map((link) => link.connectionId),
+      store.getState().excludedLinks.map((link) => link.systemId),
     ).toContain('cl-1');
   });
 });

@@ -22,7 +22,13 @@ export function renderNodeContent(node: AnyNode): NodeContentOverride | null {
 
   if (node.nodeKind === NODE_KIND.SUBGRAPH) {
     return {
-      header: <SubgraphHeader subgraphId={String(node.subgraphId)} />,
+      header: (
+        <SubgraphHeader
+          subgraphId={
+            node.meta?.subgraphSystemId ?? String(node.subgraphId)
+          }
+        />
+      ),
     };
   }
 

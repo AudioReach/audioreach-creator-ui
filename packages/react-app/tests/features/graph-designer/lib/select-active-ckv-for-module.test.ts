@@ -10,9 +10,9 @@ import type {GraphDesignerStore} from '~features/graph-designer/model/graph-desi
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
@@ -21,16 +21,16 @@ function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
 
 function makeModule(overrides?: Partial<ModuleInstance>): ModuleInstance {
   return {
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
     moduleId: 'mod-1',
-    moduleInstanceId: 'inst-1',
     moduleName: 'Module',
     moduleType: '',
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: 'inst-1',
     ...overrides,
   };
 }
@@ -59,7 +59,7 @@ describe('selectActiveCkvForModule', () => {
     });
     const state = makeState(
       {'inst-1': moduleInstance},
-      {'sg-1': {keyValues: {'key-1': 'v1'}, subgraphId: 'sg-1'}},
+      {'sg-1': {keyValues: {'key-1': 'v1'}, subgraphSystemId: 'sg-1'}},
     );
 
     const result = selectActiveCkvForModule(state, 'inst-1');
@@ -73,7 +73,7 @@ describe('selectActiveCkvForModule', () => {
     });
     const state = makeState(
       {'inst-1': moduleInstance},
-      {'sg-1': {keyValues: {'key-1': 'v9'}, subgraphId: 'sg-1'}},
+      {'sg-1': {keyValues: {'key-1': 'v9'}, subgraphSystemId: 'sg-1'}},
     );
 
     const result = selectActiveCkvForModule(state, 'inst-1');

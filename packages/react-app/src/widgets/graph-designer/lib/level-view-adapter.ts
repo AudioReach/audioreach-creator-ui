@@ -19,6 +19,7 @@ import {
   type SubgraphNodeMeta,
   type SubsystemNode,
 } from '~entities/graph';
+import {isInterUsecaseLink} from '~entities/usecases';
 import type {
   Connection,
   Subsystem,
@@ -52,9 +53,9 @@ function dedupeConnectionsById(connections: Connection[]): Connection[] {
   const dedupedConnections: Connection[] = [];
 
   for (const connection of connections) {
-    if (seenConnectionIds.has(connection.connectionId)) {
+    if (seenConnectionIds.has(connection.systemId)) {
       logger.warn(
-        `buildLevelViewFromGraphData: duplicate connection id omitted: ${connection.connectionId}`,
+        `buildLevelViewFromGraphData: duplicate connection id omitted: ${connection.systemId}`,
         {
           action: 'build_level_view',
           component: 'levelViewAdapter',
@@ -62,7 +63,7 @@ function dedupeConnectionsById(connections: Connection[]): Connection[] {
       );
       continue;
     }
-    seenConnectionIds.add(connection.connectionId);
+    seenConnectionIds.add(connection.systemId);
     dedupedConnections.push(connection);
   }
 
@@ -126,10 +127,10 @@ export function buildLevelViewFromGraphData(
   }
   const subsystemChildSubgraphIds = new Set(subgraphToSubsystemId.keys());
   const visibleModuleInstances = Object.values(data.moduleInstances).filter(
-    (m) => !subsystemChildSubgraphIds.has(m.subgraphId),
+    (m) => !subsystemChildSubgraphIds.has(m.subgraphSystemId),
   );
   const visibleConnectionNodeIds = new Set([
-    ...visibleModuleInstances.map((m) => m.moduleInstanceId),
+    ...visibleModuleInstances.map((m) => m.systemId),
     ...visibleSubsystems.map((ss) => ss.subsystemId),
   ]);
   if (options?.boundarySubsystem) {
@@ -169,13 +170,13 @@ export function buildLevelViewFromGraphData(
 
     return {
       height: 0,
-      id: m.moduleInstanceId,
+      id: m.systemId,
       label: m.displayName,
-      meta: {systemId: m.moduleInstanceId},
-      moduleId: Number(m.moduleId),
+      meta: {systemId: m.systemId},
+      moduleId: m.naturalId,
       moduleType: m.moduleType,
       nodeKind: NODE_KIND.MODULE,
-      parentId: containerNodeId(m.containerId, m.subgraphId),
+      parentId: containerNodeId(m.containerSystemId, m.subgraphSystemId),
       ports,
       shape: resolveModuleShape(m.displayName),
       width: NODE_DIMENSIONS.module.minWidth,
@@ -190,15 +191,15 @@ export function buildLevelViewFromGraphData(
   // subgraph context. A container that spans multiple subgraphs needs a
   // separate ContainerNode per subgraph so every module has a valid parent.
   const containerMeta = new Map(
-    Object.values(data.containers).map((c) => [c.containerId, c]),
+    Object.values(data.containers).map((c) => [c.systemId, c]),
   );
   const containersByKey = new Map<string, ContainerNode>();
   for (const m of visibleModuleInstances) {
-    const key = containerNodeId(m.containerId, m.subgraphId);
+    const key = containerNodeId(m.containerSystemId, m.subgraphSystemId);
     if (containersByKey.has(key)) {
       continue;
     }
-    if (!containerMeta.has(m.containerId)) {
+    if (!containerMeta.has(m.containerSystemId)) {
       logger.warn(
         'buildLevelViewFromGraphData: no container metadata for containerId',
         {
@@ -207,18 +208,22 @@ export function buildLevelViewFromGraphData(
         },
       );
     }
+    const container = containerMeta.get(m.containerSystemId);
     containersByKey.set(key, {
-      containerId: Number(m.containerId),
+      containerId: container?.naturalId ?? 0,
       height: 0,
       id: key,
-      label: `Container ${m.containerId}`,
+      label:
+        container?.naturalId === undefined
+          ? 'Container'
+          : `Container ${container.naturalId}`,
       meta: {
-        containerSystemId: m.containerId,
-        subgraphSystemId: m.subgraphId,
-        systemId: m.containerId,
+        containerSystemId: m.containerSystemId,
+        subgraphSystemId: m.subgraphSystemId,
+        systemId: m.containerSystemId,
       } satisfies ContainerNodeMeta,
       nodeKind: NODE_KIND.CONTAINER,
-      parentId: subgraphNodeId(m.subgraphId),
+      parentId: subgraphNodeId(m.subgraphSystemId),
       width: 0,
       x: 0,
       y: 0,
@@ -226,18 +231,18 @@ export function buildLevelViewFromGraphData(
   }
 
   const subgraphs: SubgraphNode[] = Object.values(data.subgraphs)
-    .filter((sg) => !subsystemChildSubgraphIds.has(sg.subgraphId))
+    .filter((sg) => !subsystemChildSubgraphIds.has(sg.systemId))
     .map((sg) => ({
       height: 0,
-      id: subgraphNodeId(sg.subgraphId),
+      id: subgraphNodeId(sg.systemId),
       label: sg.subgraphName,
       meta: {
-        subgraphSystemId: sg.subgraphId,
-        systemId: sg.subgraphId,
+        subgraphSystemId: sg.systemId,
+        systemId: sg.systemId,
       } satisfies SubgraphNodeMeta,
       nodeKind: NODE_KIND.SUBGRAPH,
-      parentId: subgraphToSubsystemId.get(sg.subgraphId),
-      subgraphId: Number(sg.subgraphId),
+      parentId: subgraphToSubsystemId.get(sg.systemId),
+      subgraphId: sg.naturalId!,
       width: 0,
       x: 0,
       y: 0,
@@ -250,32 +255,32 @@ export function buildLevelViewFromGraphData(
 
   for (const c of dedupeConnectionsById(data.connections)) {
     if (
-      !visibleConnectionNodeIds.has(c.fromModuleId) ||
-      !visibleConnectionNodeIds.has(c.toModuleId)
+      !visibleConnectionNodeIds.has(c.sourceSystemId) ||
+      !visibleConnectionNodeIds.has(c.destinationSystemId)
     ) {
       continue;
     }
-    if (c.connectionType === 'data') {
+    if (c.linkKind === 'data') {
       dataLinks.push({
         edgeKind: EDGE_KIND.DATA,
-        id: c.connectionId,
-        isDangling: c.isDangling,
-        meta: {systemId: c.connectionId},
-        sourceNodeId: c.fromModuleId,
-        sourcePortId: c.fromPortId,
-        targetNodeId: c.toModuleId,
-        targetPortId: c.toPortId,
+        id: c.systemId,
+        isDangling: isInterUsecaseLink(c.linkType),
+        meta: {systemId: c.systemId},
+        sourceNodeId: c.sourceSystemId,
+        sourcePortId: c.sourcePortSystemId,
+        targetNodeId: c.destinationSystemId,
+        targetPortId: c.destinationPortSystemId,
       });
     } else {
       controlLinks.push({
         edgeKind: EDGE_KIND.CONTROL,
-        id: c.connectionId,
-        isDangling: c.isDangling,
-        meta: {systemId: c.connectionId},
-        sourceNodeId: c.fromModuleId,
-        sourcePortId: c.fromPortId,
-        targetNodeId: c.toModuleId,
-        targetPortId: c.toPortId,
+        id: c.systemId,
+        isDangling: isInterUsecaseLink(c.linkType),
+        meta: {systemId: c.systemId},
+        sourceNodeId: c.sourceSystemId,
+        sourcePortId: c.sourcePortSystemId,
+        targetNodeId: c.destinationSystemId,
+        targetPortId: c.destinationPortSystemId,
       });
     }
   }
@@ -356,7 +361,7 @@ export function buildSubsystemLevelViewFromGraphData(
 
   const moduleInstances: UsecaseGraphData['moduleInstances'] = {};
   for (const [id, m] of Object.entries(data.moduleInstances)) {
-    if (scopedSubgraphIds.has(m.subgraphId)) {
+    if (scopedSubgraphIds.has(m.subgraphSystemId)) {
       moduleInstances[id] = m;
     }
   }
@@ -368,7 +373,8 @@ export function buildSubsystemLevelViewFromGraphData(
 
   const connections = data.connections.filter(
     (c) =>
-      includedNodeIds.has(c.fromModuleId) && includedNodeIds.has(c.toModuleId),
+      includedNodeIds.has(c.sourceSystemId) &&
+      includedNodeIds.has(c.destinationSystemId),
   );
 
   const subgraphs: UsecaseGraphData['subgraphs'] = {};
@@ -380,7 +386,7 @@ export function buildSubsystemLevelViewFromGraphData(
 
   const containers: UsecaseGraphData['containers'] = {};
   for (const [id, c] of Object.entries(data.containers)) {
-    if (scopedSubgraphIds.has(c.subgraphId)) {
+    if (scopedSubgraphIds.has(c.subgraphSystemId)) {
       containers[id] = c;
     }
   }

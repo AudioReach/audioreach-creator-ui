@@ -16,6 +16,9 @@ jest.mock('~entities/subsystems', () => ({
 jest.mock('~entities/usecases', () => ({
   getSubgraphsByIds: jest.fn(),
   getUsecaseComponents: jest.fn(),
+  toControlLinkType: jest.requireActual(
+    '~entities/usecases/model/usecase-component.dto',
+  ).toControlLinkType,
 }));
 jest.mock('~entities/edit-session', () => ({
   endSession: jest.fn(),
@@ -104,10 +107,10 @@ function moveResponseWithModules(
 }
 
 function makeSubgraphModule(
-  moduleInstanceId = 'mod-1',
-  subgraphId = 'sg-1',
+  systemId = 'mod-1',
+  subgraphSystemId = 'sg-1',
 ): ModuleInstance {
-  return makeModuleInstance({moduleInstanceId, subgraphId});
+  return makeModuleInstance({subgraphSystemId, systemId});
 }
 
 function moveResponseWithSubsystems(
@@ -137,8 +140,8 @@ function makeEmptyGraphData(): TestStore['graphData'] {
 function makeSubgraph(overrides: Partial<Subgraph> = {}): Subgraph {
   return {
     containers: [],
-    subgraphId: 'sg-1',
     subgraphName: 'Subgraph 1',
+    subgraphSystemId: 'sg-1',
     subgraphType: '',
     ...overrides,
   };
@@ -148,16 +151,16 @@ function makeModuleInstance(
   overrides: Partial<ModuleInstance> = {},
 ): ModuleInstance {
   return {
-    containerId: 'container-1',
+    containerSystemId: 'container-1',
     displayName: 'Module',
     inputPorts: [],
     moduleId: 'module-def-1',
-    moduleInstanceId: 'mod-1',
     moduleName: 'Module',
     moduleType: '',
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: 'mod-1',
     ...overrides,
   };
 }
@@ -203,7 +206,11 @@ beforeEach(() => {
   mockPatchSubsystem.mockReset();
   mockShowToast.mockClear();
   mockEndSession.mockResolvedValue({
-    data: {projectId: 'proj-subsystem-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+    data: {
+      projectId: 'proj-subsystem-ops-1',
+      sessionMode: 'READONLY',
+      summary: 'ok',
+    },
   });
   mockStartSession.mockResolvedValue({
     data: {
@@ -260,6 +267,42 @@ describe('createSubsystemOperations - moveToSubsystem existing destination', () 
     expect(store.getState().isDirty).toBe(true);
   });
 
+  it('rejects an EC control link returned by a subsystem move', async () => {
+    const {get, store, subsystemOperations} = makeTestStore();
+    store.setState({
+      graphData: {
+        ...makeEmptyGraphData(),
+        moduleInstances: {'mod-1': makeSubgraphModule()},
+        subgraphs: {'sg-1': makeSubgraph()},
+        subsystems: {'ss-1': makeSubsystem()},
+      },
+    });
+    await enterEditMode(store);
+    mockMoveSubsystemComponents.mockResolvedValueOnce({
+      data: {
+        ...moveResponseWithModules(['mod-1'], 'ss-1'),
+        addedControlLinks: [
+          {
+            destinationPortSystemId: 'control-in',
+            destinationSystemId: 'ss-1',
+            linkType: 'EC',
+            sourcePortSystemId: 'control-out',
+            sourceSystemId: 'mod-1',
+            systemId: 'invalid-control-link',
+          },
+        ],
+      },
+      message: 'ok',
+      success: true,
+    });
+
+    await expect(
+      subsystemOperations.moveToSubsystem(get, 'sg-1', {
+        subsystemId: 'ss-1',
+      }),
+    ).rejects.toThrow('EC link type is only valid for data links');
+  });
+
   it('does not move request ids that are absent from the response', async () => {
     const {get, store, subsystemOperations} = makeTestStore();
     store.setState({
@@ -267,8 +310,8 @@ describe('createSubsystemOperations - moveToSubsystem existing destination', () 
         ...makeEmptyGraphData(),
         moduleInstances: {'mod-1': makeSubgraphModule()},
         subgraphs: {
-          'sg-1': makeSubgraph({subgraphId: 'sg-1'}),
-          'sg-2': makeSubgraph({subgraphId: 'sg-2'}),
+          'sg-1': makeSubgraph({subgraphSystemId: 'sg-1'}),
+          'sg-2': makeSubgraph({subgraphSystemId: 'sg-2'}),
         },
         subsystems: {
           'ss-1': makeSubsystem(),
@@ -522,7 +565,13 @@ describe('createSubsystemOperations - deleteSubsystem', () => {
     });
     await enterEditMode(store);
     mockDeleteSubsystemApi.mockResolvedValueOnce({
-      issues: [{code: 'NOT_EMPTY', message: 'Subsystem is not empty', severity: 'ERROR'}],
+      issues: [
+        {
+          code: 'NOT_EMPTY',
+          message: 'Subsystem is not empty',
+          severity: 'ERROR',
+        },
+      ],
     });
 
     const ok = await subsystemOperations.deleteSubsystem(get, 'ss-1');
@@ -688,18 +737,17 @@ describe('createSubsystemOperations - move response adapter', () => {
         ...makeEmptyGraphData(),
         connections: [
           {
-            connectionId: 'remove-data-link',
-            connectionType: 'data',
-            fromModuleId: 'mod-c',
-            fromPortId: 'out-c',
-            isDangling: false,
-            toModuleId: 'mod-d',
-            toPortId: 'in-d',
+            destinationPortSystemId: 'in-d',
+            destinationSystemId: 'mod-d',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'out-c',
+            sourceSystemId: 'mod-c',
+            systemId: 'remove-data-link',
           },
         ],
         moduleInstances: {
           'mod-a': makeModuleInstance({
-            moduleInstanceId: 'mod-a',
             outputPorts: [
               {
                 activeLinks: 0,
@@ -712,6 +760,7 @@ describe('createSubsystemOperations - move response adapter', () => {
                 totalLinksAtPort: 0,
               },
             ],
+            systemId: 'mod-a',
           }),
           'mod-b': makeModuleInstance({
             inputPorts: [
@@ -726,10 +775,9 @@ describe('createSubsystemOperations - move response adapter', () => {
                 totalLinksAtPort: 0,
               },
             ],
-            moduleInstanceId: 'mod-b',
+            systemId: 'mod-b',
           }),
           'mod-c': makeModuleInstance({
-            moduleInstanceId: 'mod-c',
             outputPorts: [
               {
                 activeLinks: 1,
@@ -742,6 +790,7 @@ describe('createSubsystemOperations - move response adapter', () => {
                 totalLinksAtPort: 1,
               },
             ],
+            systemId: 'mod-c',
           }),
           'mod-d': makeModuleInstance({
             inputPorts: [
@@ -756,7 +805,7 @@ describe('createSubsystemOperations - move response adapter', () => {
                 totalLinksAtPort: 1,
               },
             ],
-            moduleInstanceId: 'mod-d',
+            systemId: 'mod-d',
           }),
         },
         subgraphs: {'sg-1': makeSubgraph()},
@@ -771,7 +820,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'data-in',
             destinationSystemId: 'mod-b',
-            isDangling: false,
+            linkType: 'NORMAL',
             sourcePortSystemId: 'data-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-data-link',
@@ -801,22 +850,22 @@ describe('createSubsystemOperations - move response adapter', () => {
         ...makeEmptyGraphData(),
         connections: [
           {
-            connectionId: 'keep-link',
-            connectionType: 'data',
-            fromModuleId: 'mod-a',
-            fromPortId: 'out-a',
-            isDangling: false,
-            toModuleId: 'mod-b',
-            toPortId: 'in-b',
+            destinationPortSystemId: 'in-b',
+            destinationSystemId: 'mod-b',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'out-a',
+            sourceSystemId: 'mod-a',
+            systemId: 'keep-link',
           },
           {
-            connectionId: 'remove-data-link',
-            connectionType: 'data',
-            fromModuleId: 'mod-c',
-            fromPortId: 'out-c',
-            isDangling: false,
-            toModuleId: 'mod-d',
-            toPortId: 'in-d',
+            destinationPortSystemId: 'in-d',
+            destinationSystemId: 'mod-d',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'out-c',
+            sourceSystemId: 'mod-c',
+            systemId: 'remove-data-link',
           },
         ],
         moduleInstances: {'mod-a': makeSubgraphModule('mod-a')},
@@ -828,22 +877,22 @@ describe('createSubsystemOperations - move response adapter', () => {
     store.setState({
       excludedLinks: [
         {
-          connectionId: 'remove-data-link',
-          connectionType: 'data',
-          fromModuleId: 'mod-c',
-          fromPortId: 'out-c',
-          isDangling: false,
-          toModuleId: 'mod-d',
-          toPortId: 'in-d',
+          destinationPortSystemId: 'in-d',
+          destinationSystemId: 'mod-d',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'out-c',
+          sourceSystemId: 'mod-c',
+          systemId: 'remove-data-link',
         },
         {
-          connectionId: 'excluded-survivor',
-          connectionType: 'data',
-          fromModuleId: 'mod-e',
-          fromPortId: 'out-e',
-          isDangling: false,
-          toModuleId: 'mod-f',
-          toPortId: 'in-f',
+          destinationPortSystemId: 'in-f',
+          destinationSystemId: 'mod-f',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'out-e',
+          sourceSystemId: 'mod-e',
+          systemId: 'excluded-survivor',
         },
       ],
       pairLinksById: {
@@ -865,7 +914,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'ctrl-in',
             destinationSystemId: 'ss-1',
-            isDangling: false,
+            linkType: 'NORMAL',
             sourcePortSystemId: 'ctrl-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-control-link',
@@ -875,7 +924,7 @@ describe('createSubsystemOperations - move response adapter', () => {
           {
             destinationPortSystemId: 'data-in',
             destinationSystemId: 'ss-1',
-            isDangling: false,
+            linkType: 'NORMAL',
             sourcePortSystemId: 'data-out',
             sourceSystemId: 'mod-a',
             systemId: 'add-data-link',
@@ -893,34 +942,34 @@ describe('createSubsystemOperations - move response adapter', () => {
 
     expect(store.getState().graphData!.connections).toEqual([
       {
-        connectionId: 'keep-link',
-        connectionType: 'data',
-        fromModuleId: 'mod-a',
-        fromPortId: 'out-a',
-        isDangling: false,
-        toModuleId: 'mod-b',
-        toPortId: 'in-b',
+        destinationPortSystemId: 'in-b',
+        destinationSystemId: 'mod-b',
+        linkKind: 'data',
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'out-a',
+        sourceSystemId: 'mod-a',
+        systemId: 'keep-link',
       },
       {
-        connectionId: 'add-data-link',
-        connectionType: 'data',
-        fromModuleId: 'mod-a',
-        fromPortId: 'data-out',
-        isDangling: false,
-        toModuleId: 'ss-1',
-        toPortId: 'data-in',
+        destinationPortSystemId: 'data-in',
+        destinationSystemId: 'ss-1',
+        linkKind: 'data',
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'data-out',
+        sourceSystemId: 'mod-a',
+        systemId: 'add-data-link',
       },
       {
-        connectionId: 'add-control-link',
-        connectionType: 'control',
-        fromModuleId: 'mod-a',
-        fromPortId: 'ctrl-out',
-        isDangling: false,
-        toModuleId: 'ss-1',
-        toPortId: 'ctrl-in',
+        destinationPortSystemId: 'ctrl-in',
+        destinationSystemId: 'ss-1',
+        linkKind: 'control',
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'ctrl-out',
+        sourceSystemId: 'mod-a',
+        systemId: 'add-control-link',
       },
     ]);
-    expect(store.getState().excludedLinks.map((l) => l.connectionId)).toEqual([
+    expect(store.getState().excludedLinks.map((l) => l.systemId)).toEqual([
       'excluded-survivor',
     ]);
     expect(
