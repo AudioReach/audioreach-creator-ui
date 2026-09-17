@@ -3,32 +3,61 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/**
- * Standard API response format returned by all backend endpoints
- */
-export interface ApiResult<T = unknown> {
-  /**
-   * The actual data returned by the API
-   */
-  data?: T;
+export type ApiIssueSeverity = 'WARNING' | 'ERROR' | 'FATAL';
 
-  /**
-   * Array of error messages if any occurred
-   */
-  errors?: string[];
+export type ApiIssueEntityType =
+  | 'Container'
+  | 'ContainerPropertyDefinition'
+  | 'ContainerType'
+  | 'ControlLink'
+  | 'DataLink'
+  | 'DriverModule'
+  | 'DriverModuleDefinition'
+  | 'KeyDefinition'
+  | 'ModuleManagerData'
+  | 'ProcessorDefinition'
+  | 'Project'
+  | 'SpfModule'
+  | 'SpfModuleDefinition'
+  | 'Subgraph'
+  | 'SubgraphPropertyDefinition'
+  | 'Subsystem'
+  | 'TagDefinition'
+  | 'Unknown'
+  | 'UseCase'
+  | 'VcpmModuleDefinition';
 
-  /**
-   * A human-readable message describing the result
-   */
+export interface ApiIssueImpactedEntity {
+  displayName?: string;
+  entityType: ApiIssueEntityType;
+  systemId: string;
+}
+
+export interface ApiIssueFixOptionClientInput {
+  field: string;
+  label: string;
+  type: 'BOOLEAN' | 'NUMBER' | 'STRING';
+}
+
+export interface ApiIssueFixOption {
+  commandPayload: Record<string, unknown>;
+  commandType: string;
+  description: string;
+  id: string;
+  requiredClientInputs: ApiIssueFixOptionClientInput[];
+}
+
+export interface ApiIssue {
+  category?: 'BLOCKING' | 'NON_BLOCKING' | 'DATA_LOSS';
+  code: string;
+  fixOptions?: ApiIssueFixOption[];
+  impactedEntity?: ApiIssueImpactedEntity;
+  impactedUsecases?: number[];
   message: string;
+  severity: ApiIssueSeverity;
+}
 
-  /**
-   * Whether the API call was successful
-   */
-  success: boolean;
-
-  /**
-   * Array of warning messages that don't prevent operation but should be noted
-   */
-  warnings?: string[];
+export interface ApiResult<T = unknown> {
+  data?: T;
+  issues?: ApiIssue[];
 }

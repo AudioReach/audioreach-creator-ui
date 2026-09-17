@@ -82,19 +82,15 @@ export async function moveSubsystemComponents(
     `/projects/${projectId}/subsystems/components/move`,
     request,
   );
-  if (result.success && result.data) {
+  const {data, issues} = result;
+  if (data) {
     return {
-      ...result,
-      data: normalizeMoveSubsystemComponentsResponse(result.data),
+      data: normalizeMoveSubsystemComponentsResponse(data),
+      issues,
     };
   }
 
-  return {
-    errors: result.errors,
-    message: result.message,
-    success: result.success,
-    warnings: result.warnings,
-  };
+  return {issues};
 }
 
 /**

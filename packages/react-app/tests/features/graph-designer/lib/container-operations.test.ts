@@ -89,7 +89,9 @@ beforeEach(() => {
   });
   mockDeleteSpfModule.mockReset();
   mockShowToast.mockClear();
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-container-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {
       projectId: 'proj-cnt-ops-1',
@@ -219,7 +221,9 @@ describe('createContainerOperations - deleteContainer', () => {
         message: 'ok',
         success: true,
       })
-      .mockResolvedValueOnce({message: 'boom', success: false});
+      .mockResolvedValueOnce({
+        issues: [{code: 'DELETE_FAILED', message: 'boom', severity: 'ERROR'}],
+      });
 
     const ok = await containerOperations.deleteContainer(get, 'cnt-1');
 

@@ -75,8 +75,11 @@ function SubgraphPropertiesCardBody({
         name: nextName,
       });
 
-      if (!result.success) {
-        return {message: result.message, ok: false};
+      if (hasBlockingIssues(result)) {
+        return {
+          message: getIssueMessage(result, 'Failed to save subgraph'),
+          ok: false,
+        };
       }
 
       const committedName = result.data?.name ?? nextName;
@@ -109,6 +112,7 @@ function SubgraphPropertiesCardBody({
         error={schemaData.error}
         isEditing={isEditing}
         isLoading={schemaData.isLoading}
+        loadWarning={schemaData.loadWarning}
         onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
         onRetry={() => void schemaData.load()}
         title="Schema Properties"

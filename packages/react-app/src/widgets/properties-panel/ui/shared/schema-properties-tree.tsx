@@ -17,6 +17,7 @@ export interface SchemaPropertiesTreeProps {
   error: string | null;
   isEditing: boolean;
   isLoading: boolean;
+  loadWarning?: string | null;
   onCommit: (dirtyItems: TreeViewItem[]) => void;
   onRetry: () => void;
   title: string;
@@ -27,6 +28,7 @@ export function SchemaPropertiesTree({
   error,
   isEditing,
   isLoading,
+  loadWarning,
   onCommit,
   onRetry,
   title,
@@ -60,14 +62,21 @@ export function SchemaPropertiesTree({
   }
 
   return (
-    <GenericTreeView
-      autoCommit={{onCommit}}
-      data={data}
-      defaultPolicyFilter={['BASIC', 'ADVANCED']}
-      defaultViewMode="legacy"
-      hideToolbar
-      readOnly={!isEditing}
-      title={title}
-    />
+    <div className="space-y-2">
+      {loadWarning ? (
+        <p className="text-icon-support-warning text-sm" role="status">
+          {loadWarning}
+        </p>
+      ) : null}
+      <GenericTreeView
+        autoCommit={{onCommit}}
+        data={data}
+        defaultPolicyFilter={['BASIC', 'ADVANCED']}
+        defaultViewMode="legacy"
+        hideToolbar
+        readOnly={!isEditing}
+        title={title}
+      />
+    </div>
   );
 }

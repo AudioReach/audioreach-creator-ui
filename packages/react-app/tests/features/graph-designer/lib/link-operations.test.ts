@@ -430,8 +430,7 @@ describe('createLinkOperations — connectPorts', () => {
   it('shows a danger toast and returns false when the backend call fails', async () => {
     const {get, store} = makeStore();
     mockCreateDataLink.mockResolvedValue({
-      message: 'Ports are incompatible',
-      success: false,
+      issues: [{code: 'INCOMPATIBLE_PORTS', message: 'Ports are incompatible', severity: 'ERROR'}],
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
@@ -549,8 +548,7 @@ describe('createLinkOperations — deleteLink', () => {
   it('shows a danger toast and returns false when the backend call fails', async () => {
     const {get} = makeStore();
     mockDeleteDataLink.mockResolvedValue({
-      message: 'Link not found',
-      success: false,
+      issues: [{code: 'LINK_NOT_FOUND', message: 'Link not found', severity: 'ERROR'}],
     });
 
     const {deleteLink} = createLinkOperations('proj-1');
@@ -563,8 +561,7 @@ describe('createLinkOperations — deleteLink', () => {
   it('shows a danger toast and returns false when deleteControlLink fails', async () => {
     const {get} = makeStore();
     mockDeleteControlLink.mockResolvedValue({
-      message: 'Link not found',
-      success: false,
+      issues: [{code: 'LINK_NOT_FOUND', message: 'Link not found', severity: 'ERROR'}],
     });
 
     const {deleteLink} = createLinkOperations('proj-1');

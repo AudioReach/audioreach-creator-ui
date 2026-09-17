@@ -95,6 +95,7 @@ function ControlLinkPropertiesCardBody({
         error={schemaData.error}
         isEditing={isEditing}
         isLoading={schemaData.isLoading}
+        loadWarning={schemaData.loadWarning}
         onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
         onRetry={() => void schemaData.load()}
         title="Control Link Properties"
