@@ -118,17 +118,23 @@ tsconfig.*.tsbuildinfo
 .claude/settings.local.json
 .claude/worktrees/
 
-# AI tool files (created by scripts/setup-dev-links.js after clone)
+# AI tool files (created by scripts/setup-ai-links.js after clone)
 # Actual content lives in .ai/ — these are generated overlays
 .agents/skills
 .claude/skills
 AGENTS.md
 CLAUDE.md
+.codex/
+.mcp.json
+.opencode/
+.qgenieagent/
+.quartz/
 
 # Implementation plans are working/temporary artifacts (plan.md, handoff
 # files, chapters/ scaffolding) — not meant to be committed. Design docs
 # under docs/design/ are persistent and stay tracked.
 docs/plans/
+docs/**/plans/
 
 # Visual companion session storage (mockups, state, logs)
 .brainstorm/
