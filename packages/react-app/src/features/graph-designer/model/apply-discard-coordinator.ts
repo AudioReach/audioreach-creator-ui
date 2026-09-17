@@ -11,7 +11,12 @@ import type {
   endSession,
   stageChanges,
 } from '~entities/edit-session';
-import type {ApiResult} from '~shared/api';
+import {
+  getIssueMessage,
+  hasBlockingIssues,
+  isTransportFailure,
+  type ApiResult,
+} from '~shared/api';
 
 import {partitionIssues} from '../lib/issue-gate';
 
@@ -21,18 +26,12 @@ import type {
   ReconcileOutcome,
 } from './apply-discard.types';
 
-export function parseHttpStatus(
-  result: ApiResult<unknown>,
-): number | undefined {
-  const text = [result.message, ...(result.errors ?? [])].join(' ');
-  const match = /\bHTTP error:\s*(\d{3})\b/.exec(text);
+function getTransportHttpStatus(result: ApiResult<unknown>): number | undefined {
+  const issueCode = result.issues?.find((issue) =>
+    issue.code.startsWith('TRANSPORT_HTTP_'),
+  )?.code;
+  const match = issueCode ? /TRANSPORT_HTTP_(\d{3})/.exec(issueCode) : null;
   return match ? Number(match[1]) : undefined;
-}
-
-export function isTransportFailure(result: ApiResult<unknown>): boolean {
-  return (
-    !result.success && !result.data && parseHttpStatus(result) === undefined
-  );
 }
 
 export interface ReconcileDeps {
@@ -55,12 +54,15 @@ export async function runApplyReconcile(
 
   const result = await deps.createUsecases(args.projectId, args.request);
 
-  if (isTransportFailure(result)) {
+  if (isTransportFailure(result) && !result.data) {
     return {kind: 'reconcileTransportIndeterminate'};
   }
 
-  if (!result.success) {
-    return {kind: 'reconcileFailed', message: result.message};
+  if (!result.data && hasBlockingIssues(result)) {
+    return {
+      kind: 'reconcileFailed',
+      message: getIssueMessage(result, 'Failed to reconcile staged changes'),
+    };
   }
 
   const response = result.data;
@@ -105,7 +107,7 @@ async function finalizeEndSession(
 ): Promise<FinalizeOutcome> {
   const result = await deps.endSession(projectId);
 
-  if (result.success && result.data?.sessionMode === 'READONLY') {
+  if (result.data?.sessionMode === 'READONLY') {
     return {
       kind: 'committed',
       sessionMode: result.data.sessionMode,
@@ -113,24 +115,22 @@ async function finalizeEndSession(
     };
   }
 
-  if (!result.success) {
-    const code = parseHttpStatus(result);
-    if (code === 400 || code === 422) {
-      return {
-        code: String(code) as '400' | '422',
-        kind: 'endSessionDeterminate',
-        message: result.message,
-      };
-    }
+  const code = getTransportHttpStatus(result);
+  if (code === 400 || code === 422) {
+    return {
+      code: String(code) as '400' | '422',
+      kind: 'endSessionDeterminate',
+      message: getIssueMessage(result, 'failed'),
+    };
   }
 
-  if (!isTransportFailure(result)) {
+  if (!isTransportFailure(result) || code !== undefined) {
     return {kind: 'endSessionPostCommitReloadNeeded'};
   }
 
   const retryResult = await deps.endSession(projectId);
 
-  if (retryResult.success && retryResult.data?.sessionMode === 'READONLY') {
+  if (retryResult.data?.sessionMode === 'READONLY') {
     return {
       kind: 'committed',
       sessionMode: retryResult.data.sessionMode,
@@ -138,7 +138,10 @@ async function finalizeEndSession(
     };
   }
 
-  if (isTransportFailure(retryResult)) {
+  if (
+    isTransportFailure(retryResult) &&
+    getTransportHttpStatus(retryResult) === undefined
+  ) {
     return {kind: 'endSessionTransportIndeterminate'};
   }
 
@@ -161,12 +164,16 @@ export async function runFinalize(
       notYetStagedChangeIds,
     );
 
-    if (isTransportFailure(stageResult)) {
+    if (isTransportFailure(stageResult) && !stageResult.data) {
       return {kind: 'stageTransportIndeterminate'};
     }
 
     const stageFailedChangeIds = stageResult.data?.failedChangeIds ?? [];
-    if (!stageResult.success || stageFailedChangeIds.length > 0) {
+    if (
+      hasBlockingIssues(stageResult) ||
+      stageResult.data?.success === false ||
+      stageFailedChangeIds.length > 0
+    ) {
       const stageProcessedChangeIds =
         stageResult.data?.processedChangeIds ?? [];
       const alreadyProcessed = new Set([
@@ -178,7 +185,10 @@ export async function runFinalize(
         failedChangeIds: stageFailedChangeIds,
         issues: undefined,
         kind: 'stageFailed',
-        message: stageResult.message,
+        message: getIssueMessage(
+          stageResult,
+          stageResult.data?.message ?? 'Stage changes failed',
+        ),
         notYetStagedChangeIds: checkedChangeIds.filter(
           (id) => !alreadyProcessed.has(id),
         ),
@@ -189,7 +199,7 @@ export async function runFinalize(
 
   const commitResult = await deps.commitChanges(projectId, undefined, true);
 
-  if (isTransportFailure(commitResult)) {
+  if (isTransportFailure(commitResult) && !commitResult.data) {
     return {kind: 'commitTransportIndeterminate'};
   }
 
@@ -197,14 +207,18 @@ export async function runFinalize(
   const commitProcessedChangeIds = commitResult.data?.processedChangeIds ?? [];
 
   if (
-    !commitResult.success ||
+    hasBlockingIssues(commitResult) ||
+    commitResult.data?.success === false ||
     (commitFailedChangeIds.length > 0 && commitProcessedChangeIds.length === 0)
   ) {
     return {
       failedChangeIds: commitResult.data?.failedChangeIds,
       issues: undefined,
       kind: 'commitRejected',
-      message: commitResult.message,
+      message: getIssueMessage(
+        commitResult,
+        commitResult.data?.message ?? 'Commit changes failed',
+      ),
       missingDependencies: commitResult.data?.missingDependencies,
     };
   }
@@ -213,7 +227,10 @@ export async function runFinalize(
     return {
       failedChangeIds: commitFailedChangeIds,
       kind: 'commitPartial',
-      message: commitResult.message,
+      message: getIssueMessage(
+        commitResult,
+        commitResult.data?.message ?? 'Commit changes partially failed',
+      ),
       processedChangeIds: commitProcessedChangeIds,
     };
   }
@@ -237,32 +254,33 @@ async function discardEndSession(
 ): Promise<DiscardOutcome> {
   const result = await deps.endSession(projectId);
 
-  if (result.success && result.data?.sessionMode === 'READONLY') {
+  if (result.data?.sessionMode === 'READONLY') {
     return {cascadedChangeIds, kind: 'discarded'};
   }
 
-  if (!result.success) {
-    const code = parseHttpStatus(result);
-    if (code === 400 || code === 422) {
-      return {
-        code: String(code) as '400' | '422',
-        kind: 'endSessionDeterminate',
-        message: result.message,
-      };
-    }
+  const code = getTransportHttpStatus(result);
+  if (code === 400 || code === 422) {
+    return {
+      code: String(code) as '400' | '422',
+      kind: 'endSessionDeterminate',
+      message: getIssueMessage(result, 'failed'),
+    };
   }
 
-  if (!isTransportFailure(result)) {
+  if (!isTransportFailure(result) || code !== undefined) {
     return {kind: 'endSessionPostDiscardReloadNeeded'};
   }
 
   const retryResult = await deps.endSession(projectId);
 
-  if (retryResult.success && retryResult.data?.sessionMode === 'READONLY') {
+  if (retryResult.data?.sessionMode === 'READONLY') {
     return {cascadedChangeIds, kind: 'discarded'};
   }
 
-  if (isTransportFailure(retryResult)) {
+  if (
+    isTransportFailure(retryResult) &&
+    getTransportHttpStatus(retryResult) === undefined
+  ) {
     return {kind: 'discardTransportIndeterminate'};
   }
 
@@ -277,18 +295,25 @@ export async function runDiscard(
 
   const discardResult = await deps.discardChanges(projectId);
 
-  if (isTransportFailure(discardResult)) {
+  if (isTransportFailure(discardResult) && !discardResult.data) {
     return {kind: 'discardChangesTransportIndeterminate'};
   }
 
   const discardFailedChangeIds = discardResult.data?.failedChangeIds ?? [];
 
-  if (!discardResult.success || discardFailedChangeIds.length > 0) {
+  if (
+    hasBlockingIssues(discardResult) ||
+    discardResult.data?.success === false ||
+    discardFailedChangeIds.length > 0
+  ) {
     return {
       failedChangeIds: discardResult.data?.failedChangeIds,
       issues: undefined,
       kind: 'discardDeterminate',
-      message: discardResult.message,
+      message: getIssueMessage(
+        discardResult,
+        discardResult.data?.message ?? 'Discard changes failed',
+      ),
     };
   }
 

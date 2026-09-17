@@ -36,16 +36,16 @@ interface ElementTreeProps {
 function collectBranchKeys(
   elems: AnyElementDto[],
   itemId: string,
-  prefix: string[],
+  prefix: Array<string | undefined>,
   arrayCounts: Map<string, number>,
 ): string[] {
   const keys: string[] = [];
   for (const elem of elems) {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       if (elem.displayType === 'BIT_FIELD' && elem.allowedValues?.length) {
         keys.push(elementKey(itemId, ...prefix, elem.name));
       }
-    } else if (elem.type === 'STRUCT') {
+    } else if (elem.type === 'Struct') {
       const k = elementKey(itemId, ...prefix, elem.name);
       keys.push(k);
       keys.push(
@@ -56,7 +56,7 @@ function collectBranchKeys(
           arrayCounts,
         ),
       );
-    } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+    } else if (elem.type === 'ElementTemplateArray') {
       const arrayPath = elementKey(itemId, ...prefix, elem.name);
       if (elem.length !== undefined && !elem.lengthFormula) {
         continue;
@@ -69,8 +69,8 @@ function collectBranchKeys(
           continue;
         }
         const instName =
-          inst.type === 'STRUCT' ? inst.name : `${elem.name}[${i}]`;
-        if (inst.type === 'STRUCT') {
+          inst.type === 'Struct' ? (inst.name ?? '') : `${elem.name}[${i}]`;
+        if (inst.type === 'Struct') {
           const instKey = elementKey(itemId, ...prefix, instName);
           keys.push(instKey);
           keys.push(
@@ -142,10 +142,10 @@ export function ElementTree({
     dirtyPaths,
     elementValues,
     invalidPaths,
+    itemId: item.id,
     matchElementKeys: matchSets?.elementIds,
     onAutoCommit,
     onValueChange,
-    parameterId: item.id,
     paramReadOnly,
     pathPrefix: [],
     policyFilter,

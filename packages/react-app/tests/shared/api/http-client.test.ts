@@ -34,7 +34,7 @@ function makeClient(overrides?: ConstructorParameters<typeof HttpClient>[0]) {
 
 function mockJsonResponse(
   body: unknown,
-  {status = 200}: {status?: number} = {},
+  {status = 200, statusText}: {status?: number; statusText?: string} = {},
 ) {
   return {
     headers: {get: jest.fn().mockReturnValue('application/json')},
@@ -42,11 +42,12 @@ function mockJsonResponse(
     ok: status >= 200 && status < 300,
     status,
     statusText:
-      status === 200
+      statusText ??
+      (status === 200
         ? 'OK'
         : status === 404
           ? 'Not Found'
-          : 'Internal Server Error',
+          : 'Internal Server Error'),
   };
 }
 
@@ -64,8 +65,6 @@ describe('HttpClient', () => {
       const client = makeClient();
       const resp = mockJsonResponse({
         data: {id: 1},
-        message: 'OK',
-        success: true,
       });
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
@@ -82,7 +81,6 @@ describe('HttpClient', () => {
           method: 'PUT',
         }),
       );
-      expect(result.success).toBe(true);
       expect(result.data).toEqual({id: 1});
     });
 
@@ -90,8 +88,6 @@ describe('HttpClient', () => {
       const client = makeClient();
       const resp = mockJsonResponse({
         data: {id: 42, name: 'updated'},
-        message: 'Updated successfully',
-        success: true,
       });
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
@@ -99,14 +95,12 @@ describe('HttpClient', () => {
         name: 'updated',
       });
 
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Updated successfully');
       expect(result.data).toEqual({id: 42, name: 'updated'});
     });
 
     it('supports request overrides', async () => {
       const client = makeClient();
-      const resp = mockJsonResponse({message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const customHeaders = {'X-Custom-Header': 'custom-value'};
@@ -126,7 +120,7 @@ describe('HttpClient', () => {
 
     it('omits Content-Type when body is FormData', async () => {
       const client = makeClient();
-      const resp = mockJsonResponse({message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const form = new FormData();
@@ -142,7 +136,7 @@ describe('HttpClient', () => {
   describe('patch method', () => {
     it('omits Content-Type when body is FormData', async () => {
       const client = makeClient();
-      const resp = mockJsonResponse({message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const form = new FormData();
@@ -156,40 +150,44 @@ describe('HttpClient', () => {
   });
 
   describe('error handling', () => {
-    it('returns success: false on 4xx without retrying', async () => {
+    it('returns a transport issue on 4xx without retrying', async () => {
       const client = makeClient();
-      const resp = mockJsonResponse(
-        {message: 'Not Found', success: false},
-        {status: 404},
-      );
+      const resp = mockJsonResponse({}, {status: 404});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const result = await client.get('/missing');
 
-      expect(result.success).toBe(false);
+      expect(result.data).toBeUndefined();
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_HTTP_404',
+          severity: 'ERROR',
+        }),
+      ]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('retries on 5xx up to maxRetries then fails', async () => {
+    it('retries on 5xx up to maxRetries then returns a transport issue', async () => {
       const client = makeClient({
         maxRetries: 2,
         retryBaseDelayMs: 0,
         retryJitterMs: 0,
       });
-      const resp = mockJsonResponse(
-        {message: 'Internal Server Error', success: false},
-        {status: 500},
-      );
+      const resp = mockJsonResponse({}, {status: 500});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const result = await client.get('/flaky');
 
-      expect(result.success).toBe(false);
-      // 1 initial + 2 retries = 3 total
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_HTTP_500',
+          severity: 'ERROR',
+        }),
+      ]);
       expect(global.fetch).toHaveBeenCalledTimes(3);
     });
 
-    it('returns "Request timed out" on AbortError without retrying', async () => {
+    it('returns a timeout issue on AbortError without retrying', async () => {
       const client = makeClient();
       const abortError = new DOMException(
         'The operation was aborted',
@@ -199,9 +197,95 @@ describe('HttpClient', () => {
 
       const result = await client.get('/slow');
 
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('Request timed out');
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_TIMEOUT',
+          message: 'Request timed out',
+          severity: 'ERROR',
+        }),
+      ]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns a network issue after rejected fetch retries are exhausted', async () => {
+      const client = makeClient({maxRetries: 0});
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('ECONNREFUSED'));
+
+      const result = await client.get('/unreachable');
+
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_NETWORK',
+          severity: 'ERROR',
+        }),
+      ]);
+      expect(mockStore.markUnavailable).toHaveBeenCalled();
+      expect(mockStore.incrementFail).toHaveBeenCalled();
+    });
+
+    it('returns an invalid JSON issue when parsing fails', async () => {
+      const client = makeClient();
+      const resp = {
+        headers: {get: jest.fn().mockReturnValue('application/json')},
+        json: jest.fn().mockRejectedValue(new SyntaxError('Invalid JSON')),
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+      };
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      const result = await client.get('/bad-json');
+
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_INVALID_JSON',
+          severity: 'ERROR',
+        }),
+      ]);
+    });
+
+    it('returns an invalid multipart issue when parsing fails', async () => {
+      const client = makeClient();
+      const resp = {
+        formData: jest.fn().mockRejectedValue(new Error('Bad multipart')),
+        headers: {get: jest.fn().mockReturnValue('multipart/form-data')},
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+      };
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      const result = await client.get<FormData>('/bad-multipart');
+
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_INVALID_MULTIPART',
+          severity: 'ERROR',
+        }),
+      ]);
+    });
+
+    it('preserves data and issues from a 207 JSON envelope', async () => {
+      const client = makeClient();
+      const envelope = {
+        data: {id: 7},
+        issues: [
+          {
+            code: 'PARTIAL',
+            message: 'Partial response',
+            severity: 'WARNING',
+          },
+        ],
+      };
+      const resp = mockJsonResponse(envelope, {
+        status: 207,
+        statusText: 'Multi-Status',
+      });
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      const result = await client.get('/partial');
+
+      expect(result).toEqual(envelope);
     });
 
     it('calls markUnavailable and incrementFail on repeated 5xx failure', async () => {
@@ -210,10 +294,7 @@ describe('HttpClient', () => {
         retryBaseDelayMs: 0,
         retryJitterMs: 0,
       });
-      const resp = mockJsonResponse(
-        {message: 'Server Error', success: false},
-        {status: 500},
-      );
+      const resp = mockJsonResponse({}, {status: 500});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/server-error');
@@ -232,8 +313,7 @@ describe('HttpClient', () => {
 
       const result = await client.get('/unreachable');
 
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Network error');
+      expect(result.issues?.[0]?.message).toContain('Network error');
       expect(mockStore.markUnavailable).toHaveBeenCalled();
       expect(mockStore.incrementFail).toHaveBeenCalled();
     });
@@ -243,7 +323,7 @@ describe('HttpClient', () => {
     it('calls markAvailable when backend was previously disconnected', async () => {
       mockStore.isConnected = false;
       const client = makeClient();
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/health');
@@ -254,7 +334,7 @@ describe('HttpClient', () => {
     it('resets failures when failCount > 0', async () => {
       mockStore.failCount = 3;
       const client = makeClient();
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/health');
@@ -267,7 +347,7 @@ describe('HttpClient', () => {
     it('adds the bearer token to requests when configured', async () => {
       const client = makeClient();
       client.setAuthToken('token-123');
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/secure');
@@ -285,7 +365,7 @@ describe('HttpClient', () => {
     it('merges the bearer token with request override headers', async () => {
       const client = makeClient();
       client.setAuthToken('token-123');
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.put(
@@ -309,7 +389,7 @@ describe('HttpClient', () => {
     it('does not add the bearer token when auth is skipped', async () => {
       const client = makeClient();
       client.setAuthToken('token-123');
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.post(
@@ -333,7 +413,7 @@ describe('HttpClient', () => {
 
       await client.get('/unreachable');
 
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/after-failure');
@@ -348,7 +428,7 @@ describe('HttpClient', () => {
       const client = makeClient();
       client.setAuthToken('token-123');
       client.clearAuthToken();
-      const resp = mockJsonResponse({data: null, message: 'OK', success: true});
+      const resp = mockJsonResponse({data: null});
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.get('/after-clear');

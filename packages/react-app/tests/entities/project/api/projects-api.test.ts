@@ -105,7 +105,7 @@ describe('downloadProjectFiles', () => {
     const result = await downloadProjectFiles('test-project-id');
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain('Internal Server Error');
+    expect(result.message).toBe('Failed to download project files');
     expect(result.data).toBeUndefined();
   });
 

@@ -123,7 +123,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(
       store
         .getState()
-        .graphData?.connections.find((c) => c.connectionId === 'link-1'),
+        .graphData?.connections.find((c) => c.systemId === 'link-1'),
     ).toBeDefined();
   });
 
@@ -169,7 +169,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'mod-B',
       endPortSystemId: '20',
-      isDangling: false,
+      isInterUsecase: false,
       startComponentSystemId: 'mod-A',
       startPortSystemId: '10',
     });
@@ -177,7 +177,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(
       store
         .getState()
-        .graphData?.connections.find((c) => c.connectionId === 'link-1'),
+        .graphData?.connections.find((c) => c.systemId === 'link-1'),
     ).toBeDefined();
   });
 
@@ -227,7 +227,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'mod-B',
       endPortSystemId: '20',
-      isDangling: true,
+      isInterUsecase: true,
       startComponentSystemId: 'mod-A',
       startPortSystemId: '10',
     });
@@ -308,7 +308,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'mod-B',
       endPortSystemId: '20',
-      isDangling: false,
+      isInterUsecase: false,
       startComponentSystemId: 'ss-1',
       startPortSystemId: '10',
     });
@@ -420,7 +420,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'sys-ss-2',
       endPortSystemId: '20',
-      isDangling: false,
+      isInterUsecase: false,
       startComponentSystemId: 'sys-ss-1',
       startPortSystemId: '10',
     });
@@ -430,8 +430,7 @@ describe('createLinkOperations — connectPorts', () => {
   it('shows a danger toast and returns false when the backend call fails', async () => {
     const {get, store} = makeStore();
     mockCreateDataLink.mockResolvedValue({
-      message: 'Ports are incompatible',
-      success: false,
+      issues: [{code: 'INCOMPATIBLE_PORTS', message: 'Ports are incompatible', severity: 'ERROR'}],
     });
 
     const {connectPorts} = createLinkOperations('proj-1');
@@ -472,13 +471,13 @@ describe('createLinkOperations — deleteLink', () => {
       graphData: {
         connections: [
           {
-            connectionId: 'link-1',
-            connectionType: 'data',
-            fromModuleId: 'mod-A',
-            fromPortId: '10',
-            isDangling: false,
-            toModuleId: 'mod-B',
-            toPortId: '20',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'mod-B',
+            isInterUsecase: false,
+            linkKind: 'data',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'mod-A',
+            systemId: 'link-1',
           },
         ],
         containers: {},
@@ -502,7 +501,7 @@ describe('createLinkOperations — deleteLink', () => {
     expect(
       store
         .getState()
-        .graphData?.connections.find((c) => c.connectionId === 'link-1'),
+        .graphData?.connections.find((c) => c.systemId === 'link-1'),
     ).toBeUndefined();
   });
 
@@ -512,13 +511,13 @@ describe('createLinkOperations — deleteLink', () => {
       graphData: {
         connections: [
           {
-            connectionId: 'link-1',
-            connectionType: 'control',
-            fromModuleId: 'mod-A',
-            fromPortId: '10',
-            isDangling: false,
-            toModuleId: 'mod-B',
-            toPortId: '20',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'mod-B',
+            isInterUsecase: false,
+            linkKind: 'control',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'mod-A',
+            systemId: 'link-1',
           },
         ],
         containers: {},
@@ -542,15 +541,14 @@ describe('createLinkOperations — deleteLink', () => {
     expect(
       store
         .getState()
-        .graphData?.connections.find((c) => c.connectionId === 'link-1'),
+        .graphData?.connections.find((c) => c.systemId === 'link-1'),
     ).toBeUndefined();
   });
 
   it('shows a danger toast and returns false when the backend call fails', async () => {
     const {get} = makeStore();
     mockDeleteDataLink.mockResolvedValue({
-      message: 'Link not found',
-      success: false,
+      issues: [{code: 'LINK_NOT_FOUND', message: 'Link not found', severity: 'ERROR'}],
     });
 
     const {deleteLink} = createLinkOperations('proj-1');
@@ -563,8 +561,7 @@ describe('createLinkOperations — deleteLink', () => {
   it('shows a danger toast and returns false when deleteControlLink fails', async () => {
     const {get} = makeStore();
     mockDeleteControlLink.mockResolvedValue({
-      message: 'Link not found',
-      success: false,
+      issues: [{code: 'LINK_NOT_FOUND', message: 'Link not found', severity: 'ERROR'}],
     });
 
     const {deleteLink} = createLinkOperations('proj-1');

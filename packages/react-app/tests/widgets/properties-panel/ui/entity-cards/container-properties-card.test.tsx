@@ -72,10 +72,9 @@ describe('ContainerPropertiesCard', () => {
           ...makeGraphData(),
           containers: {
             100: {
-              containerId: '100',
-              heapId: 'heap-1',
-              modules: [],
-              name: 'Container 100',
+              moduleInstances: [],
+              subgraphSystemId: 'sg-1',
+              systemId: '100',
             },
           },
         }}

@@ -7,6 +7,7 @@ import {useCallback} from 'react';
 
 import {patchContainer} from '~entities/containers';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow, type PropertyOption} from '~shared/controls/property-row';
 
 import {formatDisplayId} from '../../lib/display-id';
@@ -47,7 +48,7 @@ export function ContainerPropertiesCard({
 
   return (
     <ContainerPropertiesCardBody
-      containerId={container.containerId}
+      containerId={container.systemId}
       isCollapsed={isCollapsed}
       isEditing={isEditing}
       moduleIds={container.moduleInstances ?? []}
@@ -86,11 +87,11 @@ function ContainerPropertiesCardBody({
         containerId: nextId,
       });
 
-      if (!result.success) {
-        return {message: result.message, ok: false};
+      if (hasBlockingIssues(result)) {
+        return {message: getIssueMessage(result, 'Failed to save container'), ok: false};
       }
 
-      const committedId = result.data?.containerId ?? nextId;
+      const committedId = result.data?.systemId ?? nextId;
       onContainerIdChange(containerId, committedId);
       return {ok: true, value: committedId};
     },

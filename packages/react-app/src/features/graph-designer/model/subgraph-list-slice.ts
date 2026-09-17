@@ -9,6 +9,7 @@ import {
   getAllSubgraphs,
   type SubgraphResponseDto,
 } from '~entities/subgraph-definitions';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
 
@@ -55,8 +56,8 @@ function toSubgraphDefinition(dto: SubgraphResponseDto): SubgraphDefinition {
   return {
     category: '',
     description: '',
-    subgraphId: String(dto.id),
-    subgraphName: dto.name,
+    subgraphId: String(dto.naturalId),
+    subgraphName: dto.name ?? '',
     subgraphType: dto.subGraphSharedType,
     systemId: dto.systemId,
   };
@@ -95,11 +96,11 @@ export function createSubgraphListSlice(
       try {
         const result = await getAllSubgraphs(projectId);
 
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           logger.error('subgraphListSlice: loadSubgraphList — API error', {
             action: 'load_subgraph_list',
             component: 'subgraphListSlice',
-            error: result.message,
+            error: getIssueMessage(result, 'Failed to load subgraph list'),
           });
           setSlice({subgraphListStatus: 'error'});
           return;

@@ -15,17 +15,16 @@ export function makeProperty(
       {
         allowedValues: allowedValues.map((option) => ({
           ...option,
-          type: 'NAME_VALUE_PAIR' as const,
         })),
         isReadOnly: false,
         name,
         policy: 'BASIC',
-        type: 'CONFIG_ELEMENT',
+        type: 'ConfigElement',
         value,
       },
     ],
     hasDefinition: true,
-    propertyId: name.length,
+    naturalId: name.length,
     propertyName: name,
     systemId: `${name}-system-id`,
   };

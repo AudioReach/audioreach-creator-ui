@@ -41,14 +41,14 @@ const PROJECT_ID = 'project-1';
 
 const ITEM_SPEAKER: any = {
   expanded: false,
-  keyValueCollection: [],
+  keyValuePairs: [],
   name: 'Speaker_Mic',
   systemId: 'UC_001',
 };
 
 const ITEM_HFP: any = {
   expanded: false,
-  keyValueCollection: [],
+  keyValuePairs: [],
   name: 'HFP_Rx_Playback',
   systemId: 'UC_002',
 };
@@ -64,7 +64,7 @@ const SUBSYSTEM_CATEGORIES: any[] = [
       {
         children: [ITEM_SPEAKER],
         expanded: true,
-        keyValueCollection: [],
+        keyValuePairs: [],
         name: 'StreamPP_RX',
       },
     ],
@@ -75,7 +75,7 @@ const SUBSYSTEM_CATEGORIES: any[] = [
 // Raw API response for subsystem endpoint
 const SUBSYSTEM_API_RESPONSE = [
   {
-    filteredKv: {keyValueCollection: []},
+    filteredKv: {keyValuePairs: []},
     usecases: [{...ITEM_SPEAKER}], // UC_001 is in the subsystem
   },
 ];

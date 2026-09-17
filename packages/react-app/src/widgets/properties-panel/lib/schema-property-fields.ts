@@ -4,8 +4,9 @@
  */
 
 import type {
+  BitFieldDto,
   ConfigElementDto,
-  NameValuePairDto,
+  NameValueDto,
 } from '~entities/spf-module-data';
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
 import type {PropertyDto, PropertyElement} from '~shared/lib/property.dto';
@@ -14,11 +15,11 @@ function collectConfigElements(
   elements: PropertyElement[],
 ): ConfigElementDto[] {
   return elements.flatMap((element) => {
-    if (element.type === 'CONFIG_ELEMENT') {
+    if (element.type === 'ConfigElement') {
       return [element];
     }
 
-    if (element.type === 'STRUCT') {
+    if (element.type === 'Struct') {
       return collectConfigElements(element.value);
     }
 
@@ -29,8 +30,8 @@ function collectConfigElements(
   });
 }
 
-function isNameValuePair(value: {type: string}): value is NameValuePairDto {
-  return value.type === 'NAME_VALUE_PAIR';
+function isNameValue(value: BitFieldDto | NameValueDto): value is NameValueDto {
+  return !('bitMask' in value);
 }
 
 export function dirtyItemsHaveConfigName(
@@ -84,7 +85,7 @@ export function propertyDtosHaveConfigName(
   name: string,
 ): boolean {
   return properties.some((property) =>
-    collectConfigElements(property.elements).some(
+    collectConfigElements(property.elements ?? []).some(
       (element) => element.name === name,
     ),
   );
@@ -93,12 +94,10 @@ export function propertyDtosHaveConfigName(
 export function toNameValueOptions(
   element: ConfigElementDto | null,
 ): Array<{label: string; value: string}> {
-  return (element?.allowedValues ?? [])
-    .filter(isNameValuePair)
-    .map((value) => ({
-      label: value.name,
-      value: value.value,
-    }));
+  return (element?.allowedValues ?? []).filter(isNameValue).map((value) => ({
+    label: value.name,
+    value: value.value,
+  }));
 }
 
 function updateConfigElementValue(
@@ -108,7 +107,7 @@ function updateConfigElementValue(
 ): PropertyElement[] | null {
   let didUpdate = false;
   const next = elements.map((element): PropertyElement => {
-    if (element.type === 'CONFIG_ELEMENT') {
+    if (element.type === 'ConfigElement') {
       if (element.name !== name) {
         return element;
       }
@@ -116,7 +115,7 @@ function updateConfigElementValue(
       return {...element, value};
     }
 
-    if (element.type === 'STRUCT') {
+    if (element.type === 'Struct') {
       const updatedValue = updateConfigElementValue(element.value, name, value);
       if (!updatedValue) {
         return element;

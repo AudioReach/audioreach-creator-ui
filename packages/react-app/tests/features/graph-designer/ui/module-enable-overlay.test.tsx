@@ -26,15 +26,15 @@ interface TestStoreShape {
   graphData: {moduleInstances: Record<string, ModuleInstance>};
   headerSelectionsBySubgraphId: GraphDesignerStore['headerSelectionsBySubgraphId'];
   moduleDataByInstanceId: Record<string, ModuleDataEntry>;
-  moduleDefinitionsById: Record<string, SpfModuleDefinitionResponseDto>;
+  moduleDefinitionsBySystemId: Record<string, SpfModuleDefinitionResponseDto>;
   setModuleEnable: jest.Mock;
 }
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
@@ -45,16 +45,17 @@ function makeModuleInstance(
   overrides?: Partial<ModuleInstance>,
 ): ModuleInstance {
   return {
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
-    moduleId: 'mod-def-1',
-    moduleInstanceId: MODULE_INSTANCE_ID,
+    moduleDefinitionSystemId: 'mod-def-1',
     moduleName: 'Module',
     moduleType: '',
+    naturalId: 1,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: MODULE_INSTANCE_ID,
     ...overrides,
   };
 }
@@ -64,7 +65,7 @@ function makeModuleDefinitionDto(
 ): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
+    customModuleData: {
       entryPointTag: '',
       fileName: '',
       interfaceTypeId: 0,
@@ -137,14 +138,14 @@ function makeEnableParamDefinitionsSummaryInfo() {
 function makeStore(options: {
   headerSelectionsBySubgraphId?: GraphDesignerStore['headerSelectionsBySubgraphId'];
   moduleDataByInstanceId?: Record<string, ModuleDataEntry>;
-  moduleDefinitionsById?: Record<string, SpfModuleDefinitionResponseDto>;
+  moduleDefinitionsBySystemId?: Record<string, SpfModuleDefinitionResponseDto>;
   moduleInstances?: Record<string, ModuleInstance>;
 }): StoreApi<TestStoreShape> {
   return createStore<TestStoreShape>(() => ({
     graphData: {moduleInstances: options.moduleInstances ?? {}},
     headerSelectionsBySubgraphId: options.headerSelectionsBySubgraphId ?? {},
     moduleDataByInstanceId: options.moduleDataByInstanceId ?? {},
-    moduleDefinitionsById: options.moduleDefinitionsById ?? {},
+    moduleDefinitionsBySystemId: options.moduleDefinitionsBySystemId ?? {},
     setModuleEnable: jest.fn(),
   }));
 }
@@ -166,7 +167,7 @@ beforeEach(() => {
 describe('ModuleEnableOverlay — not present', () => {
   it('renders null when the module has no enable parameter', () => {
     const store = makeStore({
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-def-1': makeModuleDefinitionDto({paramDefinitionsSummaryInfo: []}),
       },
       moduleInstances: {[MODULE_INSTANCE_ID]: makeModuleInstance()},
@@ -183,7 +184,7 @@ describe('ModuleEnableOverlay — unresolved CKV (State 3)', () => {
       headerSelectionsBySubgraphId: {
         'sg-1': {keyValues: {'key-1': 'NA'}, subgraphId: 'sg-1'},
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-def-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: makeEnableParamDefinitionsSummaryInfo(),
         }),
@@ -223,7 +224,7 @@ describe('ModuleEnableOverlay — CKV resolved, value not fetched (State 2)', ()
           moduleName: 'Module',
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-def-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: makeEnableParamDefinitionsSummaryInfo(),
         }),
@@ -259,21 +260,20 @@ describe('ModuleEnableOverlay — ready (State 1)', () => {
                   elements: [
                     {
                       allowedValues: [
-                        {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
+                        {name: 'Enable', value: '0x1'},
                         {
                           name: 'Disable',
-                          type: 'NAME_VALUE_PAIR',
                           value: '0x0',
                         },
                       ],
                       isReadOnly: false,
                       name: 'Enable',
-                      type: 'CONFIG_ELEMENT',
+                      type: 'ConfigElement',
                       value: enabled ? '0x1' : '0x0',
                     },
                   ],
                   name: 'Enable',
-                  parameterId: '0x8001026',
+                  naturalId: '0x8001026',
                   systemId: ENABLE_PARAM_SYSTEM_ID,
                 },
               ],
@@ -285,7 +285,7 @@ describe('ModuleEnableOverlay — ready (State 1)', () => {
           moduleName: 'Module',
         },
       },
-      moduleDefinitionsById: {
+      moduleDefinitionsBySystemId: {
         'mod-def-1': makeModuleDefinitionDto({
           paramDefinitionsSummaryInfo: makeEnableParamDefinitionsSummaryInfo(),
         }),

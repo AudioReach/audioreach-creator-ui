@@ -14,15 +14,15 @@ import {elementKey} from './element-key';
 export function findElementByKey(
   elems: AnyElementDto[],
   itemId: string,
-  prefix: string[],
+  prefix: Array<string | undefined>,
   targetKey: string,
 ): ConfigElementDto | null {
   for (const elem of elems) {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       if (elementKey(itemId, ...prefix, elem.name) === targetKey) {
         return elem;
       }
-    } else if (elem.type === 'STRUCT') {
+    } else if (elem.type === 'Struct') {
       const found = findElementByKey(
         elem.value,
         itemId,
@@ -32,9 +32,9 @@ export function findElementByKey(
       if (found) {
         return found;
       }
-    } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+    } else if (elem.type === 'ElementTemplateArray') {
       for (const inst of elem.value) {
-        if (inst.type === 'STRUCT') {
+        if (inst.type === 'Struct') {
           const found = findElementByKey(
             inst.value,
             itemId,
@@ -44,7 +44,7 @@ export function findElementByKey(
           if (found) {
             return found;
           }
-        } else if (inst.type === 'CONFIG_ELEMENT') {
+        } else if (inst.type === 'ConfigElement') {
           if (elementKey(itemId, ...prefix, inst.name) === targetKey) {
             return inst;
           }

@@ -21,9 +21,9 @@ export interface SetSubgraphNameRequestDto {
  * Subgraph response data transfer object
  */
 export interface SubgraphResponseDto {
-  id: number;
-  name: string;
-  relatedEndPointLinks: EndPointLink[];
+  name?: string;
+  naturalId: number;
+  relatedEndPointLinks?: EndPointLink[];
   SGKV: KeyValueInfo[];
   subGraphSharedType: string;
   systemId: string;

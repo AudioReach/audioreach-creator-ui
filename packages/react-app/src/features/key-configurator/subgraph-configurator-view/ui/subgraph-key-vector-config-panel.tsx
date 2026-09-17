@@ -206,7 +206,7 @@ export function SubgraphKeyVectorConfigPanel({
       return '';
     }
     return configuredKeyValues
-      .map((kv) => `[${kv.keyInfo.name}: ${kv.valueInfo.name}]`)
+      .map((kv) => `[${kv.key.name}: ${kv.value.name}]`)
       .join('\n');
   }, [configuredKeyValues]);
 
@@ -227,10 +227,10 @@ export function SubgraphKeyVectorConfigPanel({
     setSearchTerm('');
 
     // Load configured keys into selection state
-    const keys = new Set(configuredKeyValues.map((kv) => kv.keyInfo.id));
+    const keys = new Set(configuredKeyValues.map((kv) => kv.key.id));
     const values: Record<number, number> = {};
     configuredKeyValues.forEach((kv) => {
-      values[kv.keyInfo.id] = kv.valueInfo.id;
+      values[kv.key.id] = kv.value.id;
     });
 
     setSelectedKeys(keys);
@@ -360,8 +360,8 @@ export function SubgraphKeyVectorConfigPanel({
           const value = key.values.find((v) => v.id === valueId);
           if (value) {
             newConfigs.push({
-              keyInfo: {id: key.id, name: keyName},
-              valueInfo: {id: value.id, name: value.name},
+              key: {id: key.id, name: keyName},
+              value: {id: value.id, name: value.name},
             });
           }
         }
@@ -584,7 +584,7 @@ export function SubgraphKeyVectorConfigPanel({
                       className={`border-neutral-01 flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors ${
                         hasSelectedValue
                           ? 'bg-secondary'
-                          : 'bg-transparent hover:bg-secondary'
+                          : 'hover:bg-secondary bg-transparent'
                       }`}
                       onClick={() => toggleKeyExpansion(key.id)}
                     >

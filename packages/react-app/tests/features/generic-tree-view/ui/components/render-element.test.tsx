@@ -11,7 +11,7 @@ import type {
   BitFieldDto,
   ConfigElementDto,
   ElementTemplateArrayDto,
-  NameValuePairDto,
+  NameValueDto,
   StructDto,
 } from '~entities/spf-module-data';
 import {
@@ -36,8 +36,8 @@ function makeCtx(
     dirtyPaths: new Set(),
     elementValues: new Map(),
     invalidPaths: new Set(),
+    itemId: 'pid1',
     onValueChange: jest.fn(),
-    parameterId: 'pid1',
     paramReadOnly: false,
     pathPrefix: [],
     policyFilter: new Set(['BASIC', 'ADVANCED']),
@@ -55,7 +55,7 @@ function makeConfig(
   return {
     isReadOnly: false,
     name: 'elem',
-    type: 'CONFIG_ELEMENT',
+    type: 'ConfigElement',
     value: '0x00000000',
     ...overrides,
   };
@@ -100,12 +100,12 @@ describe('renderElement policy filter', () => {
 // ── renderStruct ──────────────────────────────────────────────────────────────
 
 describe('renderElement renderStruct', () => {
-  it('renders child CONFIG_ELEMENT names for a STRUCT element', () => {
+  it('renders child ConfigElement names for a Struct element', () => {
     const struct: StructDto = {
       isReadOnly: false,
       name: 'myStruct',
-      structType: 'struct',
-      type: 'STRUCT',
+      structType: 'Struct',
+      type: 'Struct',
       value: [
         makeConfig({name: 'childA', value: '0x00000001'}),
         makeConfig({name: 'childB', value: '0x00000002'}),
@@ -132,7 +132,7 @@ describe('renderElement renderArray table mode', () => {
       length: 2,
       name: 'myArr',
       template: [],
-      type: 'ELEMENT_TEMPLATE_ARRAY',
+      type: 'ElementTemplateArray',
       value: [
         makeConfig({name: 'myArr[0]', value: '0x00000001'}),
         makeConfig({name: 'myArr[1]', value: '0x00000002'}),
@@ -163,11 +163,11 @@ describe('renderElement renderLeaf controls', () => {
     expect(screen.getAllByTestId('text-input').length).toBeGreaterThan(0);
   });
 
-  it('DROP_DOWN with NAME_VALUE_PAIR options renders a Select', () => {
-    const opts: NameValuePairDto[] = [
-      {name: 'Alpha', type: 'NAME_VALUE_PAIR', value: '0x0'},
-      {name: 'Beta', type: 'NAME_VALUE_PAIR', value: '0x1'},
-      {name: 'Gamma', type: 'NAME_VALUE_PAIR', value: '0x2'},
+  it('DROP_DOWN with NameValue options renders a Select', () => {
+    const opts: NameValueDto[] = [
+      {name: 'Alpha', value: '0x0'},
+      {name: 'Beta', value: '0x1'},
+      {name: 'Gamma', value: '0x2'},
     ];
     const elem = makeConfig({
       allowedValues: opts,
@@ -181,9 +181,9 @@ describe('renderElement renderLeaf controls', () => {
   });
 
   it('boolean Enable/Disable pair renders a Switch', () => {
-    const avs: NameValuePairDto[] = [
-      {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
-      {name: 'Disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+    const avs: NameValueDto[] = [
+      {name: 'Enable', value: '0x1'},
+      {name: 'Disable', value: '0x0'},
     ];
     const elem = makeConfig({allowedValues: avs, name: 'sw', value: '0x1'});
     const ctx = makeCtx({elementValues: new Map([['pid1/sw', '0x1']])});
@@ -226,8 +226,8 @@ describe('renderElement renderLeaf controls', () => {
     const bfs: BitFieldDto[] = [
       {
         allowedValues: [
-          {name: 'Off', type: 'NAME_VALUE_PAIR', value: '0x0'},
-          {name: 'On', type: 'NAME_VALUE_PAIR', value: '0x1'},
+          {name: 'Off', value: '0x0'},
+          {name: 'On', value: '0x1'},
         ],
         bitMask: '0x01',
         name: 'bit0',
@@ -353,9 +353,9 @@ describe('renderElement dirty/set indicators', () => {
 describe('renderElement SwitchControl interaction', () => {
   it('calls onValueChange with the on-value when switch is toggled on', async () => {
     const onValueChange = jest.fn();
-    const avs: NameValuePairDto[] = [
-      {name: 'Enable', type: 'NAME_VALUE_PAIR', value: '0x1'},
-      {name: 'Disable', type: 'NAME_VALUE_PAIR', value: '0x0'},
+    const avs: NameValueDto[] = [
+      {name: 'Enable', value: '0x1'},
+      {name: 'Disable', value: '0x0'},
     ];
     const elem = makeConfig({allowedValues: avs, name: 'sw', value: '0x0'});
     const ctx = makeCtx({

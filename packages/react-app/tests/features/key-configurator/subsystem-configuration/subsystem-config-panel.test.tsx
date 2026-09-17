@@ -345,8 +345,8 @@ describe('SubsystemConfigPanel', () => {
     fireEvent.click(screen.getByText('Add'));
 
     // Click on Key ID header to toggle to descending
-    const keyIdHeader = screen.getByText('Key ID');
-    fireEvent.click(keyIdHeader);
+    const naturalIdHeader = screen.getByText('Key ID');
+    fireEvent.click(naturalIdHeader);
 
     // Keys should be sorted by ID in descending order
     // StreamTx: 0xb1000000, DeviceRx: 0xa2000000, StreamRx: 0xa1000000

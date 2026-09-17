@@ -10,12 +10,12 @@ import type {
   UpdatePropertyRequestDto,
 } from '~shared/lib/property.dto';
 
-type ConfigPropertyElement = Extract<PropertyElement, {type: 'CONFIG_ELEMENT'}>;
+type ConfigPropertyElement = Extract<PropertyElement, {type: 'ConfigElement'}>;
 
 function isConfigElement(
   element: PropertyElement,
 ): element is ConfigPropertyElement {
-  return element.type === 'CONFIG_ELEMENT';
+  return element.type === 'ConfigElement';
 }
 
 function collectConfigElements(
@@ -26,7 +26,7 @@ function collectConfigElements(
       return [element];
     }
 
-    if (element.type === 'STRUCT') {
+    if (element.type === 'Struct') {
       return collectConfigElements(element.value);
     }
 
@@ -41,7 +41,7 @@ export function propertyHasConfigName(
   property: PropertyDto,
   name: string,
 ): boolean {
-  return collectConfigElements(property.elements).some(
+  return collectConfigElements(property.elements ?? []).some(
     (element) => element.name === name,
   );
 }
@@ -51,7 +51,7 @@ export function findPropertyConfigElement(
   name: string,
 ): ConfigPropertyElement | null {
   for (const property of properties) {
-    const element = collectConfigElements(property.elements).find(
+    const element = collectConfigElements(property.elements ?? []).find(
       (candidate) => candidate.name === name,
     );
     if (element) {
@@ -69,8 +69,8 @@ export function propertyDtosToTreeViewData(
 ): TreeViewData {
   return {
     items: properties.map((property) => ({
-      elements: property.elements,
-      id: String(property.propertyId),
+      elements: property.elements ?? [],
+      id: String(property.naturalId),
       name: property.propertyName,
       systemId: property.systemId,
     })),
@@ -85,7 +85,7 @@ export function dirtyItemsToProperties(
 ): PropertyDto[] {
   const byId = new Map(
     originalProperties.map((property) => [
-      String(property.propertyId),
+      String(property.naturalId),
       property,
     ]),
   );
@@ -97,7 +97,7 @@ export function dirtyItemsToProperties(
         {
           elements: item.elements,
           hasDefinition: original.hasDefinition,
-          propertyId: original.propertyId,
+          naturalId: original.naturalId,
           propertyName: original.propertyName,
           systemId: original.systemId,
         },
@@ -112,7 +112,7 @@ export function propertyDtoToUpdateRequest(
   property: PropertyDto,
 ): UpdatePropertyRequestDto {
   return {
-    elements: property.elements,
+    elements: property.elements ?? [],
     name: property.propertyName,
     systemId: property.systemId,
   };

@@ -36,7 +36,7 @@ describe('ModulePropertiesCard', () => {
 
   it('renders static fields, dynamic port editability, and schema data', async () => {
     const graphData = makeGraphData();
-    graphData.moduleInstances['mod-1'].containerId = '1';
+    graphData.moduleInstances['mod-1'].containerSystemId = '1';
 
     render(
       <ModulePropertiesCard

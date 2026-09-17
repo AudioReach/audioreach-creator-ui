@@ -12,15 +12,15 @@ import {elementKey} from './element-key';
 function seedFromElements(
   elems: AnyElementDto[],
   itemId: string,
-  pathPrefix: string[],
+  pathPrefix: Array<string | undefined>,
   elementValues: Map<string, string>,
   arrayCounts: Map<string, number>,
 ): void {
   for (const elem of elems) {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       const key = elementKey(itemId, ...pathPrefix, elem.name);
       elementValues.set(key, elem.value);
-    } else if (elem.type === 'STRUCT') {
+    } else if (elem.type === 'Struct') {
       seedFromElements(
         elem.value,
         itemId,
@@ -28,13 +28,13 @@ function seedFromElements(
         elementValues,
         arrayCounts,
       );
-    } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+    } else if (elem.type === 'ElementTemplateArray') {
       const arrayPath = elementKey(itemId, ...pathPrefix, elem.name);
       arrayCounts.set(arrayPath, elem.value.length);
       for (const inst of elem.value) {
         const instPrefix =
-          inst.type === 'STRUCT' ? [...pathPrefix, inst.name] : [...pathPrefix];
-        if (inst.type === 'STRUCT') {
+          inst.type === 'Struct' ? [...pathPrefix, inst.name] : [...pathPrefix];
+        if (inst.type === 'Struct') {
           seedFromElements(
             inst.value,
             itemId,
@@ -42,7 +42,7 @@ function seedFromElements(
             elementValues,
             arrayCounts,
           );
-        } else if (inst.type === 'CONFIG_ELEMENT') {
+        } else if (inst.type === 'ConfigElement') {
           const key = elementKey(itemId, ...pathPrefix, inst.name);
           elementValues.set(key, inst.value);
         }

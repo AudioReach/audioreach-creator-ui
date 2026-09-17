@@ -12,9 +12,9 @@ describe('computeBitfieldParentValue', () => {
   it('mask 0x06, newOption 2 → parent 0x04, NOT 0x0C (P0 regression)', () => {
     const bf: BitFieldDto = {
       allowedValues: [
-        {name: 'Zero', type: 'NAME_VALUE_PAIR', value: '0x0'},
-        {name: 'One', type: 'NAME_VALUE_PAIR', value: '0x1'},
-        {name: 'Two', type: 'NAME_VALUE_PAIR', value: '0x2'},
+        {name: 'Zero', value: '0x0'},
+        {name: 'One', value: '0x1'},
+        {name: 'Two', value: '0x2'},
       ],
       bitMask: '0x06',
       name: 'bf',
@@ -38,7 +38,7 @@ describe('computeBitfieldParentValue', () => {
 
   it('mask 0x01 (bit 0), option 1 → 0x01', () => {
     const bf: BitFieldDto = {
-      allowedValues: [{name: 'On', type: 'NAME_VALUE_PAIR', value: '0x1'}],
+      allowedValues: [{name: 'On', value: '0x1'}],
       bitMask: '0x01',
       name: 'b',
       type: 'BIT_FIELD',
@@ -50,7 +50,7 @@ describe('computeBitfieldParentValue', () => {
 
   it('mask 0xF0 (bits 4-7), option 3 → 0x30', () => {
     const bf: BitFieldDto = {
-      allowedValues: [{name: 'Three', type: 'NAME_VALUE_PAIR', value: '0x3'}],
+      allowedValues: [{name: 'Three', value: '0x3'}],
       bitMask: '0xF0',
       name: 'b',
       type: 'BIT_FIELD',

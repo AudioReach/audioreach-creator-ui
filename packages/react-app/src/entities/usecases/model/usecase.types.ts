@@ -13,7 +13,7 @@ import type {KeyValueInfo} from './usecase.dto';
 export interface UsecaseItem {
   children?: UsecaseItem[];
   expanded: boolean;
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   name: string;
   systemId?: string;
 }

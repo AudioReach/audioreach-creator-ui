@@ -13,17 +13,17 @@ import {elementKey} from './element-key';
 export function patchElements(
   elems: AnyElementDto[],
   itemId: string,
-  prefix: string[],
+  prefix: Array<string | undefined>,
   elementValues: Map<string, string>,
   arrayCounts: Map<string, number>,
 ): AnyElementDto[] {
   return elems.map((elem) => {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       const key = elementKey(itemId, ...prefix, elem.name);
       const newValue = elementValues.get(key) ?? elem.value;
       return newValue !== elem.value ? {...elem, value: newValue} : elem;
     }
-    if (elem.type === 'STRUCT') {
+    if (elem.type === 'Struct') {
       const patched = patchElements(
         elem.value,
         itemId,
@@ -35,11 +35,11 @@ export function patchElements(
         ? elem
         : {...elem, value: patched};
     }
-    if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+    if (elem.type === 'ElementTemplateArray') {
       const arrayPath = elementKey(itemId, ...prefix, elem.name);
       const count = arrayCounts.get(arrayPath) ?? elem.value.length;
       const instances = elem.value.slice(0, count).map((inst) => {
-        if (inst.type === 'STRUCT') {
+        if (inst.type === 'Struct') {
           const patched = patchElements(
             inst.value,
             itemId,
@@ -51,7 +51,7 @@ export function patchElements(
             ? inst
             : {...inst, value: patched};
         }
-        if (inst.type === 'CONFIG_ELEMENT') {
+        if (inst.type === 'ConfigElement') {
           const key = elementKey(itemId, ...prefix, inst.name);
           const newValue = elementValues.get(key) ?? inst.value;
           return newValue !== inst.value ? {...inst, value: newValue} : inst;

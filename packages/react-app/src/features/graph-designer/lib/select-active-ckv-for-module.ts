@@ -22,7 +22,7 @@ export function selectActiveCkvForModule(
   }
 
   const headerSelection =
-    state.headerSelectionsBySubgraphId[moduleInstance.subgraphId];
+    state.headerSelectionsBySubgraphId[moduleInstance.subgraphSystemId];
   if (!headerSelection) {
     return {isResolved: false};
   }

@@ -15,10 +15,9 @@ function makeParam(
   overrides?: Partial<ParameterDetailDto>,
 ): ParameterDetailDto {
   return {
-    changeInfo: {changeType: 'NONE'},
     elements: [],
     name: 'Param',
-    parameterId: 'param-1',
+    naturalId: 'param-1',
     systemId: 'sys-param-1',
     ...overrides,
   };
@@ -35,7 +34,7 @@ function makeCalDataDto(overrides?: Partial<CalDataDto>): CalDataDto {
 }
 
 describe('calDataDtoToTreeViewData', () => {
-  it('maps parameterId to id and preserves all metadata fields', () => {
+  it('maps naturalId to id and preserves all metadata fields', () => {
     const dto = makeCalDataDto({
       parameters: [
         makeParam({
@@ -45,7 +44,7 @@ describe('calDataDtoToTreeViewData', () => {
             {
               isReadOnly: false,
               name: 'el-1',
-              type: 'CONFIG_ELEMENT',
+              type: 'ConfigElement',
               value: '1',
             },
           ],
@@ -54,8 +53,7 @@ describe('calDataDtoToTreeViewData', () => {
           isOffloaded: true,
           isReadOnly: true,
           name: 'Gain',
-          parameterId: 'param-42',
-          toolPolicy: ['RTC'],
+          naturalId: 'param-42',
         }),
       ],
     });
@@ -66,7 +64,6 @@ describe('calDataDtoToTreeViewData', () => {
     expect(result.changeInfo).toEqual({changeType: 'NONE'});
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toEqual({
-      changeInfo: {changeType: 'NONE'},
       deprecated: true,
       description: 'desc',
       elements: dto.parameters[0].elements,
@@ -76,7 +73,6 @@ describe('calDataDtoToTreeViewData', () => {
       isOffloaded: true,
       isReadOnly: true,
       name: 'Gain',
-      toolPolicy: ['RTC'],
     });
   });
 
@@ -88,17 +84,17 @@ describe('calDataDtoToTreeViewData', () => {
 });
 
 describe('dirtyItemsToCalDataRequest', () => {
-  it('overlays dirty items onto the original DTO and marks them UPDATE', () => {
+  it('overlays dirty items onto the original DTO', () => {
     const original = makeCalDataDto({
       parameters: [
-        makeParam({name: 'Gain', parameterId: 'param-1', systemId: 'sys-1'}),
-        makeParam({name: 'Mute', parameterId: 'param-2', systemId: 'sys-2'}),
+        makeParam({name: 'Gain', naturalId: 'param-1', systemId: 'sys-1'}),
+        makeParam({name: 'Mute', naturalId: 'param-2', systemId: 'sys-2'}),
       ],
     });
     const dirtyItems: TreeViewItem[] = [
       {
         elements: [
-          {isReadOnly: false, name: 'el-1', type: 'CONFIG_ELEMENT', value: '5'},
+          {isReadOnly: false, name: 'el-1', type: 'ConfigElement', value: '5'},
         ],
         id: 'param-1',
         name: 'Gain',
@@ -109,10 +105,9 @@ describe('dirtyItemsToCalDataRequest', () => {
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]).toEqual({
-      changeInfo: {changeType: 'UPDATE'},
       elements: dirtyItems[0].elements,
       name: 'Gain',
-      parameterId: 'param-1',
+      naturalId: 'param-1',
       systemId: 'sys-1',
     });
   });
@@ -120,8 +115,8 @@ describe('dirtyItemsToCalDataRequest', () => {
   it('excludes non-dirty parameters from the request', () => {
     const original = makeCalDataDto({
       parameters: [
-        makeParam({name: 'Gain', parameterId: 'param-1'}),
-        makeParam({name: 'Mute', parameterId: 'param-2'}),
+        makeParam({name: 'Gain', naturalId: 'param-1'}),
+        makeParam({name: 'Mute', naturalId: 'param-2'}),
       ],
     });
     const dirtyItems: TreeViewItem[] = [
@@ -130,7 +125,7 @@ describe('dirtyItemsToCalDataRequest', () => {
 
     const result = dirtyItemsToCalDataRequest(dirtyItems, original);
 
-    expect(result.data.map((p) => p.parameterId)).toEqual(['param-1']);
+    expect(result.data.map((p) => p.naturalId)).toEqual(['param-1']);
   });
 
   it('falls back to the dirty item id as systemId when no original parameter matches', () => {
@@ -142,10 +137,9 @@ describe('dirtyItemsToCalDataRequest', () => {
     const result = dirtyItemsToCalDataRequest(dirtyItems, original);
 
     expect(result.data[0]).toEqual({
-      changeInfo: {changeType: 'UPDATE'},
       elements: [],
       name: 'New Param',
-      parameterId: 'param-unknown',
+      naturalId: 'param-unknown',
       systemId: 'param-unknown',
     });
   });
@@ -160,18 +154,18 @@ describe('buildGroupedTreeViewData', () => {
             group: 'General',
             isReadOnly: false,
             name: 'Volume',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '10',
           },
           {
             group: 'Advanced',
             isReadOnly: false,
             name: 'Threshold',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '2',
           },
         ],
-        parameterId: 'param-1',
+        naturalId: 'param-1',
       }),
       makeParam({
         elements: [
@@ -179,11 +173,11 @@ describe('buildGroupedTreeViewData', () => {
             group: 'General',
             isReadOnly: false,
             name: 'Mute',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: 'false',
           },
         ],
-        parameterId: 'param-2',
+        naturalId: 'param-2',
       }),
     ];
 
@@ -208,11 +202,11 @@ describe('buildGroupedTreeViewData', () => {
           {
             isReadOnly: false,
             name: 'Ungrouped',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '1',
           },
         ],
-        parameterId: 'param-1',
+        naturalId: 'param-1',
       }),
     ];
 
@@ -229,7 +223,7 @@ describe('buildGroupedTreeViewData', () => {
             group: 'General',
             isReadOnly: false,
             name: 'Volume',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '10',
           },
           {
@@ -237,7 +231,7 @@ describe('buildGroupedTreeViewData', () => {
             isReadOnly: false,
             name: 'FilterFreq',
             subgroup: 'Filter',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '100',
           },
           {
@@ -245,11 +239,11 @@ describe('buildGroupedTreeViewData', () => {
             isReadOnly: false,
             name: 'FilterGain',
             subgroup: 'Filter',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '3',
           },
         ],
-        parameterId: 'param-1',
+        naturalId: 'param-1',
       }),
     ];
 
@@ -260,7 +254,7 @@ describe('buildGroupedTreeViewData', () => {
     expect(generalItem.elements).toHaveLength(2);
     expect(generalItem.elements[0]).toMatchObject({
       name: 'Volume',
-      type: 'CONFIG_ELEMENT',
+      type: 'ConfigElement',
     });
 
     const structEl = generalItem.elements[1];
@@ -268,9 +262,9 @@ describe('buildGroupedTreeViewData', () => {
       isReadOnly: false,
       name: 'Filter',
       structType: 'Filter',
-      type: 'STRUCT',
+      type: 'Struct',
     });
-    if (structEl.type !== 'STRUCT') {
+    if (structEl.type !== 'Struct') {
       throw new Error('expected STRUCT element');
     }
     expect(structEl.value.map((el) => el.name)).toEqual([

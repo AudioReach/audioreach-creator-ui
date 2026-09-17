@@ -12,6 +12,7 @@ import {
   deleteDataLink,
 } from '~entities/usecases';
 import type {ComponentCollectionDto} from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 
 import {withMutationLock} from '../model/edit-session-slice';
@@ -96,7 +97,7 @@ export function createLinkOperations(projectId: string) {
             destinationPortSystemId: targetPortId,
             sourceNodeSystemId: sourceNodeId,
             sourcePortSystemId: sourcePortId,
-            type: edgeMode,
+            type: edgeMode === 'dangling' ? 'interUsecase' : edgeMode,
           })
         : await (
             useSubsystemVariant
@@ -105,13 +106,13 @@ export function createLinkOperations(projectId: string) {
           )(projectId, {
             endComponentSystemId: targetNodeId,
             endPortSystemId: targetPortId,
-            isDangling: edgeMode === 'dangling',
+            isInterUsecase: edgeMode === 'dangling',
             startComponentSystemId: sourceNodeId,
             startPortSystemId: sourcePortId,
           });
 
-    if (!result.success || !result.data) {
-      showToast(result.message ?? 'Failed to create connection', 'danger');
+    if (hasBlockingIssues(result) || !result.data) {
+      showToast(getIssueMessage(result, 'Failed to create connection'), 'danger');
       return false;
     }
 
@@ -161,9 +162,12 @@ export function createLinkOperations(projectId: string) {
     const {deleteFn, key} = DELETE_LINK_BY_TYPE[linkType];
     const result = await deleteFn(projectId, connectionId);
 
-    if (!result.success || !result.data) {
+    if (hasBlockingIssues(result) || !result.data) {
       if (!options?.suppressToast) {
-        showToast(result.message ?? 'Failed to delete connection', 'danger');
+        showToast(
+          getIssueMessage(result, 'Failed to delete connection'),
+          'danger',
+        );
       }
       return false;
     }

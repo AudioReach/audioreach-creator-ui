@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -89,7 +89,9 @@ beforeEach(() => {
   });
   mockDeleteSpfModule.mockReset();
   mockShowToast.mockClear();
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-container-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {
       projectId: 'proj-cnt-ops-1',
@@ -136,16 +138,16 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
           'mod-3': makeModuleInstance({
-            containerId: 'cnt-2',
-            moduleInstanceId: 'mod-3',
+            containerSystemId: 'cnt-2',
+            systemId: 'mod-3',
           }),
         },
       },
@@ -197,12 +199,12 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
         },
       },
@@ -219,7 +221,9 @@ describe('createContainerOperations - deleteContainer', () => {
         message: 'ok',
         success: true,
       })
-      .mockResolvedValueOnce({message: 'boom', success: false});
+      .mockResolvedValueOnce({
+        issues: [{code: 'DELETE_FAILED', message: 'boom', severity: 'ERROR'}],
+      });
 
     const ok = await containerOperations.deleteContainer(get, 'cnt-1');
 
@@ -241,12 +245,12 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
         },
       },
@@ -297,8 +301,8 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
         },
       },
@@ -324,9 +328,9 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
-            subgraphId: 'sg-1',
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           }),
         },
       },

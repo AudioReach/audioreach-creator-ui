@@ -47,7 +47,9 @@ beforeEach(() => {
     message: undefined as never,
     success: true,
   });
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {projectId: 'proj-1', sessionMode: 'DESIGNER', summary: 'ok'},
     message: 'ok',
@@ -123,35 +125,34 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
     store.setState({
       excludedLinks: [
         {
-          connectionId: 'link-old',
-          connectionType: 'data',
-          fromModuleId: 'mod-A',
-          fromPortId: '11',
-          isDangling: false,
-          toModuleId: 'ss-1',
-          toPortId: '90',
+          destinationPortSystemId: '90',
+          destinationSystemId: 'ss-1',
+          isInterUsecase: false,
+          linkKind: 'data',
+          sourcePortSystemId: '11',
+          sourceSystemId: 'mod-A',
+          systemId: 'link-old',
         },
       ],
       graphData: {
         connections: [
           {
-            connectionId: 'link-old',
-            connectionType: 'data',
-            fromModuleId: 'mod-A',
-            fromPortId: '11',
-            isDangling: false,
-            toModuleId: 'ss-1',
-            toPortId: '90',
+            destinationPortSystemId: '90',
+            destinationSystemId: 'ss-1',
+            isInterUsecase: false,
+            linkKind: 'data',
+            sourcePortSystemId: '11',
+            sourceSystemId: 'mod-A',
+            systemId: 'link-old',
           },
         ],
         containers: {},
         moduleInstances: {
           'mod-A': {
-            containerId: 'c1',
+            containerSystemId: 'c1',
             displayName: 'Mod A',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-A',
             moduleName: 'Mod A',
             moduleType: 'SOURCE',
             outputPorts: [
@@ -177,7 +178,8 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
               },
             ],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-A',
           },
         },
         selectedUsecases: [],
@@ -243,7 +245,7 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
           ],
           spfModules: [
             makeSpfModuleDto({
-              containerId: 20,
+              containerSystemId: 20,
               dataPorts: [
                 {
                   id: 21,
@@ -255,9 +257,9 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
                 } as never,
               ],
               id: 2,
-              moduleId: 300,
+              moduleDefinitionSystemId: 'mod-def-300',
               name: 'Mod B',
-              subgraphId: '2',
+              subgraphSystemId: '2',
               systemId: 'mod-B',
             }),
           ],
@@ -281,20 +283,20 @@ describe('createGraphDesignerStore — full edit-session round-trip through a mi
     expect(graphData.moduleInstances['mod-B']).toBeDefined();
     expect(graphData.moduleInstances['mod-B'].moduleType).toBe('SINK');
     expect(
-      graphData.connections.find((c) => c.connectionId === 'link-new'),
+      graphData.connections.find((c) => c.systemId === 'link-new'),
     ).toEqual({
-      connectionId: 'link-new',
-      connectionType: 'data',
-      fromModuleId: 'mod-A',
-      fromPortId: '12',
-      isDangling: false,
-      toModuleId: 'mod-B',
-      toPortId: '21',
+      destinationPortSystemId: '21',
+      destinationSystemId: 'mod-B',
+      isInterUsecase: false,
+      linkKind: 'data',
+      sourcePortSystemId: '12',
+      sourceSystemId: 'mod-A',
+      systemId: 'link-new',
     });
 
     // Pure-delete half: the old link and the subsystem it terminated at are gone.
     expect(
-      graphData.connections.find((c) => c.connectionId === 'link-old'),
+      graphData.connections.find((c) => c.systemId === 'link-old'),
     ).toBeUndefined();
     expect(graphData.subsystems['ss-1']).toBeUndefined();
 

@@ -11,6 +11,7 @@ import type {
   Port,
   UsecaseGraphData,
 } from '~features/graph-designer/model/graph-data-slice';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow} from '~shared/controls/property-row';
 
 import {formatDisplayId} from '../../lib/display-id';
@@ -102,8 +103,8 @@ function ModulePropertiesCardBody({
     onSave: useCallback(
       async (alias: string) => {
         const result = await patchSpfModule(projectId, moduleId, {alias});
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {message: getIssueMessage(result, 'Failed to save module'), ok: false};
         }
 
         const committedAlias = result.data?.alias ?? alias;
@@ -121,20 +122,20 @@ function ModulePropertiesCardBody({
         const result = await patchSpfModule(projectId, moduleId, {
           containerSystemId,
         });
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {message: getIssueMessage(result, 'Failed to save module'), ok: false};
         }
 
         const committedContainerId =
-          result.data?.containerId !== undefined
-            ? String(result.data.containerId)
+          result.data?.containerSystemId !== undefined
+            ? result.data.containerSystemId
             : containerSystemId;
         onModuleContainerChange(moduleId, committedContainerId);
         return {ok: true, value: committedContainerId};
       },
       [moduleId, onModuleContainerChange, projectId],
     ),
-    value: module.containerId,
+    value: module.containerSystemId,
   });
   const inputCountSave = usePortCountSave({
     field: 'maxInputPorts',
@@ -183,8 +184,8 @@ function ModulePropertiesCardBody({
         onChange={(value) => aliasSave.saveText(String(value))}
         value={aliasSave.value}
       />
-      <CopyableIdRow label="Module ID" value={module.moduleId} />
-      <CopyableIdRow label="Instance ID" value={module.moduleInstanceId} />
+      <CopyableIdRow label="Module ID" value={String(module.naturalId)} />
+      <CopyableIdRow label="Instance ID" value={module.systemId} />
       <PropertyRow
         error={containerSave.error}
         isEditing={isEditing}
@@ -301,8 +302,8 @@ function usePortCountSave({
           [requestField]: nextValue,
         });
 
-        if (!result.success) {
-          return {message: result.message, ok: false};
+        if (hasBlockingIssues(result)) {
+          return {message: getIssueMessage(result, 'Failed to save module'), ok: false};
         }
 
         onModulePortCountChange(moduleId, field, nextValue);

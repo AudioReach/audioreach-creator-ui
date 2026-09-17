@@ -8,6 +8,7 @@ import type {
   ProjectInfoResponseDto,
 } from '~entities/project/model/project.dto';
 import type {ApiResult} from '~shared/api/api-response.types';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api/api-result-utils';
 import {httpClient} from '~shared/api/http-client';
 
 /**
@@ -64,8 +65,11 @@ export async function downloadProjectFiles(
     const result = await httpClient.get<FormData>(
       `/projects/${projectId}/download-files`,
     );
-    if (!result.success || !result.data) {
-      return {message: result.message, success: false};
+    if (hasBlockingIssues(result) || !result.data) {
+      return {
+        message: getIssueMessage(result, 'Failed to download project files'),
+        success: false,
+      };
     }
 
     const workspaceEntry = result.data.get('workspaceFile');

@@ -6,6 +6,6 @@
 import type {Key, KeyValue} from '~shared/types/key-configurator-config.types';
 
 export interface ConfiguredSubgraphKeyValue {
-  keyInfo: Key;
-  valueInfo: KeyValue;
+  key: Key;
+  value: KeyValue;
 }

@@ -19,14 +19,14 @@ export interface TagDataDto {
 }
 
 export interface TagInfoDto {
+  naturalId: number;
   systemId: string;
-  tagId: number;
   tagName: string;
   tkvs?: TkvDto[];
 }
 
 export interface TkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }

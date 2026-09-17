@@ -26,7 +26,7 @@ export type {
   DataLinkWithUsecasesDto,
 } from './model/usecase-component.dto';
 export type {
-  KeyValueInfo as KeyValue,
+  KeyValueInfo,
   RelatedEndPointLink,
   SubsystemFilteredKv,
   UsecaseDto,

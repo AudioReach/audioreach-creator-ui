@@ -10,9 +10,9 @@ import type {Connection} from '~features/graph-designer/model/graph-data-slice';
 
 function makeKeyValue(id: number, valueSystemId: string): KeyValue {
   return {
-    keyInfo: {keyId: id, keyLabel: `key${id}`, keySystemId: `ks${id}`},
-    valueInfo: {valueId: id, valueLabel: `value${id}`, valueSystemId},
-  } as unknown as KeyValue;
+    key: {name: `key${id}`, naturalId: id, systemId: `ks${id}`},
+    value: {name: `value${id}`, naturalId: id, systemId: valueSystemId},
+  };
 }
 
 describe('buildCreateUsecasesRequest', () => {
@@ -91,31 +91,31 @@ describe('buildCreateUsecasesRequest', () => {
   it('partitions mixed excludedLinks into data and control arrays', () => {
     const excludedLinks: Connection[] = [
       {
-        connectionId: 'conn1',
-        connectionType: 'data',
-        fromModuleId: 'm1',
-        fromPortId: 'p1',
-        isDangling: false,
-        toModuleId: 'm2',
-        toPortId: 'p2',
+        destinationPortSystemId: 'p2',
+        destinationSystemId: 'm2',
+        isInterUsecase: false,
+        linkKind: 'data',
+        sourcePortSystemId: 'p1',
+        sourceSystemId: 'm1',
+        systemId: 'conn1',
       },
       {
-        connectionId: 'conn2',
-        connectionType: 'control',
-        fromModuleId: 'm2',
-        fromPortId: 'p3',
-        isDangling: false,
-        toModuleId: 'm3',
-        toPortId: 'p4',
+        destinationPortSystemId: 'p4',
+        destinationSystemId: 'm3',
+        isInterUsecase: false,
+        linkKind: 'control',
+        sourcePortSystemId: 'p3',
+        sourceSystemId: 'm2',
+        systemId: 'conn2',
       },
       {
-        connectionId: 'conn3',
-        connectionType: 'data',
-        fromModuleId: 'm3',
-        fromPortId: 'p5',
-        isDangling: false,
-        toModuleId: 'm4',
-        toPortId: 'p6',
+        destinationPortSystemId: 'p6',
+        destinationSystemId: 'm4',
+        isInterUsecase: false,
+        linkKind: 'data',
+        sourcePortSystemId: 'p5',
+        sourceSystemId: 'm3',
+        systemId: 'conn3',
       },
     ];
 
@@ -132,13 +132,13 @@ describe('buildCreateUsecasesRequest', () => {
   it('omits excludedControlLinkSystemIds key when no control links excluded', () => {
     const excludedLinks: Connection[] = [
       {
-        connectionId: 'conn1',
-        connectionType: 'data',
-        fromModuleId: 'm1',
-        fromPortId: 'p1',
-        isDangling: false,
-        toModuleId: 'm2',
-        toPortId: 'p2',
+        destinationPortSystemId: 'p2',
+        destinationSystemId: 'm2',
+        isInterUsecase: false,
+        linkKind: 'data',
+        sourcePortSystemId: 'p1',
+        sourceSystemId: 'm1',
+        systemId: 'conn1',
       },
     ];
 

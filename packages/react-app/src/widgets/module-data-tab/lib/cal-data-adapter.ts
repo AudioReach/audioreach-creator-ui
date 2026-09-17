@@ -33,7 +33,7 @@ export function dirtyItemsToCalDataRequest(
 }
 
 function isConfigElement(el: AnyElementDto): el is ConfigElementDto {
-  return el.type === 'CONFIG_ELEMENT';
+  return el.type === 'ConfigElement';
 }
 
 export function buildGroupedTreeViewData(
@@ -78,7 +78,7 @@ export function buildGroupedTreeViewData(
       isReadOnly: false,
       name: subgroup,
       structType: subgroup,
-      type: 'STRUCT',
+      type: 'Struct',
       value: elementsByGroupAndSubgroup.get(`${group} ${subgroup}`) ?? [],
     }));
 

@@ -139,12 +139,12 @@ function addEdgeGroupItem(
   virtualControlLinks: ProxyControlLink[],
 ): void {
   const connection = graphData.connections.find(
-    (item) => item.connectionId === selectedEdge.systemId,
+    (item) => item.systemId === selectedEdge.systemId,
   );
 
   if (
     selectedEdge.edgeKind === EDGE_KIND.DATA &&
-    connection?.connectionType === EDGE_KIND.DATA
+    connection?.linkKind === EDGE_KIND.DATA
   ) {
     groups.dataLinks.push({
       edgeId: selectedEdge.id,
@@ -155,7 +155,7 @@ function addEdgeGroupItem(
 
   if (
     selectedEdge.edgeKind === EDGE_KIND.CONTROL &&
-    connection?.connectionType === EDGE_KIND.CONTROL
+    connection?.linkKind === EDGE_KIND.CONTROL
   ) {
     groups.controlLinks.push({
       edgeId: selectedEdge.id,

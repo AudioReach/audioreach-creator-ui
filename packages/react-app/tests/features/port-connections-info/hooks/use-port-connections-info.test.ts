@@ -131,10 +131,10 @@ describe('usePortConnectionsInfo — happy path', () => {
     const links = [
       {
         link: {
-          destinationId: 'mod-B',
-          destinationPortId: 'p-2',
-          sourceId: componentSystemId,
-          sourcePortId: 'p-1',
+          destinationPortSystemId: 'p-2',
+          destinationSystemId: 'mod-B',
+          sourcePortSystemId: 'p-1',
+          sourceSystemId: componentSystemId,
           systemId: 'link-1',
         },
         usecases: [],
@@ -142,20 +142,20 @@ describe('usePortConnectionsInfo — happy path', () => {
       {
         // Same other-end module as link-1 — must collapse to one lookup id.
         link: {
-          destinationId: 'mod-B',
-          destinationPortId: 'p-3',
-          sourceId: componentSystemId,
-          sourcePortId: 'p-1',
+          destinationPortSystemId: 'p-3',
+          destinationSystemId: 'mod-B',
+          sourcePortSystemId: 'p-1',
+          sourceSystemId: componentSystemId,
           systemId: 'link-2',
         },
         usecases: [],
       },
       {
         link: {
-          destinationId: 'mod-C',
-          destinationPortId: 'p-4',
-          sourceId: componentSystemId,
-          sourcePortId: 'p-1',
+          destinationPortSystemId: 'p-4',
+          destinationSystemId: 'mod-C',
+          sourcePortSystemId: 'p-1',
+          sourceSystemId: componentSystemId,
           systemId: 'link-3',
         },
         usecases: [],
@@ -165,20 +165,20 @@ describe('usePortConnectionsInfo — happy path', () => {
       {
         controlPorts: [],
         dataPorts: [
-          {id: 2, systemId: 'p-2'},
-          {id: 3, systemId: 'p-3'},
+          {naturalId: 2, systemId: 'p-2'},
+          {naturalId: 3, systemId: 'p-3'},
         ],
-        id: 11,
         name: 'Module B',
-        subgraphId: 'sg-1',
+        naturalId: 11,
+        subgraphSystemId: 'sg-1',
         systemId: 'mod-B',
       },
       {
         controlPorts: [],
-        dataPorts: [{id: 4, systemId: 'p-4'}],
-        id: 12,
+        dataPorts: [{naturalId: 4, systemId: 'p-4'}],
         name: 'Module C',
-        subgraphId: 'sg-2',
+        naturalId: 12,
+        subgraphSystemId: 'sg-2',
         systemId: 'mod-C',
       },
     ];
@@ -209,39 +209,39 @@ describe('usePortConnectionsInfo — happy path', () => {
   it('keeps entries sharing the same link.systemId as separate rows when they are distinct connections', async () => {
     // Real backend responses have been observed reusing the same
     // link.systemId across genuinely distinct connections (differing
-    // sourceId/sourcePortId) — each must remain its own row with its
+    // sourceSystemId/sourcePortSystemId) — each must remain its own row with its
     // own usecases, never merged.
     const usecaseX = {
       changeInfo: {changeType: 'CREATE' as const},
-      keyValueCollection: [],
+      keyValuePairs: [],
       systemId: 'uc-x',
       usecaseType: 'Regular' as const,
     };
     const usecaseY = {
       changeInfo: {changeType: 'CREATE' as const},
-      keyValueCollection: [],
+      keyValuePairs: [],
       systemId: 'uc-y',
       usecaseType: 'Regular' as const,
     };
     const links = [
       {
         link: {
-          destinationId: componentSystemId,
-          destinationPortId: 'p-self',
-          isDangling: false,
-          sourceId: 'mod-B',
-          sourcePortId: 'p-b1',
+          destinationPortSystemId: 'p-self',
+          destinationSystemId: componentSystemId,
+          isInterUsecase: false,
+          sourcePortSystemId: 'p-b1',
+          sourceSystemId: 'mod-B',
           systemId: 'link-1',
         },
         usecases: [usecaseX],
       },
       {
         link: {
-          destinationId: componentSystemId,
-          destinationPortId: 'p-self',
-          isDangling: true,
-          sourceId: 'mod-C',
-          sourcePortId: 'p-c1',
+          destinationPortSystemId: 'p-self',
+          destinationSystemId: componentSystemId,
+          isInterUsecase: true,
+          sourcePortSystemId: 'p-c1',
+          sourceSystemId: 'mod-C',
           systemId: 'link-1',
         },
         usecases: [usecaseY],
@@ -250,10 +250,10 @@ describe('usePortConnectionsInfo — happy path', () => {
     const modules = [
       {
         controlPorts: [],
-        dataPorts: [{id: 2, systemId: 'p-b1'}],
-        id: 11,
+        dataPorts: [{naturalId: 2, systemId: 'p-b1'}],
         name: 'Module B',
-        subgraphId: 'sg-1',
+        naturalId: 11,
+        subgraphSystemId: 'sg-1',
         systemId: 'mod-B',
       },
     ];
@@ -294,8 +294,7 @@ describe('usePortConnectionsInfo — failures', () => {
 
   it('stage-A failure toasts and returns to closed, never reaching error', async () => {
     mockGetDataLinkWithUsecases.mockResolvedValue({
-      message: 'link fetch failed',
-      success: false,
+      issues: [{code: 'LINK_FETCH_FAILED', message: 'link fetch failed', severity: 'ERROR'}],
     });
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
@@ -309,7 +308,7 @@ describe('usePortConnectionsInfo — failures', () => {
   });
 
   it('a stage-A failure with no message falls back to a default toast message', async () => {
-    mockGetDataLinkWithUsecases.mockResolvedValue({success: false});
+    mockGetDataLinkWithUsecases.mockResolvedValue({issues: []});
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
     await act(async () => {
@@ -326,10 +325,10 @@ describe('usePortConnectionsInfo — failures', () => {
     const links = [
       {
         link: {
-          destinationId: 'mod-B',
-          destinationPortId: 'p-2',
-          sourceId: componentSystemId,
-          sourcePortId: 'p-1',
+          destinationPortSystemId: 'p-2',
+          destinationSystemId: 'mod-B',
+          sourcePortSystemId: 'p-1',
+          sourceSystemId: componentSystemId,
           systemId: 'link-1',
         },
         usecases: [],
@@ -337,8 +336,7 @@ describe('usePortConnectionsInfo — failures', () => {
     ];
     mockGetDataLinkWithUsecases.mockResolvedValue({data: links, success: true});
     mockGetModulesBySystemIds.mockResolvedValue({
-      message: 'module lookup failed',
-      success: false,
+      issues: [{code: 'MODULE_LOOKUP_FAILED', message: 'module lookup failed', severity: 'ERROR'}],
     });
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
@@ -359,17 +357,17 @@ describe('usePortConnectionsInfo — failures', () => {
     const links = [
       {
         link: {
-          destinationId: 'mod-B',
-          destinationPortId: 'p-2',
-          sourceId: componentSystemId,
-          sourcePortId: 'p-1',
+          destinationPortSystemId: 'p-2',
+          destinationSystemId: 'mod-B',
+          sourcePortSystemId: 'p-1',
+          sourceSystemId: componentSystemId,
           systemId: 'link-1',
         },
         usecases: [],
       },
     ];
     mockGetDataLinkWithUsecases.mockResolvedValue({data: links, success: true});
-    mockGetModulesBySystemIds.mockResolvedValue({success: false});
+    mockGetModulesBySystemIds.mockResolvedValue({issues: []});
 
     const {result} = renderHook(() => usePortConnectionsInfo(projectId));
     await act(async () => {

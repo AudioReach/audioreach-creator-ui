@@ -4,6 +4,7 @@
  */
 
 import {deleteSpfModule} from '~entities/spf-modules';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 
 import {
@@ -30,8 +31,8 @@ function moduleIdsInContainer(
   containerId: string,
 ): string[] {
   return Object.values(get().graphData!.moduleInstances)
-    .filter((m) => m.containerId === containerId)
-    .map((m) => m.moduleInstanceId);
+    .filter((m) => m.containerSystemId === containerId)
+    .map((m) => m.systemId);
 }
 
 export function createContainerOperations(
@@ -44,9 +45,12 @@ export function createContainerOperations(
   ): Promise<boolean> {
     for (const moduleId of moduleIdsInContainer(get, containerId)) {
       const result = await deleteSpfModule(projectId, moduleId);
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         if (!options?.suppressToast) {
-          showToast(result.message ?? 'Failed to delete container', 'danger');
+          showToast(
+            getIssueMessage(result, 'Failed to delete container'),
+            'danger',
+          );
         }
         return false;
       }

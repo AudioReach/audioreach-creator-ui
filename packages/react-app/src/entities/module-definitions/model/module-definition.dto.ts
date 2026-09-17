@@ -5,20 +5,22 @@
 
 export interface SpfModuleDefinitionResponseDto {
   builtIn: boolean;
-  customModuleInfo: CustomModuleInfo;
-  deprecated: boolean;
+  customModuleData?: CustomModuleInfo;
+  deprecated?: boolean;
   description: string;
   displayName: string;
-  isOffloadable: boolean;
+  isCustomModule: boolean;
+  isLoadedAtBootup: boolean;
+  isOffloadable?: boolean;
   modSearchKeys: string;
-  moduleDirectionType: string;
-  moduleId: number;
+  moduleDirectionType?: string;
   moduleInfo: ModuleInfo;
   name: string;
+  naturalId: number;
   paramDefinitionsSummaryInfo: ParamDefinitionsSummaryInfo[];
   processorInfo: ProcessorInfo;
   systemId: string;
-  vocoderModuleType: string;
+  vocoderModuleType?: string;
 }
 
 export interface ParamDefinitionsSummaryInfo {
@@ -73,19 +75,19 @@ export interface DataPortInfo {
 }
 
 export interface PortInfo {
-  portId: number;
+  naturalId: number;
   portName: string;
 }
 
 export interface IntentInfo {
-  intentId: number;
   maxPorts: number;
   name: string;
+  naturalId: number;
   systemId: string;
 }
 
 export interface StaticCtrlPortInfo {
-  portId: number;
+  naturalId: number;
   portIntents: IntentInfo[];
   portName: string;
   systemId: string;
