@@ -85,7 +85,13 @@ beforeEach(() => {
     message: undefined as never,
     success: true,
   });
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {
+      projectId: 'proj-mod-ops-1',
+      sessionMode: 'READONLY',
+      summary: 'ok',
+    },
+  });
   mockStartSession.mockResolvedValue({
     data: {
       projectId: 'proj-mod-ops-1',
@@ -142,7 +148,7 @@ describe('resolveModuleDropTarget', () => {
     });
   });
 
-  it('resolves a container target to its containerId', () => {
+  it('resolves a container target to its containerSystemId', () => {
     const target = baseNode({containerId: 42, nodeKind: NODE_KIND.CONTAINER});
     expect(resolveModuleDropTarget(target)).toEqual({
       containerId: '42',
@@ -304,8 +310,13 @@ describe('createModuleOperations — addModuleToEmptyCanvas', () => {
     await store.getState().enterEditMode();
 
     mockCreateSpfModule.mockResolvedValueOnce({
-      message: 'backend rejected the request',
-      success: false,
+      issues: [
+        {
+          code: 'CREATE_FAILED',
+          message: 'backend rejected the request',
+          severity: 'ERROR',
+        },
+      ],
     });
 
     const result = await moduleOperations.addModuleToEmptyCanvas(
@@ -560,8 +571,13 @@ describe('createModuleOperations — renameModuleInstance', () => {
     });
 
     mockPatchSpfModule.mockResolvedValueOnce({
-      message: 'backend rejected the rename',
-      success: false,
+      issues: [
+        {
+          code: 'RENAME_FAILED',
+          message: 'backend rejected the rename',
+          severity: 'ERROR',
+        },
+      ],
     });
 
     await moduleOperations.renameModuleInstance(get, 'sys-mod-1', 'New Name');

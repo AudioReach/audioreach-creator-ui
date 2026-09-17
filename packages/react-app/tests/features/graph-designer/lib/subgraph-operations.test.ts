@@ -92,7 +92,9 @@ beforeEach(() => {
   mockDeleteSpfModule.mockReset();
   mockRenameSubgraphApi.mockReset();
   mockShowToast.mockClear();
-  mockEndSession.mockResolvedValue({message: 'ok', success: true});
+  mockEndSession.mockResolvedValue({
+    data: {projectId: 'proj-subgraph-ops-1', sessionMode: 'READONLY', summary: 'ok'},
+  });
   mockStartSession.mockResolvedValue({
     data: {
       projectId: 'proj-sg-ops-1',
@@ -311,8 +313,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
     const {get, store, subgraphOperations} = makeTestStore();
     await store.getState().enterEditMode();
     mockGetSubgraphContents.mockResolvedValueOnce({
-      message: 'backend rejected the request',
-      success: false,
+      issues: [{code: 'CONTENTS_FAILED', message: 'backend rejected the request', severity: 'ERROR'}],
     });
 
     const ok = await subgraphOperations.placeSubgraphFromPalette(get, 'sg-1', {
@@ -369,8 +370,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       success: true,
     });
     mockGetSubgraphPairs.mockResolvedValueOnce({
-      message: 'pairs backend is down',
-      success: false,
+      issues: [{code: 'PAIRS_FAILED', message: 'pairs backend is down', severity: 'ERROR'}],
     });
 
     const ok = await subgraphOperations.placeSubgraphFromPalette(get, 'sg-1', {
@@ -1072,7 +1072,9 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         message: 'ok',
         success: true,
       })
-      .mockResolvedValueOnce({message: 'boom', success: false});
+      .mockResolvedValueOnce({
+        issues: [{code: 'DELETE_FAILED', message: 'boom', severity: 'ERROR'}],
+      });
 
     const ok = await subgraphOperations.deleteSubgraph(get, 'sg-1');
 
@@ -1141,8 +1143,7 @@ describe('createSubgraphOperations — renameSubgraph', () => {
       },
     });
     mockRenameSubgraphApi.mockResolvedValueOnce({
-      message: 'backend rejected the rename',
-      success: false,
+      issues: [{code: 'RENAME_FAILED', message: 'backend rejected the rename', severity: 'ERROR'}],
     });
 
     await subgraphOperations.renameSubgraph(get, 'sg-1', 'New');

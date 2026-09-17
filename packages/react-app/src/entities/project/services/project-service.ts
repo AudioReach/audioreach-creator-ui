@@ -12,7 +12,7 @@ import {
 import type ProjectInfo from '~entities/project/model/project-info.types';
 import {getAllUsecases} from '~entities/usecases/api/usecases-api';
 import {mapUsecaseDtoToCategories} from '~entities/usecases/model/usecase.mapper';
-import {electronApi} from '~shared/api';
+import {electronApi, getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 export interface ProjectOpenResponse {
@@ -30,7 +30,7 @@ export class ProjectService {
   private static async fetchUsecaseData(projectId: string): Promise<any[]> {
     try {
       const result = await getAllUsecases(projectId);
-      if (result.success && result.data) {
+      if (!hasBlockingIssues(result) && result.data) {
         logger.info('Successfully fetched usecases for project', {
           action: 'fetch_usecases',
           component: 'ProjectService',
@@ -41,7 +41,7 @@ export class ProjectService {
         logger.error('Failed to fetch usecases', {
           action: 'fetch_usecases',
           component: 'ProjectService',
-          error: result.message,
+          error: getIssueMessage(result, 'Failed to fetch usecases'),
           projectId,
         });
         return [];
@@ -72,9 +72,9 @@ export class ProjectService {
 
       const result = await openProject(project.id);
 
-      if (!result.success) {
+      if (hasBlockingIssues(result)) {
         return {
-          message: result.message || 'Failed to open project',
+          message: getIssueMessage(result, 'Failed to open project'),
           success: false,
         };
       }
@@ -171,9 +171,9 @@ export class ProjectService {
         projectInfo.description,
       );
 
-      if (!result.success || !result.data) {
+      if (hasBlockingIssues(result) || !result.data) {
         return {
-          message: result.message || 'Failed to open project',
+          message: getIssueMessage(result, 'Failed to open project'),
           success: false,
         };
       }

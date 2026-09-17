@@ -113,8 +113,13 @@ describe('useSchemaCardData', () => {
     const fetchProperties = jest
       .fn()
       .mockResolvedValueOnce({
-        message: 'Backend unavailable',
-        success: false,
+        issues: [
+          {
+            code: 'BACKEND_UNAVAILABLE',
+            message: 'Backend unavailable',
+            severity: 'ERROR',
+          },
+        ],
       })
       .mockResolvedValueOnce(successResult([property]));
 

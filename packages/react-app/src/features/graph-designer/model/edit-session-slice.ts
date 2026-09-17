@@ -136,10 +136,11 @@ export function createEditSessionSlice<
       }
 
       const endResult = await endSession(projectId);
-      if (!endResult.success) {
+      if (hasBlockingIssues(endResult) || !endResult.data) {
         const projectResult = await getProjectById(projectId);
         const alreadyEnded =
-          projectResult.success &&
+          projectResult !== undefined &&
+          !hasBlockingIssues(projectResult) &&
           projectResult.data?.sessionMode === SessionMode.Readonly;
 
         if (!alreadyEnded) {
