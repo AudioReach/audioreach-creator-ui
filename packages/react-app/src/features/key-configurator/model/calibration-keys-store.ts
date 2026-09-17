@@ -6,6 +6,7 @@
 import {create} from 'zustand';
 
 import {getAllKeyDefinitions} from '~entities/key-definitions';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import {
@@ -123,7 +124,7 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
         // Fetch key definitions from backend
         const result = await getAllKeyDefinitions(projectId);
 
-        if (result.success && result.data) {
+        if (!hasBlockingIssues(result) && result.data) {
           // Transform to UI format
           const availableKeys = transformKeyDefinitionsToCalibrationKeys(
             result.data,
@@ -138,10 +139,10 @@ export const useCalibrationKeysStore = create<CalibrationKeysStore>(
           });
           return true;
         } else {
-          const errorMessage =
-            result.errors?.join(', ') ||
-            result.message ||
-            'Failed to fetch key definitions';
+          const errorMessage = getIssueMessage(
+            result,
+            'Failed to fetch key definitions',
+          );
 
           logger.error('Failed to load key definitions', {
             action: 'initialize',

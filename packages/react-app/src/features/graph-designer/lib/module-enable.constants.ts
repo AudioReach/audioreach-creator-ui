@@ -17,6 +17,6 @@ export function resolveEnableParamSystemId(
   definition: SpfModuleDefinitionResponseDto | undefined,
 ): string | undefined {
   return definition?.paramDefinitionsSummaryInfo.find(
-    (param) => param.paramId === PARAM_ID_MODULE_ENABLE,
+    (param) => param.naturalId === PARAM_ID_MODULE_ENABLE,
   )?.systemId;
 }

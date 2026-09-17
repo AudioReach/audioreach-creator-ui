@@ -108,17 +108,27 @@ function makeReviewResponse(
   overrides: Partial<CreateUsecasesResponseDto> = {},
 ): CreateUsecasesResponseDto {
   return {
-    created: [
+    changes: [
       {
+        after: {
+          alias: null,
+          aliasId: null,
+          categories: [],
+          controlLinks: [],
+          dataLinks: [],
+          gkv: [],
+          isEc: false,
+          subgraphSystemIds: [],
+        },
+        before: null,
         changeId: 'change-1',
-        keyValueCollection: [],
+        operation: 'CREATE',
+        source: 'MANUAL',
         systemId: 'uc-new-1',
-        usecaseType: 'Regular',
       },
     ],
-    deleted: [],
+    groupId: 'group-1',
     issues: [],
-    updated: [],
     ...overrides,
   };
 }

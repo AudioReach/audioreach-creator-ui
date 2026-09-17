@@ -9,6 +9,7 @@ import {
   getAllKeyDefinitions,
   getAllTagDefinitions,
 } from '~entities/key-definitions/api/key-definition-api';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
 
@@ -103,11 +104,18 @@ export function createKeyConfigSlice(
           getAllTagDefinitions(context.projectId),
         ]);
 
-        if (!keysResult.success || !tagsResult.success) {
+        if (
+          hasBlockingIssues(keysResult) ||
+          hasBlockingIssues(tagsResult) ||
+          !keysResult.data ||
+          !tagsResult.data
+        ) {
           logger.error('keyConfigSlice: initializeConfiguration — API error', {
             action: 'initializeConfiguration',
             component: 'keyConfigSlice',
-            error: keysResult.message ?? tagsResult.message,
+            error: hasBlockingIssues(keysResult)
+              ? getIssueMessage(keysResult, 'Failed to load key definitions')
+              : getIssueMessage(tagsResult, 'Failed to load tag definitions'),
           });
           setSlice({keyConfigStatus: 'error'});
           return false;
@@ -119,13 +127,13 @@ export function createKeyConfigSlice(
             defaultValue: null,
             keyId: k.systemId,
             keyName: k.name,
-            keyType: k.specialKey,
+            keyType: k.specialKey ?? '',
             value: null,
           }));
 
         const moduleTagKeys: ModuleTagKey[] = (tagsResult.data ?? []).flatMap(
           (tag) =>
-            tag.keyDefinitions.map((kd) => ({
+            (tag.keyDefinitions ?? []).map((kd) => ({
               tagKeyId: kd.systemId,
               tagKeyName: kd.name,
               value: '',

@@ -7,7 +7,7 @@ import type {
   CreateUsecasesRequestDto,
   SubgraphKvSelectionDto,
 } from '~entities/edit-session';
-import type {KeyValue} from '~entities/usecases';
+import type {KeyValueInfo} from '~entities/usecases';
 
 import type {KvSelection} from '../model/edit-session-slice';
 import type {Connection} from '../model/graph-data-slice';
@@ -29,18 +29,16 @@ export function buildCreateUsecasesRequest(
     systemId: subgraphId,
     valueSystemIds: selections
       .filter((s) => s.selected)
-      .map((s) =>
-        s.keyValuePairs.map((kv: KeyValue) => kv.valueInfo.valueSystemId),
-      ),
+      .map((s) => s.keyValuePairs.map((kv: KeyValueInfo) => kv.value.systemId)),
   }));
 
   const excludedDataLinks = excludedLinks
-    .filter((l) => l.connectionType === 'data')
-    .map((l) => l.connectionId);
+    .filter((l) => l.linkKind === 'data')
+    .map((l) => l.systemId);
 
   const excludedControlLinks = excludedLinks
-    .filter((l) => l.connectionType === 'control')
-    .map((l) => l.connectionId);
+    .filter((l) => l.linkKind === 'control')
+    .map((l) => l.systemId);
 
   const result: CreateUsecasesRequestDto = {
     activeSubgraphs,

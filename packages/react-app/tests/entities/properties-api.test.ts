@@ -40,7 +40,7 @@ const mockPatch = jest.mocked(httpClient.patch);
 const propertyFixture: PropertyDto = {
   elements: [],
   hasDefinition: true,
-  propertyId: 1,
+  naturalId: 1,
   propertyName: 'Scenario ID',
   systemId: 'prop-1',
 };

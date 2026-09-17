@@ -5,20 +5,22 @@
 
 export interface SpfModuleDefinitionResponseDto {
   builtIn: boolean;
-  customModuleInfo: CustomModuleInfo;
-  deprecated: boolean;
+  customModuleData?: CustomModuleInfo;
+  deprecated?: boolean;
   description: string;
   displayName: string;
-  isOffloadable: boolean;
+  isCustomModule: boolean;
+  isLoadedAtBootup: boolean;
+  isOffloadable?: boolean;
   modSearchKeys: string;
-  moduleDirectionType: string;
-  moduleId: number;
+  moduleDirectionType?: string;
   moduleInfo: ModuleInfo;
   name: string;
+  naturalId: number;
   paramDefinitionsSummaryInfo: ParamDefinitionsSummaryInfo[];
   processorInfo: ProcessorInfo;
   systemId: string;
-  vocoderModuleType: string;
+  vocoderModuleType?: string;
 }
 
 export interface ParamDefinitionsSummaryInfo {
@@ -27,7 +29,7 @@ export interface ParamDefinitionsSummaryInfo {
   isHidden: boolean;
   isReadOnly: boolean;
   name: string;
-  paramId: number;
+  naturalId: number;
   pidType: string;
   systemId: string;
   toolPolicy: string;
@@ -35,7 +37,7 @@ export interface ParamDefinitionsSummaryInfo {
 
 export interface ProcessorInfo {
   name: string;
-  processorId: number;
+  naturalId: number;
   systemId: string;
 }
 
@@ -43,22 +45,33 @@ export interface ModuleInfo {
   containerTypeInfo: ContainerTypeInfo[];
   dynamicIntents: IntentInfo[];
   inputDataPortInfo: DataPortInfo;
-  mdfModuleType: string;
-  metaData: number;
-  moduleTypeInfo: ModuleTypeInfo;
   outputDataPortInfo: DataPortInfo;
   pidFramework: number;
-  reserved: number;
-  stackSize: number;
-  staticCtrlPorts: StaticCtrlPortInfo;
+  stackSize?: number;
+  staticCtrlPorts: StaticCtrlPortInfo[];
 }
 
 export interface CustomModuleInfo {
-  entryPointTag: string;
+  endPointFunctionTag: string;
   fileName: string;
-  interfaceTypeId: number;
-  interfaceVersionId: number;
-  majorTypeId: number;
+  interface: {
+    type: NameValueDto;
+    version: NameValueDto;
+  };
+  type: NameValueDto;
+}
+
+export interface DataTypeDto {
+  maxValue?: string;
+  minValue?: string;
+  sizeInBytes: number;
+  typeName: string;
+}
+
+export interface NameValueDto {
+  name: string;
+  value: string;
+  valueDataType: DataTypeDto;
 }
 
 export interface ContainerTypeInfo {
@@ -73,26 +86,20 @@ export interface DataPortInfo {
 }
 
 export interface PortInfo {
-  portId: number;
+  naturalId: number;
   portName: string;
 }
 
 export interface IntentInfo {
-  intentId: number;
   maxPorts: number;
   name: string;
+  naturalId: number;
   systemId: string;
 }
 
 export interface StaticCtrlPortInfo {
-  portId: number;
+  naturalId: number;
   portIntents: IntentInfo[];
   portName: string;
   systemId: string;
-}
-
-export interface ModuleTypeInfo {
-  buildType: string;
-  islandFriendly: boolean;
-  majorModuleType: string;
 }

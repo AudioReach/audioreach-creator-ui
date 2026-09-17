@@ -123,35 +123,53 @@ jest.mock('@qualcomm-ui/react/tooltip', () => ({
   },
 }));
 
-import type {CreateUsecasesResponseDto} from '~entities/edit-session';
+import type {
+  CreateUsecasesResponseDto,
+  UsecaseChangeDetailsDto,
+} from '~entities/edit-session';
 import {ApplySummaryDialog} from '~features/graph-designer/ui/apply-summary-dialog';
 
 const makeRow = (
-  overrides: Partial<CreateUsecasesResponseDto['created'][number]> = {},
-): CreateUsecasesResponseDto['created'][number] => ({
+  overrides: Partial<UsecaseChangeDetailsDto> & {alias?: string | null} = {},
+): UsecaseChangeDetailsDto => ({
+  after: {
+    alias: overrides.alias ?? null,
+    aliasId: null,
+    categories: [],
+    controlLinks: [],
+    dataLinks: [],
+    gkv: [],
+    isEc: false,
+    subgraphSystemIds: [],
+  },
+  before: null,
   changeId: 'change-1',
-  keyValueCollection: [],
+  operation: 'CREATE',
+  source: 'MANUAL',
   systemId: 'sys-1',
-  usecaseType: 'Regular',
   ...overrides,
 });
 
 const buildResponse = (
   overrides: Partial<CreateUsecasesResponseDto> = {},
 ): CreateUsecasesResponseDto => ({
-  created: [],
-  deleted: [],
+  changes: [],
+  groupId: 'group-1',
   issues: [],
-  updated: [],
   ...overrides,
 });
 
 const makeRows = (
   prefix: string,
   count: number,
-): CreateUsecasesResponseDto['created'] =>
+  operation: UsecaseChangeDetailsDto['operation'],
+): UsecaseChangeDetailsDto[] =>
   Array.from({length: count}, (_, index) =>
-    makeRow({changeId: `${prefix}-${index}`, systemId: `${prefix}-${index}`}),
+    makeRow({
+      changeId: `${prefix}-${index}`,
+      operation,
+      systemId: `${prefix}-${index}`,
+    }),
   );
 
 describe('ApplySummaryDialog', () => {
@@ -162,8 +180,10 @@ describe('ApplySummaryDialog', () => {
         onOK={jest.fn()}
         open
         response={buildResponse({
-          created: makeRows('created', 8),
-          updated: makeRows('updated', 7),
+          changes: [
+            ...makeRows('created', 8, 'CREATE'),
+            ...makeRows('updated', 7, 'UPDATE'),
+          ],
         })}
       />,
     );
@@ -181,8 +201,10 @@ describe('ApplySummaryDialog', () => {
         onOK={jest.fn()}
         open
         response={buildResponse({
-          created: makeRows('created', 10),
-          updated: makeRows('updated', 6),
+          changes: [
+            ...makeRows('created', 10, 'CREATE'),
+            ...makeRows('updated', 6, 'UPDATE'),
+          ],
         })}
       />,
     );
@@ -199,7 +221,7 @@ describe('ApplySummaryDialog', () => {
         onCancel={jest.fn()}
         onOK={jest.fn()}
         open
-        response={buildResponse({created: makeRows('created', 20)})}
+        response={buildResponse({changes: makeRows('created', 20, 'CREATE')})}
       />,
     );
 
@@ -209,16 +231,17 @@ describe('ApplySummaryDialog', () => {
 
   it('renders only non-empty sections', () => {
     const updatedRow = makeRow({
+      alias: 'Updated Alias',
       changeId: 'updated-1',
+      operation: 'UPDATE',
       systemId: 'sys-updated',
-      usecaseAliasName: 'Updated Alias',
     });
     render(
       <ApplySummaryDialog
         onCancel={jest.fn()}
         onOK={jest.fn()}
         open
-        response={buildResponse({updated: [updatedRow]})}
+        response={buildResponse({changes: [updatedRow]})}
       />,
     );
 
@@ -235,7 +258,7 @@ describe('ApplySummaryDialog', () => {
         onOK={jest.fn()}
         open
         response={buildResponse({
-          updated: [makeRow({changeId: 'updated-1'})],
+          changes: [makeRow({changeId: 'updated-1', operation: 'UPDATE'})],
         })}
       />,
     );
@@ -252,7 +275,7 @@ describe('ApplySummaryDialog', () => {
         onOK={jest.fn()}
         open
         response={buildResponse({
-          created: [makeRow({changeId: 'created-1'})],
+          changes: [makeRow({changeId: 'created-1'})],
         })}
       />,
     );
@@ -268,15 +291,15 @@ describe('ApplySummaryDialog', () => {
 
   it('hides the radio group once every created row is unchecked', () => {
     const createdRow = makeRow({
+      alias: 'Created Alias',
       changeId: 'created-1',
-      usecaseAliasName: 'Created Alias',
     });
     render(
       <ApplySummaryDialog
         onCancel={jest.fn()}
         onOK={jest.fn()}
         open
-        response={buildResponse({created: [createdRow]})}
+        response={buildResponse({changes: [createdRow]})}
       />,
     );
 
@@ -292,15 +315,16 @@ describe('ApplySummaryDialog', () => {
   it('makes deleted-row checkboxes read-only so they cannot be unchecked', () => {
     const onOK = jest.fn();
     const deletedRow = makeRow({
+      alias: 'Deleted Alias',
       changeId: 'deleted-1',
-      usecaseAliasName: 'Deleted Alias',
+      operation: 'DELETE',
     });
     render(
       <ApplySummaryDialog
         onCancel={jest.fn()}
         onOK={onOK}
         open
-        response={buildResponse({deleted: [deletedRow]})}
+        response={buildResponse({changes: [deletedRow]})}
       />,
     );
 
@@ -324,8 +348,10 @@ describe('ApplySummaryDialog', () => {
         onOK={onOK}
         open
         response={buildResponse({
-          created: [createdRow],
-          updated: [updatedRow],
+          changes: [
+            createdRow,
+            {...updatedRow, operation: 'UPDATE'},
+          ],
         })}
       />,
     );
@@ -343,12 +369,13 @@ describe('ApplySummaryDialog', () => {
   it('excludes unchecked rows and reports the chosen nav value', () => {
     const onOK = jest.fn();
     const createdRow = makeRow({
+      alias: 'Created Alias',
       changeId: 'created-1',
-      usecaseAliasName: 'Created Alias',
     });
     const updatedRow = makeRow({
+      alias: 'Updated Alias',
       changeId: 'updated-1',
-      usecaseAliasName: 'Updated Alias',
+      operation: 'UPDATE',
     });
     render(
       <ApplySummaryDialog
@@ -356,8 +383,7 @@ describe('ApplySummaryDialog', () => {
         onOK={onOK}
         open
         response={buildResponse({
-          created: [createdRow],
-          updated: [updatedRow],
+          changes: [createdRow, updatedRow],
         })}
       />,
     );
@@ -379,7 +405,7 @@ describe('ApplySummaryDialog', () => {
         onOK={onOK}
         open
         response={buildResponse({
-          created: [makeRow({changeId: 'created-1'})],
+          changes: [makeRow({changeId: 'created-1'})],
         })}
       />,
     );

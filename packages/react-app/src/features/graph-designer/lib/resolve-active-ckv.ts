@@ -8,8 +8,7 @@ import type {CkvDto} from '~entities/spf-module-data';
 const NA_SENTINEL = 'NA';
 
 export type ResolvedCkv =
-  | {ckvSystemId: string; isResolved: true}
-  | {isResolved: false};
+  {ckvSystemId: string; isResolved: true} | {isResolved: false};
 
 /**
  * Finds the CKV whose key/value pairs are all satisfied by the given header
@@ -26,9 +25,8 @@ export function resolveActiveCkv(
   }
 
   const match = moduleCkvs.find((ckv) =>
-    ckv.keyValueCollection.every(
-      ({keyInfo, valueInfo}) =>
-        headerSelection[keyInfo.keySystemId] === valueInfo.valueSystemId,
+    ckv.keyValuePairs.every(
+      ({key, value}) => headerSelection[key.systemId] === value.systemId,
     ),
   );
 

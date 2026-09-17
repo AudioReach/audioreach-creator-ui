@@ -5,8 +5,9 @@
 
 import {useCallback} from 'react';
 
-import {patchContainer} from '~entities/containers';
+import {updateContainerId} from '~entities/containers';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow, type PropertyOption} from '~shared/controls/property-row';
 
 import {formatDisplayId} from '../../lib/display-id';
@@ -26,8 +27,14 @@ export interface ContainerPropertiesCardProps extends EntityCollapseProps {
   containerId: string;
   graphData: UsecaseGraphData;
   isEditing: boolean;
-  onContainerIdChange: (containerId: string, newId: string) => void;
+  onContainerIdChange: (
+    subgraphSystemId: string,
+    containerSystemId: string,
+    newContainerSystemId: string,
+    newContainerNaturalId: number,
+  ) => void;
   projectId: string;
+  subgraphSystemId?: string;
 }
 
 export function ContainerPropertiesCard({
@@ -38,75 +45,100 @@ export function ContainerPropertiesCard({
   onContainerIdChange,
   onToggle,
   projectId,
+  subgraphSystemId,
 }: ContainerPropertiesCardProps) {
   const container = graphData.containers[containerId];
 
-  if (!container) {
+  if (!container || container.naturalId === undefined || !subgraphSystemId) {
     return <MissingEntityAlert message="Container no longer exists" />;
   }
 
   return (
     <ContainerPropertiesCardBody
-      containerId={container.containerId}
+      containerNaturalId={container.naturalId}
+      containerSystemId={container.systemId}
       isCollapsed={isCollapsed}
       isEditing={isEditing}
       moduleIds={container.moduleInstances ?? []}
       onContainerIdChange={onContainerIdChange}
       onToggle={onToggle}
       projectId={projectId}
+      subgraphSystemId={subgraphSystemId}
     />
   );
 }
 
 function ContainerPropertiesCardBody({
-  containerId,
+  containerNaturalId,
+  containerSystemId,
   isCollapsed,
   isEditing,
   moduleIds,
   onContainerIdChange,
   onToggle,
   projectId,
+  subgraphSystemId,
 }: {
-  containerId: string;
+  containerNaturalId: number;
+  containerSystemId: string;
   isCollapsed?: boolean;
   isEditing: boolean;
   moduleIds: string[];
-  onContainerIdChange: (containerId: string, newId: string) => void;
+  onContainerIdChange: (
+    subgraphSystemId: string,
+    containerSystemId: string,
+    newContainerSystemId: string,
+    newContainerNaturalId: number,
+  ) => void;
   onToggle?: () => void;
   projectId: string;
+  subgraphSystemId: string;
 }) {
   const schemaData = useContainerCardData({
-    containerId,
+    containerId: containerSystemId,
     moduleIds,
     projectId,
   });
   const saveContainerId = useCallback(
-    async (nextId: string) => {
-      const result = await patchContainer(projectId, containerId, {
-        containerId: nextId,
+    async (nextContainerNaturalId: number) => {
+      const result = await updateContainerId(projectId, subgraphSystemId, {
+        newContainerNaturalId: nextContainerNaturalId,
+        oldContainerNaturalId: containerNaturalId,
       });
 
-      if (hasBlockingIssues(result)) {
+      if (hasBlockingIssues(result) || !result.data) {
         return {
-          message: getIssueMessage(result, 'Failed to save container'),
+          message: getIssueMessage(result, 'Failed to save container ID'),
           ok: false,
         };
       }
 
-      const committedId = result.data?.containerId ?? nextId;
-      onContainerIdChange(containerId, committedId);
-      return {ok: true, value: committedId};
+      const committedId = result.data.newContainerSystemId;
+      const committedNaturalId = result.data.newContainerNaturalId;
+      onContainerIdChange(
+        subgraphSystemId,
+        containerSystemId,
+        committedId,
+        committedNaturalId,
+      );
+      return {ok: true, value: committedNaturalId};
     },
-    [containerId, onContainerIdChange, projectId],
+    [
+      containerNaturalId,
+      containerSystemId,
+      onContainerIdChange,
+      projectId,
+      subgraphSystemId,
+    ],
   );
   const idSave = useStaticFieldSave({
     delayMs: 300,
     onSave: saveContainerId,
-    value: containerId,
+    value: containerNaturalId,
   });
   const containerType = findConfigElement(schemaData.data, 'Container Type');
   const containerTypeOptions = toNameValueOptions(containerType);
-  const displayContainerId = formatDisplayId(containerId);
+  const displayContainerId = formatDisplayId(String(containerNaturalId));
 
   return (
     <CollapsibleCard
@@ -119,9 +151,9 @@ function ContainerPropertiesCardBody({
         isEditing={isEditing}
         isSaving={idSave.isSaving}
         label="Container ID"
-        mode="text"
-        onChange={(value) => idSave.saveText(String(value))}
-        value={formatDisplayId(String(idSave.value))}
+        mode="number"
+        onChange={(value) => idSave.saveText(Number(value))}
+        value={idSave.value}
       />
       {containerTypeOptions.length > 0 ? (
         <ContainerTypePreview

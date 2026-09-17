@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,6 +9,9 @@ jest.mock('~shared/controls/global-toaster', () => ({
 }));
 jest.mock('~entities/usecases', () => ({
   getSubgraphsByIds: jest.fn(),
+}));
+jest.mock('~entities/containers', () => ({
+  getContainersBySystemIds: jest.fn(),
 }));
 jest.mock('~entities/spf-modules', () => ({
   deleteSpfModule: jest.fn(),
@@ -34,6 +37,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 
 import {createStore} from 'zustand';
 
+import {getContainersBySystemIds} from '~entities/containers';
 import {endSession, startSession} from '~entities/edit-session';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {deleteSpfModule} from '~entities/spf-modules';
@@ -56,6 +60,7 @@ import {showToast} from '~shared/controls/global-toaster';
 import {makeModuleInstance} from '../test-utils/component-dto-fixtures';
 
 const mockDeleteSpfModule = jest.mocked(deleteSpfModule);
+const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockShowToast = jest.mocked(showToast);
 const mockEndSession = jest.mocked(endSession);
@@ -82,6 +87,11 @@ async function flushPromises(): Promise<void> {
 }
 
 beforeEach(() => {
+  mockGetContainersBySystemIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -138,16 +148,16 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
           'mod-3': makeModuleInstance({
-            containerId: 'cnt-2',
-            moduleInstanceId: 'mod-3',
+            containerSystemId: 'cnt-2',
+            systemId: 'mod-3',
           }),
         },
       },
@@ -199,12 +209,12 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
         },
       },
@@ -245,12 +255,12 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
           'mod-2': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-2',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-2',
           }),
         },
       },
@@ -301,8 +311,8 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
+            containerSystemId: 'cnt-1',
+            systemId: 'mod-1',
           }),
         },
       },
@@ -328,9 +338,9 @@ describe('createContainerOperations - deleteContainer', () => {
         ...EMPTY_GRAPH_DATA,
         moduleInstances: {
           'mod-1': makeModuleInstance({
-            containerId: 'cnt-1',
-            moduleInstanceId: 'mod-1',
-            subgraphId: 'sg-1',
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           }),
         },
       },

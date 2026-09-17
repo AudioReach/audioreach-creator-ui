@@ -33,20 +33,20 @@ export function transformCkvsToConfiguredKeys(ckvs: CkvDto[]): ConfiguredCkv[] {
  * Transforms a single CkvDto to ConfiguredCKV format
  */
 function transformCkvToConfiguredCKV(ckv: CkvDto): ConfiguredCkv {
-  const keyValuePairs = ckv.keyValueCollection.map((kv) => ({
+  const keyValuePairs = ckv.keyValuePairs.map((kv) => ({
     key: {
-      id: kv.keyInfo.keyId,
-      name: kv.keyInfo.keyLabel,
+      id: kv.key.naturalId,
+      name: kv.key.name,
     },
     value: {
-      id: kv.valueInfo.valueId,
-      name: kv.valueInfo.valueLabel,
+      id: kv.value.naturalId,
+      name: kv.value.name,
     },
   }));
 
   // Map supported parameters to PID array
   const pidConfig = ckv.supportedParameters.map(
-    (paramInfo) => paramInfo.paramId,
+    (paramInfo) => paramInfo.naturalId,
   );
 
   return {
@@ -75,7 +75,7 @@ export function transformParamDefinitionsToCKVParameters(
   return paramDefinitions.map((paramDef) => ({
     checked: false,
     name: paramDef.name,
-    pid: paramDef.paramId,
+    pid: paramDef.naturalId,
   }));
 }
 
@@ -102,7 +102,7 @@ export function transformValueDefinition(valueDto: ValueDefinitionDto): {
   name: string;
 } {
   return {
-    id: valueDto.valueId,
+    id: valueDto.naturalId,
     name: valueDto.name,
   };
 }
@@ -116,7 +116,7 @@ function transformKeyDefinitionToCalibrationKey(
   keyDto: KeyDefinitionResponseDto,
 ): CalibrationKey {
   return {
-    id: keyDto.keyId,
+    id: keyDto.naturalId,
     name: keyDto.name,
     values: keyDto.values.map(transformValueDefinition),
   };

@@ -13,13 +13,11 @@ import type {
 } from '~entities/edit-session';
 import type {SessionResponseDto} from '~entities/project';
 import {
-  isTransportFailure,
-  parseHttpStatus,
   runApplyReconcile,
   runDiscard,
   runFinalize,
 } from '~features/graph-designer/model/apply-discard-coordinator';
-import type {ApiResult} from '~shared/api';
+import {createTransportIssue, isTransportFailure, type ApiResult} from '~shared/api';
 
 function makeIssue(overrides: Partial<ApiIssueItem> = {}): ApiIssueItem {
   return {
@@ -30,12 +28,16 @@ function makeIssue(overrides: Partial<ApiIssueItem> = {}): ApiIssueItem {
   };
 }
 
-function apiSuccess<T>(data: T, message = 'ok'): ApiResult<T> {
-  return {data, message, success: true};
+function apiSuccess<T>(data: T): ApiResult<T> {
+  return {data};
 }
 
-function apiFailure<T>(overrides: Partial<ApiResult<T>>): ApiResult<T> {
-  return {message: 'failed', success: false, ...overrides};
+function apiFailure<T>(message = 'failed'): ApiResult<T> {
+  return {issues: [makeIssue({message, severity: 'ERROR'})]};
+}
+
+function apiTransportFailure<T>(code: string, message: string): ApiResult<T> {
+  return {issues: [createTransportIssue(code, message)]};
 }
 
 const request: CreateUsecasesRequestDto = {
@@ -43,113 +45,13 @@ const request: CreateUsecasesRequestDto = {
   selectedUsecaseSystemIds: [],
 };
 
-describe('parseHttpStatus', () => {
-  it('parses HTTP error: 400 from errors', () => {
+describe('transport issue fixtures', () => {
+  it('recognizes synthetic HTTP issues as transport failures', () => {
     expect(
-      parseHttpStatus({
-        errors: ['HTTP error: 400 Bad Request'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(400);
-  });
-
-  it('parses HTTP error: 422 from errors', () => {
-    expect(
-      parseHttpStatus({
-        errors: ['HTTP error: 422 Unprocessable Entity'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(422);
-  });
-
-  it('returns undefined for network error wire shape', () => {
-    expect(
-      parseHttpStatus({
-        errors: ['Network error: fetch failed'],
-        message: '',
-        success: false,
-      }),
-    ).toBeUndefined();
-  });
-
-  it('returns undefined for timeout wire shape', () => {
-    expect(
-      parseHttpStatus({
-        errors: ['Request timed out'],
-        message: '',
-        success: false,
-      }),
-    ).toBeUndefined();
-  });
-
-  it('parses HTTP error: 500 from errors', () => {
-    expect(
-      parseHttpStatus({
-        errors: ['HTTP error: 500 Internal Server Error'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(500);
-  });
-
-  it('parses HTTP error: 503 from errors', () => {
-    expect(
-      parseHttpStatus({
-        errors: ['HTTP error: 503 Service Unavailable'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(503);
-  });
-});
-
-describe('isTransportFailure', () => {
-  it('is false for a determinate HTTP 400 failure', () => {
-    expect(
-      isTransportFailure({
-        errors: ['HTTP error: 400'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(false);
-  });
-
-  it('is true for a network error', () => {
-    expect(
-      isTransportFailure({
-        errors: ['Network error: ...'],
-        message: '',
-        success: false,
-      }),
+      isTransportFailure(
+        apiTransportFailure<SessionResponseDto>('HTTP_422', 'Unprocessable'),
+      ),
     ).toBe(true);
-  });
-
-  it('is true for a timeout', () => {
-    expect(
-      isTransportFailure({
-        errors: ['Request timed out'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(true);
-  });
-
-  it('is false for a successful response', () => {
-    expect(isTransportFailure({data: {}, message: 'ok', success: true})).toBe(
-      false,
-    );
-  });
-
-  it('is false for a determinate HTTP 500 failure', () => {
-    expect(
-      isTransportFailure({
-        errors: ['HTTP error: 500'],
-        message: '',
-        success: false,
-      }),
-    ).toBe(false);
   });
 });
 
@@ -168,9 +70,10 @@ describe('runApplyReconcile', () => {
 
   it('returns reconcileTransportIndeterminate on create-usecases transport failure', async () => {
     const createUsecases = jest.fn().mockResolvedValue(
-      apiFailure<CreateUsecasesResponseDto>({
-        errors: ['Network error: fetch failed'],
-      }),
+      apiTransportFailure<CreateUsecasesResponseDto>(
+        'NETWORK',
+        'Network error: fetch failed',
+      ),
     );
 
     const outcome = await runApplyReconcile(
@@ -183,10 +86,9 @@ describe('runApplyReconcile', () => {
 
   it('returns reconcileFailed on a determinate create-usecases failure', async () => {
     const createUsecases = jest.fn().mockResolvedValue(
-      apiFailure<CreateUsecasesResponseDto>({
-        errors: ['HTTP error: 500'],
-        message: 'Failed to reconcile staged changes',
-      }),
+      apiFailure<CreateUsecasesResponseDto>(
+        'Failed to reconcile staged changes',
+      ),
     );
 
     const outcome = await runApplyReconcile(
@@ -204,10 +106,9 @@ describe('runApplyReconcile', () => {
     const fatalIssue = makeIssue({message: 'Fatal problem', severity: 'FATAL'});
     const noticeIssue = makeIssue({message: 'Notice', severity: 'WARNING'});
     const response: CreateUsecasesResponseDto = {
-      created: [],
-      deleted: [],
+      changes: [],
+      groupId: 'group-1',
       issues: [fatalIssue, noticeIssue],
-      updated: [],
     };
     const createUsecases = jest.fn().mockResolvedValue(apiSuccess(response));
 
@@ -222,13 +123,12 @@ describe('runApplyReconcile', () => {
     });
   });
 
-  it('returns emptyReconcile when created/updated/deleted are all empty', async () => {
+  it('returns emptyReconcile when changes is empty', async () => {
     const noticeIssue = makeIssue({message: 'Notice', severity: 'WARNING'});
     const response: CreateUsecasesResponseDto = {
-      created: [],
-      deleted: [],
+      changes: [],
+      groupId: 'group-1',
       issues: [noticeIssue],
-      updated: [],
     };
     const createUsecases = jest.fn().mockResolvedValue(apiSuccess(response));
 
@@ -243,17 +143,27 @@ describe('runApplyReconcile', () => {
   it('returns review with the raw response and only notice issues', async () => {
     const noticeIssue = makeIssue({message: 'Notice', severity: 'WARNING'});
     const response: CreateUsecasesResponseDto = {
-      created: [
+      changes: [
         {
+          after: {
+            alias: null,
+            aliasId: null,
+            categories: [],
+            controlLinks: [],
+            dataLinks: [],
+            gkv: [],
+            isEc: false,
+            subgraphSystemIds: [],
+          },
+          before: null,
           changeId: 'c1',
-          keyValueCollection: [],
+          operation: 'CREATE',
+          source: 'MANUAL',
           systemId: 'uc1',
-          usecaseType: 'Regular',
         },
       ],
-      deleted: [],
+      groupId: 'group-1',
       issues: [noticeIssue],
-      updated: [],
     };
     const createUsecases = jest.fn().mockResolvedValue(apiSuccess(response));
 
@@ -312,15 +222,12 @@ describe('runFinalize', () => {
   it('returns commitRejected when checkedChangeIds is empty and commit fails all', async () => {
     const stageChanges = jest.fn();
     const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>(
-        {
-          failedChangeIds: ['a', 'b'],
-          message: 'validation failed',
-          processedChangeIds: [],
-          success: true,
-        },
-        'validation failed',
-      ),
+      apiSuccess<CommitChangesResponseDto>({
+        failedChangeIds: ['a', 'b'],
+        message: 'validation failed',
+        processedChangeIds: [],
+        success: true,
+      }),
     );
     const endSession = jest.fn();
 
@@ -340,15 +247,12 @@ describe('runFinalize', () => {
 
   it('returns stageFailed and never calls commit when stage returns failed ids', async () => {
     const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>(
-        {
-          failedChangeIds: ['a'],
-          message: 'stage failed',
-          processedChangeIds: [],
-          success: true,
-        },
-        'stage failed',
-      ),
+      apiSuccess<StageChangesResponseDto>({
+        failedChangeIds: ['a'],
+        message: 'stage failed',
+        processedChangeIds: [],
+        success: true,
+      }),
     );
     const commitChanges = jest.fn();
     const endSession = jest.fn();
@@ -375,9 +279,10 @@ describe('runFinalize', () => {
 
   it('returns stageTransportIndeterminate and publishes no rows on stage transport failure', async () => {
     const stageChanges = jest.fn().mockResolvedValue(
-      apiFailure<StageChangesResponseDto>({
-        errors: ['Network error: fetch failed'],
-      }),
+      apiTransportFailure<StageChangesResponseDto>(
+        'NETWORK',
+        'Network error: fetch failed',
+      ),
     );
     const commitChanges = jest.fn();
     const endSession = jest.fn();
@@ -433,15 +338,12 @@ describe('runFinalize', () => {
       }),
     );
     const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>(
-        {
-          failedChangeIds: ['b'],
-          message: 'partial commit',
-          processedChangeIds: ['a'],
-          success: true,
-        },
-        'partial commit',
-      ),
+      apiSuccess<CommitChangesResponseDto>({
+        failedChangeIds: ['b'],
+        message: 'partial commit',
+        processedChangeIds: ['a'],
+        success: true,
+      }),
     );
     const endSession = jest.fn();
 
@@ -473,9 +375,10 @@ describe('runFinalize', () => {
       }),
     );
     const commitChanges = jest.fn().mockResolvedValue(
-      apiFailure<CommitChangesResponseDto>({
-        errors: ['Request timed out'],
-      }),
+      apiTransportFailure<CommitChangesResponseDto>(
+        'TIMEOUT',
+        'Request timed out',
+      ),
     );
     const endSession = jest.fn();
 
@@ -518,7 +421,7 @@ describe('runFinalize', () => {
   it('returns endSessionDeterminate with code 422', async () => {
     const deps = fullHappyPathDeps(() =>
       Promise.resolve(
-        apiFailure<SessionResponseDto>({errors: ['HTTP error: 422']}),
+        apiTransportFailure<SessionResponseDto>('HTTP_422', 'failed'),
       ),
     );
 
@@ -538,7 +441,7 @@ describe('runFinalize', () => {
   it('returns endSessionDeterminate with code 400', async () => {
     const deps = fullHappyPathDeps(() =>
       Promise.resolve(
-        apiFailure<SessionResponseDto>({errors: ['HTTP error: 400']}),
+        apiTransportFailure<SessionResponseDto>('HTTP_400', 'failed'),
       ),
     );
 
@@ -559,7 +462,7 @@ describe('runFinalize', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['HTTP error: 500']}),
+        apiTransportFailure<SessionResponseDto>('HTTP_500', 'failed'),
       );
     const deps = fullHappyPathDeps(endSession);
 
@@ -577,7 +480,10 @@ describe('runFinalize', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+        apiTransportFailure<SessionResponseDto>(
+          'NETWORK',
+          'Network error: ...',
+        ),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
     const stageChanges = jest.fn().mockResolvedValue(
@@ -619,10 +525,13 @@ describe('runFinalize', () => {
       jest
         .fn()
         .mockResolvedValueOnce(
-          apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+          apiTransportFailure<SessionResponseDto>(
+            'NETWORK',
+            'Network error: ...',
+          ),
         )
         .mockResolvedValueOnce(
-          apiFailure<SessionResponseDto>({errors: ['HTTP error: 400']}),
+          apiTransportFailure<SessionResponseDto>('HTTP_400', 'failed'),
         ),
     );
 
@@ -640,10 +549,16 @@ describe('runFinalize', () => {
       jest
         .fn()
         .mockResolvedValueOnce(
-          apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+          apiTransportFailure<SessionResponseDto>(
+            'NETWORK',
+            'Network error: ...',
+          ),
         )
         .mockResolvedValueOnce(
-          apiFailure<SessionResponseDto>({errors: ['Request timed out']}),
+          apiTransportFailure<SessionResponseDto>(
+            'TIMEOUT',
+            'Request timed out',
+          ),
         ),
     );
 
@@ -660,7 +575,10 @@ describe('runFinalize', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Request timed out']}),
+        apiTransportFailure<SessionResponseDto>(
+          'TIMEOUT',
+          'Request timed out',
+        ),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
     const stageChanges = jest.fn().mockResolvedValue(
@@ -734,14 +652,12 @@ describe('runDiscard', () => {
 
   it('returns discardDeterminate on business failure', async () => {
     const discardChanges = jest.fn().mockResolvedValue(
-      apiFailure<DiscardChangesResponseDto>({
-        data: {
-          cascadedChangeIds: [],
-          failedChangeIds: [],
-          message: 'failed',
-          processedChangeIds: [],
-          success: false,
-        },
+      apiSuccess<DiscardChangesResponseDto>({
+        cascadedChangeIds: [],
+        failedChangeIds: [],
+        message: 'failed',
+        processedChangeIds: [],
+        success: false,
       }),
     );
     const endSession = jest.fn();
@@ -762,9 +678,10 @@ describe('runDiscard', () => {
 
   it('returns discardChangesTransportIndeterminate on discard transport failure and never calls endSession', async () => {
     const discardChanges = jest.fn().mockResolvedValue(
-      apiFailure<DiscardChangesResponseDto>({
-        errors: ['Network error: fetch failed'],
-      }),
+      apiTransportFailure<DiscardChangesResponseDto>(
+        'NETWORK',
+        'Network error: fetch failed',
+      ),
     );
     const endSession = jest.fn();
 
@@ -779,16 +696,13 @@ describe('runDiscard', () => {
 
   it('returns discardDeterminate with failedChangeIds when success is true but ids failed', async () => {
     const discardChanges = jest.fn().mockResolvedValue(
-      apiSuccess<DiscardChangesResponseDto>(
-        {
-          cascadedChangeIds: [],
-          failedChangeIds: ['a'],
-          message: 'partially failed',
-          processedChangeIds: [],
-          success: true,
-        },
-        'partially failed',
-      ),
+      apiSuccess<DiscardChangesResponseDto>({
+        cascadedChangeIds: [],
+        failedChangeIds: ['a'],
+        message: 'partially failed',
+        processedChangeIds: [],
+        success: true,
+      }),
     );
     const endSession = jest.fn();
 
@@ -819,7 +733,7 @@ describe('runDiscard', () => {
     const endSession = jest
       .fn()
       .mockResolvedValue(
-        apiFailure<SessionResponseDto>({errors: ['HTTP error: 422']}),
+        apiTransportFailure<SessionResponseDto>('HTTP_422', 'failed'),
       );
 
     const outcome = await runDiscard(
@@ -847,7 +761,10 @@ describe('runDiscard', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+        apiTransportFailure<SessionResponseDto>(
+          'NETWORK',
+          'Network error: ...',
+        ),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
 
@@ -876,10 +793,13 @@ describe('runDiscard', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+        apiTransportFailure<SessionResponseDto>(
+          'NETWORK',
+          'Network error: ...',
+        ),
       )
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['HTTP error: 400']}),
+        apiTransportFailure<SessionResponseDto>('HTTP_400', 'failed'),
       );
 
     const outcome = await runDiscard(
@@ -903,10 +823,16 @@ describe('runDiscard', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Network error: ...']}),
+        apiTransportFailure<SessionResponseDto>(
+          'NETWORK',
+          'Network error: ...',
+        ),
       )
       .mockResolvedValueOnce(
-        apiFailure<SessionResponseDto>({errors: ['Request timed out']}),
+        apiTransportFailure<SessionResponseDto>(
+          'TIMEOUT',
+          'Request timed out',
+        ),
       );
 
     const outcome = await runDiscard(

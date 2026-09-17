@@ -35,11 +35,11 @@ export function resolveNodeKind(
 function parentOf(graphData: UsecaseGraphData, nodeId: string): string | null {
   const moduleInstance = graphData.moduleInstances[nodeId];
   if (moduleInstance) {
-    return moduleInstance.containerId;
+    return moduleInstance.containerSystemId;
   }
   const container = graphData.containers[nodeId];
   if (container) {
-    return container.subgraphId;
+    return container.subgraphSystemId;
   }
   for (const subsystem of Object.values(graphData.subsystems)) {
     if (subsystem.subgraphs.includes(nodeId)) {
@@ -97,13 +97,13 @@ export function filterEdgesCoveredByCascade(
   selectedEdgeIds: string[],
 ): string[] {
   return selectedEdgeIds.filter((edgeId) => {
-    const edge = graphData.connections.find((c) => c.connectionId === edgeId);
+    const edge = graphData.connections.find((c) => c.systemId === edgeId);
     if (!edge) {
       return true;
     }
     return !(
-      endpointCovered(graphData, survivingRootIds, edge.fromModuleId) ||
-      endpointCovered(graphData, survivingRootIds, edge.toModuleId)
+      endpointCovered(graphData, survivingRootIds, edge.sourceSystemId) ||
+      endpointCovered(graphData, survivingRootIds, edge.destinationSystemId)
     );
   });
 }
@@ -139,7 +139,7 @@ export async function deleteSelection(
       ),
       ...survivingEdges.map((connectionId) => {
         const connection = graphData.connections.find(
-          (candidate) => candidate.connectionId === connectionId,
+          (candidate) => candidate.systemId === connectionId,
         );
         if (!connection) {
           return Promise.resolve(false);
@@ -147,7 +147,7 @@ export async function deleteSelection(
         return get().deleteLinkInner(
           get,
           connectionId,
-          connection.connectionType,
+          connection.linkKind,
           {suppressToast: true},
         );
       }),

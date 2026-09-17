@@ -6,6 +6,7 @@
 import {create} from 'zustand';
 
 import {getAllTagDefinitions} from '~entities/key-definitions';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import {
@@ -118,7 +119,7 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
       // Fetch tag definitions from backend
       const result = await getAllTagDefinitions(projectId);
 
-      if (result.success && result.data) {
+      if (!hasBlockingIssues(result) && result.data) {
         // Transform to UI format (result.data is an array)
         const availableModuleTags = transformTagDefinitionsToTagGroups(
           result.data,
@@ -136,10 +137,10 @@ export const useModuleTagKeysStore = create<ModuleTagKeysStore>((set, get) => ({
         );
         return true;
       } else {
-        const errorMessage =
-          result.errors?.join(', ') ||
-          result.message ||
-          'Failed to fetch tag definitions';
+        const errorMessage = getIssueMessage(
+          result,
+          'Failed to fetch tag definitions',
+        );
 
         logger.error('Failed to load tag definitions', {
           action: 'initialize',

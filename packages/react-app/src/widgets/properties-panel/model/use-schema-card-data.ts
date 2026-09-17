@@ -127,7 +127,7 @@ export function useSchemaCardData({
           projectId,
           entityType,
           entityId,
-          result.message ?? 'Failed to load schema properties',
+          getIssueMessage(result, 'Failed to load schema properties'),
         );
         return;
       }
@@ -218,8 +218,10 @@ export function useSchemaCardData({
             return;
           }
 
-          if (!result.success || !result.data) {
-            setSaveError(result.message ?? 'Failed to save schema properties');
+          if (hasBlockingIssues(result) || !result.data) {
+            setSaveError(
+              getIssueMessage(result, 'Failed to save schema properties'),
+            );
             return;
           }
 
@@ -236,7 +238,7 @@ export function useSchemaCardData({
               applySubgraphVsidUpdate(
                 projectId,
                 commitResult.affectedSubgraphSystemIds,
-                commitResult.property.elements,
+                commitResult.property.elements ?? [],
               );
               break;
             case 'replaceProperties':
@@ -263,7 +265,7 @@ export function useSchemaCardData({
                 const index = committedProperties.findIndex(
                   (candidate) =>
                     candidate.systemId === commitResult.property.systemId ||
-                    candidate.propertyId === commitResult.property.propertyId,
+                    candidate.naturalId === commitResult.property.naturalId,
                 );
                 if (index === -1) {
                   committedProperties.push(commitResult.property);

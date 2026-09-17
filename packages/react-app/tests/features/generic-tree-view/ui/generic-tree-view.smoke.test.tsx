@@ -32,7 +32,7 @@ function makeItem(id: string): TreeViewItem {
       {
         isReadOnly: false,
         name: 'gain',
-        type: 'CONFIG_ELEMENT',
+        type: 'ConfigElement',
         value: '0x00000010',
       },
     ],

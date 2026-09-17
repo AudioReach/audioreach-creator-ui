@@ -5,6 +5,9 @@
 
 jest.mock('~shared/lib/logger');
 jest.mock('~entities/usecases/api/usecases-api');
+jest.mock('~entities/containers', () => ({
+  getContainersBySystemIds: jest.fn(),
+}));
 jest.mock('~entities/spf-modules', () => ({
   patchSpfModule: jest.fn(),
 }));
@@ -20,6 +23,7 @@ import {
   getSubgraphsByIds,
   getUsecaseComponents,
 } from '~entities/usecases/api/usecases-api';
+import {getContainersBySystemIds} from '~entities/containers';
 import {patchSpfModule} from '~entities/spf-modules';
 import {
   createEditSessionSlice,
@@ -48,10 +52,16 @@ import {
 } from './test-utils/component-dto-fixtures';
 
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
+const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockPatchSpfModule = jest.mocked(patchSpfModule);
 
 beforeEach(() => {
+  mockGetContainersBySystemIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
   mockGetSubgraphsByIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -79,13 +89,13 @@ function makeStore(moduleList: ModuleDefinition[] = []) {
 
 function moduleWithPort(overrides: {
   activeLinks?: number;
-  moduleInstanceId: string;
   portId: string;
   portSystemId?: string;
+  systemId: string;
   totalLinksAtPort: number;
 }): ModuleInstance {
   return {
-    containerId: 'c1',
+    containerSystemId: 'c1',
     displayName: 'M',
     inputPorts: [
       {
@@ -99,13 +109,14 @@ function moduleWithPort(overrides: {
         totalLinksAtPort: overrides.totalLinksAtPort,
       },
     ],
-    moduleId: '1',
-    moduleInstanceId: overrides.moduleInstanceId,
+    moduleDefinitionSystemId: '1',
     moduleName: 'M',
     moduleType: '',
+    naturalId: 1,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: overrides.systemId,
   };
 }
 
@@ -115,13 +126,13 @@ const minimalDto = {
   spfModules: [
     {
       alias: '',
-      containerId: 10,
+      containerSystemId: '10',
       controlPorts: [],
       dataPorts: [],
-      id: 1,
-      moduleId: 200,
+      moduleDefinitionSystemId: 'mod-def-200',
       name: 'AudioDecoder',
-      subgraphId: 'sys-sg-1',
+      naturalId: 200,
+      subgraphSystemId: 'sys-sg-1',
       systemId: 'sys-mod-1',
     },
   ],
@@ -129,7 +140,7 @@ const minimalDto = {
 };
 
 describe('toConnection', () => {
-  it('maps a DataLinkDto to a Connection with connectionType "data"', () => {
+  it('maps a DataLinkDto to a Connection with linkKind "data"', () => {
     const link = makeDataLinkDto({
       destinationPortSystemId: 'port-2',
       destinationSystemId: 'mod-2',
@@ -139,13 +150,13 @@ describe('toConnection', () => {
     });
 
     expect(toConnection(link, 'data')).toEqual({
-      connectionId: 'link-1',
-      connectionType: 'data',
-      fromModuleId: 'mod-1',
-      fromPortId: 'port-1',
-      isDangling: false,
-      toModuleId: 'mod-2',
-      toPortId: 'port-2',
+      destinationPortSystemId: 'port-2',
+      destinationSystemId: 'mod-2',
+      linkKind: 'data',
+      linkType: 'NORMAL',
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'link-1',
     });
   });
 
@@ -261,8 +272,8 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
     mockGetSubgraphsByIds.mockResolvedValueOnce({
       data: [
         {
-          id: 1,
           name: 'RealSubgraphName',
+          naturalId: 1,
           relatedEndPointLinks: [],
           SGKV: [],
           subGraphSharedType: 'AUDIO_PLAYBACK',
@@ -277,6 +288,7 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
 
     expect(mockGetSubgraphsByIds).toHaveBeenCalledWith('proj-1', ['sys-sg-1']);
     const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
+    expect(subgraph?.naturalId).toBe(1);
     expect(subgraph?.subgraphName).toBe('RealSubgraphName');
     expect(subgraph?.subgraphType).toBe('AUDIO_PLAYBACK');
   });
@@ -307,24 +319,24 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sys-sg-1',
+            subgraphSystemId: 'sys-sg-1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
         subgraphs: {
           'sys-sg-1': {
             containers: [],
-            subgraphId: 'sys-sg-1',
             subgraphName: 'RealSubgraphName',
+            subgraphSystemId: 'sys-sg-1',
             subgraphType: 'AUDIO_PLAYBACK',
           },
         },
@@ -347,14 +359,14 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     spfModules: [
       {
         alias: '',
-        containerId: 10,
+        containerSystemId: 10,
         controlPorts: [],
         dataPorts: [],
-        id: 1,
         moduleId: 200,
         name: 'AudioDecoder',
+        naturalId: 1,
         parentSystemId: 'sys-ss-20',
-        subgraphId: 'sys-sg-5',
+        subgraphSystemId: 'sys-sg-5',
         systemId: 'sys-mod-1',
       },
     ],
@@ -362,8 +374,8 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
       {
         controlPorts: [],
         dataPorts: [],
-        id: 20,
         name: 'AudioSubsystem',
+        naturalId: 20,
         systemId: 'sys-ss-20',
       },
     ],
@@ -410,13 +422,13 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
         ...dtoWithSubsystem,
         subsystems: [
           makeSubsystemDto({
-            id: 20,
             name: 'Parent',
+            naturalId: 20,
             systemId: 'sys-ss-parent',
           }),
           makeSubsystemDto({
-            id: 21,
             name: 'Child',
+            naturalId: 21,
             parentSystemId: 'sys-ss-parent',
             systemId: 'sys-ss-child',
           }),
@@ -486,16 +498,16 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [],
             position: {x: 42, y: 7},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -521,23 +533,22 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
       graphData: {
         connections: [
           {
-            connectionId: 'link-1',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: 'sys-port-10',
-            isDangling: false,
-            toModuleId: 'sys-mod-2',
-            toPortId: 'sys-port-20',
+            destinationPortSystemId: 'sys-port-20',
+            destinationSystemId: 'sys-mod-2',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: 'sys-port-10',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'link-1',
           },
         ],
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [
@@ -553,7 +564,8 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
               },
             ],
             position: {x: 0, y: 0},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -573,8 +585,8 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
           dataPorts: [
             {
               changeInfo: {changeType: 'UPDATE'},
-              id: 10,
               name: 'out1',
+              naturalId: 10,
               portIoType: 'Output',
               portType: 'Static',
               relatedEndPointLinks: [],
@@ -600,11 +612,10 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'Existing',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'Existing',
             moduleType: '',
             outputPorts: [
@@ -620,7 +631,8 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
               },
             ],
             position: {x: 0, y: 0},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -648,8 +660,8 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
           dataPorts: [
             {
               changeInfo: {changeType: 'CREATE'},
-              id: 20,
               name: 'in1',
+              naturalId: 20,
               portIoType: 'Input',
               portType: 'Static',
               relatedEndPointLinks: [],
@@ -675,16 +687,16 @@ describe('applyAddedCollection / applyDeletedCollection — modules', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -714,16 +726,16 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -755,15 +767,15 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
 
     const conn = store
       .getState()
-      .graphData!.connections.find((c) => c.connectionId === 'link-1');
+      .graphData!.connections.find((c) => c.systemId === 'link-1');
     expect(conn).toEqual({
-      connectionId: 'link-1',
-      connectionType: 'data',
-      fromModuleId: 'sys-mod-1',
-      fromPortId: '10',
-      isDangling: false,
-      toModuleId: 'sys-ss-1',
-      toPortId: '20',
+      destinationPortSystemId: '20',
+      destinationSystemId: 'sys-ss-1',
+      linkKind: 'data',
+      linkType: 'NORMAL',
+      sourcePortSystemId: '10',
+      sourceSystemId: 'sys-mod-1',
+      systemId: 'link-1',
     });
   });
 
@@ -773,22 +785,22 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
       graphData: {
         connections: [
           {
-            connectionId: 'link-1',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-1',
-            fromPortId: '10',
-            isDangling: false,
-            toModuleId: 'sys-ss-1',
-            toPortId: '20',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'sys-ss-1',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'sys-mod-1',
+            systemId: 'link-1',
           },
           {
-            connectionId: 'link-survivor',
-            connectionType: 'data',
-            fromModuleId: 'sys-mod-2',
-            fromPortId: '11',
-            isDangling: false,
-            toModuleId: 'sys-mod-3',
-            toPortId: '21',
+            destinationPortSystemId: '21',
+            destinationSystemId: 'sys-mod-3',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: '11',
+            sourceSystemId: 'sys-mod-2',
+            systemId: 'link-survivor',
           },
         ],
         containers: {},
@@ -806,7 +818,7 @@ describe('applyAddedCollection / applyDeletedCollection — links', () => {
     });
 
     expect(
-      store.getState().graphData!.connections.map((c) => c.connectionId),
+      store.getState().graphData!.connections.map((c) => c.systemId),
     ).toEqual(['link-survivor']);
   });
 });
@@ -944,16 +956,16 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
         containers: {},
         moduleInstances: {
           'sys-mod-1': {
-            containerId: '10',
+            containerSystemId: '10',
             displayName: 'AudioDecoder',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'sys-mod-1',
             moduleName: 'AudioDecoder',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: '1',
+            subgraphSystemId: '1',
+            systemId: 'sys-mod-1',
           },
         },
         selectedUsecases: [],
@@ -977,8 +989,8 @@ describe('applyAddedCollection / applyDeletedCollection — subsystems', () => {
 
     const conn = store
       .getState()
-      .graphData!.connections.find((c) => c.connectionId === 'link-1');
-    expect(conn?.toModuleId).toBe('sys-ss-1');
+      .graphData!.connections.find((c) => c.systemId === 'link-1');
+    expect(conn?.destinationSystemId).toBe('sys-ss-1');
   });
 });
 
@@ -990,23 +1002,23 @@ describe('recomputeContainersAndSubgraphs', () => {
         connections: [],
         containers: {
           'old-container': {
-            containerId: 'old-container',
+            containerSystemId: 'old-container',
             moduleInstances: ['gone-module'],
-            subgraphId: 'old-subgraph',
+            subgraphSystemId: 'old-subgraph',
           },
         },
         moduleInstances: {
           'mod-1': {
-            containerId: 'container-1',
+            containerSystemId: 'container-1',
             displayName: 'Mod 1',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod 1',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'subgraph-1',
+            subgraphSystemId: 'subgraph-1',
+            systemId: 'mod-1',
           },
         },
         selectedUsecases: [],
@@ -1032,17 +1044,17 @@ describe('recomputeContainersAndSubgraphs', () => {
         containers: {},
         moduleInstances: {
           'mod-1': {
-            containerId: 'container-1',
+            containerSystemId: 'container-1',
             diffState: 'added',
             displayName: 'Mod 1',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Mod 1',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'subgraph-1',
+            subgraphSystemId: 'subgraph-1',
+            systemId: 'mod-1',
           },
         },
         selectedUsecases: [],
@@ -1063,8 +1075,8 @@ describe('recomputeContainersAndSubgraphs', () => {
     mockGetSubgraphsByIds.mockResolvedValueOnce({
       data: [
         {
-          id: 2,
           name: 'Real New Subgraph',
+          naturalId: 2,
           relatedEndPointLinks: [],
           SGKV: [],
           subGraphSharedType: 'AUDIO_PLAYBACK',
@@ -1080,36 +1092,36 @@ describe('recomputeContainersAndSubgraphs', () => {
         containers: {},
         moduleInstances: {
           'mod-existing': {
-            containerId: 'container-1',
+            containerSystemId: 'container-1',
             displayName: 'Mod Existing',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-existing',
             moduleName: 'Mod Existing',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'subgraph-existing',
+            subgraphSystemId: 'subgraph-existing',
+            systemId: 'mod-existing',
           },
           'mod-new': {
-            containerId: 'container-2',
+            containerSystemId: 'container-2',
             displayName: 'Mod New',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-new',
             moduleName: 'Mod New',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'subgraph-new',
+            subgraphSystemId: 'subgraph-new',
+            systemId: 'mod-new',
           },
         },
         selectedUsecases: [],
         subgraphs: {
           'subgraph-existing': {
             containers: ['container-1'],
-            subgraphId: 'subgraph-existing',
             subgraphName: 'Existing Subgraph',
+            subgraphSystemId: 'subgraph-existing',
             subgraphType: 'AUDIO_RECORD',
           },
         },
@@ -1137,22 +1149,22 @@ describe('pruneDeletedLinkBookkeeping', () => {
     store.setState({
       excludedLinks: [
         {
-          connectionId: 'link-deleted',
-          connectionType: 'data',
-          fromModuleId: 'm1',
-          fromPortId: 'p1',
-          isDangling: false,
-          toModuleId: 'm2',
-          toPortId: 'p2',
+          destinationPortSystemId: 'p2',
+          destinationSystemId: 'm2',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p1',
+          sourceSystemId: 'm1',
+          systemId: 'link-deleted',
         },
         {
-          connectionId: 'link-survivor',
-          connectionType: 'data',
-          fromModuleId: 'm3',
-          fromPortId: 'p3',
-          isDangling: false,
-          toModuleId: 'm4',
-          toPortId: 'p4',
+          destinationPortSystemId: 'p4',
+          destinationSystemId: 'm4',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p3',
+          sourceSystemId: 'm3',
+          systemId: 'link-survivor',
         },
       ],
       pairLinksById: {
@@ -1177,7 +1189,7 @@ describe('pruneDeletedLinkBookkeeping', () => {
     expect(store.getState().pairLinksById['sg-3:sg-4']?.dataLinks).toHaveLength(
       1,
     );
-    expect(store.getState().excludedLinks.map((l) => l.connectionId)).toEqual([
+    expect(store.getState().excludedLinks.map((l) => l.systemId)).toEqual([
       'link-survivor',
     ]);
   });
@@ -1224,13 +1236,13 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-dst': moduleWithPort({
-            moduleInstanceId: 'mod-dst',
             portId: '20',
+            systemId: 'mod-dst',
             totalLinksAtPort: 1,
           }),
           'mod-src': moduleWithPort({
-            moduleInstanceId: 'mod-src',
             portId: '10',
+            systemId: 'mod-src',
             totalLinksAtPort: 0,
           }),
         },
@@ -1265,13 +1277,13 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-dst': moduleWithPort({
-            moduleInstanceId: 'mod-dst',
             portId: '20',
+            systemId: 'mod-dst',
             totalLinksAtPort: 2,
           }),
           'mod-src': moduleWithPort({
-            moduleInstanceId: 'mod-src',
             portId: '10',
+            systemId: 'mod-src',
             totalLinksAtPort: 1,
           }),
         },
@@ -1306,8 +1318,8 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-src': moduleWithPort({
-            moduleInstanceId: 'mod-src',
             portId: '10',
+            systemId: 'mod-src',
             totalLinksAtPort: 0,
           }),
         },
@@ -1345,15 +1357,15 @@ describe('adjustSurvivingPortCounts', () => {
         containers: {},
         moduleInstances: {
           'mod-dst': moduleWithPort({
-            moduleInstanceId: 'mod-dst',
             portId: '999', // numeric id, distinct from portSystemId below
             portSystemId: 'sys-port-777',
+            systemId: 'mod-dst',
             totalLinksAtPort: 1,
           }),
           'mod-src': moduleWithPort({
-            moduleInstanceId: 'mod-src',
             portId: '777', // numeric id, collides with the other port's portId
             portSystemId: 'sys-port-999',
+            systemId: 'mod-src',
             totalLinksAtPort: 0,
           }),
         },
@@ -1389,43 +1401,43 @@ describe('createGraphDataSlice - store-only property updates', () => {
         connections: [],
         containers: {
           'cnt-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             moduleInstances: ['mod-1', 'mod-2'],
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
           },
         },
         moduleInstances: {
           'mod-1': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Module 1',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-1',
             moduleName: 'Module 1',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
           },
           'mod-2': {
-            containerId: 'cnt-1',
+            containerSystemId: 'cnt-1',
             displayName: 'Module 2',
             inputPorts: [],
             moduleId: '200',
-            moduleInstanceId: 'mod-2',
             moduleName: 'Module 2',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'sg-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-2',
           },
         },
         selectedUsecases: [],
         subgraphs: {
           'sg-1': {
             containers: ['cnt-1'],
-            subgraphId: 'sg-1',
             subgraphName: 'Subgraph 1',
+            subgraphSystemId: 'sg-1',
             subgraphType: '',
           },
         },
@@ -1488,19 +1500,59 @@ describe('createGraphDataSlice - store-only property updates', () => {
   it('renames a container locally and moves member modules to the new id', () => {
     const store = makeStoreWithGraphData();
 
-    store.getState().updateContainerIdLocal('cnt-1', 'cnt-2');
+    store.getState().updateContainerIdLocal('sg-1', 'cnt-1', 'cnt-2', 2);
 
     const graphData = store.getState().graphData!;
     expect(graphData.containers['cnt-1']).toBeUndefined();
     expect(graphData.containers['cnt-2']).toEqual({
-      containerId: 'cnt-2',
       moduleInstances: ['mod-1', 'mod-2'],
-      subgraphId: 'sg-1',
+      naturalId: 2,
+      subgraphSystemId: 'sg-1',
+      systemId: 'cnt-2',
     });
-    expect(graphData.moduleInstances['mod-1'].containerId).toBe('cnt-2');
-    expect(graphData.moduleInstances['mod-2'].containerId).toBe('cnt-2');
+    expect(graphData.moduleInstances['mod-1'].containerSystemId).toBe('cnt-2');
+    expect(graphData.moduleInstances['mod-2'].containerSystemId).toBe('cnt-2');
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('retains a shared container cache entry for other subgraphs', () => {
+    const store = makeStoreWithGraphData();
+    const graphData = store.getState().graphData!;
+    store.setState({
+      graphData: {
+        ...graphData,
+        moduleInstances: {
+          ...graphData.moduleInstances,
+          'mod-3': {
+            ...graphData.moduleInstances['mod-1'],
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-3',
+          },
+        },
+        subgraphs: {
+          ...graphData.subgraphs,
+          'sg-2': {
+            containers: ['cnt-1'],
+            subgraphName: 'Subgraph 2',
+            subgraphType: '',
+            systemId: 'sg-2',
+          },
+        },
+      },
+    });
+
+    store.getState().updateContainerIdLocal('sg-1', 'cnt-1', 'cnt-2', 2);
+
+    const updatedGraphData = store.getState().graphData!;
+    expect(updatedGraphData.containers['cnt-1']).toBeDefined();
+    expect(updatedGraphData.containers['cnt-2'].naturalId).toBe(2);
+    expect(updatedGraphData.moduleInstances['mod-1'].containerSystemId).toBe(
+      'cnt-2',
+    );
+    expect(updatedGraphData.moduleInstances['mod-3'].containerSystemId).toBe(
+      'cnt-1',
+    );
   });
 
   it('updates module container locally', () => {
@@ -1509,22 +1561,22 @@ describe('createGraphDataSlice - store-only property updates', () => {
     store.getState().updateModuleContainerLocal('mod-1', 'cnt-2');
 
     const graphData = store.getState().graphData!;
-    expect(graphData.moduleInstances['mod-1'].containerId).toBe('cnt-2');
+    expect(graphData.moduleInstances['mod-1'].containerSystemId).toBe('cnt-2');
     expect(graphData.containers['cnt-1']).toEqual({
-      containerId: 'cnt-1',
       moduleInstances: ['mod-2'],
-      subgraphId: 'sg-1',
+      subgraphSystemId: 'sg-1',
+      systemId: 'cnt-1',
     });
     expect(graphData.containers['cnt-2']).toEqual({
-      containerId: 'cnt-2',
       moduleInstances: ['mod-1'],
-      subgraphId: 'sg-1',
+      subgraphSystemId: 'sg-1',
+      systemId: 'cnt-2',
     });
     expect(graphData.subgraphs['sg-1']).toEqual({
       containers: ['cnt-2', 'cnt-1'],
-      subgraphId: 'sg-1',
       subgraphName: 'Subgraph 1',
       subgraphType: '',
+      systemId: 'sg-1',
     });
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
@@ -1555,37 +1607,37 @@ describe('applyComponentCollection', () => {
     store.setState({
       excludedLinks: [
         {
-          connectionId: 'old-link',
-          connectionType: 'data',
-          fromModuleId: 'mod-old-src',
-          fromPortId: '10',
-          isDangling: false,
-          toModuleId: 'mod-old-dst',
-          toPortId: '20',
+          destinationPortSystemId: '20',
+          destinationSystemId: 'mod-old-dst',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: '10',
+          sourceSystemId: 'mod-old-src',
+          systemId: 'old-link',
         },
       ],
       graphData: {
         connections: [
           {
-            connectionId: 'old-link',
-            connectionType: 'data',
-            fromModuleId: 'mod-old-src',
-            fromPortId: '10',
-            isDangling: false,
-            toModuleId: 'mod-old-dst',
-            toPortId: '20',
+            destinationPortSystemId: '20',
+            destinationSystemId: 'mod-old-dst',
+            linkKind: 'data',
+            linkType: 'NORMAL',
+            sourcePortSystemId: '10',
+            sourceSystemId: 'mod-old-src',
+            systemId: 'old-link',
           },
         ],
         containers: {},
         moduleInstances: {
           'mod-old-dst': moduleWithPort({
-            moduleInstanceId: 'mod-old-dst',
             portId: '20',
+            systemId: 'mod-old-dst',
             totalLinksAtPort: 1,
           }),
           'mod-old-src': moduleWithPort({
-            moduleInstanceId: 'mod-old-src',
             portId: '10',
+            systemId: 'mod-old-src',
             totalLinksAtPort: 1,
           }),
         },
@@ -1650,31 +1702,31 @@ describe('applyComponentCollection', () => {
         connections: [],
         containers: {
           'container-10': {
-            containerId: 'container-10',
+            containerSystemId: 'container-10',
             moduleInstances: ['mod-existing'],
-            subgraphId: 'subgraph-1',
+            subgraphSystemId: 'subgraph-1',
           },
         },
         moduleInstances: {
           'mod-existing': {
-            containerId: 'container-10',
+            containerSystemId: 'container-10',
             displayName: 'Existing',
             inputPorts: [],
             moduleId: '100',
-            moduleInstanceId: 'mod-existing',
             moduleName: 'Existing',
             moduleType: '',
             outputPorts: [],
             position: {x: 0, y: 0},
-            subgraphId: 'subgraph-1',
+            subgraphSystemId: 'subgraph-1',
+            systemId: 'mod-existing',
           },
         },
         selectedUsecases: [],
         subgraphs: {
           'subgraph-1': {
             containers: ['container-10'],
-            subgraphId: 'subgraph-1',
             subgraphName: 'Existing Subgraph',
+            subgraphSystemId: 'subgraph-1',
             subgraphType: 'AUDIO_RECORD',
           },
         },
@@ -1688,8 +1740,8 @@ describe('applyComponentCollection', () => {
         dataLinks: [],
         spfModules: [
           makeSpfModuleDto({
-            containerId: 'container-10' as never,
-            subgraphId: 'subgraph-1',
+            containerSystemId: 'container-10',
+            subgraphSystemId: 'subgraph-1',
             systemId: 'mod-created',
           }),
         ],
@@ -1711,9 +1763,9 @@ describe('applyComponentCollection', () => {
     expect(Object.keys(state.graphData!.subgraphs)).toEqual(['subgraph-1']);
     expect(state.graphData!.subgraphs['subgraph-1']).toEqual({
       containers: ['container-10'],
-      subgraphId: 'subgraph-1',
       subgraphName: 'Existing Subgraph',
       subgraphType: 'AUDIO_RECORD',
+      systemId: 'subgraph-1',
     });
     expect(state.graphData!.containers['container-10'].moduleInstances).toEqual(
       ['mod-existing', 'mod-created'],
@@ -1723,13 +1775,13 @@ describe('applyComponentCollection', () => {
 
 describe('createGraphDataSlice — ModuleInstance ckvs/tags (D1)', () => {
   const ckv = {
-    keyValueCollection: [],
+    keyValuePairs: [],
     supportedParameters: [],
     systemId: 'ckv-1',
   };
   const tag = {
+    naturalId: 1,
     systemId: 'tag-1',
-    tagId: 1,
     tagName: 'tag',
     tkvs: [],
   };
@@ -1796,8 +1848,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 10,
                 name: 'out1',
+                naturalId: 10,
                 portIoType: 'Output',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1811,8 +1863,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 20,
                 name: 'in1',
+                naturalId: 20,
                 portIoType: 'Input',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1848,8 +1900,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 42,
                 name: 'out1',
+                naturalId: 42,
                 portIoType: 'Output',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1893,12 +1945,12 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
+                name: 'out1',
                 // Numeric id intentionally collides with the *other*
                 // port's systemId suffix (777 vs. 999) — the lookup below
                 // must key off systemId, not id, or this would coincidentally
                 // pass.
-                id: 999,
-                name: 'out1',
+                naturalId: 999,
                 portIoType: 'Output',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1912,8 +1964,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 777,
                 name: 'in1',
+                naturalId: 777,
                 portIoType: 'Input',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1953,8 +2005,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 1,
                 name: 'out1',
+                naturalId: 1,
                 portIoType: 'Output',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -1989,8 +2041,8 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
             dataPorts: [
               {
                 changeInfo: {changeType: 'CREATE'},
-                id: 1,
                 name: 'out1',
+                naturalId: 1,
                 portIoType: 'Output',
                 portType: 'Static',
                 relatedEndPointLinks: [],
@@ -2034,9 +2086,9 @@ describe('graphDataSlice — activeLinks / portSystemId / portId', () => {
               {
                 changeInfo: {changeType: 'CREATE'},
                 controlPortName: 'ctrl-out',
-                id: 5,
                 intents: [],
                 name: 'ctrl-out',
+                naturalId: 5,
                 portType: 'Static',
                 relatedEndPointLinks: [],
                 systemId: 'sys-ctrl-5',

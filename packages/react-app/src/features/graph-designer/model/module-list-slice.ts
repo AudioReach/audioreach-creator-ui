@@ -10,6 +10,7 @@ import {
   getAllSpfModuleDefinitions,
   type SpfModuleDefinitionResponseDto,
 } from '~entities/module-definitions';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
 
@@ -40,7 +41,10 @@ export interface ModuleDefinition {
 
 export interface ModuleListSlice {
   loadModuleList: () => Promise<void>;
-  moduleDefinitionsById: Record<string, SpfModuleDefinitionResponseDto>;
+  moduleDefinitionsBySystemId: Record<
+    string,
+    SpfModuleDefinitionResponseDto
+  >;
   moduleList: ModuleDefinition[];
   moduleListSearchQuery: string;
   moduleListStatus: SliceStatus;
@@ -78,7 +82,7 @@ function toModuleDefinition(
 
   const inputPorts: Port[] = (info.inputDataPortInfo?.ports ?? []).map((p) => ({
     isStatic: true,
-    portId: String(p.portId),
+    portId: String(p.naturalId),
     portIoType: PORT_IO_TYPE.INPUT,
     portName: p.portName,
   }));
@@ -86,31 +90,31 @@ function toModuleDefinition(
   const outputPorts: Port[] = (info.outputDataPortInfo?.ports ?? []).map(
     (p) => ({
       isStatic: true,
-      portId: String(p.portId),
+      portId: String(p.naturalId),
       portIoType: PORT_IO_TYPE.OUTPUT,
       portName: p.portName,
     }),
   );
 
-  if (info.staticCtrlPorts?.portId) {
+  for (const port of info.staticCtrlPorts ?? []) {
     inputPorts.push({
       isStatic: true,
-      portId: String(info.staticCtrlPorts.portId),
+      portId: String(port.naturalId),
       portIoType: PORT_IO_TYPE.CONTROL,
-      portName: info.staticCtrlPorts.portName,
+      portName: port.portName,
     });
   }
 
   return {
     builtIn: dto.builtIn,
-    category: info.moduleTypeInfo?.majorModuleType ?? '',
+    category: '',
     description: dto.description,
     dspType: dto.processorInfo?.name ?? '',
     inputPorts,
     moduleDefinitionSystemId: dto.systemId,
-    moduleId: String(dto.moduleId),
+    moduleId: String(dto.naturalId),
     moduleName: dto.name,
-    moduleType: dto.moduleDirectionType,
+    moduleType: dto.moduleDirectionType ?? '',
     outputPorts,
     processorSystemId: dto.processorInfo?.systemId ?? '',
   };
@@ -157,11 +161,11 @@ export function createModuleListSlice(
       try {
         const result = await getAllSpfModuleDefinitions(projectId);
 
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           logger.error('moduleListSlice: loadModuleList — API error', {
             action: 'load_module_list',
             component: 'moduleListSlice',
-            error: result.message,
+            error: getIssueMessage(result, 'Failed to load module list'),
           });
           setSlice({moduleListStatus: 'error'});
           return;
@@ -183,16 +187,16 @@ export function createModuleListSlice(
         const allModuleTypes = [...categorySet].sort();
         const cached = filterCache.get(projectId);
 
-        const moduleDefinitionsById: Record<
+        const moduleDefinitionsBySystemId: Record<
           string,
           SpfModuleDefinitionResponseDto
         > = {};
         for (const dto of result.data) {
-          moduleDefinitionsById[String(dto.moduleId)] = dto;
+          moduleDefinitionsBySystemId[dto.systemId] = dto;
         }
 
         setSlice({
-          moduleDefinitionsById,
+          moduleDefinitionsBySystemId,
           moduleList: modules,
           moduleListStatus: 'ready',
           selectedDspTypes: cached?.dspTypes ?? allDspTypes,
@@ -216,7 +220,7 @@ export function createModuleListSlice(
       }
     },
 
-    moduleDefinitionsById: {},
+    moduleDefinitionsBySystemId: {},
 
     moduleList: [],
 

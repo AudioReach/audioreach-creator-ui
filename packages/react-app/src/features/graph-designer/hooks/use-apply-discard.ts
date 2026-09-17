@@ -439,9 +439,13 @@ export function useApplyDiscard(
       if (!response) {
         return;
       }
-      const createdSystemIds = response.created
-        .filter((r) => checkedChangeIds.includes(r.changeId))
-        .map((r) => r.systemId);
+      const createdSystemIds = response.changes
+        .filter(
+          (change) =>
+            change.operation === 'CREATE' &&
+            checkedChangeIds.includes(change.changeId),
+        )
+        .map((change) => change.systemId);
       setPendingReview(null);
       pendingReviewResponseRef.current = null;
       setIsBusy(true);
