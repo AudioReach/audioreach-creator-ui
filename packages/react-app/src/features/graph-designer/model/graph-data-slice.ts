@@ -68,6 +68,7 @@ export interface Connection {
   fromModuleId: string;
   fromPortId: string;
   isDangling: boolean;
+  isEcLink?: boolean;
   toModuleId: string;
   toPortId: string;
 }
@@ -399,12 +400,16 @@ export function toConnection(
   link: ControlLinkDto | DataLinkDto,
   connectionType: 'control' | 'data',
 ): Connection {
+  const isEcLink =
+    connectionType === 'data' ? (link as DataLinkDto).isEcLink : undefined;
+
   return {
     connectionId: link.systemId,
     connectionType,
     fromModuleId: link.sourceSystemId,
     fromPortId: link.sourcePortSystemId,
     isDangling: link.isDangling,
+    ...(isEcLink === undefined ? {} : {isEcLink}),
     toModuleId: link.destinationSystemId,
     toPortId: link.destinationPortSystemId,
   };

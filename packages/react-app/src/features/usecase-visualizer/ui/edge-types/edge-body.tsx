@@ -16,6 +16,8 @@ export interface EdgeBodyProps {
   arrowMarkerId?: string;
   dashed?: boolean;
   edgeId: string;
+  isDangling?: boolean;
+  isEcLink?: boolean;
   label?: ReactNode;
   labelX: number;
   labelY: number;
@@ -33,6 +35,8 @@ export function EdgeBody({
   arrowMarkerId,
   dashed,
   edgeId,
+  isDangling,
+  isEcLink,
   label,
   labelX,
   labelY,
@@ -48,7 +52,11 @@ export function EdgeBody({
 
   const stroke = selected
     ? 'var(--color-border-support-info)'
-    : 'var(--color-border-neutral-10)';
+    : isDangling
+      ? 'var(--color-border-support-success)'
+      : isEcLink
+        ? 'var(--color-category-purple-strong)'
+      : 'var(--color-border-neutral-10)';
 
   const showLabel = label != null && label !== '' && !labelHidden;
 

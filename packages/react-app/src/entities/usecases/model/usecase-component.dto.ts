@@ -141,6 +141,7 @@ export interface DataLinkDto {
   destinationPortSystemId: string;
   destinationSystemId: string;
   isDangling: boolean;
+  isEcLink?: boolean;
   parentSystemId?: string;
   sourcePortSystemId: string;
   sourceSystemId: string;
