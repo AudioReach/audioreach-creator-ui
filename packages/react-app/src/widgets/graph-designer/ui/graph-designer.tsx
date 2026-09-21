@@ -160,6 +160,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   );
 
   const usecaseData = initialUsecaseData;
+  const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   const {preferences, updatePreference} = useUserPreferences();
   const {
@@ -172,9 +173,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     viewMode,
   } = preferences.visualization;
   const isDetailedView = viewMode === 'detailed';
-  const effectivePortVisibilityMode = isDetailedView
-    ? preferences.display.portVisibilityMode
-    : 'active';
+  const effectivePortVisibilityMode = isEditable
+    ? 'all'
+    : isDetailedView
+      ? preferences.display.portVisibilityMode
+      : 'active';
   const {workflowLevel, workflowType} = preferences.usecases;
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
     preferences.usecases,
@@ -671,8 +674,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const hasLoadedGraphContent = graphDataHasContent(graphData);
   const canUndoRedo = false; // TODO: Support undo/redo stack
 
-  const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
-
   const subgraphList = useGraphDesignerStoreShallow((s) => s.subgraphList);
 
   const {close, open, state} = usePortConnectionsInfo(projectId);
@@ -1062,12 +1063,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const displayOptionsContent = useMemo(
     () => (
       <DisplayOptionsPopover
+        isEditable={isEditable}
         preferences={preferences}
         projectId={projectId}
         updatePreference={updatePreference}
       />
     ),
-    [preferences, projectId, updatePreference],
+    [isEditable, preferences, projectId, updatePreference],
   );
 
   const visualizerRendering = useMemo(
