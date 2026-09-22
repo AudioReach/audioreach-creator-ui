@@ -43,28 +43,28 @@ class ModuleInstanceCoordinator {
    */
   async fetchAndDistributeModuleInstanceData(
     projectId: string,
-    moduleId: number,
     instanceId: number,
+    moduleDefinitionSystemId: string,
     moduleInstanceSystemId: string,
   ): Promise<{error?: string; success: boolean}> {
     // Check if stores already have data
     const ckvStore = useCalibrationKeysStore.getState();
     const tkvStore = useModuleTagKeysStore.getState();
 
-    const ckvHasData = ckvStore.configuredKeyValuesMap[moduleId]?.some(
+    const ckvHasData = ckvStore.configuredKeyValuesMap[instanceId]?.some(
       (inst) => inst.instanceId === instanceId,
     );
-    const tkvHasData = tkvStore.configuredModuleTags[moduleId]?.some(
+    const tkvHasData = tkvStore.configuredModuleTags[instanceId]?.some(
       (inst) => inst.instanceId === instanceId,
     );
 
     // Also check if parameters exist for this module
-    const ckvHasParameters = !!ckvStore.moduleParameters[moduleId];
-    const tkvHasParameters = !!tkvStore.moduleParameters[moduleId];
+    const ckvHasParameters = !!ckvStore.moduleParameters[instanceId];
+    const tkvHasParameters = !!tkvStore.moduleParameters[instanceId];
 
     if (ckvHasData && tkvHasData && ckvHasParameters && tkvHasParameters) {
       logger.info(
-        `Using existing store data for module ${moduleId}, instance ${instanceId}`,
+        `Using existing store data for module ${instanceId}, instance ${instanceId}`,
         {
           action: 'fetch_module_instance_data',
           component: 'ModuleInstanceCoordinator',
@@ -77,7 +77,7 @@ class ModuleInstanceCoordinator {
     // Fetch from backend (stores don't have complete data)
     try {
       logger.info(
-        `Fetching from backend for module ${moduleId}, instance ${instanceId}`,
+        `Fetching from backend for module ${instanceId}, instance ${instanceId}`,
         {
           action: 'fetch_module_instance_data',
           component: 'ModuleInstanceCoordinator',
@@ -88,7 +88,7 @@ class ModuleInstanceCoordinator {
       // Fetch module definition
       const defResult = await getSpfModuleDefinition(
         projectId,
-        moduleInstanceSystemId,
+        moduleDefinitionSystemId,
       );
 
       if (hasBlockingIssues(defResult) || !defResult.data) {
@@ -97,7 +97,7 @@ class ModuleInstanceCoordinator {
           'Failed to fetch module definition',
         );
         logger.error(
-          `Failed to fetch module definition for module ${moduleId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
+          `Failed to fetch module definition for module ${instanceId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
           {
             action: 'fetch_module_definition',
             component: 'ModuleInstanceCoordinator',
@@ -109,18 +109,18 @@ class ModuleInstanceCoordinator {
       }
 
       // Fetch tuning configuration
-      const result = await getModuleInstanceTuningConfig(
-        projectId,
+      const result = await getModuleInstanceTuningConfig(projectId, [
         moduleInstanceSystemId,
-      );
+      ]);
+      const tuningConfig = result.data?.[0];
 
-      if (hasBlockingIssues(result) || !result.data) {
+      if (hasBlockingIssues(result) || !tuningConfig) {
         const errorMessage = getIssueMessage(
           result,
           'Failed to fetch module instance data',
         );
         logger.error(
-          `Failed to fetch module instance data for module ${moduleId}, instance ${instanceId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
+          `Failed to fetch module instance data for module ${instanceId}, instance ${instanceId}, systemId ${moduleInstanceSystemId}: ${errorMessage}`,
           {
             action: 'fetch_module_instance_data',
             component: 'ModuleInstanceCoordinator',
@@ -133,9 +133,9 @@ class ModuleInstanceCoordinator {
 
       // Distribute data to both stores
       this.distributeDataToStores(
-        moduleId,
+        defResult.data.naturalId,
         instanceId,
-        result.data,
+        tuningConfig,
         defResult.data,
       );
       return {success: true};
@@ -143,7 +143,7 @@ class ModuleInstanceCoordinator {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       logger.error(
-        `Error fetching module instance data for module ${moduleId}, instance ${instanceId}: ${errorMessage}`,
+        `Error fetching module instance data for module instance ${instanceId}: ${errorMessage}`,
         {
           action: 'fetch_module_instance_data',
           component: 'ModuleInstanceCoordinator',

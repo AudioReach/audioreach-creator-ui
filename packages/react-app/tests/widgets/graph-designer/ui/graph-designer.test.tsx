@@ -10,6 +10,7 @@ import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/
 import type {
   ContextMenuTarget,
   NodeDisplayConfig,
+  SelectionChangePayload,
   VisualizerContextMenuConfig,
 } from '~features/usecase-visualizer';
 
@@ -47,6 +48,7 @@ interface MockUsecaseVisualizerProps {
       targetSubgraphId?: string;
     }) => void;
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
+    onSelectionChange?: (payload: SelectionChangePayload) => void;
   };
   graph?: LevelView;
   rendering?: {nodeDisplayConfig?: NodeDisplayConfig};
@@ -213,6 +215,10 @@ import {createGraphDesignerStore} from '~features/graph-designer/model/graph-des
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import type {PortConnectionsInfoPopupProps} from '~features/port-connections-info';
 import {
+  ConfigurationItemType,
+  keyConfiguratorStoreManager,
+} from '~features/key-configurator';
+import {
   DEFAULT_USER_PREFERENCES,
   type UserPreferences,
 } from '~shared/config/user-preferences-types';
@@ -306,8 +312,8 @@ function makeBoundaryGraphData(): UsecaseGraphData {
       {
         destinationPortSystemId: 'in-1',
         destinationSystemId: 'mod-1',
-        isInterUsecase: false,
         linkKind: 'data',
+        linkType: 'NORMAL',
         sourcePortSystemId: 'out-1',
         sourceSystemId: 'mod-1',
         systemId: 'inner-boundary-link',
@@ -391,6 +397,7 @@ function renderGraphDesigner(options?: {
 }
 
 beforeEach(() => {
+  keyConfiguratorStoreManager.clearAllStores();
   mockVisualizerProps = null;
 });
 
@@ -512,6 +519,90 @@ describe('GraphDesigner - active boundary navigation', () => {
     expect(outerSubsystem).toBeDefined();
     expect(outerSubsystem?.width).not.toBe(999);
     expect(outerSubsystem?.height).not.toBe(999);
+  });
+});
+
+describe('GraphDesigner - key configurator selection sync', () => {
+  it('syncs selected subgraphs into the key configurator store', async () => {
+    renderGraphDesigner({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: ['uc-1'],
+        subgraphs: {
+          '1': {
+            containers: [],
+            subgraphName: 'Subgraph 1',
+            subgraphType: '',
+            systemId: '1',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onSelectionChange?.({
+        delta: {
+          addedEdges: [],
+          addedNodes: [],
+          removedEdges: [],
+          removedNodes: [],
+        },
+        selectedEdges: [],
+        selectedNodes: [
+          {
+            id: 'subgraph-1',
+            nodeKind: NODE_KIND.SUBGRAPH,
+            systemId: '1',
+          },
+        ],
+      });
+    });
+
+    expect(
+      keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
+    ).toEqual([
+      {
+        id: 1,
+        name: 'Subgraph 1',
+        systemId: '1',
+        type: ConfigurationItemType.SUBGRAPH,
+      },
+    ]);
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onSelectionChange?.({
+        delta: {
+          addedEdges: [],
+          addedNodes: [],
+          removedEdges: [],
+          removedNodes: [],
+        },
+        selectedEdges: [],
+        selectedNodes: [
+          {
+            id: 'subgraph-proxy-1',
+            nodeKind: NODE_KIND.SUBGRAPH_PROXY,
+            systemId: '1',
+          },
+        ],
+      });
+    });
+
+    expect(
+      keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
+    ).toEqual([
+      {
+        id: 1,
+        name: 'Subgraph 1',
+        systemId: '1',
+        type: ConfigurationItemType.SUBGRAPH,
+      },
+    ]);
   });
 });
 
