@@ -144,7 +144,7 @@ export type AnyEdge = ControlLink | DataLink | ProxyControlLink | ProxyDataLink;
 
 export interface EdgeBase {
   id: string;
-  /** Not used on proxy links, since one merged line can't have a single true/false. */
+  /** Used to style dangling links, including collapsed proxy links. */
   isDangling?: boolean;
   label?: string;
   /** Excluded from Delete key and context menu. */
@@ -169,6 +169,7 @@ export type VirtualDataLinkKind = 'mdf' | 'standard' | 'subsystem';
 
 export interface ProxyDataLink extends EdgeBase {
   edgeKind: 'proxy-data';
+  isEcLink?: boolean;
   kind?: VirtualDataLinkKind;
   mdfModuleIds?: string[];
   realConnectionIds?: string[];
