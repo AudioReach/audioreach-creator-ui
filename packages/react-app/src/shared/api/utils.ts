@@ -7,6 +7,21 @@ import type {ApiResult} from './api-response.types';
 import {createTransportIssue} from './api-result-utils';
 
 /**
+ * Create a query parameter whose value is a comma-separated list.
+ */
+export function createCommaSeparatedQueryParam(
+  name: string,
+  values: string[],
+): string {
+  if (!values.length) {
+    return '';
+  }
+
+  const encodedValues = values.map((value) => encodeURIComponent(value));
+  return `${encodeURIComponent(name)}=${encodedValues.join(',')}`;
+}
+
+/**
  * Process an API response and convert it to an ApiResult
  * @param response The fetch Response object
  * @returns ApiResult object
@@ -50,7 +65,10 @@ export async function processApiResponse<T>(
   } catch {
     return {
       issues: [
-        createTransportIssue('INVALID_JSON', 'Failed to parse response as JSON'),
+        createTransportIssue(
+          'INVALID_JSON',
+          'Failed to parse response as JSON',
+        ),
       ],
     };
   }

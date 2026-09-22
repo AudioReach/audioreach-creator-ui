@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {downloadProjectFiles} from '~entities/project/api/projects-api';
+import {
+  closeProject,
+  downloadProjectFiles,
+  openProject,
+} from '~entities/project/api/projects-api';
 import * as httpClientModule from '~shared/api/http-client';
 
 jest.mock('~shared/api/http-client', () => ({
-  httpClient: {get: jest.fn()},
+  httpClient: {get: jest.fn(), post: jest.fn()},
 }));
 
 /** Creates a File with arrayBuffer() polyfilled for jsdom */
@@ -57,10 +61,48 @@ function buildMultipartResult(
 
 describe('downloadProjectFiles', () => {
   let getMock: jest.Mock;
+  let postMock: jest.Mock;
 
   beforeEach(() => {
     getMock = httpClientModule.httpClient.get as jest.Mock;
+    postMock = httpClientModule.httpClient.post as jest.Mock;
     jest.clearAllMocks();
+  });
+
+  it('connects to a project and returns project info', async () => {
+    const projectInfo = {
+      description: 'Project description',
+      name: 'Project',
+      projectId: 'proj-1',
+    };
+    postMock.mockResolvedValue({
+      data: projectInfo,
+      message: 'ok',
+      success: true,
+    });
+
+    const result = await openProject('proj-1');
+
+    expect(result.data).toEqual(projectInfo);
+    expect(postMock).toHaveBeenCalledWith('/projects/proj-1/connect');
+  });
+
+  it('disconnects from a project and returns project info', async () => {
+    const projectInfo = {
+      description: 'Project description',
+      name: 'Project',
+      projectId: 'proj-1',
+    };
+    postMock.mockResolvedValue({
+      data: projectInfo,
+      message: 'ok',
+      success: true,
+    });
+
+    const result = await closeProject('proj-1');
+
+    expect(result.data).toEqual(projectInfo);
+    expect(postMock).toHaveBeenCalledWith('/projects/proj-1/disconnect');
   });
 
   // Both files extracted correctly when backend returns full multipart response

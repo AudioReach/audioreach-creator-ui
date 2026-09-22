@@ -33,21 +33,25 @@ export async function getProjectById(
 
 /**
  * Open/connect to a project by ID.
- * Returns ApiResult<void> indicating success/failure.
+ * Returns ApiResult<ProjectInfoResponseDto> with the connected project.
  */
-export async function openProject(projectId: string): Promise<ApiResult<void>> {
-  return httpClient.patch<void>(`/projects/${projectId}/connect-to-project`);
+export async function openProject(
+  projectId: string,
+): Promise<ApiResult<ProjectInfoResponseDto>> {
+  return httpClient.post<ProjectInfoResponseDto>(
+    `/projects/${projectId}/connect`,
+  );
 }
 
 /**
  * Close/disconnect a project by ID.
- * Returns ApiResult<void> indicating success/failure.
+ * Returns ApiResult<ProjectInfoResponseDto> with the disconnected project.
  */
 export async function closeProject(
   projectId: string,
-): Promise<ApiResult<void>> {
-  return httpClient.patch<void>(
-    `/projects/${projectId}/disconnect-from-project`,
+): Promise<ApiResult<ProjectInfoResponseDto>> {
+  return httpClient.post<ProjectInfoResponseDto>(
+    `/projects/${projectId}/disconnect`,
   );
 }
 
