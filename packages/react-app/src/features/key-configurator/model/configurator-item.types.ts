@@ -16,7 +16,7 @@ interface BaseConfigurationItem {
 }
 
 export interface ModuleConfigurationItem extends BaseConfigurationItem {
-  instanceId: number;
+  moduleDefinitionSystemId: string;
   type: ConfigurationItemType.MODULE;
 }
 

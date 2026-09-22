@@ -51,6 +51,7 @@ import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
+import {keyConfiguratorStoreManager} from '~features/key-configurator';
 import {
   PortConnectionsInfoPopup,
   usePortConnectionsInfo,
@@ -104,6 +105,7 @@ import {
   buildSubsystemLevelViewFromGraphData,
 } from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
+import {mapSelectedNodesToConfigurationItems} from '../lib/node-to-config-item';
 import {subgraphNodeId, subgraphProxyNodeId} from '../lib/node-id';
 import {renderNodeContent} from '../lib/render-node-content';
 import {collapseSetForLevel} from '../lib/subgraph-collapse';
@@ -402,6 +404,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     (s) => s.clearSearchHighlight,
   );
   const setSelection = useGraphDesignerStoreShallow((s) => s.setSelection);
+  const keyConfiguratorStore = useMemo(
+    () => keyConfiguratorStoreManager.getStore(projectId),
+    [projectId],
+  );
+  const setKeyConfiguratorSelectedItems = keyConfiguratorStore(
+    (state) => state.setSelectedItems,
+  );
   const isSearchVisible = useGraphDesignerStoreShallow(
     (s) => s.isSearchVisible,
   );
@@ -1027,6 +1036,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         selectedNodes,
       }: SelectionChangePayload) => {
         setSelection(selectedNodes, selectedEdges);
+        setKeyConfiguratorSelectedItems(
+          mapSelectedNodesToConfigurationItems(selectedNodes, graphData),
+        );
       },
       onSubgraphCollapse: (subgraphId: number) => {
         setCollapseByLevel((prev) => ({
@@ -1055,8 +1067,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       handleEdgesDeleted,
       handleNodeDoubleClick,
       handleNodesDeleted,
+      graphData,
       levelId,
       setSelection,
+      setKeyConfiguratorSelectedItems,
       linkOperations,
       store,
     ],

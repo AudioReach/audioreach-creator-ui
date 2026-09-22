@@ -8,6 +8,7 @@ import type {EdgeKind, NodeKind} from '~entities/graph';
 export interface SelectedNodeRef {
   id: string;
   nodeKind: NodeKind;
+  subgraphSystemId?: string;
   systemId: string;
 }
 

@@ -27,11 +27,11 @@ interface BaseConfigurationContext {
 }
 
 /**
- * Module configuration context - includes required instanceId
+ * Module configuration context for module-instance API lookups.
  */
 export interface ModuleConfigurationContext extends BaseConfigurationContext {
   entityType: ConfigurationItemType.MODULE;
-  instanceId: number;
+  moduleDefinitionSystemId: string;
 }
 
 /**
@@ -44,8 +44,7 @@ export interface SubgraphConfigurationContext extends BaseConfigurationContext {
 /**
  * Subsystem configuration context
  */
-export interface SubsystemConfigurationContext
-  extends BaseConfigurationContext {
+export interface SubsystemConfigurationContext extends BaseConfigurationContext {
   entityType: ConfigurationItemType.SUBSYSTEM;
 }
 
@@ -145,7 +144,7 @@ export function createKeyConfiguratorStore(projectId: string) {
                 await moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData(
                   state.projectId,
                   context.entityId,
-                  context.instanceId,
+                  context.moduleDefinitionSystemId,
                   context.systemId,
                 );
 
