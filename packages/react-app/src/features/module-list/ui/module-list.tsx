@@ -98,14 +98,14 @@ export function ModuleList(): ReactElement {
 
   // Filter modules based on selected types and search query
   const filteredModules = useMemo(() => {
-    if (selectedDspTypes.length === 0 || selectedModuleTypes.length === 0) {
+    if (selectedDspTypes.length === 0) {
       return [];
     }
 
     let result = moduleList.filter(
       (module) =>
         selectedDspTypes.includes(module.dspType) &&
-        selectedModuleTypes.includes(module.category),
+        (!module.category || selectedModuleTypes.includes(module.category)),
     );
 
     if (moduleListSearchQuery) {
