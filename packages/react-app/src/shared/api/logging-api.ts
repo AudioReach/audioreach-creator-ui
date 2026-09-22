@@ -19,7 +19,7 @@ export class LoggingApiService {
    */
   async sendLog(log: UserLogRequestDto): Promise<boolean> {
     try {
-      const result = await httpClient.post<void>('/log', log);
+      const result = await httpClient.post<void>('/logs', log);
       return !hasBlockingIssues(result);
     } catch (error) {
       console.warn('[LoggingAPI] Failed to send log:', error);

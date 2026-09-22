@@ -7,23 +7,21 @@ jest.mock('~shared/api/http-client', () => ({
   httpClient: {
     get: jest.fn(),
     patch: jest.fn(),
+    put: jest.fn(),
   },
 }));
 
 import {
   fetchContainerProperties,
-  patchContainer,
+  getContainersBySystemIds,
   patchContainerProperty,
+  updateContainerId,
 } from '~entities/containers';
 import {
   fetchControlLinkProperties,
   patchControlLinkProperties,
 } from '~entities/control-links';
-import {
-  fetchSpfModuleProperties,
-  patchSpfModule,
-  patchSpfModuleProperties,
-} from '~entities/spf-modules';
+import {fetchSpfModuleProperties, patchSpfModule} from '~entities/spf-modules';
 import {
   fetchSubgraphProperties,
   patchSubgraph,
@@ -36,6 +34,7 @@ import type {PropertyDto} from '~shared/lib/property.dto';
 
 const mockGet = jest.mocked(httpClient.get);
 const mockPatch = jest.mocked(httpClient.patch);
+const mockPut = jest.mocked(httpClient.put);
 
 const propertyFixture: PropertyDto = {
   elements: [],
@@ -54,6 +53,7 @@ describe('properties API clients', () => {
       success: true,
     });
     mockPatch.mockResolvedValue({data: [], message: 'ok', success: true});
+    mockPut.mockResolvedValue({data: [], message: 'ok', success: true});
   });
 
   it('unwraps subgraph property responses and uses graph-data endpoints', async () => {
@@ -108,9 +108,25 @@ describe('properties API clients', () => {
       message: 'ok',
       success: true,
     });
+    mockPatch.mockResolvedValueOnce({
+      data: {
+        newContainerNaturalId: 2,
+        newContainerSystemId: 'cnt-2',
+      },
+      message: 'ok',
+      success: true,
+    });
+    mockPut.mockResolvedValueOnce({
+      data: propertyFixture,
+      message: 'ok',
+      success: true,
+    });
 
     const result = await fetchContainerProperties('proj-1', 'cnt-1');
-    await patchContainer('proj-1', 'cnt-1', {containerId: 'cnt-2'});
+    const updateContainerIdResult = await updateContainerId('proj-1', 'sg-1', {
+      newContainerNaturalId: 2,
+      oldContainerNaturalId: 1,
+    });
     await patchContainerProperty('proj-1', 'cnt-1', 'prop-1', {
       elements: [],
       name: 'Container Type',
@@ -121,26 +137,85 @@ describe('properties API clients', () => {
     expect(mockGet).toHaveBeenCalledWith(
       '/projects/proj-1/containers/cnt-1/properties',
     );
+    expect(updateContainerIdResult.data).toEqual({
+      newContainerNaturalId: 2,
+      newContainerSystemId: 'cnt-2',
+    });
     expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/containers/cnt-1',
-      {containerId: 'cnt-2'},
+      '/projects/proj-1/subgraphs/sg-1/container-id',
+      {newContainerNaturalId: 2, oldContainerNaturalId: 1},
     );
-    expect(mockPatch).toHaveBeenCalledWith(
+    expect(mockPut).toHaveBeenCalledWith(
       '/projects/proj-1/containers/cnt-1/properties/prop-1',
       {elements: [], name: 'Container Type', systemId: 'prop-1'},
     );
   });
 
+  it('GETs container natural IDs with comma-separated system IDs', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: [
+        {naturalId: 401, systemId: 'cnt-401'},
+        {naturalId: 402, systemId: 'cnt-402'},
+      ],
+      message: 'ok',
+      success: true,
+    });
+
+    const result = await getContainersBySystemIds('proj-1', [
+      'cnt-401',
+      'cnt-402',
+    ]);
+
+    expect(result.data).toEqual([
+      {naturalId: 401, systemId: 'cnt-401'},
+      {naturalId: 402, systemId: 'cnt-402'},
+    ]);
+    expect(mockGet).toHaveBeenCalledWith(
+      '/projects/proj-1/containers?systemId=cnt-401,cnt-402',
+    );
+  });
+
   it('unwraps spf-module properties beside existing module patch', async () => {
     mockGet.mockResolvedValueOnce({
-      data: {properties: [propertyFixture]},
+      data: [
+        {
+          ckvs: [
+            {
+              keyValuePairs: [],
+              supportedParameters: [],
+              systemId: 'ckv-1',
+            },
+          ],
+          containerSystemId: 'cnt-1',
+          controlPorts: [],
+          dataPorts: [],
+          maxControlPortsSupported: 0,
+          maxInputPortsSupported: 0,
+          maxOutputPortsSupported: 0,
+          moduleDefinitionSystemId: 'mod-def-1',
+          name: 'Decoder',
+          naturalId: 1,
+          parentSystemId: 'parent-1',
+          properties: [propertyFixture],
+          relatedEndPointLinks: [],
+          subgraphSystemId: 'sg-1',
+          systemId: 'mod-1',
+          tags: [
+            {
+              naturalId: 1,
+              systemId: 'tag-1',
+              tagName: 'Tag 1',
+              tkvs: [],
+            },
+          ],
+        },
+      ],
       message: 'ok',
       success: true,
     });
 
     await patchSpfModule('proj-1', 'mod-1', {alias: 'Decoder'});
-    const result = await fetchSpfModuleProperties('proj-1', 'mod-1');
-    await patchSpfModuleProperties('proj-1', 'mod-1', {properties: []});
+    const result = await fetchSpfModuleProperties('proj-1', ['mod-1']);
 
     expect(result.data).toEqual([propertyFixture]);
     expect(mockPatch).toHaveBeenCalledWith(
@@ -148,11 +223,7 @@ describe('properties API clients', () => {
       {alias: 'Decoder'},
     );
     expect(mockGet).toHaveBeenCalledWith(
-      '/projects/proj-1/spf-modules/mod-1/properties',
-    );
-    expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/spf-modules/mod-1/properties',
-      {properties: []},
+      '/projects/proj-1/spf-modules?systemId=mod-1&include=properties',
     );
   });
 

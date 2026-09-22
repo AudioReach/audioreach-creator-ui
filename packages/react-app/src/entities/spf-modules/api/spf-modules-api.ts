@@ -4,18 +4,18 @@
  */
 
 import type {SpfModuleDto} from '~entities/usecases/model/usecase-component.dto';
-import {type ApiResult, httpClient} from '~shared/api';
-import type {
-  PropertiesResponseDto,
-  PropertyCollectionRequestDto,
-  PropertyDto,
-} from '~shared/lib/property.dto';
-import {unwrapPropertiesResponse} from '~shared/lib/property-api';
+import {
+  type ApiResult,
+  createCommaSeparatedQueryParam,
+  httpClient,
+} from '~shared/api';
+import type {PropertyDto} from '~shared/lib/property.dto';
 
 import type {
   CreateSpfModuleRequestDto,
   PatchSpfModuleRequestDto,
   RemoveSpfModuleResponseDto,
+  SpfModuleResponseDto,
 } from '../model/spf-module-crud.dto';
 
 /**
@@ -68,21 +68,21 @@ export async function patchSpfModule(
 
 export async function fetchSpfModuleProperties(
   projectId: string,
-  moduleSystemId: string,
+  moduleSystemIds: string[],
 ): Promise<ApiResult<PropertyDto[]>> {
-  const result = await httpClient.get<PropertiesResponseDto>(
-    `/projects/${projectId}/spf-modules/${moduleSystemId}/properties`,
+  const systemIdParam = createCommaSeparatedQueryParam(
+    'systemId',
+    moduleSystemIds,
   );
-  return unwrapPropertiesResponse(result);
-}
-
-export async function patchSpfModuleProperties(
-  projectId: string,
-  moduleSystemId: string,
-  request: PropertyCollectionRequestDto,
-): Promise<ApiResult<PropertyDto[]>> {
-  return httpClient.patch<PropertyDto[]>(
-    `/projects/${projectId}/spf-modules/${moduleSystemId}/properties`,
-    request,
+  const params = [systemIdParam, 'include=properties']
+    .filter(Boolean)
+    .join('&');
+  const result = await httpClient.get<SpfModuleResponseDto[]>(
+    `/projects/${projectId}/spf-modules?${params}`,
   );
+  const {data, ...rest} = result;
+  return {
+    ...rest,
+    data: data?.flatMap((module) => module.properties ?? []),
+  };
 }

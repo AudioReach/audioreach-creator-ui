@@ -8,13 +8,18 @@ import type {
   SubgraphPairResponseDto,
   SubgraphResponseDto,
 } from '~entities/subgraph-definitions/model/subgraph-response.dto';
-import {type ApiResult, httpClient} from '~shared/api';
+import {
+  type ApiResult,
+  createCommaSeparatedQueryParam,
+  httpClient,
+} from '~shared/api';
 
 import type {
   ComponentCollectionDto,
   ControlLinkDto,
   CreateControlLinkRequest,
   CreateDataLinkRequest,
+  CreateDataLinkWithSubsystemsRequest,
   DataLinkDto,
   LinkOperationResult,
   ControlLinkWithUsecasesDto,
@@ -81,7 +86,7 @@ export async function getUsecaseComponentsFilteredBySubsystem(
   systemIds: string[],
 ): Promise<ApiResult<ComponentCollectionDto>> {
   return httpClient.post<ComponentCollectionDto>(
-    `/projects/${projectId}/usecases/components/filtered-by-subsystem`,
+    `/projects/${projectId}/usecases/components/query-with-subsystems`,
     {systemIds},
   );
 }
@@ -130,9 +135,10 @@ export async function getSubgraphsByIds(
   projectId: string,
   systemIds: string[],
 ): Promise<ApiResult<SubgraphResponseDto[]>> {
-  return httpClient.post<SubgraphResponseDto[]>(
-    `/projects/${projectId}/subgraphs/query`,
-    {systemIds},
+  const params = createCommaSeparatedQueryParam('systemId', systemIds);
+  const query = params ? `?${params}` : '';
+  return httpClient.get<SubgraphResponseDto[]>(
+    `/projects/${projectId}/subgraphs${query}`,
   );
 }
 
@@ -250,7 +256,7 @@ export async function createDataLink(
  */
 export async function createDataLinkWithSubsystems(
   projectId: string,
-  request: CreateDataLinkRequest,
+  request: CreateDataLinkWithSubsystemsRequest,
 ): Promise<LinkOperationResult> {
   return httpClient.post<ComponentCollectionDto>(
     `/projects/${projectId}/data-links/with-subsystems`,
@@ -332,8 +338,9 @@ export async function getModulesBySystemIds(
   projectId: string,
   systemIds: string[],
 ): Promise<ApiResult<SpfModuleDto[]>> {
-  return httpClient.post<SpfModuleDto[]>(
-    `/projects/${projectId}/spf-modules/query`,
-    {systemIds},
+  const params = createCommaSeparatedQueryParam('systemId', systemIds);
+  const query = params ? `?${params}` : '';
+  return httpClient.get<SpfModuleDto[]>(
+    `/projects/${projectId}/spf-modules${query}`,
   );
 }
