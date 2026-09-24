@@ -19,14 +19,7 @@ export type OpenFileInput = {
   readonly workspacePath: string;
 };
 
-type UploadResponse = {
-  readonly data?: unknown;
-  readonly errors?: string[];
-  readonly message?: string;
-  readonly success?: boolean;
-};
-
-function isUploadResponse(value: unknown): value is UploadResponse {
+function isUploadResponse(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
@@ -61,8 +54,9 @@ export function parseUploadResponse(
   body: unknown,
 ): OpenFileResult {
   const uploadBody = isUploadResponse(body) ? body : undefined;
-  const successful =
-    status >= 200 && status < 300 && uploadBody?.success === true;
+  // New ApiResult format: success is indicated by 2xx status and presence of data
+  // Old format had explicit success field, but backend now uses HTTP status codes
+  const successful = status >= 200 && status < 300 && uploadBody?.data;
 
   if (!successful) {
     return {
