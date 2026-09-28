@@ -4,11 +4,15 @@
  */
 
 export function usecaseSelectionsMatch(
-  first: readonly string[],
-  second: readonly string[],
+  firstSystemIds: readonly string[],
+  secondSystemIds: readonly string[],
 ): boolean {
-  return (
-    first.length === second.length &&
-    first.every((usecase, index) => usecase === second[index])
-  );
+  const firstIds = new Set(firstSystemIds);
+  const secondIds = new Set(secondSystemIds);
+
+  if (firstIds.size !== secondIds.size) {
+    return false;
+  }
+
+  return [...firstIds].every((systemId) => secondIds.has(systemId));
 }

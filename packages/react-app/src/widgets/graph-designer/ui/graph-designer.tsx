@@ -304,16 +304,27 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const previousSelectedUsecasesRef = useRef(selectedUsecases);
 
   useEffect(() => {
+    // Compare previous and latest usecase selections by system ID.
+    // Only a change in system IDs should reset the selected subsystem.
+    const previousSelectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
+      previousSelectedUsecasesRef.current,
+      usecaseData,
+    );
+    const selectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
+      selectedUsecases,
+      usecaseData,
+    );
+
     if (
       !usecaseSelectionsMatch(
-        previousSelectedUsecasesRef.current,
-        selectedUsecases,
+        previousSelectedUsecaseSystemIds,
+        selectedUsecaseSystemIds,
       )
     ) {
       clearActiveSubsystem();
-      previousSelectedUsecasesRef.current = selectedUsecases;
     }
-  }, [clearActiveSubsystem, selectedUsecases]);
+    previousSelectedUsecasesRef.current = selectedUsecases;
+  }, [clearActiveSubsystem, selectedUsecases, usecaseData]);
 
   // Applies expandSubgraphs to the current level; overlay only on checkbox click.
   useEffect(() => {
