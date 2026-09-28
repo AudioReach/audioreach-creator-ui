@@ -265,6 +265,7 @@ export function buildLevelViewFromGraphData(
         edgeKind: EDGE_KIND.DATA,
         id: c.systemId,
         isDangling: isInterUsecaseLink(c.linkType),
+        ...(c.isEcLink === undefined ? {} : {isEcLink: c.isEcLink}),
         meta: {systemId: c.systemId},
         sourceNodeId: c.sourceSystemId,
         sourcePortId: c.sourcePortSystemId,

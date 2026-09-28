@@ -196,4 +196,30 @@ describe('applyCollapses', () => {
       }),
     );
   });
+
+  it('preserves dangling state on collapsed data and control links', () => {
+    const level = baseLevelWithControlLink();
+    level.dataLinks![1].isDangling = true;
+    level.controlLinks![0].isDangling = true;
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.proxyDataLinks?.[0]).toEqual(
+      expect.objectContaining({isDangling: true}),
+    );
+    expect(out.proxyControlLinks?.[0]).toEqual(
+      expect.objectContaining({isDangling: true}),
+    );
+  });
+
+  it('preserves EC state on collapsed data links', () => {
+    const level = baseLevel();
+    level.dataLinks![1].isEcLink = true;
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.proxyDataLinks?.[0]).toEqual(
+      expect.objectContaining({isEcLink: true}),
+    );
+  });
 });

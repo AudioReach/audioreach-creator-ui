@@ -69,6 +69,7 @@ export interface Connection {
   destinationPortSystemId: string;
   destinationSystemId: string;
   diffState?: DiffState;
+  isEcLink?: boolean;
   linkKind: 'control' | 'data';
   linkType: LinkType;
   sourcePortSystemId: string;
@@ -432,9 +433,13 @@ export function toConnection(
   link: ControlLinkDto | DataLinkDto,
   linkKind: 'control' | 'data',
 ): Connection {
+  const isEcLink =
+    linkKind === 'data' && link.linkType === 'EC' ? true : undefined;
+
   return {
     destinationPortSystemId: link.destinationPortSystemId,
     destinationSystemId: link.destinationSystemId,
+    ...(isEcLink === undefined ? {} : {isEcLink}),
     linkKind,
     linkType: link.linkType,
     sourcePortSystemId: link.sourcePortSystemId,

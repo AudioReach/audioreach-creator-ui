@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+jest.mock('~shared/controls/global-toaster', () => ({
+  showToast: jest.fn(),
+}));
+
 import {createVisualizerStore} from '~features/usecase-visualizer/model/usecase-visualizer-store';
 
 describe('visualizer connection store', () => {

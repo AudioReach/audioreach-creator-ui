@@ -84,6 +84,26 @@ describe('DataLinkEdge', () => {
     expect(path.style.stroke).toContain('--color-border-neutral-10');
   });
 
+  it('uses the success stroke for dangling links', () => {
+    const {container} = renderEdge(
+      <DataLinkEdge
+        {...makeEdgeProps({data: {isDangling: true}, id: 'd1'})}
+      />,
+    );
+    expect(findEdgePath(container).style.stroke).toContain(
+      '--color-border-support-success',
+    );
+  });
+
+  it('uses the purple stroke for EC links', () => {
+    const {container} = renderEdge(
+      <DataLinkEdge {...makeEdgeProps({data: {isEcLink: true}, id: 'd1'})} />,
+    );
+    expect(findEdgePath(container).style.stroke).toContain(
+      '--color-category-purple-strong',
+    );
+  });
+
   it('uses stroke width 3 and selected stroke when selected', () => {
     const {container} = renderEdge(
       <DataLinkEdge {...makeEdgeProps({id: 'd1', selected: true})} />,
@@ -147,6 +167,17 @@ describe('ControlLinkEdge', () => {
     );
     const path = findEdgePath(container);
     expect(path.style.strokeWidth).toBe('2');
+  });
+
+  it('uses the success stroke for dangling links', () => {
+    const {container} = renderEdge(
+      <ControlLinkEdge
+        {...makeEdgeProps({data: {isDangling: true}, id: 'c1'})}
+      />,
+    );
+    expect(findEdgePath(container).style.stroke).toContain(
+      '--color-border-support-success',
+    );
   });
 
   it('uses stroke width 3 and selected stroke when selected', () => {
