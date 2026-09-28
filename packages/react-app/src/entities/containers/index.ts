@@ -5,10 +5,12 @@
 
 export {
   fetchContainerProperties,
-  patchContainer,
+  getContainersBySystemIds,
   patchContainerProperty,
+  updateContainerId,
 } from './api/containers-api';
 export type {
-  PatchContainerRequestDto,
-  PatchContainerResponseDto,
+  ContainerResponseDto,
+  UpdateSubgraphContainerIdRequestDto,
+  UpdateSubgraphContainerIdResponseDto,
 } from './api/containers-api';

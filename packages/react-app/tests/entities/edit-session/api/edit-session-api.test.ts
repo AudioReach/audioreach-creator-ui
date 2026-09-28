@@ -33,10 +33,9 @@ describe('edit-session-api', () => {
   describe('createUsecases', () => {
     it('should call httpClient.post with correct URL and body', async () => {
       const mockResponse: CreateUsecasesResponseDto = {
-        created: [],
-        deleted: [],
+        changes: [],
+        groupId: 'group-1',
         issues: [],
-        updated: [],
       };
       (httpClient.post as jest.Mock).mockResolvedValue({
         data: mockResponse,

@@ -20,15 +20,15 @@ function makeConfig(
   value: string,
   extra: Partial<ConfigElementDto> = {},
 ): ConfigElementDto {
-  return {isReadOnly: false, name, type: 'CONFIG_ELEMENT', value, ...extra};
+  return {isReadOnly: false, name, type: 'ConfigElement', value, ...extra};
 }
 
 function makeStruct(name: string, children: AnyElementDto[]): StructDto {
   return {
     isReadOnly: false,
     name,
-    structType: 'struct',
-    type: 'STRUCT',
+    structType: 'Struct',
+    type: 'Struct',
     value: children,
   };
 }
@@ -42,7 +42,7 @@ function makeArray(
     isReadOnly: false,
     name,
     template,
-    type: 'ELEMENT_TEMPLATE_ARRAY',
+    type: 'ElementTemplateArray',
     value: instances,
   };
 }
@@ -50,8 +50,8 @@ function makeArray(
 // ── patchElements ────────────────────────────────────────────────────────────
 
 describe('patchElements', () => {
-  describe('CONFIG_ELEMENT patching', () => {
-    it('updates a matching CONFIG_ELEMENT value', () => {
+  describe('ConfigElement patching', () => {
+    it('updates a matching ConfigElement value', () => {
       const elem = makeConfig('gain', '0x00000010');
       const values = new Map([['pid/gain', '0x00000020']]);
       const result = patchElements([elem], 'pid', [], values, new Map());
@@ -81,7 +81,7 @@ describe('patchElements', () => {
   });
 
   describe('STRUCT patching', () => {
-    it('updates a nested CONFIG_ELEMENT inside a STRUCT', () => {
+    it('updates a nested ConfigElement inside a Struct', () => {
       const inner = makeConfig('freq', '100');
       const struct = makeStruct('cfg', [inner]);
       const values = new Map([['pid/cfg/freq', '999']]);
@@ -90,7 +90,7 @@ describe('patchElements', () => {
       expect((patched.value[0] as ConfigElementDto).value).toBe('999');
     });
 
-    it('preserves inner CONFIG_ELEMENT identity when no value changed', () => {
+    it('preserves inner ConfigElement identity when no value changed', () => {
       const inner = makeConfig('freq', '100');
       const struct = makeStruct('cfg', [inner]);
       const result = patchElements([struct], 'pid', [], new Map(), new Map());
@@ -109,8 +109,8 @@ describe('patchElements', () => {
     });
   });
 
-  describe('ELEMENT_TEMPLATE_ARRAY patching', () => {
-    it('updates CONFIG_ELEMENT instances within an array', () => {
+  describe('ElementTemplateArray patching', () => {
+    it('updates ConfigElement instances within an array', () => {
       const inst0 = makeConfig('bandGain', '10');
       const arr = makeArray('bands', [inst0]);
       const values = new Map([['pid/bandGain', '20']]);

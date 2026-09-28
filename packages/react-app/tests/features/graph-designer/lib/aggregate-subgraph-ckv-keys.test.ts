@@ -9,9 +9,9 @@ import type {ModuleInstance} from '~features/graph-designer/model/graph-data-sli
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
@@ -21,16 +21,16 @@ function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
 function makeModule(ckvs: CkvDto[]): ModuleInstance {
   return {
     ckvs,
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
     moduleId: 'mod-1',
-    moduleInstanceId: 'inst-1',
     moduleName: 'Module',
     moduleType: '',
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: 'sg-1',
+    subgraphSystemId: 'sg-1',
+    systemId: 'inst-1',
   };
 }
 
@@ -126,10 +126,10 @@ describe('aggregateSubgraphCkvKeys', () => {
 
   it('collects display labels keyed by systemId, distinct from the systemIds themselves', () => {
     const ckv: CkvDto = {
-      keyValueCollection: [
+      keyValuePairs: [
         {
-          keyInfo: {keyId: 0, keyLabel: 'Sample Rate', keySystemId: 'key-1'},
-          valueInfo: {valueId: 0, valueLabel: '48 kHz', valueSystemId: 'v1'},
+          key: {name: 'Sample Rate', naturalId: 0, systemId: 'key-1'},
+          value: {name: '48 kHz', naturalId: 0, systemId: 'v1'},
         },
       ],
       supportedParameters: [],

@@ -68,13 +68,13 @@ describe('selection groups', () => {
   it('builds supported property groups in the required order', () => {
     const graphData = makeGraphData();
     graphData.connections.push({
-      connectionId: 'dl-subsystem',
-      connectionType: EDGE_KIND.DATA,
-      fromModuleId: 'ss-1',
-      fromPortId: 'ss-out-1',
-      isDangling: false,
-      toModuleId: 'mod-2',
-      toPortId: 'in-2',
+      destinationPortSystemId: 'in-2',
+      destinationSystemId: 'mod-2',
+      linkKind: EDGE_KIND.DATA,
+      linkType: 'NORMAL',
+      sourcePortSystemId: 'ss-out-1',
+      sourceSystemId: 'ss-1',
+      systemId: 'dl-subsystem',
     });
 
     const groups = buildPropertyGroups({

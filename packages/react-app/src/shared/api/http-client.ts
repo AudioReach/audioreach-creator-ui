@@ -7,6 +7,7 @@ import {logger} from '~shared/lib/logger';
 import {useGlobalStore} from '~shared/store/global-store';
 
 import type {ApiResult} from './api-response.types';
+import {createTransportIssue, getIssueMessage} from './api-result-utils';
 import {processApiResponse} from './utils';
 
 /**
@@ -235,17 +236,14 @@ export class HttpClient {
         });
         clearTimeout(timer);
 
-        // Retry only on 5xx server errors
         const isServerError = !response.ok && response.status >= 500;
 
         const result = await processApiResponse<T>(response);
 
-        logger.verbose(`[request] parsing response result ${result.success}`);
+        logger.verbose(`[request] response ok ${response.ok}`);
         logger.verbose(`[request] Server error ${isServerError}`);
 
-        // Update connection state based on response
-        if (result.success) {
-          // Successful response - backend is available
+        if (response.ok) {
           const store = useGlobalStore.getState();
           if (!store.isConnected) {
             store.markAvailable();
@@ -254,14 +252,13 @@ export class HttpClient {
             store.resetFailures();
           }
         } else if (isServerError) {
-          // Server error (5xx) - mark backend as unavailable
-          // This will also reset registration automatically
           const store = useGlobalStore.getState();
-          store.markUnavailable(result.message || 'Server error');
-          store.incrementFail(result.message || 'Server error');
+          const message = getIssueMessage(result, 'Server error');
+          store.markUnavailable(message);
+          store.incrementFail(message);
         }
 
-        if (!result.success && isServerError && attempt < retries) {
+        if (isServerError && attempt < retries) {
           const delay = backoffDelay(
             attempt,
             options.retryBaseDelayMs ?? this.retryBaseDelayMs,
@@ -273,7 +270,10 @@ export class HttpClient {
         return result;
       } catch (error) {
         clearTimeout(timer);
-        const isAbort = (error as any)?.name === 'AbortError';
+        const isAbort =
+          error instanceof DOMException
+            ? error.name === 'AbortError'
+            : error instanceof Error && error.name === 'AbortError';
         const shouldRetry = !isAbort && attempt < retries;
 
         if (shouldRetry) {
@@ -286,8 +286,6 @@ export class HttpClient {
           continue;
         }
 
-        // Network error or timeout - mark backend as unavailable
-        // This will also reset registration automatically
         const message = isAbort
           ? 'Request timed out'
           : `Network error: ${String(error)}`;
@@ -295,17 +293,22 @@ export class HttpClient {
         store.markUnavailable(message);
         store.incrementFail(message);
 
-        return {errors: [message], message, success: false};
+        return {
+          issues: [
+            createTransportIssue(isAbort ? 'TIMEOUT' : 'NETWORK', message),
+          ],
+        };
       }
     }
 
-    // All retries exhausted - mark backend as unavailable
     const message = 'Request failed after maximum retries';
     const store = useGlobalStore.getState();
     store.markUnavailable(message);
     store.incrementFail(message);
 
-    return {message, success: false};
+    return {
+      issues: [createTransportIssue('NETWORK', message)],
+    };
   }
 
   private composeRequestHeaders(

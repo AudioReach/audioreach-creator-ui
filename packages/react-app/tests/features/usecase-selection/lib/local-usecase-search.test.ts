@@ -11,10 +11,10 @@ import {filterUsecasesLocally} from '~features/usecase-selection/lib/local-useca
 /** Leaf item: Speaker_Mic — key "DeviceTX", value "Speaker_Mic" */
 const ITEM_SPEAKER: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 1, keyLabel: 'DeviceTX', keySystemId: 'k1'},
-      valueInfo: {valueId: 1, valueLabel: 'Speaker_Mic', valueSystemId: 'v1'},
+      key: {name: 'DeviceTX', naturalId: 1, systemId: 'k1'},
+      value: {name: 'Speaker_Mic', naturalId: 1, systemId: 'v1'},
     },
   ],
   name: 'Speaker_Mic',
@@ -24,13 +24,13 @@ const ITEM_SPEAKER: any = {
 /** Leaf item: HFP_Rx_Playback — key "StreamRX", value "HFP_Rx_Playback" */
 const ITEM_HFP: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 2, keyLabel: 'StreamRX', keySystemId: 'k2'},
-      valueInfo: {
-        valueId: 2,
-        valueLabel: 'HFP_Rx_Playback',
-        valueSystemId: 'v2',
+      key: {name: 'StreamRX', naturalId: 2, systemId: 'k2'},
+      value: {
+        name: 'HFP_Rx_Playback',
+        naturalId: 2,
+        systemId: 'v2',
       },
     },
   ],
@@ -41,10 +41,10 @@ const ITEM_HFP: any = {
 /** Leaf item: BT_SCO — key "BtProfile", value "BT_SCO" */
 const ITEM_BT_SCO: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 3, keyLabel: 'BtProfile', keySystemId: 'k3'},
-      valueInfo: {valueId: 3, valueLabel: 'BT_SCO', valueSystemId: 'v3'},
+      key: {name: 'BtProfile', naturalId: 3, systemId: 'k3'},
+      value: {name: 'BT_SCO', naturalId: 3, systemId: 'v3'},
     },
   ],
   name: 'BT_SCO',
@@ -54,14 +54,14 @@ const ITEM_BT_SCO: any = {
 /** Leaf item with two key-value pairs (AND across both must be satisfiable) */
 const ITEM_MULTI_KV: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 4, keyLabel: 'DeviceRX', keySystemId: 'k4'},
-      valueInfo: {valueId: 4, valueLabel: 'BT_Rx', valueSystemId: 'v4'},
+      key: {name: 'DeviceRX', naturalId: 4, systemId: 'k4'},
+      value: {name: 'BT_Rx', naturalId: 4, systemId: 'v4'},
     },
     {
-      keyInfo: {keyId: 5, keyLabel: 'BtProfile', keySystemId: 'k5'},
-      valueInfo: {valueId: 5, valueLabel: 'SCO', valueSystemId: 'v5'},
+      key: {name: 'BtProfile', naturalId: 5, systemId: 'k5'},
+      value: {name: 'SCO', naturalId: 5, systemId: 'v5'},
     },
   ],
   name: 'BT_Rx • SCO',
@@ -70,14 +70,14 @@ const ITEM_MULTI_KV: any = {
 
 /**
  * Leaf item whose custom `name` does not appear anywhere in its
- * keyValueCollection labels — isolates matching on `name` alone.
+ * keyValuePairs labels — isolates matching on `name` alone.
  */
 const ITEM_CUSTOM_NAME: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 8, keyLabel: 'DeviceRX', keySystemId: 'k8'},
-      valueInfo: {valueId: 8, valueLabel: 'BT_Rx', valueSystemId: 'v8'},
+      key: {name: 'DeviceRX', naturalId: 8, systemId: 'k8'},
+      value: {name: 'BT_Rx', naturalId: 8, systemId: 'v8'},
     },
   ],
   name: 'My Custom Usecase',
@@ -101,13 +101,13 @@ const groupedCategories: any[] = [
       {
         children: [ITEM_SPEAKER, ITEM_HFP],
         expanded: true,
-        keyValueCollection: [
+        keyValuePairs: [
           {
-            keyInfo: {keyId: 6, keyLabel: 'StreamPP_RX', keySystemId: 'k6'},
-            valueInfo: {
-              valueId: 6,
-              valueLabel: 'StreamPP_RX',
-              valueSystemId: 'v6',
+            key: {name: 'StreamPP_RX', naturalId: 6, systemId: 'k6'},
+            value: {
+              name: 'StreamPP_RX',
+              naturalId: 6,
+              systemId: 'v6',
             },
           },
         ],
@@ -116,13 +116,13 @@ const groupedCategories: any[] = [
       {
         children: [ITEM_BT_SCO],
         expanded: true,
-        keyValueCollection: [
+        keyValuePairs: [
           {
-            keyInfo: {keyId: 7, keyLabel: 'StreamPP_TX', keySystemId: 'k7'},
-            valueInfo: {
-              valueId: 7,
-              valueLabel: 'StreamPP_TX',
-              valueSystemId: 'v7',
+            key: {name: 'StreamPP_TX', naturalId: 7, systemId: 'k7'},
+            value: {
+              name: 'StreamPP_TX',
+              naturalId: 7,
+              systemId: 'v7',
             },
           },
         ],
@@ -148,13 +148,13 @@ describe('filterUsecasesLocally — empty / whitespace search term', () => {
 });
 
 describe('filterUsecasesLocally — single-term substring (contains) match', () => {
-  it('matches a full valueLabel', () => {
+  it('matches a full value name', () => {
     const result = filterUsecasesLocally(flatCategories, 'Speaker_Mic');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
   });
 
-  it('matches a full keyLabel', () => {
+  it('matches a full key name', () => {
     const result = filterUsecasesLocally(flatCategories, 'DeviceTX');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
@@ -166,25 +166,25 @@ describe('filterUsecasesLocally — single-term substring (contains) match', () 
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
   });
 
-  it('matches a partial/substring prefix of a valueLabel', () => {
+  it('matches a partial/substring prefix of a value name', () => {
     const result = filterUsecasesLocally(flatCategories, 'Speaker');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
   });
 
-  it('matches a partial/substring suffix of a valueLabel', () => {
+  it('matches a partial/substring suffix of a value name', () => {
     const result = filterUsecasesLocally(flatCategories, 'Mic');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
   });
 
-  it('matches a partial/substring fragment in the middle of a valueLabel', () => {
+  it('matches a partial/substring fragment in the middle of a value name', () => {
     const result = filterUsecasesLocally(flatCategories, 'eaker_Mi');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
   });
 
-  it('matches a partial/substring fragment of a keyLabel', () => {
+  it('matches a partial/substring fragment of a key name', () => {
     const result = filterUsecasesLocally(flatCategories, 'Device');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
@@ -217,7 +217,7 @@ describe('filterUsecasesLocally — matching on item.name', () => {
 
   it('still matches via kv labels when the term is not found in name', () => {
     // ITEM_SPEAKER.name is 'Speaker_Mic', which does not contain 'DeviceTX' —
-    // falls through to the keyValueCollection check.
+    // falls through to the keyValuePairs check.
     const result = filterUsecasesLocally(flatCategories, 'DeviceTX');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual([ITEM_SPEAKER]);
@@ -256,10 +256,7 @@ describe('filterUsecasesLocally — AND (+) operator', () => {
 
 describe('filterUsecasesLocally — OR (|) operator', () => {
   it('matches items satisfying either term', () => {
-    const result = filterUsecasesLocally(
-      flatCategories,
-      'Speaker_Mic|BT_SCO',
-    );
+    const result = filterUsecasesLocally(flatCategories, 'Speaker_Mic|BT_SCO');
     expect(result).toHaveLength(1);
     expect(result[0].items).toEqual(
       expect.arrayContaining([ITEM_SPEAKER, ITEM_BT_SCO]),

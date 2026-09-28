@@ -6,6 +6,7 @@
 jest.mock('~shared/api/http-client', () => ({
   httpClient: {
     delete: jest.fn(),
+    get: jest.fn(),
     patch: jest.fn(),
     post: jest.fn(),
   },
@@ -14,12 +15,14 @@ jest.mock('~shared/api/http-client', () => ({
 import {
   createSpfModule,
   deleteSpfModule,
+  fetchSpfModuleProperties,
   patchSpfModule,
 } from '~entities/spf-modules/api/spf-modules-api';
 import type {RemoveSpfModuleResponseDto} from '~entities/spf-modules/model/spf-module-crud.dto';
 import type {SpfModuleDto} from '~entities/usecases/model/usecase-component.dto';
 import {httpClient} from '~shared/api/http-client';
 
+const mockGet = jest.mocked(httpClient.get);
 const mockPost = jest.mocked(httpClient.post);
 const mockDelete = jest.mocked(httpClient.delete);
 const mockPatch = jest.mocked(httpClient.patch);
@@ -75,8 +78,12 @@ describe('spf-modules-api — module CRUD', () => {
           containers: [],
           controlLinks: [],
           dataLinks: [],
-          spfModules: ['sys-mod-1'],
+          spfModules: [{systemId: 'sys-mod-1'}],
           subgraphs: [],
+        },
+        updated: {
+          containers: [],
+          usecases: [],
         },
       };
       mockDelete.mockResolvedValue({
@@ -130,6 +137,72 @@ describe('spf-modules-api — module CRUD', () => {
       );
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockModule);
+    });
+  });
+
+  describe('fetchSpfModuleProperties', () => {
+    it('GETs properties with comma-separated module system IDs', async () => {
+      mockGet.mockResolvedValue({
+        data: [
+          {
+            ckvs: [
+              {
+                keyValuePairs: [],
+                supportedParameters: [],
+                systemId: 'ckv-1',
+              },
+            ],
+            containerSystemId: 'cnt-1',
+            controlPorts: [],
+            dataPorts: [],
+            maxControlPortsSupported: 0,
+            maxInputPortsSupported: 0,
+            maxOutputPortsSupported: 0,
+            moduleDefinitionSystemId: 'mod-def-1',
+            name: 'Decoder',
+            naturalId: 1,
+            parentSystemId: 'parent-1',
+            properties: [
+              {
+                elements: [],
+                hasDefinition: true,
+                naturalId: 1,
+                propertyName: 'Gain',
+                systemId: 'prop-1',
+              },
+            ],
+            relatedEndPointLinks: [],
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
+            tags: [
+              {
+                naturalId: 1,
+                systemId: 'tag-1',
+                tagName: 'Tag 1',
+                tkvs: [],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await fetchSpfModuleProperties('proj-1', [
+        'mod-1',
+        'mod-2',
+      ]);
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/spf-modules?systemId=mod-1,mod-2&include=properties',
+      );
+      expect(result.data).toEqual([
+        {
+          elements: [],
+          hasDefinition: true,
+          naturalId: 1,
+          propertyName: 'Gain',
+          systemId: 'prop-1',
+        },
+      ]);
     });
   });
 });

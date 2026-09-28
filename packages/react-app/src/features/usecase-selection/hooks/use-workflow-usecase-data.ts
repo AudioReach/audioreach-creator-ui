@@ -10,6 +10,7 @@ import {
   mapSubsystemResultsToCategories,
   type UsecaseCategory,
 } from '~entities/usecases';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {
   WORKFLOW_LEVELS,
   WORKFLOW_TYPES,
@@ -57,7 +58,7 @@ export function useWorkflowUsecaseData(
         if (cancelled) {
           return;
         }
-        if (result.success && result.data) {
+        if (!hasBlockingIssues(result) && result.data) {
           const subsystemCategories = mapSubsystemResultsToCategories(
             result.data,
           );
@@ -90,7 +91,7 @@ export function useWorkflowUsecaseData(
           logger.error('Failed to fetch subsystem data', {
             action: 'fetch_subsystem_data',
             component: 'useWorkflowUsecaseData',
-            error: result.message,
+            error: getIssueMessage(result, 'Failed to fetch subsystem data'),
             projectId: projectGroupId,
           });
           setResolvedData(baseUsecaseData);

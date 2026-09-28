@@ -4,15 +4,13 @@
  */
 
 import type {UsecaseDto} from '~entities/usecases';
-import type {ConnectionType} from '~entities/usecases/model/usecase-component.dto';
 
 export type ConnectionFilter = 'all' | 'sg' | 'dangling';
 
 export interface ConnectionRow {
-  connectionType: ConnectionType;
-  isDangling: boolean;
-  moduleId: string;
+  isInterUsecase: boolean;
   moduleName: string;
+  moduleNaturalId: string;
   otherModuleSystemId: string;
   otherPortId: string;
   subgraphSystemId: string;

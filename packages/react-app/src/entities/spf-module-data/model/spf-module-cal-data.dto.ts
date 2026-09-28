@@ -4,26 +4,27 @@
  */
 
 import type {
-  ChangeInfoDto,
   KeyValueDto,
   KeyValueInfo,
   ParameterDetailDto,
   ParamInfo,
 } from './spf-module-common.dto';
 
-export interface CalDataDto {
-  changeInfo: ChangeInfoDto;
+export interface CkvCalDataResponseDto {
   Ckv: KeyValueDto[];
   parameters: ParameterDetailDto[];
   systemId: string;
 }
 
+export type CalDataDto = CkvCalDataResponseDto;
+
 export interface CkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }
 
 export interface UpdateSpfModuleCalDataRequest {
-  data: ParameterDetailDto[];
+  parameters: ParameterDetailDto[];
+  uiPersistence?: string;
 }

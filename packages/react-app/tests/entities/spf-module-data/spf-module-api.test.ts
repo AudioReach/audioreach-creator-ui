@@ -15,11 +15,13 @@ jest.mock('~shared/api', () => ({
   },
 }));
 
-import {putCalData} from '~entities/spf-module-data';
+import {putCalData, putTagData} from '~entities/spf-module-data';
 
 const PROJECT_ID = 'proj-1';
 const MODULE_ID = 'mod-1';
 const CKV_SYSTEM_ID = 'ckv-1';
+const TAG_SYSTEM_ID = 'tag-1';
+const TKV_SYSTEM_ID = 'tkv-1';
 
 describe('spf-module-api — putCalData', () => {
   beforeEach(() => {
@@ -28,34 +30,57 @@ describe('spf-module-api — putCalData', () => {
   });
 
   it('appends a param-system-ids query string when paramSystemIds is provided', async () => {
-    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {data: []}, [
+    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {parameters: []}, [
       'param-1',
       'param-2',
     ]);
 
     expect(mockPut).toHaveBeenCalledWith(
       `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/cal-data/${CKV_SYSTEM_ID}?param-system-ids=param-1,param-2`,
-      {data: []},
+      {parameters: []},
       {retries: 0},
     );
   });
 
   it('omits the query string when paramSystemIds is not provided', async () => {
-    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {data: []});
+    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {parameters: []});
 
     expect(mockPut).toHaveBeenCalledWith(
       `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/cal-data/${CKV_SYSTEM_ID}`,
-      {data: []},
+      {parameters: []},
       {retries: 0},
     );
   });
 
   it('omits the query string when paramSystemIds is an empty array', async () => {
-    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {data: []}, []);
+    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {parameters: []}, []);
 
     expect(mockPut).toHaveBeenCalledWith(
       `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/cal-data/${CKV_SYSTEM_ID}`,
-      {data: []},
+      {parameters: []},
+      {retries: 0},
+    );
+  });
+});
+
+describe('spf-module-api — putTagData', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPut.mockResolvedValue({data: undefined, message: 'OK', success: true});
+  });
+
+  it('PUTs Swagger parameters without an absent uiPersistence value', async () => {
+    await putTagData(
+      PROJECT_ID,
+      MODULE_ID,
+      TAG_SYSTEM_ID,
+      TKV_SYSTEM_ID,
+      {parameters: []},
+    );
+
+    expect(mockPut).toHaveBeenCalledWith(
+      `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/tag-data/${TAG_SYSTEM_ID}/${TKV_SYSTEM_ID}`,
+      {parameters: []},
       {retries: 0},
     );
   });

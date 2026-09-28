@@ -22,6 +22,7 @@ import {
   type UsecaseItem,
 } from '~entities/usecases';
 import {deleteUsecases} from '~entities/usecases/api/usecases-api';
+import {hasBlockingIssues} from '~shared/api';
 import {ArcCombobox} from '~shared/controls/arc-combobox';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
@@ -458,7 +459,7 @@ export const UsecaseSelectionControl: React.FC<
       .filter((cat) => cat.items.length > 0);
 
     try {
-      if ((await deleteUsecases(projectId, systemIds)).success) {
+      if (!hasBlockingIssues(await deleteUsecases(projectId, systemIds))) {
         setLocalUsecaseData(nextData);
         onSelectedUsecasesChange([]);
         removeFromRecentlySelected(projectId, [...selectedSet]);

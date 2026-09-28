@@ -37,7 +37,7 @@ function makeItem(
 ): TreeViewItem {
   return {
     elements: [
-      {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value: '10'},
+      {isReadOnly: false, name: 'gain', type: 'ConfigElement', value: '10'},
     ],
     id,
     name: `Param ${id}`,
@@ -100,6 +100,31 @@ describe('initialUiState restoration', () => {
     render(<GenericTreeView data={makeData()} title="Test" />);
     // In modern mode, the Toolbar shows a "Legacy" button
     expect(screen.getByText('Legacy')).toBeInTheDocument();
+  });
+
+  it('renders when array child data is missing', () => {
+    const arrayWithoutValue = {
+      isReadOnly: false,
+      name: 'Dynamic Array',
+      template: [
+        {
+          isReadOnly: false,
+          name: 'gain',
+          type: 'ConfigElement',
+          value: '10',
+        },
+      ],
+      type: 'ElementTemplateArray',
+    } as AnyElementDto;
+
+    render(
+      <GenericTreeView
+        data={makeData([makeItem('100', {elements: [arrayWithoutValue]})])}
+        title="Test"
+      />,
+    );
+
+    expect(screen.getByText('Dynamic Array (0 instances)')).toBeInTheDocument();
   });
 
   it('initialUiState with no searchText leaves the search bar empty', () => {
@@ -379,7 +404,7 @@ describe('reconcile dirty/set state on Set success', () => {
   function makeItemWithGain(id: string, value: string): TreeViewItem {
     return makeItem(id, {
       elements: [
-        {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value},
+        {isReadOnly: false, name: 'gain', type: 'ConfigElement', value},
       ],
     });
   }
@@ -391,11 +416,11 @@ describe('reconcile dirty/set state on Set success', () => {
   ): TreeViewItem {
     return makeItem(id, {
       elements: [
-        {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value: gain},
+        {isReadOnly: false, name: 'gain', type: 'ConfigElement', value: gain},
         {
           isReadOnly: false,
           name: 'volume',
-          type: 'CONFIG_ELEMENT',
+          type: 'ConfigElement',
           value: volume,
         },
       ],
@@ -550,7 +575,7 @@ describe('reconcile dirty/set state on Set success', () => {
     const instance: AnyElementDto = {
       isReadOnly: false,
       name: 'val',
-      type: 'CONFIG_ELEMENT',
+      type: 'ConfigElement',
       value: '0',
     };
     const item1 = makeItem('100', {
@@ -558,7 +583,7 @@ describe('reconcile dirty/set state on Set success', () => {
         {
           isReadOnly: false,
           name: 'items',
-          type: 'ELEMENT_TEMPLATE_ARRAY',
+          type: 'ElementTemplateArray',
           value: [instance, instance],
         },
       ],
@@ -579,7 +604,7 @@ describe('reconcile dirty/set state on Set success', () => {
         {
           isReadOnly: false,
           name: 'items',
-          type: 'ELEMENT_TEMPLATE_ARRAY',
+          type: 'ElementTemplateArray',
           value: [instance, instance, instance],
         },
       ],
@@ -771,7 +796,7 @@ describe('handleValueChange emits onUiStateChange', () => {
   function makeItemWithGain(id: string, value = '10'): TreeViewItem {
     return makeItem(id, {
       elements: [
-        {isReadOnly: false, name: 'gain', type: 'CONFIG_ELEMENT', value},
+        {isReadOnly: false, name: 'gain', type: 'ConfigElement', value},
       ],
     });
   }
@@ -831,14 +856,14 @@ describe('handleValueChange emits onUiStateChange', () => {
 });
 
 describe('arrayCounts emission from length-controller edit', () => {
-  // Build a TreeViewItem with a CONFIG_ELEMENT 'count' (the length controller)
-  // and an ELEMENT_TEMPLATE_ARRAY 'filters' whose lengthFormula references 'count'.
+  // Build a TreeViewItem with a ConfigElement 'count' (the length controller)
+  // and an ElementTemplateArray 'filters' whose lengthFormula references 'count'.
   // The array starts with 2 instances so that setting count to 3 is a real change.
   function makeItemWithLengthController(id: string): TreeViewItem {
     const instance: AnyElementDto = {
       isReadOnly: false,
       name: 'val',
-      type: 'CONFIG_ELEMENT',
+      type: 'ConfigElement',
       value: '0',
     };
     return makeItem(id, {
@@ -846,7 +871,7 @@ describe('arrayCounts emission from length-controller edit', () => {
         {
           isReadOnly: false,
           name: 'count',
-          type: 'CONFIG_ELEMENT',
+          type: 'ConfigElement',
           value: '2',
         },
         {
@@ -854,7 +879,7 @@ describe('arrayCounts emission from length-controller edit', () => {
           lengthFormula: 'count',
           name: 'filters',
           template: [instance],
-          type: 'ELEMENT_TEMPLATE_ARRAY',
+          type: 'ElementTemplateArray',
           value: [instance, instance],
         },
       ],
@@ -896,7 +921,7 @@ describe('invalidPaths range validation', () => {
           max: 100,
           min: 0,
           name: 'gain',
-          type: 'CONFIG_ELEMENT',
+          type: 'ConfigElement',
           value: '50',
         },
       ],
@@ -968,7 +993,7 @@ describe('invalidPaths range validation', () => {
             max: 100,
             min: 0,
             name: 'gain',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '200',
           },
           {
@@ -976,7 +1001,7 @@ describe('invalidPaths range validation', () => {
             max: 100,
             min: 0,
             name: 'offset',
-            type: 'CONFIG_ELEMENT',
+            type: 'ConfigElement',
             value: '50',
           },
         ],
@@ -1044,7 +1069,7 @@ describe('Modified Only / Errors Only filters', () => {
           max: 100,
           min: 0,
           name: 'gain',
-          type: 'CONFIG_ELEMENT',
+          type: 'ConfigElement',
           value,
         },
       ],
@@ -1288,7 +1313,7 @@ describe('reset bumps resetKey', () => {
               {
                 isReadOnly: false,
                 name: 'gain',
-                type: 'CONFIG_ELEMENT',
+                type: 'ConfigElement',
                 value: '10',
               },
             ],

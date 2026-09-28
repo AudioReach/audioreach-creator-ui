@@ -37,7 +37,7 @@ function transformKeyDefinitionToGraphKey(
   keyDto: KeyDefinitionResponseDto,
 ): GraphKey {
   return {
-    id: keyDto.keyId,
+    id: keyDto.naturalId,
     name: keyDto.name,
     values: keyDto.values.map(transformValueDefinition),
   };

@@ -7,6 +7,7 @@ import {useCallback} from 'react';
 
 import {patchSubgraph} from '~entities/subgraphs';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow} from '~shared/controls/property-row';
 
 import {useStaticFieldSave} from '../../model/use-static-field-save';
@@ -75,8 +76,11 @@ function SubgraphPropertiesCardBody({
         name: nextName,
       });
 
-      if (!result.success) {
-        return {message: result.message, ok: false};
+      if (hasBlockingIssues(result)) {
+        return {
+          message: getIssueMessage(result, 'Failed to save subgraph'),
+          ok: false,
+        };
       }
 
       const committedName = result.data?.name ?? nextName;
@@ -109,6 +113,7 @@ function SubgraphPropertiesCardBody({
         error={schemaData.error}
         isEditing={isEditing}
         isLoading={schemaData.isLoading}
+        loadWarning={schemaData.loadWarning}
         onCommit={(dirtyItems) => void schemaData.handleCommit(dirtyItems)}
         onRetry={() => void schemaData.load()}
         title="Schema Properties"

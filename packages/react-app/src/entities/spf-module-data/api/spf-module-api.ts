@@ -13,7 +13,7 @@ import type {
   TagDataDto,
   UpdateSpfModuleTagDataRequest,
 } from '../model/spf-module-tag-data.dto';
-import type {SpfModuleDto, SystemIdsRequestDto} from '../model/spf-module.dto';
+import type {SpfModuleDto} from '../model/spf-module.dto';
 
 export async function getCalData(
   projectId: string,
@@ -79,9 +79,7 @@ export async function queryModuleIndices(
   projectId: string,
   moduleSystemId: string,
 ): Promise<ApiResult<SpfModuleDto[]>> {
-  const payload: SystemIdsRequestDto = {systemIds: [moduleSystemId]};
-  return httpClient.post<SpfModuleDto[]>(
-    `/projects/${projectId}/spf-modules/query?include=ckvs,tags`,
-    payload,
+  return httpClient.get<SpfModuleDto[]>(
+    `/projects/${projectId}/spf-modules?systemId=${moduleSystemId}&include=ckvs,tags`,
   );
 }

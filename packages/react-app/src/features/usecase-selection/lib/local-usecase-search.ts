@@ -113,8 +113,7 @@ function parseSearchExpression(tokens: string[]): SearchExpressionNode | null {
   return parseOr();
 }
 
-// Case-insensitive substring match against the item's name, or any
-// keyLabel/valueLabel if the name doesn't match.
+// Case-insensitive substring match against the item's name, or key/value names.
 function matchesUsecaseItem(item: UsecaseItem, term: string): boolean {
   const target = term.trim().toLowerCase();
   if (!target) {
@@ -123,10 +122,10 @@ function matchesUsecaseItem(item: UsecaseItem, term: string): boolean {
   if (item.name.toLowerCase().includes(target)) {
     return true;
   }
-  return item.keyValueCollection.some(
+  return item.keyValuePairs.some(
     (kv) =>
-      kv.keyInfo.keyLabel.toLowerCase().includes(target) ||
-      kv.valueInfo.valueLabel.toLowerCase().includes(target),
+      kv.key.name.toLowerCase().includes(target) ||
+      kv.value.name.toLowerCase().includes(target),
   );
 }
 

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {NameValuePairDto} from '~entities/spf-module-data';
+import type {NameValueDto} from '~entities/spf-module-data';
 
 export function findOptionName(
-  allowedValues: NameValuePairDto[],
+  allowedValues: NameValueDto[],
   currentHex: string,
 ): string {
   return (

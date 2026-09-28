@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {AnyElementDto} from '~entities/spf-module-data';
+import {
+  type AnyElementDto,
+  getArrayValueElements,
+  getStructValueElements,
+} from '~entities/spf-module-data';
 
 import type {TreeViewData} from '../model/tree-view-data';
 
@@ -22,24 +26,32 @@ export function buildMatchSets(data: TreeViewData, search: string): MatchSets {
   function walkElems(
     elems: AnyElementDto[],
     itemId: string,
-    prefix: string[],
+    prefix: Array<string | undefined>,
   ): boolean {
     let anyMatch = false;
     for (const elem of elems) {
       const name =
-        elem.type === 'CONFIG_ELEMENT' ||
-        elem.type === 'STRUCT' ||
-        elem.type === 'ELEMENT_TEMPLATE_ARRAY'
-          ? elem.name
+        elem.type === 'ConfigElement' ||
+        elem.type === 'Struct' ||
+        elem.type === 'ElementTemplateArray'
+          ? (elem.name ?? '')
           : '';
       const selfMatch = name.toLowerCase().includes(lower);
       let childMatch = false;
-      if (elem.type === 'STRUCT') {
-        childMatch = walkElems(elem.value, itemId, [...prefix, elem.name]);
-      } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
-        for (const inst of elem.value) {
-          if (inst.type === 'STRUCT') {
-            if (walkElems(inst.value, itemId, [...prefix, inst.name])) {
+      if (elem.type === 'Struct') {
+        childMatch = walkElems(getStructValueElements(elem), itemId, [
+          ...prefix,
+          elem.name,
+        ]);
+      } else if (elem.type === 'ElementTemplateArray') {
+        for (const inst of getArrayValueElements(elem)) {
+          if (inst.type === 'Struct') {
+            if (
+              walkElems(getStructValueElements(inst), itemId, [
+                ...prefix,
+                inst.name,
+              ])
+            ) {
               childMatch = true;
             }
           }

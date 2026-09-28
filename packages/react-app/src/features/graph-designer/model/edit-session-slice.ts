@@ -8,7 +8,8 @@ import type {StoreApi} from 'zustand';
 import {endSession, startSession} from '~entities/edit-session';
 import {getProjectById, SessionMode} from '~entities/project';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
-import type {KeyValue} from '~entities/usecases';
+import type {KeyValueInfo} from '~entities/usecases';
+import {hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import {projectStoreRegistry} from '~shared/store/project-store-registry';
 
@@ -18,15 +19,13 @@ import type {Connection, UsecaseGraphData} from './graph-data-slice';
  * Where a subgraph currently on canvas came from this edit session
  */
 export type SubgraphProvenance =
-  | 'newly-created'
-  | 'palette-placed'
-  | 'pre-loaded';
+  'newly-created' | 'palette-placed' | 'pre-loaded';
 
 /** One selectable KV *selection* a subgraph supports — a whole Key+Value
  *  combination offered as a unit, not an individually toggleable pair
  */
 export interface KvSelection {
-  keyValuePairs: KeyValue[];
+  keyValuePairs: KeyValueInfo[];
   selected: boolean;
   systemId: string;
 }
@@ -136,10 +135,11 @@ export function createEditSessionSlice<
       }
 
       const endResult = await endSession(projectId);
-      if (!endResult.success) {
+      if (hasBlockingIssues(endResult) || !endResult.data) {
         const projectResult = await getProjectById(projectId);
         const alreadyEnded =
-          projectResult.success &&
+          projectResult !== undefined &&
+          !hasBlockingIssues(projectResult) &&
           projectResult.data?.sessionMode === SessionMode.Readonly;
 
         if (!alreadyEnded) {
@@ -153,7 +153,7 @@ export function createEditSessionSlice<
       }
 
       const startResult = await startSession(projectId, SessionMode.Designer);
-      if (!startResult.success) {
+      if (hasBlockingIssues(startResult) || !startResult.data) {
         logSession(
           'enterEditMode rejected — startSession failed',
           'enterEditMode',
@@ -178,7 +178,7 @@ export function createEditSessionSlice<
       // the last step of their own commit/discard sequence before calling
       // this — see docs/design/edit-mode-toggle/edit-mode-toggle-design.md §3.
       const startResult = await startSession(projectId, SessionMode.Tuning);
-      if (!startResult.success) {
+      if (hasBlockingIssues(startResult) || !startResult.data) {
         logSession(
           'exitEditMode rejected — startSession failed',
           'exitEditMode',

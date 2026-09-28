@@ -8,7 +8,6 @@ export {
   deleteSpfModule,
   fetchSpfModuleProperties,
   patchSpfModule,
-  patchSpfModuleProperties,
 } from './api/spf-modules-api';
 export type {
   CreateSpfModuleRequestDto,

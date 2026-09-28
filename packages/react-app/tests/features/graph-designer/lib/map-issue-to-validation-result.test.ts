@@ -136,9 +136,9 @@ describe('mapIssueToValidationResult', () => {
 
       const result = mapIssueToValidationResult(issue);
 
+      expect(result.connectionId).toBeUndefined();
       expect(result.moduleInstanceId).toBeUndefined();
       expect(result.subgraphId).toBeUndefined();
-      expect(result.connectionId).toBeUndefined();
     });
 
     it('does not set id fields when impactedEntity is absent', () => {
@@ -150,9 +150,9 @@ describe('mapIssueToValidationResult', () => {
 
       const result = mapIssueToValidationResult(issue);
 
+      expect(result.connectionId).toBeUndefined();
       expect(result.moduleInstanceId).toBeUndefined();
       expect(result.subgraphId).toBeUndefined();
-      expect(result.connectionId).toBeUndefined();
     });
   });
 

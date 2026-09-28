@@ -4,6 +4,7 @@
  */
 
 export * from './api/spf-module-api';
+export * from './lib/element-children';
 export type * from './model/spf-module-cal-data.dto';
 export type * from './model/spf-module-common.dto';
 export type * from './model/spf-module-tag-data.dto';

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {UsecaseDto} from '~entities/usecases';
+import {isInterUsecaseLink, type UsecaseDto} from '~entities/usecases';
 import type {
   ControlLinkWithUsecasesDto,
   DataLinkWithUsecasesDto,
@@ -36,35 +36,36 @@ function dedupeUsecasesBySystemId(usecases: UsecaseDto[]): UsecaseDto[] {
  * returns it unchanged.
  */
 function formatFallbackId(systemId: string): string {
-  const asNumber = ConvertStringToNumber(systemId);
+  const normalizedSystemId = String(systemId);
+  const asNumber = ConvertStringToNumber(normalizedSystemId);
   if (asNumber === null) {
-    return systemId;
+    return normalizedSystemId;
   }
-  return ConvertNumberToHexString(asNumber) ?? systemId;
+  return ConvertNumberToHexString(asNumber) ?? normalizedSystemId;
 }
 
 function resolveOtherModuleSystemId(
-  link: {destinationId: string; sourceId: string},
+  link: {destinationSystemId: string; sourceSystemId: string},
   selfModuleSystemId: string,
 ): string {
-  const sourceId = String(link.sourceId);
+  const sourceId = String(link.sourceSystemId);
   return sourceId === selfModuleSystemId
-    ? String(link.destinationId)
+    ? String(link.destinationSystemId)
     : sourceId;
 }
 
 function resolveOtherPortSystemId(
   link: {
-    destinationId: string;
-    destinationPortId: string;
-    sourceId: string;
-    sourcePortId: string;
+    destinationPortSystemId: string;
+    destinationSystemId: string;
+    sourcePortSystemId: string;
+    sourceSystemId: string;
   },
   selfModuleSystemId: string,
 ): string {
-  return String(link.sourceId) === selfModuleSystemId
-    ? String(link.destinationPortId)
-    : String(link.sourcePortId);
+  return String(link.sourceSystemId) === selfModuleSystemId
+    ? String(link.destinationPortSystemId)
+    : String(link.sourcePortSystemId);
 }
 
 /**
@@ -81,7 +82,7 @@ function findOtherPortId(
     ...(module?.dataPorts ?? []),
     ...(module?.controlPorts ?? []),
   ].find((p) => String(p.systemId) === otherPortSystemId);
-  const id = port?.id;
+  const id = port?.naturalId;
   return id !== undefined
     ? (ConvertNumberToMinimalHexString(Number(id)) ?? String(id))
     : '—';
@@ -104,18 +105,17 @@ export function buildConnectionRows(
     );
     const otherModule = moduleBySystemId.get(otherModuleSystemId);
     return {
-      connectionType: link.connectionType,
-      isDangling: link.isDangling,
-      moduleId: otherModule
-        ? (ConvertNumberToHexString(Number(otherModule.id)) ??
-          String(otherModule.id))
-        : formatFallbackId(otherModuleSystemId),
+      isInterUsecase: isInterUsecaseLink(link.linkType),
       moduleName: otherModule
         ? otherModule.alias || otherModule.name
         : otherModuleSystemId,
+      moduleNaturalId: otherModule
+        ? (ConvertNumberToHexString(otherModule.naturalId) ??
+          String(otherModule.naturalId))
+        : formatFallbackId(otherModuleSystemId),
       otherModuleSystemId,
       otherPortId: findOtherPortId(otherModule, otherPortSystemId),
-      subgraphSystemId: otherModule?.subgraphId ?? '',
+      subgraphSystemId: otherModule?.subgraphSystemId ?? '',
       systemId: `${String(link.systemId)}-${index}`,
       usecases: dedupeUsecasesBySystemId(usecases),
     };

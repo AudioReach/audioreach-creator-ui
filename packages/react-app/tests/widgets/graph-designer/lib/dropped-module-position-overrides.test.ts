@@ -12,7 +12,7 @@ const BASE_GRAPH_DATA: UsecaseGraphData = {
   connections: [],
   containers: {},
   moduleInstances: {
-    'mod-existing': makeModuleInstance({moduleInstanceId: 'mod-existing'}),
+    'mod-existing': makeModuleInstance({systemId: 'mod-existing'}),
   },
   selectedUsecases: [],
   subgraphs: {},
@@ -26,9 +26,9 @@ describe('buildDroppedModulePositionOverrides', () => {
       moduleInstances: {
         ...BASE_GRAPH_DATA.moduleInstances,
         'mod-created': makeModuleInstance({
-          containerId: '10',
-          moduleInstanceId: 'mod-created',
-          subgraphId: '5',
+          containerSystemId: '10',
+          subgraphSystemId: '5',
+          systemId: 'mod-created',
         }),
       },
     };
@@ -49,9 +49,9 @@ describe('buildDroppedModulePositionOverrides', () => {
       moduleInstances: {
         ...BASE_GRAPH_DATA.moduleInstances,
         'mod-created': makeModuleInstance({
-          containerId: '20',
-          moduleInstanceId: 'mod-created',
-          subgraphId: '5',
+          containerSystemId: '20',
+          subgraphSystemId: '5',
+          systemId: 'mod-created',
         }),
       },
     };
@@ -75,9 +75,9 @@ describe('buildDroppedModulePositionOverrides', () => {
       moduleInstances: {
         ...BASE_GRAPH_DATA.moduleInstances,
         'mod-created': makeModuleInstance({
-          containerId: '30',
-          moduleInstanceId: 'mod-created',
-          subgraphId: '6',
+          containerSystemId: '30',
+          subgraphSystemId: '6',
+          systemId: 'mod-created',
         }),
       },
     };

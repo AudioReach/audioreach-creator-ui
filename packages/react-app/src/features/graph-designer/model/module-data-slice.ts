@@ -7,12 +7,11 @@ import type {StoreApi} from 'zustand';
 
 import {
   type CalDataDto,
-  type ChangeInfoDto,
   type CkvDto,
   type ConfigElementDto,
   getCalData,
   getTagData,
-  type NameValuePairDto,
+  type NameValueDto,
   type ParameterDetailDto,
   putCalData,
   putTagData,
@@ -22,6 +21,7 @@ import {
   type UpdateSpfModuleCalDataRequest,
   type UpdateSpfModuleTagDataRequest,
 } from '~entities/spf-module-data';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {createDefaultTreeViewUiState} from '~shared/lib/tree-view-ui-state';
@@ -75,16 +75,15 @@ export interface ModuleDataEntry {
 }
 
 function mergeParametersById<
-  T extends {changeInfo: ChangeInfoDto; parameters: ParameterDetailDto[]},
+  T extends {parameters: ParameterDetailDto[]},
 >(existingDto: T, responseDto: T): T {
   const byId = new Map(
-    responseDto.parameters.map((param) => [param.parameterId, param]),
+    responseDto.parameters.map((param) => [param.naturalId, param]),
   );
   return {
     ...existingDto,
-    changeInfo: responseDto.changeInfo,
     parameters: existingDto.parameters.map(
-      (param) => byId.get(param.parameterId) ?? param,
+      (param) => byId.get(param.naturalId) ?? param,
     ),
   };
 }
@@ -165,9 +164,8 @@ function enableValueToConfigElement(
 ): ConfigElementDto {
   const targetName = value ? 'enable' : 'disable';
   const allowedValue = element.allowedValues?.find(
-    (candidate): candidate is NameValuePairDto =>
-      candidate.type === 'NAME_VALUE_PAIR' &&
-      candidate.name.toLowerCase() === targetName,
+    (candidate): candidate is NameValueDto =>
+      !('bitMask' in candidate) && candidate.name.toLowerCase() === targetName,
   );
   return allowedValue ? {...element, value: allowedValue.value} : element;
 }
@@ -179,7 +177,7 @@ function enableValueToConfigElement(
  * `ModuleListSlice`, and `SubgraphHeaderSelectionSlice` — `setModuleEnable`
  * and `syncEnableOverlays` read a module instance's CKVs and its subgraph's
  * header selection to resolve the active CKV, and both also read
- * `moduleDefinitionsById` to resolve the enable parameter's systemId.
+ * `moduleDefinitionsBySystemId` to resolve the enable parameter's systemId.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.
  * @param projectId - Project identifier bound at construction time.
@@ -259,11 +257,14 @@ export function createModuleDataSlice<
         const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.calData;
 
-        if (!result.success || !result.data) {
+        if (hasBlockingIssues(result) || !result.data) {
           if (scope === 'partial' && base?.loadedScope === 'full') {
             return false;
           }
-          const errorMsg = result.message ?? 'Failed to fetch module data';
+          const errorMsg = getIssueMessage(
+            result,
+            'Failed to fetch module data',
+          );
           logger.error('moduleDataSlice: fetchCalData — GET failed', {
             action: 'fetchCalData',
             component: 'moduleDataSlice',
@@ -361,8 +362,11 @@ export function createModuleDataSlice<
         const latest = get().moduleDataByInstanceId[moduleInstanceId];
         const base = latest?.tagData;
 
-        if (!result.success || !result.data) {
-          const errorMsg = result.message ?? 'Failed to fetch module data';
+        if (hasBlockingIssues(result) || !result.data) {
+          const errorMsg = getIssueMessage(
+            result,
+            'Failed to fetch module data',
+          );
           logger.error('moduleDataSlice: fetchTagData — GET failed', {
             action: 'fetchTagData',
             component: 'moduleDataSlice',
@@ -443,8 +447,11 @@ export function createModuleDataSlice<
       try {
         const result = await queryModuleIndices(projectId, moduleInstanceId);
 
-        if (!result.success) {
-          const errorMsg = result.message ?? 'Failed to query module data';
+        if (hasBlockingIssues(result) || !result.data) {
+          const errorMsg = getIssueMessage(
+            result,
+            'Failed to query module data',
+          );
           logger.error('moduleDataSlice: queryModuleData — API error', {
             action: 'queryModuleData',
             component: 'moduleDataSlice',
@@ -515,7 +522,7 @@ export function createModuleDataSlice<
         const moduleInstance =
           get().graphData?.moduleInstances[moduleInstanceId];
         const headerSelection = moduleInstance
-          ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphId]
+          ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphSystemId]
           : undefined;
         const activeCkv = resolveActiveCkv(
           moduleInstance?.ckvs ?? [],
@@ -623,7 +630,7 @@ export function createModuleDataSlice<
 
       const moduleInstance = get().graphData?.moduleInstances[moduleInstanceId];
       const headerSelection = moduleInstance
-        ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphId]
+        ? get().headerSelectionsBySubgraphId[moduleInstance.subgraphSystemId]
         : undefined;
       const activeCkv = resolveActiveCkv(
         moduleInstance?.ckvs ?? [],
@@ -642,7 +649,9 @@ export function createModuleDataSlice<
       }
 
       const moduleDefinition = moduleInstance
-        ? get().moduleDefinitionsById[moduleInstance.moduleId]
+        ? get().moduleDefinitionsBySystemId[
+            moduleInstance.moduleDefinitionSystemId
+          ]
         : undefined;
       const enableSystemId = resolveEnableParamSystemId(moduleDefinition);
 
@@ -655,16 +664,15 @@ export function createModuleDataSlice<
         !enableSystemId ||
         !dto ||
         !enableParameter ||
-        enableElement?.type !== 'CONFIG_ELEMENT'
+        enableElement?.type !== 'ConfigElement'
       ) {
         return;
       }
 
       const payload: UpdateSpfModuleCalDataRequest = {
-        data: [
+        parameters: [
           {
             ...enableParameter,
-            changeInfo: {changeType: 'UPDATE'},
             elements: [enableValueToConfigElement(enableElement, value)],
           },
         ],
@@ -683,7 +691,7 @@ export function createModuleDataSlice<
           [enableSystemId],
         );
 
-        if (result.success && result.data) {
+        if (!hasBlockingIssues(result) && result.data) {
           const latest = get().moduleDataByInstanceId[moduleInstanceId];
           const latestDto = latest?.calData?.dto;
           // Only merge if this save is still the current one — a later
@@ -702,7 +710,10 @@ export function createModuleDataSlice<
           return;
         }
 
-        showToast(result.message ?? 'Failed to save module data', 'danger');
+        showToast(
+          getIssueMessage(result, 'Failed to save module data'),
+          'danger',
+        );
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : 'Failed to save module data';
@@ -776,11 +787,14 @@ export function createModuleDataSlice<
       for (const moduleInstance of Object.values(moduleInstances)) {
         if (
           subgraphId !== undefined &&
-          moduleInstance.subgraphId !== subgraphId
+          moduleInstance.subgraphSystemId !== subgraphId
         ) {
           continue;
         }
-        const definition = state.moduleDefinitionsById[moduleInstance.moduleId];
+        const definition =
+          state.moduleDefinitionsBySystemId[
+            moduleInstance.moduleDefinitionSystemId
+          ];
         const enableSystemId = resolveEnableParamSystemId(definition);
         if (!enableSystemId) {
           // Definition not loaded yet (moduleListStatus not 'ready') — every
@@ -790,7 +804,7 @@ export function createModuleDataSlice<
           continue;
         }
         const headerSelection =
-          state.headerSelectionsBySubgraphId[moduleInstance.subgraphId];
+          state.headerSelectionsBySubgraphId[moduleInstance.subgraphSystemId];
         const activeCkv = resolveActiveCkv(
           moduleInstance.ckvs ?? [],
           headerSelection?.keyValues ?? {},
@@ -799,7 +813,7 @@ export function createModuleDataSlice<
           continue;
         }
         const entry =
-          state.moduleDataByInstanceId[moduleInstance.moduleInstanceId];
+          state.moduleDataByInstanceId[moduleInstance.systemId];
         const cal = entry?.calData;
         // Never background-fetch a module whose tab has already loaded a full
         // DTO — partial overlay fetches must not disturb a decoupled tab CKV.
@@ -821,7 +835,7 @@ export function createModuleDataSlice<
           continue;
         }
         void get().fetchCalData(
-          moduleInstance.moduleInstanceId,
+          moduleInstance.systemId,
           activeCkv.ckvSystemId,
           'partial',
           [enableSystemId],
@@ -861,7 +875,7 @@ export function createModuleDataSlice<
           payload,
         );
 
-        if (result.success && result.data) {
+        if (!hasBlockingIssues(result) && result.data) {
           const latest = get().moduleDataByInstanceId[moduleInstanceId];
           if (latest?.calData?.dto) {
             const mergedDto = mergeParametersById(
@@ -881,7 +895,10 @@ export function createModuleDataSlice<
           return result.data;
         }
 
-        const errorMsg = result.message ?? 'Failed to save module data';
+        const errorMsg = getIssueMessage(
+          result,
+          'Failed to save module data',
+        );
         showToast(errorMsg, 'danger');
       } catch (error) {
         const errorMsg =
@@ -936,7 +953,7 @@ export function createModuleDataSlice<
           payload,
         );
 
-        if (result.success && result.data) {
+        if (!hasBlockingIssues(result) && result.data) {
           const latest = get().moduleDataByInstanceId[moduleInstanceId];
           if (latest?.tagData?.dto) {
             const mergedDto = mergeParametersById(
@@ -956,7 +973,10 @@ export function createModuleDataSlice<
           return result.data;
         }
 
-        const errorMsg = result.message ?? 'Failed to save module data';
+        const errorMsg = getIssueMessage(
+          result,
+          'Failed to save module data',
+        );
         showToast(errorMsg, 'danger');
       } catch (error) {
         const errorMsg =

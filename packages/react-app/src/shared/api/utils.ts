@@ -4,6 +4,22 @@
  */
 
 import type {ApiResult} from './api-response.types';
+import {createTransportIssue} from './api-result-utils';
+
+/**
+ * Create a query parameter whose value is a comma-separated list.
+ */
+export function createCommaSeparatedQueryParam(
+  name: string,
+  values: string[],
+): string {
+  if (!values.length) {
+    return '';
+  }
+
+  const encodedValues = values.map((value) => encodeURIComponent(value));
+  return `${encodeURIComponent(name)}=${encodedValues.join(',')}`;
+}
 
 /**
  * Process an API response and convert it to an ApiResult
@@ -13,12 +29,14 @@ import type {ApiResult} from './api-response.types';
 export async function processApiResponse<T>(
   response: Response,
 ): Promise<ApiResult<T>> {
-  // Handle HTTP errors
   if (!response.ok) {
     return {
-      errors: [`HTTP error: ${response.status}`],
-      message: `HTTP error: ${response.status} ${response.statusText}`,
-      success: false,
+      issues: [
+        createTransportIssue(
+          `TRANSPORT_HTTP_${response.status}`,
+          `HTTP error: ${response.status} ${response.statusText}`,
+        ),
+      ],
     };
   }
 
@@ -29,25 +47,29 @@ export async function processApiResponse<T>(
       const formData = await response.formData();
       // Deliberate cast: multipart endpoints return FormData, not a JSON DTO.
       // Callers must pass T = FormData when using get<T>() against multipart endpoints.
-      return {data: formData as unknown as T, message: '', success: true};
+      return {data: formData as unknown as T};
     } catch {
       return {
-        errors: ['Invalid multipart response'],
-        message: 'Failed to parse multipart response',
-        success: false,
+        issues: [
+          createTransportIssue(
+            'INVALID_MULTIPART',
+            'Failed to parse multipart response',
+          ),
+        ],
       };
     }
   }
 
   try {
-    // Parse the response as JSON
     return await response.json();
-  } catch (_error) {
-    // Handle JSON parsing errors
+  } catch {
     return {
-      errors: ['Invalid JSON response'],
-      message: 'Failed to parse response as JSON',
-      success: false,
+      issues: [
+        createTransportIssue(
+          'INVALID_JSON',
+          'Failed to parse response as JSON',
+        ),
+      ],
     };
   }
 }

@@ -26,12 +26,12 @@ function subgraph(id: number): SubgraphNode {
   };
 }
 
-function container(containerId: number, sgId: number): ContainerNode {
+function container(containerSystemId: number, sgId: number): ContainerNode {
   return {
-    containerId,
+    containerSystemId,
     height: 80,
-    id: `container-${containerId}:${sgId}`,
-    label: `C ${containerId}`,
+    id: `container-${containerSystemId}:${sgId}`,
+    label: `C ${containerSystemId}`,
     nodeKind: 'container',
     parentId: `subgraph-${sgId}`,
     width: 80,
@@ -40,7 +40,7 @@ function container(containerId: number, sgId: number): ContainerNode {
   };
 }
 
-function moduleNode(id: number, containerId: number, sgId: number): ModuleNode {
+function moduleNode(id: number, containerSystemId: number, sgId: number): ModuleNode {
   return {
     height: 80,
     id: `module-${id}`,
@@ -48,7 +48,7 @@ function moduleNode(id: number, containerId: number, sgId: number): ModuleNode {
     moduleId: id,
     moduleType: 'Mod',
     nodeKind: 'module',
-    parentId: `container-${containerId}:${sgId}`,
+    parentId: `container-${containerSystemId}:${sgId}`,
     ports: [
       {id: 'in', name: 'in', portIoType: 'input'},
       {id: 'out', name: 'out', portIoType: 'output'},

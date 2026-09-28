@@ -27,8 +27,7 @@ export interface TreeViewItem {
   description?: string;
   elements: AnyElementDto[];
   /**
-   * Domain-specific identifier — `parameterId` for cal/tag data,
-   * `propertyId` for subgraph properties.
+   * Domain-specific identifier for the backing property or parameter.
    */
   id: string;
   isHidden?: boolean;

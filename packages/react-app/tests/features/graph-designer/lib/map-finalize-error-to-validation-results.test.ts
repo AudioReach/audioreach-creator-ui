@@ -339,7 +339,7 @@ describe('mapFinalizeErrorToValidationResults', () => {
   });
 
   describe('entity id fields', () => {
-    it('never sets moduleInstanceId/subgraphId/connectionId on summary rows', () => {
+    it('never sets systemId/subgraphSystemId/systemId on summary rows', () => {
       const stageFailedRows = mapFinalizeErrorToValidationResults({
         failedChangeIds: [],
         kind: 'stageFailed',
@@ -376,9 +376,9 @@ describe('mapFinalizeErrorToValidationResults', () => {
         discardDeterminateRows,
         endSessionRows,
       ]) {
-        expect(rows[0].moduleInstanceId).toBeUndefined();
-        expect(rows[0].subgraphId).toBeUndefined();
-        expect(rows[0].connectionId).toBeUndefined();
+        expect(rows[0].systemId).toBeUndefined();
+        expect(rows[0].subgraphSystemId).toBeUndefined();
+        expect(rows[0].systemId).toBeUndefined();
       }
     });
   });

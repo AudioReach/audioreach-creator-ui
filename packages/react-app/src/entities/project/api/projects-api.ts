@@ -8,6 +8,7 @@ import type {
   ProjectInfoResponseDto,
 } from '~entities/project/model/project.dto';
 import type {ApiResult} from '~shared/api/api-response.types';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api/api-result-utils';
 import {httpClient} from '~shared/api/http-client';
 
 /**
@@ -32,21 +33,25 @@ export async function getProjectById(
 
 /**
  * Open/connect to a project by ID.
- * Returns ApiResult<void> indicating success/failure.
+ * Returns ApiResult<ProjectInfoResponseDto> with the connected project.
  */
-export async function openProject(projectId: string): Promise<ApiResult<void>> {
-  return httpClient.patch<void>(`/projects/${projectId}/connect-to-project`);
+export async function openProject(
+  projectId: string,
+): Promise<ApiResult<ProjectInfoResponseDto>> {
+  return httpClient.post<ProjectInfoResponseDto>(
+    `/projects/${projectId}/connect`,
+  );
 }
 
 /**
  * Close/disconnect a project by ID.
- * Returns ApiResult<void> indicating success/failure.
+ * Returns ApiResult<ProjectInfoResponseDto> with the disconnected project.
  */
 export async function closeProject(
   projectId: string,
-): Promise<ApiResult<void>> {
-  return httpClient.patch<void>(
-    `/projects/${projectId}/disconnect-from-project`,
+): Promise<ApiResult<ProjectInfoResponseDto>> {
+  return httpClient.post<ProjectInfoResponseDto>(
+    `/projects/${projectId}/disconnect`,
   );
 }
 
@@ -64,8 +69,11 @@ export async function downloadProjectFiles(
     const result = await httpClient.get<FormData>(
       `/projects/${projectId}/download-files`,
     );
-    if (!result.success || !result.data) {
-      return {message: result.message, success: false};
+    if (hasBlockingIssues(result) || !result.data) {
+      return {
+        message: getIssueMessage(result, 'Failed to download project files'),
+        success: false,
+      };
     }
 
     const workspaceEntry = result.data.get('workspaceFile');

@@ -43,7 +43,7 @@ describe('applyPositionOverrides boundary subsystem', () => {
 
   it('overlays a split container by its logical React Flow id', () => {
     const container: ContainerNode = {
-      containerId: 1,
+      containerSystemId: 1,
       height: 100,
       id: 'cnt-1',
       label: 'Container',

@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {AnyElementDto} from '~entities/spf-module-data';
+import {
+  type AnyElementDto,
+  getArrayTemplateElements,
+  getArrayValueElements,
+  getStructValueElements,
+} from '~entities/spf-module-data';
 
 import type {TreeViewItem} from '../model/tree-view-data';
 
@@ -20,25 +25,33 @@ export function buildLengthFormulaMap(
     {arrayName: string; arrayPath: string; template: AnyElementDto[]}[]
   >();
 
-  function walk(elems: AnyElementDto[], itemId: string, prefix: string[]) {
+  function walk(
+    elems: AnyElementDto[],
+    itemId: string,
+    prefix: Array<string | undefined>,
+  ) {
     for (const elem of elems) {
-      if (elem.type === 'ELEMENT_TEMPLATE_ARRAY' && elem.lengthFormula) {
+      if (elem.type === 'ElementTemplateArray' && elem.lengthFormula) {
         const controllerName = elem.lengthFormula;
         const controllerPath = elementKey(itemId, ...prefix, controllerName);
         const arrayPath = elementKey(itemId, ...prefix, elem.name);
         const existing = map.get(controllerPath) ?? [];
         map.set(controllerPath, [
           ...existing,
-          {arrayName: elem.name, arrayPath, template: elem.template},
+          {
+            arrayName: elem.name ?? '',
+            arrayPath,
+            template: getArrayTemplateElements(elem),
+          },
         ]);
       }
-      if (elem.type === 'STRUCT') {
-        walk(elem.value, itemId, [...prefix, elem.name]);
+      if (elem.type === 'Struct') {
+        walk(getStructValueElements(elem), itemId, [...prefix, elem.name]);
       }
-      if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
-        for (const inst of elem.value) {
-          if (inst.type === 'STRUCT') {
-            walk(inst.value, itemId, [...prefix, inst.name]);
+      if (elem.type === 'ElementTemplateArray') {
+        for (const inst of getArrayValueElements(elem)) {
+          if (inst.type === 'Struct') {
+            walk(getStructValueElements(inst), itemId, [...prefix, inst.name]);
           }
         }
       }

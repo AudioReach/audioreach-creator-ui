@@ -4,10 +4,13 @@
  */
 
 export const SessionMode = {
+  Connected: 'CONNECTED',
   Designer: 'DESIGNER',
   DiffMerge: 'DIFF_MERGE',
+  Disconnected: 'DISCONNECTED',
   DiscoveryWizard: 'DISCOVERY_WIZARD',
   Readonly: 'READONLY',
+  Simulation: 'SIMULATION',
   Tuning: 'TUNING',
 } as const;
 

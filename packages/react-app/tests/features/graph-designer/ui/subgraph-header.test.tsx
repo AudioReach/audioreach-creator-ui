@@ -27,28 +27,29 @@ interface TestStoreShape {
 
 function makeCkv(systemId: string, keyValues: [string, string][]): CkvDto {
   return {
-    keyValueCollection: keyValues.map(([keySystemId, valueSystemId]) => ({
-      keyInfo: {keyId: 0, keyLabel: keySystemId, keySystemId},
-      valueInfo: {valueId: 0, valueLabel: valueSystemId, valueSystemId},
+    keyValuePairs: keyValues.map(([keySystemId, valueSystemId]) => ({
+      key: {name: keySystemId, naturalId: 0, systemId: keySystemId},
+      value: {name: valueSystemId, naturalId: 0, systemId: valueSystemId},
     })),
     supportedParameters: [],
     systemId,
   };
 }
 
-function makeModule(moduleInstanceId: string, ckvs: CkvDto[]): ModuleInstance {
+function makeModule(systemId: string, ckvs: CkvDto[]): ModuleInstance {
   return {
     ckvs,
-    containerId: 'cnt-1',
+    containerSystemId: 'cnt-1',
     displayName: 'Module',
     inputPorts: [],
-    moduleId: 'mod-1',
-    moduleInstanceId,
+    moduleDefinitionSystemId: 'mod-1',
     moduleName: 'Module',
     moduleType: '',
+    naturalId: 1,
     outputPorts: [],
     position: {x: 0, y: 0},
-    subgraphId: SUBGRAPH_ID,
+    subgraphSystemId: SUBGRAPH_ID,
+    systemId,
   };
 }
 

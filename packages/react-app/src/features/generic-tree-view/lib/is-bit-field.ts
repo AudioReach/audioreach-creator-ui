@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {BitFieldDto, NameValuePairDto} from '~entities/spf-module-data';
+import type {BitFieldDto, NameValueDto} from '~entities/spf-module-data';
 
 export function isBitField(
-  allowedValues: (NameValuePairDto | BitFieldDto)[],
+  allowedValues: (NameValueDto | BitFieldDto)[],
 ): allowedValues is BitFieldDto[] {
-  return allowedValues.length > 0 && allowedValues[0].type === 'BIT_FIELD';
+  return allowedValues.length > 0 && 'bitMask' in allowedValues[0];
 }

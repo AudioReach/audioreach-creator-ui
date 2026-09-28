@@ -115,7 +115,7 @@ export const usePropertiesPanelStore = create<PropertiesPanelStore>((set) => ({
             {
               ...entry,
               properties: entry.properties.map((property) =>
-                property.propertyId === VSID_PROPERTY_ID
+                property.naturalId === VSID_PROPERTY_ID
                   ? {...property, elements}
                   : property,
               ),
@@ -169,7 +169,7 @@ export const usePropertiesPanelStore = create<PropertiesPanelStore>((set) => ({
       const didReplace = entry.properties.some(
         (candidate) =>
           candidate.systemId === property.systemId ||
-          candidate.propertyId === property.propertyId,
+          candidate.naturalId === property.naturalId,
       );
       logger.debug('Replaced property', {
         action: 'properties_panel_property_replace',
@@ -183,7 +183,7 @@ export const usePropertiesPanelStore = create<PropertiesPanelStore>((set) => ({
           properties: didReplace
             ? entry.properties.map((candidate) =>
                 candidate.systemId === property.systemId ||
-                candidate.propertyId === property.propertyId
+                candidate.naturalId === property.naturalId
                   ? property
                   : candidate,
               )

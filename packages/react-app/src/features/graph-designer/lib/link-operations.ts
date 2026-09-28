@@ -10,8 +10,13 @@ import {
   createDataLinkWithSubsystems,
   deleteControlLink,
   deleteDataLink,
+  toControlLinkType,
 } from '~entities/usecases';
-import type {ComponentCollectionDto} from '~entities/usecases/model/usecase-component.dto';
+import type {
+  ComponentCollectionDto,
+  LinkType,
+} from '~entities/usecases/model/usecase-component.dto';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 
 import {withMutationLock} from '../model/edit-session-slice';
@@ -41,6 +46,14 @@ const DELETE_LINK_BY_TYPE = {
 };
 
 type EdgeMode = 'EC' | 'dangling' | 'normal';
+
+function toDataLinkType(edgeMode: EdgeMode): LinkType {
+  return edgeMode === 'dangling'
+    ? 'INTER_USECASE'
+    : edgeMode === 'normal'
+      ? 'NORMAL'
+      : 'EC';
+}
 
 export interface LinkOperations {
   connectPorts: (
@@ -89,15 +102,21 @@ export function createLinkOperations(projectId: string) {
 
     const result =
       edgeKind === 'data'
-        ? await (
-            useSubsystemVariant ? createDataLinkWithSubsystems : createDataLink
-          )(projectId, {
-            destinationNodeSystemId: targetNodeId,
-            destinationPortSystemId: targetPortId,
-            sourceNodeSystemId: sourceNodeId,
-            sourcePortSystemId: sourcePortId,
-            type: edgeMode,
-          })
+        ? useSubsystemVariant
+          ? await createDataLinkWithSubsystems(projectId, {
+              destinationNodeSystemId: targetNodeId,
+              destinationPortSystemId: targetPortId,
+              linkType: toDataLinkType(edgeMode),
+              sourceNodeSystemId: sourceNodeId,
+              sourcePortSystemId: sourcePortId,
+            })
+          : await createDataLink(projectId, {
+              destinationModuleSystemId: targetNodeId,
+              destinationPortSystemId: targetPortId,
+              linkType: toDataLinkType(edgeMode),
+              sourceModuleSystemId: sourceNodeId,
+              sourcePortSystemId: sourcePortId,
+            })
         : await (
             useSubsystemVariant
               ? createControlLinkWithSubsystems
@@ -105,13 +124,16 @@ export function createLinkOperations(projectId: string) {
           )(projectId, {
             endComponentSystemId: targetNodeId,
             endPortSystemId: targetPortId,
-            isDangling: edgeMode === 'dangling',
+            linkType: toControlLinkType(toDataLinkType(edgeMode)),
             startComponentSystemId: sourceNodeId,
             startPortSystemId: sourcePortId,
           });
 
-    if (!result.success || !result.data) {
-      showToast(result.message ?? 'Failed to create connection', 'danger');
+    if (hasBlockingIssues(result) || !result.data) {
+      showToast(
+        getIssueMessage(result, 'Failed to create connection'),
+        'danger',
+      );
       return false;
     }
 
@@ -161,9 +183,12 @@ export function createLinkOperations(projectId: string) {
     const {deleteFn, key} = DELETE_LINK_BY_TYPE[linkType];
     const result = await deleteFn(projectId, connectionId);
 
-    if (!result.success || !result.data) {
+    if (hasBlockingIssues(result) || !result.data) {
       if (!options?.suppressToast) {
-        showToast(result.message ?? 'Failed to delete connection', 'danger');
+        showToast(
+          getIssueMessage(result, 'Failed to delete connection'),
+          'danger',
+        );
       }
       return false;
     }

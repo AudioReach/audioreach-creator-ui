@@ -33,45 +33,55 @@ function makeModuleDefinitionDto(
 ): SpfModuleDefinitionResponseDto {
   return {
     builtIn: true,
-    customModuleInfo: {
-      entryPointTag: '',
+    customModuleData: {
+      endPointFunctionTag: '',
       fileName: '',
-      interfaceTypeId: 0,
-      interfaceVersionId: 0,
-      majorTypeId: 0,
+      interface: {
+        type: {
+          name: '',
+          value: '',
+          valueDataType: {sizeInBytes: 2, typeName: 'UINT16'},
+        },
+        version: {
+          name: '',
+          value: '',
+          valueDataType: {sizeInBytes: 2, typeName: 'UINT16'},
+        },
+      },
+      type: {
+        name: '',
+        value: '',
+        valueDataType: {sizeInBytes: 4, typeName: 'UINT32'},
+      },
     },
     deprecated: false,
     description: '',
     displayName: 'AudioDecoder',
+    isCustomModule: false,
+    isLoadedAtBootup: true,
     isOffloadable: false,
     modSearchKeys: '',
     moduleDirectionType: 'SOURCE',
-    moduleId: 200,
     moduleInfo: {
       containerTypeInfo: [],
       dynamicIntents: [],
       inputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-in'},
-      mdfModuleType: '',
-      metaData: 0,
-      moduleTypeInfo: {
-        buildType: '',
-        islandFriendly: false,
-        majorModuleType: '',
-      },
       outputDataPortInfo: {maxPorts: 0, ports: [], systemId: 'dpi-out'},
       pidFramework: 0,
-      reserved: 0,
       stackSize: 0,
-      staticCtrlPorts: {
-        portId: 0,
-        portIntents: [],
-        portName: '',
-        systemId: 'ctrl',
-      },
+      staticCtrlPorts: [
+        {
+          naturalId: 0,
+          portIntents: [],
+          portName: '',
+          systemId: 'ctrl',
+        },
+      ],
     },
     name: 'AudioDecoder',
+    naturalId: 200,
     paramDefinitionsSummaryInfo: [],
-    processorInfo: {name: 'DSP', processorId: 1, systemId: 'proc-1'},
+    processorInfo: {name: 'DSP', naturalId: 1, systemId: 'proc-1'},
     systemId: 'def-1',
     vocoderModuleType: '',
     ...overrides,
@@ -83,30 +93,26 @@ beforeEach(() => {
 });
 
 describe('createModuleListSlice — loadModuleList', () => {
-  it('populates moduleDefinitionsById keyed by String(moduleId)', async () => {
-    const dto = makeModuleDefinitionDto({moduleId: 200});
+  it('populates moduleDefinitionsBySystemId keyed by systemId', async () => {
+    const dto = makeModuleDefinitionDto({naturalId: 200});
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
       data: [dto],
-      message: undefined,
-      success: true,
     });
 
     const store = makeStore();
     await store.getState().loadModuleList();
 
-    expect(store.getState().moduleDefinitionsById['200']).toEqual(dto);
+    expect(store.getState().moduleDefinitionsBySystemId['def-1']).toEqual(dto);
   });
 
   it('keeps natural module IDs and processor labels separate from system IDs', async () => {
     const dto = makeModuleDefinitionDto({
-      moduleId: 200,
-      processorInfo: {name: 'ADSP', processorId: 1, systemId: 'proc-1'},
+      naturalId: 200,
+      processorInfo: {name: 'ADSP', naturalId: 1, systemId: 'proc-1'},
       systemId: 'mod-def-200',
     });
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
       data: [dto],
-      message: undefined,
-      success: true,
     });
 
     const store = makeStore();
@@ -121,17 +127,15 @@ describe('createModuleListSlice — loadModuleList', () => {
     expect(store.getState().selectedDspTypes).toEqual(['ADSP']);
   });
 
-  it('leaves moduleDefinitionsById empty when the API call fails', async () => {
+  it('leaves moduleDefinitionsBySystemId empty when the API call fails', async () => {
     mockGetAllSpfModuleDefinitions.mockResolvedValueOnce({
-      data: undefined,
-      message: 'boom',
-      success: false,
+      issues: [{code: 'LOAD_FAILED', message: 'boom', severity: 'ERROR'}],
     });
 
     const store = makeStore();
     await store.getState().loadModuleList();
 
-    expect(store.getState().moduleDefinitionsById).toEqual({});
+    expect(store.getState().moduleDefinitionsBySystemId).toEqual({});
     expect(store.getState().moduleListStatus).toBe('error');
   });
 });

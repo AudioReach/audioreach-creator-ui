@@ -9,6 +9,7 @@ import type {MruProjectInfo} from '@audioreach-creator-ui/api-utils';
 import {toPng} from 'html-to-image';
 
 import {getProjects, type ProjectInfo} from '~entities/project';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 interface ArcRecentProjectsApi {
@@ -67,9 +68,9 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
         // 2. Get currently active projects from backend
         const backendResult = await getProjects();
 
-        if (!backendResult.success) {
+        if (hasBlockingIssues(backendResult)) {
           logger.warn(
-            `Failed to fetch active projects from backend: ${backendResult.message}`,
+            `Failed to fetch active projects from backend: ${getIssueMessage(backendResult, 'Unknown error')}`,
             {
               component: 'useArcRecentProjects',
             },

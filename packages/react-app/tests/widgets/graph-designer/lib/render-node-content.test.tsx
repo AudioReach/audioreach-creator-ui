@@ -110,8 +110,15 @@ describe('renderNodeContent — module node', () => {
 });
 
 describe('renderNodeContent — subgraph node', () => {
-  it('returns a header wrapping SubgraphHeader keyed by String(node.subgraphId)', () => {
-    const node = makeSubgraphNode({id: 'subgraph-sg-7', subgraphId: 7});
+  it('returns a header wrapping SubgraphHeader keyed by its system ID', () => {
+    const node = makeSubgraphNode({
+      id: 'subgraph-sg-7',
+      meta: {
+        subgraphSystemId: 'subgraph-system-7',
+        systemId: 'subgraph-system-7',
+      },
+      subgraphId: 7,
+    });
     const override = renderNodeContent(node);
 
     expect(override?.header).toBeDefined();
@@ -119,7 +126,7 @@ describe('renderNodeContent — subgraph node', () => {
     const {getByTestId} = render(<>{override?.header}</>);
     expect(getByTestId('mock-subgraph-header')).toHaveAttribute(
       'data-subgraphid',
-      '7',
+      'subgraph-system-7',
     );
   });
 });

@@ -40,23 +40,20 @@ export function aggregateSubgraphCkvKeys(
   const keyLabels: Record<string, string> = {};
   const valueLabels: Record<string, Record<string, string>> = {};
   for (const ckv of uniqueCkvs) {
-    for (const {keyInfo, valueInfo} of ckv.keyValueCollection) {
-      const values = valuesByKey.get(keyInfo.keySystemId);
+    for (const {key, value} of ckv.keyValuePairs) {
+      const values = valuesByKey.get(key.systemId);
       if (values) {
-        values.add(valueInfo.valueSystemId);
+        values.add(value.systemId);
       } else {
-        valuesByKey.set(
-          keyInfo.keySystemId,
-          new Set([valueInfo.valueSystemId]),
-        );
+        valuesByKey.set(key.systemId, new Set([value.systemId]));
       }
-      keyLabels[keyInfo.keySystemId] = keyInfo.keyLabel;
-      const labelsForKey = valueLabels[keyInfo.keySystemId];
+      keyLabels[key.systemId] = key.name;
+      const labelsForKey = valueLabels[key.systemId];
       if (labelsForKey) {
-        labelsForKey[valueInfo.valueSystemId] = valueInfo.valueLabel;
+        labelsForKey[value.systemId] = value.name;
       } else {
-        valueLabels[keyInfo.keySystemId] = {
-          [valueInfo.valueSystemId]: valueInfo.valueLabel,
+        valueLabels[key.systemId] = {
+          [value.systemId]: value.name,
         };
       }
     }

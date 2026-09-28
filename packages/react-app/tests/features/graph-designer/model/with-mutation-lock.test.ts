@@ -31,6 +31,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 import {createStore} from 'zustand';
 
 import {endSession, startSession} from '~entities/edit-session';
+import {getProjectById} from '~entities/project/api/projects-api';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
@@ -38,6 +39,7 @@ import {
 } from '~features/graph-designer/model/edit-session-slice';
 
 const mockEndSession = jest.mocked(endSession);
+const mockGetProjectById = jest.mocked(getProjectById);
 const mockStartSession = jest.mocked(startSession);
 
 function makeStore(projectId = 'proj-wml-1') {
@@ -51,11 +53,20 @@ describe('withMutationLock', () => {
     mockReleaseExclusiveMode.mockClear();
     mockSetActiveExclusiveMode.mockClear();
     mockSetEditModeState.mockClear();
-    mockEndSession.mockResolvedValue({message: 'ok', success: true});
+    mockEndSession.mockResolvedValue({
+      issues: [{code: 'END_FAILED', message: 'Already ended', severity: 'ERROR'}],
+    });
+    mockGetProjectById.mockResolvedValue({
+      data: {
+        description: '',
+        name: 'Test project',
+        projectId: 'proj-wml-1',
+        projectType: 'OFFLINE',
+        sessionMode: 'READONLY',
+      },
+    });
     mockStartSession.mockResolvedValue({
       data: {projectId: 'proj-wml-1', sessionMode: 'DESIGNER', summary: 'ok'},
-      message: 'ok',
-      success: true,
     });
   });
 

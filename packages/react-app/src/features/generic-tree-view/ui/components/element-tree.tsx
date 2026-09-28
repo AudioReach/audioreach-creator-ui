@@ -8,7 +8,12 @@ import {useMemo} from 'react';
 import {createTreeCollection} from '@qualcomm-ui/core/tree';
 import {Tree} from '@qualcomm-ui/react/tree';
 
-import type {AnyElementDto} from '~entities/spf-module-data';
+import {
+  type AnyElementDto,
+  getArrayTemplateElements,
+  getArrayValueElements,
+  getStructValueElements,
+} from '~entities/spf-module-data';
 
 import {elementKey} from '../../lib/element-key';
 import type {TreeViewItem} from '../../model/tree-view-data';
@@ -36,46 +41,49 @@ interface ElementTreeProps {
 function collectBranchKeys(
   elems: AnyElementDto[],
   itemId: string,
-  prefix: string[],
+  prefix: Array<string | undefined>,
   arrayCounts: Map<string, number>,
 ): string[] {
   const keys: string[] = [];
   for (const elem of elems) {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       if (elem.displayType === 'BIT_FIELD' && elem.allowedValues?.length) {
         keys.push(elementKey(itemId, ...prefix, elem.name));
       }
-    } else if (elem.type === 'STRUCT') {
+    } else if (elem.type === 'Struct') {
       const k = elementKey(itemId, ...prefix, elem.name);
       keys.push(k);
       keys.push(
         ...collectBranchKeys(
-          elem.value,
+          getStructValueElements(elem),
           itemId,
           [...prefix, elem.name],
           arrayCounts,
         ),
       );
-    } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
+    } else if (elem.type === 'ElementTemplateArray') {
       const arrayPath = elementKey(itemId, ...prefix, elem.name);
       if (elem.length !== undefined && !elem.lengthFormula) {
         continue;
       }
       keys.push(arrayPath);
-      const count = arrayCounts.get(arrayPath) ?? elem.value.length;
+      const valueElements = getArrayValueElements(elem);
+      const templateElements = getArrayTemplateElements(elem);
+      const count = arrayCounts.get(arrayPath) ?? valueElements.length;
       for (let i = 0; i < count; i++) {
-        const inst = i < elem.value.length ? elem.value[i] : elem.template[0];
+        const inst =
+          i < valueElements.length ? valueElements[i] : templateElements[0];
         if (!inst) {
           continue;
         }
         const instName =
-          inst.type === 'STRUCT' ? inst.name : `${elem.name}[${i}]`;
-        if (inst.type === 'STRUCT') {
+          inst.type === 'Struct' ? (inst.name ?? '') : `${elem.name}[${i}]`;
+        if (inst.type === 'Struct') {
           const instKey = elementKey(itemId, ...prefix, instName);
           keys.push(instKey);
           keys.push(
             ...collectBranchKeys(
-              inst.value,
+              getStructValueElements(inst),
               itemId,
               [...prefix, instName],
               arrayCounts,
@@ -142,10 +150,10 @@ export function ElementTree({
     dirtyPaths,
     elementValues,
     invalidPaths,
+    itemId: item.id,
     matchElementKeys: matchSets?.elementIds,
     onAutoCommit,
     onValueChange,
-    parameterId: item.id,
     paramReadOnly,
     pathPrefix: [],
     policyFilter,

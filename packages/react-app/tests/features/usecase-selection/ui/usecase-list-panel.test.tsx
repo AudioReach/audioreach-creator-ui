@@ -125,10 +125,10 @@ import {UsecaseListPanel} from '~features/usecase-selection/ui/usecase-list-pane
 /** Leaf item: Speaker_Mic */
 const ITEM_SPEAKER: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 1, keyLabel: 'DeviceTX', keySystemId: 'k1'},
-      valueInfo: {valueId: 1, valueLabel: 'Speaker_Mic', valueSystemId: 'v1'},
+      key: {name: 'DeviceTX', naturalId: 1, systemId: 'k1'},
+      value: {name: 'Speaker_Mic', naturalId: 1, systemId: 'v1'},
     },
   ],
   name: 'Speaker_Mic',
@@ -138,13 +138,13 @@ const ITEM_SPEAKER: any = {
 /** Leaf item: HFP_Rx_Playback */
 const ITEM_HFP: any = {
   expanded: false,
-  keyValueCollection: [
+  keyValuePairs: [
     {
-      keyInfo: {keyId: 2, keyLabel: 'StreamRX', keySystemId: 'k2'},
-      valueInfo: {
-        valueId: 2,
-        valueLabel: 'HFP_Rx_Playback',
-        valueSystemId: 'v2',
+      key: {name: 'StreamRX', naturalId: 2, systemId: 'k2'},
+      value: {
+        name: 'HFP_Rx_Playback',
+        naturalId: 2,
+        systemId: 'v2',
       },
     },
   ],
@@ -169,13 +169,13 @@ const mockSubsystemData: any[] = [
       {
         children: [ITEM_SPEAKER, ITEM_HFP],
         expanded: true,
-        keyValueCollection: [
+        keyValuePairs: [
           {
-            keyInfo: {keyId: 3, keyLabel: 'StreamPP_RX', keySystemId: 'k3'},
-            valueInfo: {
-              valueId: 3,
-              valueLabel: 'StreamPP_RX',
-              valueSystemId: 'v3',
+            key: {name: 'StreamPP_RX', naturalId: 3, systemId: 'k3'},
+            value: {
+              name: 'StreamPP_RX',
+              naturalId: 3,
+              systemId: 'v3',
             },
           },
         ],

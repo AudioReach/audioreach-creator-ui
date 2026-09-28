@@ -6,9 +6,7 @@
 export type ToolPolicy = 'CALIBRATION' | 'RTC' | 'RTC_READONLY' | 'RTM';
 
 export type AnyElementDto =
-  | ConfigElementDto
-  | ElementTemplateArrayDto
-  | StructDto;
+  ConfigElementDto | ElementTemplateArrayDto | StructDto;
 
 export type DisplayType =
   | 'BIT_FIELD'
@@ -23,8 +21,21 @@ export type DisplayType =
   | 'STRING_FIELD'
   | 'TEXT_BOX';
 
+export type ConfigElementDataType =
+  | 'Double'
+  | 'Float'
+  | 'Int8'
+  | 'Int16'
+  | 'Int32'
+  | 'Int64'
+  | 'RawData'
+  | 'UInt8'
+  | 'UInt16'
+  | 'UInt32'
+  | 'UInt64';
+
 export interface BitFieldDto {
-  allowedValues: NameValuePairDto[];
+  allowedValues: NameValueDto[];
   bitMask: string;
   description?: string;
   name: string;
@@ -38,20 +49,21 @@ export interface ChangeInfoDto {
 }
 
 export interface ConfigElementDto {
-  allowedValues?: (BitFieldDto | NameValuePairDto)[];
+  allowedValues?: (BitFieldDto | NameValueDto)[];
+  dataType: ConfigElementDataType;
   description?: string;
-  displayType?: DisplayType;
+  displayType?: string;
   group?: string;
   isReadOnly: boolean;
   linkedElementNames?: string[];
   max?: number;
   min?: number;
-  name: string;
-  policy?: 'ADVANCED' | 'BASIC' | 'HIDDEN';
+  name?: string;
+  policy?: string;
   precision?: number;
   qFormat?: string;
   subgroup?: string;
-  type: 'CONFIG_ELEMENT';
+  type: 'ConfigElement';
   unit?: string;
   value: string;
 }
@@ -62,44 +74,43 @@ export interface ElementTemplateArrayDto {
   isReadOnly: boolean;
   length?: number;
   lengthFormula?: string;
-  name: string;
+  name?: string;
   subgroup?: string;
   template: AnyElementDto[];
-  type: 'ELEMENT_TEMPLATE_ARRAY';
+  type: 'ElementTemplateArray';
   value: AnyElementDto[];
 }
 
 export interface KeyInfo {
-  keyId: number;
-  keyLabel: string;
-  keySystemId: string;
+  name: string;
+  naturalId: number;
+  systemId: string;
 }
 
 export interface KeyValueDto {
-  key: {keyId: number; name: string; systemId: string};
-  value: {name: string; systemId: string; valueId: number};
+  key: KeyInfo;
+  value: ValueInfo;
 }
 
 export interface KeyValueInfo {
-  keyInfo: KeyInfo;
-  valueInfo: ValueInfo;
+  key: KeyInfo;
+  value: ValueInfo;
 }
 
-export interface NameValuePairDto {
+export interface NameValueDto {
   name: string;
-  type: 'NAME_VALUE_PAIR';
   value: string;
+  valueDataType: ConfigElementDataType;
 }
 
 export interface ParamInfo {
   description: string;
   name: string;
-  paramId: number;
-  paramSystemId: string;
+  naturalId: number;
+  systemId: string;
 }
 
 export interface ParameterDetailDto {
-  changeInfo: ChangeInfoDto;
   deprecated?: boolean;
   description?: string;
   elements: AnyElementDto[];
@@ -108,24 +119,24 @@ export interface ParameterDetailDto {
   isOffloaded?: boolean;
   isReadOnly?: boolean;
   name: string;
-  parameterId: string;
+  naturalId: string;
+  pidType?: string;
   systemId: string;
-  toolPolicy?: ToolPolicy[];
 }
 
 export interface StructDto {
   description?: string;
   group?: string;
   isReadOnly: boolean;
-  name: string;
+  name?: string;
   structType: string;
   subgroup?: string;
-  type: 'STRUCT';
+  type: 'Struct';
   value: AnyElementDto[];
 }
 
 export interface ValueInfo {
-  valueId: number;
-  valueLabel: string;
-  valueSystemId: string;
+  name: string;
+  naturalId: number;
+  systemId: string;
 }

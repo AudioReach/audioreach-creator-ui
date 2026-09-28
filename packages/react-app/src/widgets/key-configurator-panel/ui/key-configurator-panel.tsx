@@ -63,7 +63,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
         return {
           entityId: item.id,
           entityType: item.type,
-          instanceId: item.instanceId,
+          moduleDefinitionSystemId: item.moduleDefinitionSystemId,
           systemId: item.systemId,
         };
 
@@ -120,9 +120,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
       default:
         return (
           <div className="text-neutral-secondary p-4 text-center text-sm">
-            <div className="text-neutral-secondary mb-2">
-              ❓
-            </div>
+            <div className="text-neutral-secondary mb-2">❓</div>
             <div className="text-neutral-secondary">
               Unknown configuration type: {item.type}
             </div>

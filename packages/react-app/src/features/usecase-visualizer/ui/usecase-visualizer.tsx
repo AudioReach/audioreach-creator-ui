@@ -137,6 +137,7 @@ function selectedNodeFromReactFlowNode(
   return {
     id: node.id,
     nodeKind: data.nodeKind,
+    subgraphSystemId: stringMeta(data.meta?.subgraphSystemId),
     systemId,
   };
 }

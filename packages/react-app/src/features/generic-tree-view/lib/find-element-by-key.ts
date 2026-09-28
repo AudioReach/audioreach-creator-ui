@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {AnyElementDto, ConfigElementDto} from '~entities/spf-module-data';
+import {
+  type AnyElementDto,
+  type ConfigElementDto,
+  getArrayValueElements,
+  getStructValueElements,
+} from '~entities/spf-module-data';
 
 import {elementKey} from './element-key';
 
@@ -14,17 +19,17 @@ import {elementKey} from './element-key';
 export function findElementByKey(
   elems: AnyElementDto[],
   itemId: string,
-  prefix: string[],
+  prefix: Array<string | undefined>,
   targetKey: string,
 ): ConfigElementDto | null {
   for (const elem of elems) {
-    if (elem.type === 'CONFIG_ELEMENT') {
+    if (elem.type === 'ConfigElement') {
       if (elementKey(itemId, ...prefix, elem.name) === targetKey) {
         return elem;
       }
-    } else if (elem.type === 'STRUCT') {
+    } else if (elem.type === 'Struct') {
       const found = findElementByKey(
-        elem.value,
+        getStructValueElements(elem),
         itemId,
         [...prefix, elem.name],
         targetKey,
@@ -32,11 +37,11 @@ export function findElementByKey(
       if (found) {
         return found;
       }
-    } else if (elem.type === 'ELEMENT_TEMPLATE_ARRAY') {
-      for (const inst of elem.value) {
-        if (inst.type === 'STRUCT') {
+    } else if (elem.type === 'ElementTemplateArray') {
+      for (const inst of getArrayValueElements(elem)) {
+        if (inst.type === 'Struct') {
           const found = findElementByKey(
-            inst.value,
+            getStructValueElements(inst),
             itemId,
             [...prefix, inst.name],
             targetKey,
@@ -44,7 +49,7 @@ export function findElementByKey(
           if (found) {
             return found;
           }
-        } else if (inst.type === 'CONFIG_ELEMENT') {
+        } else if (inst.type === 'ConfigElement') {
           if (elementKey(itemId, ...prefix, inst.name) === targetKey) {
             return inst;
           }

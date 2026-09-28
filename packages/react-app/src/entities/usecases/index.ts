@@ -22,11 +22,20 @@ export {
 export type {
   CreateControlLinkRequest,
   CreateDataLinkRequest,
+  CreateDataLinkWithSubsystemsRequest,
+  ControlLinkDto,
+  ControlLinkType,
+  DataLinkDto,
   ControlLinkWithUsecasesDto,
   DataLinkWithUsecasesDto,
+  LinkType,
+} from './model/usecase-component.dto';
+export {
+  isInterUsecaseLink,
+  toControlLinkType,
 } from './model/usecase-component.dto';
 export type {
-  KeyValueInfo as KeyValue,
+  KeyValueInfo,
   RelatedEndPointLink,
   SubsystemFilteredKv,
   UsecaseDto,

@@ -115,10 +115,9 @@ function makeReviewResponse(
   overrides: Partial<CreateUsecasesResponseDto> = {},
 ): CreateUsecasesResponseDto {
   return {
-    created: [],
-    deleted: [],
+    changes: [],
+    groupId: 'group-1',
     issues: [],
-    updated: [],
     ...overrides,
   };
 }

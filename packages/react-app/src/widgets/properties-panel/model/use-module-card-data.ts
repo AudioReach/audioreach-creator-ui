@@ -20,7 +20,7 @@ export function useModuleCardData({
   projectId: string;
 }): UseSchemaCardDataResult {
   const fetchProperties = useCallback(
-    (entityId: string) => fetchSpfModuleProperties(projectId, entityId),
+    (entityId: string) => fetchSpfModuleProperties(projectId, [entityId]),
     [projectId],
   );
 

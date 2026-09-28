@@ -109,19 +109,19 @@ interface TestStoreShape {
 
 function makeTagInfoDto(
   systemId: string,
-  valueLabel: string,
+  valueName: string,
   tkvSystemId: string,
 ): TagInfoDto {
   return {
+    naturalId: 1,
     systemId,
-    tagId: 1,
     tagName: 'volume-tag',
     tkvs: [
       {
-        keyValueCollection: [
+        keyValuePairs: [
           {
-            keyInfo: {keyId: 1, keyLabel: 'Volume', keySystemId: 'key-1'},
-            valueInfo: {valueId: 1, valueLabel, valueSystemId: 'val-1'},
+            key: {name: 'Volume', naturalId: 1, systemId: 'key-1'},
+            value: {name: valueName, naturalId: 1, systemId: 'val-1'},
           },
         ],
         supportedParameters: [],
@@ -136,7 +136,7 @@ function makeParam(id: string): ParameterDetailDto {
     changeInfo: {changeType: 'NONE'},
     elements: [],
     name: `Param ${id}`,
-    parameterId: id,
+    naturalId: id,
     systemId: id,
   };
 }
@@ -506,7 +506,7 @@ describe('TagDataPanel — index Select wiring', () => {
 
     expect(store.getState().updateTagData).toHaveBeenCalledWith(
       MODULE_ID,
-      expect.objectContaining({data: expect.any(Array)}),
+      expect.objectContaining({parameters: expect.any(Array)}),
     );
     expect(store.getState().fetchTagData).toHaveBeenCalledWith(
       MODULE_ID,

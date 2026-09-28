@@ -35,7 +35,7 @@ export function resolveComponentInfo(
   if (module) {
     return {
       displayName: module.displayName,
-      id: formatDisplayId(module.moduleInstanceId),
+      id: formatDisplayId(module.systemId),
       kind: 'module',
     };
   }
@@ -83,7 +83,7 @@ export function buildDirectLinkInfo(
   connectionId: string,
 ): DirectLinkInfo | null {
   const connection = graphData.connections.find(
-    (item) => item.connectionId === connectionId,
+    (item) => item.systemId === connectionId,
   );
   if (!connection) {
     return null;
@@ -91,26 +91,26 @@ export function buildDirectLinkInfo(
 
   return {
     destination: {
-      component: resolveComponentInfo(graphData, connection.toModuleId),
-      nodeId: connection.toModuleId,
-      portId: connection.toPortId,
+      component: resolveComponentInfo(graphData, connection.destinationSystemId),
+      nodeId: connection.destinationSystemId,
+      portId: connection.destinationPortSystemId,
       portLabel: resolvePortLabel(
         graphData,
-        connection.toModuleId,
-        connection.toPortId,
+        connection.destinationSystemId,
+        connection.destinationPortSystemId,
       ),
     },
-    id: connection.connectionId,
+    id: connection.systemId,
     source: {
-      component: resolveComponentInfo(graphData, connection.fromModuleId),
-      nodeId: connection.fromModuleId,
-      portId: connection.fromPortId,
+      component: resolveComponentInfo(graphData, connection.sourceSystemId),
+      nodeId: connection.sourceSystemId,
+      portId: connection.sourcePortSystemId,
       portLabel: resolvePortLabel(
         graphData,
-        connection.fromModuleId,
-        connection.fromPortId,
+        connection.sourceSystemId,
+        connection.sourcePortSystemId,
       ),
     },
-    type: connection.connectionType,
+    type: connection.linkKind,
   };
 }

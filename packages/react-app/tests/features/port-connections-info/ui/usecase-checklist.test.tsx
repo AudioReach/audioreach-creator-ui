@@ -31,7 +31,7 @@ import {UsecaseChecklist} from '~features/port-connections-info/ui/usecase-check
 
 const makeUsecase = (systemId: string, name: string): UsecaseDto => ({
   changeInfo: {} as UsecaseDto['changeInfo'],
-  keyValueCollection: [],
+  keyValuePairs: [],
   systemId,
   usecaseAliasName: name,
   usecaseType: 'Regular',

@@ -11,6 +11,7 @@ import {
   getDataLinkWithUsecases,
   getModulesBySystemIds,
 } from '~entities/usecases';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 
 import {buildConnectionRows} from '../lib/build-connection-rows';
@@ -41,8 +42,11 @@ export function usePortConnectionsInfo(projectId: string): {
           if (requestIdRef.current !== requestId) {
             return;
           }
-          if (!result.success || !result.data) {
-            showToast(result.message ?? 'Failed to load connections', 'danger');
+          if (hasBlockingIssues(result) || !result.data) {
+            showToast(
+              getIssueMessage(result, 'Failed to load connections'),
+              'danger',
+            );
             setState({status: 'closed'});
             return;
           }
@@ -50,9 +54,9 @@ export function usePortConnectionsInfo(projectId: string): {
           const otherModuleSystemIds = [
             ...new Set(
               links.map(({link}) => {
-                const sourceId = String(link.sourceId);
+                const sourceId = link.sourceSystemId;
                 return sourceId === componentSystemId
-                  ? String(link.destinationId)
+                  ? link.destinationSystemId
                   : sourceId;
               }),
             ),
@@ -69,10 +73,13 @@ export function usePortConnectionsInfo(projectId: string): {
           if (requestIdRef.current !== requestId) {
             return;
           }
-          if (!moduleResult.success || !moduleResult.data) {
+          if (hasBlockingIssues(moduleResult) || !moduleResult.data) {
             setState({
               componentSystemId,
-              message: moduleResult.message ?? 'Failed to load module info',
+              message: getIssueMessage(
+                moduleResult,
+                'Failed to load module info',
+              ),
               portSystemId,
               status: 'error',
             });

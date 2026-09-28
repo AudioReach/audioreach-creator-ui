@@ -12,7 +12,7 @@ const PROJECT_B = 'project-b';
 
 const makeItem = (systemId: string, name = systemId): any => ({
   expanded: false,
-  keyValueCollection: [],
+  keyValuePairs: [],
   name,
   systemId,
 });
@@ -166,7 +166,7 @@ describe('useUsecaseSelectionControlStore — addToRecentlySelected', () => {
     const {addToRecentlySelected} = useUsecaseSelectionControlStore.getState();
     const itemNoId: any = {
       expanded: false,
-      keyValueCollection: [],
+      keyValuePairs: [],
       name: 'Group',
     };
     addToRecentlySelected(PROJECT_A, [itemNoId]);

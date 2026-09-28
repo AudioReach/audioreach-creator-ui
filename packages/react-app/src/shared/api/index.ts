@@ -1,5 +1,6 @@
 export * from './electron-api';
 export * from './utils';
+export * from './api-result-utils';
 export * from './http-client';
 export * from './register-client';
 export * from './logging-api';

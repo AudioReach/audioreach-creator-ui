@@ -122,10 +122,10 @@ const uc1 = {systemId: 'uc-1'} as UsecaseDto;
 const uc2 = {systemId: 'uc-2'} as UsecaseDto;
 
 const rowA: ConnectionRow = {
-  connectionType: 'MODULE_MODULE',
-  isDangling: false,
-  moduleId: '0x01',
+  isInterUsecase: false,
+  linkKind: 'MODULE_MODULE',
   moduleName: 'Row A',
+  moduleNaturalId: '0x01',
   otherModuleSystemId: 'mod-a',
   otherPortId: '0x10',
   subgraphSystemId: 'sg-a',
@@ -139,10 +139,10 @@ const rowB: ConnectionRow = {
   systemId: 'row-b',
   usecases: [uc1],
 };
-const rowSg: ConnectionRow = {...rowA, isDangling: false, systemId: 'row-sg'};
+const rowSg: ConnectionRow = {...rowA, isInterUsecase: false, systemId: 'row-sg'};
 const rowDangling: ConnectionRow = {
   ...rowB,
-  isDangling: true,
+  isInterUsecase: true,
   systemId: 'row-dangling',
 };
 

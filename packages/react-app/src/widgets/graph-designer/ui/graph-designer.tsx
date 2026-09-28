@@ -51,6 +51,7 @@ import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
+import {keyConfiguratorStoreManager} from '~features/key-configurator';
 import {
   PortConnectionsInfoPopup,
   usePortConnectionsInfo,
@@ -105,6 +106,7 @@ import {
   buildSubsystemLevelViewFromGraphData,
 } from '../lib/level-view-adapter';
 import {layoutLevelView} from '../lib/level-view-layout';
+import {mapSelectedNodesToConfigurationItems} from '../lib/node-to-config-item';
 import {subgraphNodeId, subgraphProxyNodeId} from '../lib/node-id';
 import {renderNodeContent} from '../lib/render-node-content';
 import {collapseSetForLevel} from '../lib/subgraph-collapse';
@@ -420,6 +422,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     (s) => s.clearSearchHighlight,
   );
   const setSelection = useGraphDesignerStoreShallow((s) => s.setSelection);
+  const keyConfiguratorStore = useMemo(
+    () => keyConfiguratorStoreManager.getStore(projectId),
+    [projectId],
+  );
+  const setKeyConfiguratorSelectedItems = keyConfiguratorStore(
+    (state) => state.setSelectedItems,
+  );
   const isSearchVisible = useGraphDesignerStoreShallow(
     (s) => s.isSearchVisible,
   );
@@ -667,7 +676,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Effect — proactively fetch enable-parameter values so canvas enable
   // overlays reflect real state without opening a module data tab
   // (design.md §21.8). Gated on both graph data and module definitions being
-  // ready — syncEnableOverlays uses moduleDefinitionsById to identify
+  // ready — syncEnableOverlays uses moduleDefinitionsBySystemId to identify
   // enable-capable modules, so running before definitions load silently
   // skips every module and never retries. Safe to re-run because
   // syncEnableOverlays is idempotent per resolved CKV.
@@ -733,7 +742,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   const resolveSubgraphDisplay = useCallback(
     (subgraphSystemId: string) =>
-      subgraphBySystemId.get(subgraphSystemId)?.subgraphId ?? subgraphSystemId,
+      String(
+        subgraphBySystemId.get(subgraphSystemId)?.naturalId ??
+          subgraphSystemId,
+      ),
     [subgraphBySystemId],
   );
 
@@ -1040,6 +1052,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         selectedNodes,
       }: SelectionChangePayload) => {
         setSelection(selectedNodes, selectedEdges);
+        setKeyConfiguratorSelectedItems(
+          mapSelectedNodesToConfigurationItems(selectedNodes, graphData),
+        );
       },
       onSubgraphCollapse: (subgraphId: number) => {
         setCollapseByLevel((prev) => ({
@@ -1068,8 +1083,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       handleEdgesDeleted,
       handleNodeDoubleClick,
       handleNodesDeleted,
+      graphData,
       levelId,
       setSelection,
+      setKeyConfiguratorSelectedItems,
       linkOperations,
       store,
     ],

@@ -31,7 +31,7 @@ const SH = NODE_DIMENSIONS.subgraph.headerHeight;
 const unpositioned: LevelView = {
   containers: [
     {
-      containerId: 1,
+      containerSystemId: 1,
       height: 0,
       id: 'container-1:1',
       label: 'C1',
@@ -87,7 +87,7 @@ const unpositioned: LevelView = {
       id: 'subgraph-1',
       label: 'SG1',
       nodeKind: NODE_KIND.SUBGRAPH,
-      subgraphId: 1,
+      subgraphSystemId: 1,
       width: 0,
       x: 0,
       y: 0,
@@ -101,7 +101,7 @@ const unpositioned: LevelView = {
 const splitGraph: LevelView = {
   containers: [
     {
-      containerId: 1,
+      containerSystemId: 1,
       height: 0,
       id: 'cnt-a',
       label: 'A',
@@ -112,7 +112,7 @@ const splitGraph: LevelView = {
       y: 0,
     },
     {
-      containerId: 2,
+      containerSystemId: 2,
       height: 0,
       id: 'cnt-b',
       label: 'B',
@@ -192,7 +192,7 @@ const splitGraph: LevelView = {
       id: 'sg-1',
       label: 'SG1',
       nodeKind: NODE_KIND.SUBGRAPH,
-      subgraphId: 1,
+      subgraphSystemId: 1,
       width: 0,
       x: 0,
       y: 0,
@@ -206,7 +206,7 @@ const splitGraph: LevelView = {
 const twoSubgraphGraph: LevelView = {
   containers: [
     {
-      containerId: 1,
+      containerSystemId: 1,
       height: 0,
       id: 'cnt-ax',
       label: 'CA',
@@ -217,7 +217,7 @@ const twoSubgraphGraph: LevelView = {
       y: 0,
     },
     {
-      containerId: 2,
+      containerSystemId: 2,
       height: 0,
       id: 'cnt-by',
       label: 'CB',
@@ -273,7 +273,7 @@ const twoSubgraphGraph: LevelView = {
       id: 'sg-a',
       label: 'SGA',
       nodeKind: NODE_KIND.SUBGRAPH,
-      subgraphId: 1,
+      subgraphSystemId: 1,
       width: 0,
       x: 0,
       y: 0,
@@ -283,7 +283,7 @@ const twoSubgraphGraph: LevelView = {
       id: 'sg-b',
       label: 'SGB',
       nodeKind: NODE_KIND.SUBGRAPH,
-      subgraphId: 2,
+      subgraphSystemId: 2,
       width: 0,
       x: 0,
       y: 0,
@@ -564,7 +564,7 @@ describe('layoutLevelView', () => {
     const verticalGraph: LevelView = {
       containers: [
         {
-          containerId: 1,
+          containerSystemId: 1,
           height: 0,
           id: 'cnt-1',
           label: 'C1',
@@ -575,7 +575,7 @@ describe('layoutLevelView', () => {
           y: 0,
         },
         {
-          containerId: 2,
+          containerSystemId: 2,
           height: 0,
           id: 'cnt-2',
           label: 'C2',
@@ -622,7 +622,7 @@ describe('layoutLevelView', () => {
           id: 'sg-1',
           label: 'SG1',
           nodeKind: NODE_KIND.SUBGRAPH,
-          subgraphId: 1,
+          subgraphSystemId: 1,
           width: 0,
           x: 0,
           y: 0,
@@ -632,7 +632,7 @@ describe('layoutLevelView', () => {
           id: 'sg-2',
           label: 'SG2',
           nodeKind: NODE_KIND.SUBGRAPH,
-          subgraphId: 2,
+          subgraphSystemId: 2,
           width: 0,
           x: 0,
           y: 0,

@@ -37,7 +37,7 @@ export function ConnectionsTable({
         cell: (info) => info.getValue(),
         header: () => 'Module Name',
       }),
-      columnHelper.accessor('isDangling', {
+      columnHelper.accessor('isInterUsecase', {
         cell: (info) => (info.getValue() ? 'Dangling' : 'Subgraph'),
         header: () => 'Connection Type',
       }),
@@ -47,7 +47,7 @@ export function ConnectionsTable({
     }
     return [
       ...alwaysVisible,
-      columnHelper.accessor('moduleId', {
+      columnHelper.accessor('moduleNaturalId', {
         cell: (info) => info.getValue(),
         header: () => 'Module Id',
       }),

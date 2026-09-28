@@ -6,7 +6,6 @@
 import {type ApiResult, httpClient} from '~shared/api';
 import type {
   PropertiesResponseDto,
-  PropertyCollectionRequestDto,
   PropertyDto,
 } from '~shared/lib/property.dto';
 import {unwrapPropertiesResponse} from '~shared/lib/property-api';
@@ -26,7 +25,7 @@ export async function fetchControlLinkProperties(
 export async function patchControlLinkProperties(
   projectId: string,
   controlLinkId: string,
-  request: PropertyCollectionRequestDto,
+  request: ControlLinkPropertiesResponseDto,
 ): Promise<ApiResult<PropertyDto[]>> {
   const result = await httpClient.patch<ControlLinkPropertiesResponseDto>(
     `/projects/${projectId}/control-links/${controlLinkId}/properties`,

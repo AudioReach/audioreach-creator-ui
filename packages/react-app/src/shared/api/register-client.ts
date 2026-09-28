@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ApiResult} from '~shared/api/api-response.types';
+import {
+  getIssueMessage,
+  hasBlockingIssues,
+  type ApiResult,
+} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import {useGlobalStore} from '~shared/store/global-store';
 
@@ -69,15 +73,14 @@ export async function ensureRegistered(): Promise<boolean> {
         component: 'RegisterClient',
         tag: JSON.stringify({
           clientId: result.data?.clientId,
-          message: result.message,
-          success: result.success,
+          issueMessage: getIssueMessage(result, ''),
           tokenReceived: Boolean(result.data?.token),
         }),
       });
 
       useGlobalStore.getState().setLastHealthCheckAt(Date.now());
 
-      if (result.success) {
+      if (!hasBlockingIssues(result) && result.data) {
         const clientId = result.data?.clientId;
         const token = result.data?.token;
 
@@ -117,16 +120,14 @@ export async function ensureRegistered(): Promise<boolean> {
         return true;
       }
 
-      // Registration failed with a handled response (e.g., 4xx/5xx)
+      const message = getIssueMessage(result, 'Registration failed');
       logger.error('Registration failed', {
         action: 'register_failed',
         component: 'RegisterClient',
-        error: result.message,
+        error: message,
       });
-      useGlobalStore
-        .getState()
-        .incrementFail(result.message || 'Registration failed');
-      useGlobalStore.getState().markUnavailable(result.message);
+      useGlobalStore.getState().incrementFail(message);
+      useGlobalStore.getState().markUnavailable(message);
       useGlobalStore.getState().setRegistrationStatus('error');
       return false;
     } catch (e) {

@@ -36,7 +36,12 @@ export type ModulePortCountField =
 export interface PropertiesPanelProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
-  onContainerIdChange: (containerId: string, newId: string) => void;
+  onContainerIdChange: (
+    subgraphSystemId: string,
+    containerSystemId: string,
+    newContainerSystemId: string,
+    newContainerNaturalId: number,
+  ) => void;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
   onModulePortCountChange: (
@@ -191,7 +196,12 @@ function renderPropertyCard({
   graphData: UsecaseGraphData;
   isEditing: boolean;
   item: PropertyGroupItem;
-  onContainerIdChange: (containerId: string, newId: string) => void;
+  onContainerIdChange: (
+    subgraphSystemId: string,
+    containerSystemId: string,
+    newContainerSystemId: string,
+    newContainerNaturalId: number,
+  ) => void;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
   onModulePortCountChange: (
@@ -230,6 +240,7 @@ function renderPropertyCard({
           isEditing={isEditing}
           onContainerIdChange={onContainerIdChange}
           projectId={projectId}
+          subgraphSystemId={item.subgraphSystemId}
         />
       );
     case 'modules':

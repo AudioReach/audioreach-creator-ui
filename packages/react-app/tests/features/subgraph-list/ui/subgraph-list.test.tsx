@@ -129,9 +129,10 @@ function makeGraphDataWithSubgraph(subgraphId: string): UsecaseGraphData {
     subgraphs: {
       [subgraphId]: {
         containers: [],
-        subgraphId,
+        naturalId: 1,
         subgraphName: 'Already Present',
         subgraphType: 'stream',
+        systemId: subgraphId,
       },
     },
     subsystems: {},
@@ -167,9 +168,10 @@ function renderSubgraphList(options: {
       {
         category: '',
         description: 'Subgraph description',
-        subgraphId: 'sg-1',
+        naturalId: 1,
         subgraphName: 'Stream Subgraph',
         subgraphType: 'stream',
+        systemId: 'subgraph-system-1',
       },
     ],
     subgraphListStatus: 'ready',
@@ -207,7 +209,7 @@ describe('SubgraphList drag source', () => {
 
     expect(dataTransfer.setData).toHaveBeenCalledWith(
       'application/json',
-      JSON.stringify({kind: 'subgraph', subgraphId: 'sg-1'}),
+      JSON.stringify({kind: 'subgraph', subgraphId: 'subgraph-system-1'}),
     );
     expect(dataTransfer.setData).toHaveBeenCalledWith(
       'application/x-audioreach-node-type-subgraph',
@@ -258,7 +260,7 @@ describe('SubgraphList drag source', () => {
   it('disables a subgraph already present on the canvas', async () => {
     renderSubgraphList({
       editModeState: 'edit',
-      graphData: makeGraphDataWithSubgraph('sg-1'),
+      graphData: makeGraphDataWithSubgraph('subgraph-system-1'),
     });
 
     const row = screen.getByText('Stream Subgraph').closest('li');
@@ -287,9 +289,10 @@ describe('SubgraphList drag source', () => {
         {
           category: '',
           description: 'Subgraph description',
-          subgraphId: 'sg-1',
+          naturalId: 1,
           subgraphName: 'Stream Subgraph',
           subgraphType: 'stream',
+          systemId: 'sg-1',
         },
       ],
       subgraphListStatus: 'ready',
@@ -306,9 +309,10 @@ describe('SubgraphList drag source', () => {
         {
           category: '',
           description: 'Subgraph description',
-          subgraphId: 'sg-1',
+          naturalId: 1,
           subgraphName: 'Stream Subgraph',
           subgraphType: 'stream',
+          systemId: 'sg-1',
         },
       ],
       subgraphListStatus: 'ready',

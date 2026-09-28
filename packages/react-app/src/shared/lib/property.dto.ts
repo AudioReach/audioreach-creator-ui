@@ -8,9 +8,9 @@ import type {AnyElementDto} from '~entities/spf-module-data';
 export type PropertyElement = AnyElementDto;
 
 export interface PropertyDto {
-  elements: PropertyElement[];
+  elements?: PropertyElement[];
   hasDefinition: boolean;
-  propertyId: number;
+  naturalId: number;
   propertyName: string;
   systemId: string;
 }

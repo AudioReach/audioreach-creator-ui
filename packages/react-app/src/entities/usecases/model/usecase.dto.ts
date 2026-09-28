@@ -3,14 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ChangeInfoDto, KeyInfo, ValueInfo} from './usecase-component.dto';
-
-/**
- * Represents a usecase as returned by the API.
- */
 export interface UsecaseDto {
-  changeInfo: ChangeInfoDto;
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   relatedEndPointLinks?: RelatedEndPointLink[];
   systemId: string;
   usecaseAliasId?: number;
@@ -23,14 +17,22 @@ export interface UsecaseDto {
  * Identifies a subsystem group returned by the filtered-by-subsystem endpoint.
  */
 export interface SubsystemFilteredKv {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
 }
 
 export type UsecaseIdentifier = UsecaseDto;
 
 export interface KeyValueInfo {
-  keyInfo: KeyInfo;
-  valueInfo: ValueInfo;
+  key: {
+    name: string;
+    naturalId: number;
+    systemId: string;
+  };
+  value: {
+    name: string;
+    naturalId: number;
+    systemId: string;
+  };
 }
 
 export interface RelatedEndPointLink {

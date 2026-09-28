@@ -10,6 +10,7 @@ import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/
 import type {
   ContextMenuTarget,
   NodeDisplayConfig,
+  SelectionChangePayload,
   VisualizerContextMenuConfig,
 } from '~features/usecase-visualizer';
 
@@ -47,6 +48,7 @@ interface MockUsecaseVisualizerProps {
       targetSubgraphId?: string;
     }) => void;
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
+    onSelectionChange?: (payload: SelectionChangePayload) => void;
   };
   graph?: LevelView;
   rendering?: {nodeDisplayConfig?: NodeDisplayConfig};
@@ -213,6 +215,10 @@ import {createGraphDesignerStore} from '~features/graph-designer/model/graph-des
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import type {PortConnectionsInfoPopupProps} from '~features/port-connections-info';
 import {
+  ConfigurationItemType,
+  keyConfiguratorStoreManager,
+} from '~features/key-configurator';
+import {
   DEFAULT_USER_PREFERENCES,
   type UserPreferences,
 } from '~shared/config/user-preferences-types';
@@ -236,32 +242,33 @@ function makeGraphData(): UsecaseGraphData {
     connections: [],
     containers: {
       'cnt-1': {
-        containerId: 'cnt-1',
         moduleInstances: ['mod-1'],
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'cnt-1',
       },
     },
     moduleInstances: {
       'mod-1': {
-        containerId: 'cnt-1',
+        containerSystemId: 'cnt-1',
         displayName: 'Module 1',
         inputPorts: [],
-        moduleId: 'module-1',
-        moduleInstanceId: 'mod-1',
+        moduleDefinitionSystemId: 'module-1',
         moduleName: 'Module 1',
         moduleType: '',
+        naturalId: 1,
         outputPorts: [],
         position: {x: 0, y: 0},
-        subgraphId: 'sg-1',
+        subgraphSystemId: 'sg-1',
+        systemId: 'mod-1',
       },
     },
     selectedUsecases: ['uc-1'],
     subgraphs: {
       'sg-1': {
         containers: ['cnt-1'],
-        subgraphId: 'sg-1',
         subgraphName: 'Subgraph 1',
         subgraphType: '',
+        systemId: 'sg-1',
       },
     },
     subsystems: {},
@@ -303,13 +310,13 @@ function makeBoundaryGraphData(): UsecaseGraphData {
     ...graphData,
     connections: [
       {
-        connectionId: 'inner-boundary-link',
-        connectionType: 'data',
-        fromModuleId: 'mod-1',
-        fromPortId: 'out-1',
-        isDangling: false,
-        toModuleId: 'mod-1',
-        toPortId: 'in-1',
+        destinationPortSystemId: 'in-1',
+        destinationSystemId: 'mod-1',
+        linkKind: 'data',
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'out-1',
+        sourceSystemId: 'mod-1',
+        systemId: 'inner-boundary-link',
       },
     ],
     subsystems: {
@@ -390,6 +397,7 @@ function renderGraphDesigner(options?: {
 }
 
 beforeEach(() => {
+  keyConfiguratorStoreManager.clearAllStores();
   mockVisualizerProps = null;
 });
 
@@ -514,6 +522,90 @@ describe('GraphDesigner - active boundary navigation', () => {
   });
 });
 
+describe('GraphDesigner - key configurator selection sync', () => {
+  it('syncs selected subgraphs into the key configurator store', async () => {
+    renderGraphDesigner({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: ['uc-1'],
+        subgraphs: {
+          '1': {
+            containers: [],
+            subgraphName: 'Subgraph 1',
+            subgraphType: '',
+            systemId: '1',
+          },
+        },
+        subsystems: {},
+      },
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onSelectionChange?.({
+        delta: {
+          addedEdges: [],
+          addedNodes: [],
+          removedEdges: [],
+          removedNodes: [],
+        },
+        selectedEdges: [],
+        selectedNodes: [
+          {
+            id: 'subgraph-1',
+            nodeKind: NODE_KIND.SUBGRAPH,
+            systemId: '1',
+          },
+        ],
+      });
+    });
+
+    expect(
+      keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
+    ).toEqual([
+      {
+        id: 1,
+        name: 'Subgraph 1',
+        systemId: '1',
+        type: ConfigurationItemType.SUBGRAPH,
+      },
+    ]);
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onSelectionChange?.({
+        delta: {
+          addedEdges: [],
+          addedNodes: [],
+          removedEdges: [],
+          removedNodes: [],
+        },
+        selectedEdges: [],
+        selectedNodes: [
+          {
+            id: 'subgraph-proxy-1',
+            nodeKind: NODE_KIND.SUBGRAPH_PROXY,
+            systemId: '1',
+          },
+        ],
+      });
+    });
+
+    expect(
+      keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
+    ).toEqual([
+      {
+        id: 1,
+        name: 'Subgraph 1',
+        systemId: '1',
+        type: ConfigurationItemType.SUBGRAPH,
+      },
+    ]);
+  });
+});
+
 async function renderWithGraphReady() {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
   const projectStore = createProjectStore(PROJECT_ID);
@@ -573,13 +665,13 @@ function makePortTarget(
   };
 }
 
-function makeUsecase(systemId: string, valueLabel: string): UsecaseDto {
+function makeUsecase(systemId: string, valueName: string): UsecaseDto {
   return {
     changeInfo: {changeType: 'NONE'},
-    keyValueCollection: [
+    keyValuePairs: [
       {
-        keyInfo: {keyId: 1, keyLabel: 'DeviceRX', keySystemId: 'key-1'},
-        valueInfo: {valueId: 1, valueLabel, valueSystemId: 'val-1'},
+        key: {name: 'DeviceRX', naturalId: 1, systemId: 'key-1'},
+        value: {name: valueName, naturalId: 1, systemId: 'val-1'},
       },
     ],
     systemId,
@@ -1140,7 +1232,7 @@ describe('GraphDesigner — PortConnectionsInfoPopup wiring', () => {
     expect(mockPortConnectionsInfo.close).toHaveBeenCalledTimes(1);
   });
 
-  it('resolveSubgraphDisplay maps a subgraph systemId to its subgraphId', async () => {
+  it('resolveSubgraphDisplay maps a subgraph systemId to its naturalId', async () => {
     const {graphDesignerStore} = await renderWithGraphReady();
     act(() => {
       graphDesignerStore.setState({
@@ -1148,7 +1240,7 @@ describe('GraphDesigner — PortConnectionsInfoPopup wiring', () => {
           {
             category: '',
             description: '',
-            subgraphId: 'sg-42',
+            naturalId: 42,
             subgraphName: 'Playback',
             subgraphType: 'Static',
             systemId: 'sg-system-1',
@@ -1158,7 +1250,7 @@ describe('GraphDesigner — PortConnectionsInfoPopup wiring', () => {
     });
 
     expect(capturedPopupProps!.resolveSubgraphDisplay('sg-system-1')).toBe(
-      'sg-42',
+      '42',
     );
     // Falls back to the raw systemId when there's no match (design.md
     // "Error Handling" — a lookup miss is not an error).

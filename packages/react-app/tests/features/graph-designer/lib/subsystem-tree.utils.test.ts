@@ -13,24 +13,24 @@ import {
 describe('buildSubsystemTree', () => {
   it('deduplicates repeated subsystem DTOs at root and child levels', () => {
     const root = makeSubsystemDto({
-      id: 1,
       name: 'Root',
+      naturalId: 1,
       systemId: 'ss-root',
     });
     const child = makeSubsystemDto({
-      id: 2,
       name: 'Child',
+      naturalId: 2,
       parentSystemId: 'ss-root',
       systemId: 'ss-child',
     });
     const rootAlias = makeSubsystemDto({
-      id: 101,
       name: 'Root Alias',
+      naturalId: 101,
       systemId: 'ss-root',
     });
     const childAlias = makeSubsystemDto({
-      id: 102,
       name: 'Child Alias',
+      naturalId: 102,
       parentSystemId: 'ss-root',
       systemId: 'ss-child',
     });
@@ -40,19 +40,19 @@ describe('buildSubsystemTree', () => {
       [
         makeSpfModuleDto({
           parentSystemId: 'ss-root',
-          subgraphId: 'sg-root',
+          subgraphSystemId: 'sg-root',
         }),
         makeSpfModuleDto({
           parentSystemId: 'ss-root',
-          subgraphId: 'sg-root-alias',
+          subgraphSystemId: 'sg-root-alias',
         }),
         makeSpfModuleDto({
           parentSystemId: 'ss-child',
-          subgraphId: 'sg-child',
+          subgraphSystemId: 'sg-child',
         }),
         makeSpfModuleDto({
           parentSystemId: 'ss-child',
-          subgraphId: 'sg-child-alias',
+          subgraphSystemId: 'sg-child-alias',
         }),
       ],
     );

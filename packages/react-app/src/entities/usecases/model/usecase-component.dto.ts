@@ -16,11 +16,18 @@ export type ConnectionType =
   | 'MODULE_SUBSYSTEM'
   | 'SUBSYSTEM_MODULE'
   | 'SUBSYSTEM_SUBSYSTEM';
+export type LinkType = 'EC' | 'INTER_USECASE' | 'NORMAL';
+export type ControlLinkType = Exclude<LinkType, 'EC'>;
 
-export interface ChangeInfoDto {
-  changeId?: string;
-  changeStatus?: 'STAGED' | 'UNSTAGED';
-  changeType: 'NONE' | 'CREATE' | 'UPDATE' | 'DELETE';
+export function isInterUsecaseLink(linkType: LinkType): boolean {
+  return linkType === 'INTER_USECASE';
+}
+
+export function toControlLinkType(linkType: LinkType): ControlLinkType {
+  if (linkType === 'EC') {
+    throw new Error('EC link type is only valid for data links');
+  }
+  return linkType;
 }
 
 export interface EndPointLink {
@@ -30,140 +37,101 @@ export interface EndPointLink {
 }
 
 export interface DataPortDto {
-  changeInfo: ChangeInfoDto;
-  id: number;
   name: string;
+  naturalId: number;
   portIoType: PortIOType;
   portType: PortType;
-  relatedEndPointLinks: EndPointLink[];
   systemId: string;
   totalLinksAtPort: number;
 }
 
 export interface ControlPortIntentDto {
-  id: number;
   name: string;
+  naturalId: number;
 }
 
 export interface ControlPortDto {
-  changeInfo: ChangeInfoDto;
   controlPortName: string;
-  id: number;
   intents: ControlPortIntentDto[];
   name: string;
+  naturalId: number;
   portType: PortType;
-  relatedEndPointLinks: EndPointLink[];
   systemId: string;
   totalLinksAtPort: number;
 }
 
 export interface SpfModuleDto {
   alias: string;
-  changeInfo: ChangeInfoDto;
   ckvs?: CkvDto[];
-  containerId: number;
+  containerSystemId: string;
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
-  heapId: number;
-  id: number;
   maxControlPortsSupported: number;
   maxInputPortsSupported: number;
   maxOutputPortsSupported: number;
-  moduleId: number;
+  moduleDefinitionSystemId: string;
   name: string;
+  naturalId: number;
   parentSystemId?: string;
-  relatedEndPointLinks: EndPointLink[];
-  subgraphId: string;
+  relatedEndPointLinks?: EndPointLink[];
+  subgraphSystemId: string;
   systemId: string;
   tags?: TagInfoDto[];
 }
 
-export class KeyInfo {
-  readonly keyId!: number;
-  readonly keyLabel!: string;
-  readonly keySystemId!: string;
-
-  constructor(keyId: number, keyLabel: string, keySystemId: string) {
-    this.keyId = keyId;
-    this.keyLabel = keyLabel;
-    this.keySystemId = keySystemId;
-  }
-
-  equals(other: KeyInfo): boolean {
-    if (!other) {
-      return false;
-    }
-    return (
-      this.keyId === other.keyId &&
-      this.keyLabel === other.keyLabel &&
-      this.keySystemId === other.keySystemId
-    );
-  }
+export interface KeyInfoDto {
+  name: string;
+  naturalId: number;
+  systemId: string;
 }
 
-export class ValueInfo {
-  readonly valueId!: number;
-  readonly valueLabel!: string;
-  readonly valueSystemId!: string;
-
-  constructor(valueId: number, valueLabel: string, valueSystemId: string) {
-    this.valueId = valueId;
-    this.valueLabel = valueLabel;
-    this.valueSystemId = valueSystemId;
-  }
-
-  equals(other: ValueInfo): boolean {
-    if (!other) {
-      return false;
-    }
-    return (
-      this.valueId === other.valueId &&
-      this.valueLabel === other.valueLabel &&
-      this.valueSystemId === other.valueSystemId
-    );
-  }
+export interface ValueInfoDto {
+  name: string;
+  naturalId: number;
+  systemId: string;
 }
 
 export interface SubsystemDto {
-  changeInfo: ChangeInfoDto;
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
-  filteredKeys: KeyInfo[];
-  id: number;
-  name: string;
+  filteredKeys: KeyInfoDto[];
+  name?: string;
+  naturalId: number;
   parentSystemId?: string;
-  relatedEndPointLinks: EndPointLink[];
   systemId: string;
 }
 
 export interface DataLinkDto {
-  connectionType: ConnectionType;
   destinationPortSystemId: string;
   destinationSystemId: string;
-  isDangling: boolean;
-  parentSystemId?: string;
+  linkType: LinkType;
+  relatedEndPointLinks?: EndPointLink[];
   sourcePortSystemId: string;
   sourceSystemId: string;
   systemId: string;
 }
 
-/** Data link mode. The backend defaults to `normal` when omitted. */
-export type DataLinkType = 'EC' | 'dangling' | 'normal';
-
 export interface CreateDataLinkRequest {
+  destinationModuleSystemId: string;
+  destinationPortSystemId: string;
+  linkType: LinkType;
+  sourceModuleSystemId: string;
+  sourcePortSystemId: string;
+}
+
+export interface CreateDataLinkWithSubsystemsRequest {
   destinationNodeSystemId: string;
   destinationPortSystemId: string;
+  linkType: LinkType;
   sourceNodeSystemId: string;
   sourcePortSystemId: string;
-  type?: DataLinkType;
 }
 
 export interface ControlLinkDto {
-  connectionType: ConnectionType;
   destinationPortSystemId: string;
   destinationSystemId: string;
-  isDangling: boolean;
-  parentSystemId?: string;
+  linkType: ControlLinkType;
+  relatedEndPointLinks?: EndPointLink[];
   sourcePortSystemId: string;
   sourceSystemId: string;
   systemId: string;
@@ -172,51 +140,34 @@ export interface ControlLinkDto {
 export interface CreateControlLinkRequest {
   endComponentSystemId: string;
   endPortSystemId: string;
-  isDangling: boolean;
+  linkType: ControlLinkType;
   parentSystemId?: string;
   startComponentSystemId: string;
   startPortSystemId: string;
 }
 
-interface DataLinkWithUsecasesLinkDto {
-  changeId?: string;
-  connectionType: ConnectionType;
-  destinationId: string;
-  destinationPortId: string;
-  editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
-  isDangling: boolean;
-  relatedEndPointLinks: EndPointLink[];
-  sourceId: string;
-  sourcePortId: string;
-  systemId: string;
-}
-
-interface ControlLinkWithUsecasesLinkDto {
-  changeId?: string;
-  connectionType: ConnectionType;
-  destinationId: string;
-  destinationPortId: string;
-  editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
-  isDangling: boolean;
-  relatedEndPointLinks: EndPointLink[];
-  sourceId: string;
-  sourcePortId: string;
+interface LinkWithUsecasesLinkDto {
+  destinationPortSystemId: string;
+  destinationSystemId: string;
+  linkType: LinkType;
+  sourcePortSystemId: string;
+  sourceSystemId: string;
   systemId: string;
 }
 
 export interface DataLinkWithUsecasesDto {
-  link: DataLinkWithUsecasesLinkDto;
+  link: LinkWithUsecasesLinkDto;
   usecases: UsecaseDto[];
 }
 
 export interface ControlLinkWithUsecasesDto {
-  link: ControlLinkWithUsecasesLinkDto;
+  link: LinkWithUsecasesLinkDto;
   usecases: UsecaseDto[];
 }
 
 export interface KeyValueInfo {
-  keyInfo: KeyInfo;
-  valueInfo: ValueInfo;
+  key: KeyInfoDto;
+  value: ValueInfoDto;
 }
 
 export interface ComponentCollectionDto {

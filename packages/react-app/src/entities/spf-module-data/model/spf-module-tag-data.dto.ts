@@ -4,33 +4,34 @@
  */
 
 import type {
-  ChangeInfoDto,
   KeyValueDto,
   KeyValueInfo,
   ParameterDetailDto,
   ParamInfo,
 } from './spf-module-common.dto';
 
-export interface TagDataDto {
-  changeInfo: ChangeInfoDto;
+export interface TkvCalDataResponseDto {
   parameters: ParameterDetailDto[];
   systemId: string;
   Tkv: KeyValueDto[];
 }
 
+export type TagDataDto = TkvCalDataResponseDto;
+
 export interface TagInfoDto {
+  naturalId: number;
   systemId: string;
-  tagId: number;
   tagName: string;
   tkvs?: TkvDto[];
 }
 
 export interface TkvDto {
-  keyValueCollection: KeyValueInfo[];
+  keyValuePairs: KeyValueInfo[];
   supportedParameters: ParamInfo[];
   systemId: string;
 }
 
 export interface UpdateSpfModuleTagDataRequest {
-  data: ParameterDetailDto[];
+  parameters: ParameterDetailDto[];
+  uiPersistence?: string;
 }

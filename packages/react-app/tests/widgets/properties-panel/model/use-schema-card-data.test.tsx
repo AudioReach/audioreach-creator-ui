@@ -10,14 +10,17 @@ import {act, renderHook, waitFor} from '@testing-library/react';
 import type {TreeViewItem} from '~features/generic-tree-view';
 import type {ApiResult} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
-import {type SchemaPropertyCommitResult,useSchemaCardData} from '~widgets/properties-panel/model/use-schema-card-data';
+import {
+  type SchemaPropertyCommitResult,
+  useSchemaCardData,
+} from '~widgets/properties-panel/model/use-schema-card-data';
 
 import {usePropertiesPanelStore} from '~widgets/properties-panel/model/use-properties-panel-store';
 
 function makeProperty(
-  propertyId: number,
+  naturalId: number,
   propertyName: string,
-  systemId = `prop-${propertyId}`,
+  systemId = `prop-${naturalId}`,
 ): PropertyDto {
   return {
     elements: [
@@ -25,11 +28,11 @@ function makeProperty(
         isReadOnly: false,
         name: propertyName,
         policy: 'BASIC',
-        type: 'CONFIG_ELEMENT',
-        value: String(propertyId),
+        type: 'ConfigElement',
+        value: String(naturalId),
       },
     ],
-    propertyId,
+    naturalId,
     propertyName,
     systemId,
   };
@@ -113,8 +116,13 @@ describe('useSchemaCardData', () => {
     const fetchProperties = jest
       .fn()
       .mockResolvedValueOnce({
-        message: 'Backend unavailable',
-        success: false,
+        issues: [
+          {
+            code: 'BACKEND_UNAVAILABLE',
+            message: 'Backend unavailable',
+            severity: 'ERROR',
+          },
+        ],
       })
       .mockResolvedValueOnce(successResult([property]));
 
@@ -138,6 +146,37 @@ describe('useSchemaCardData', () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.data?.items[0]?.name).toBe('Scenario ID');
+  });
+
+  it('keeps partial load data and exposes the issue as a warning', async () => {
+    const property = makeProperty(1, 'Scenario ID');
+    const fetchProperties = jest.fn().mockResolvedValue({
+      data: [property],
+      issues: [
+        {
+          code: 'PROPERTY_PAYLOAD_NOT_FOUND',
+          message:
+            'No payload found for property definition with systemId 5410652176 (propertyId 134222028)',
+          severity: 'ERROR',
+        },
+      ],
+    });
+
+    const {result} = renderHook(() =>
+      useSchemaCardData({
+        entityId: 'sg-1',
+        entityType: 'subgraph',
+        fetchProperties,
+        projectId: 'proj-1',
+        saveProperty: jest.fn(),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.data?.items[0]?.name).toBe('Scenario ID'),
+    );
+    expect(result.current.error).toBeNull();
+    expect(result.current.loadWarning).toContain('No payload found');
   });
 
   it('patches dirty tree items and reconciles returned authoritative data', async () => {
@@ -174,7 +213,7 @@ describe('useSchemaCardData', () => {
     });
 
     expect(saveProperty).toHaveBeenCalledWith(
-      expect.objectContaining({propertyId: 1}),
+      expect.objectContaining({naturalId: 1}),
     );
     expect(result.current.data?.items[0]?.systemId).toBe('prop-1-next');
     expect(onCommitSuccess).toHaveBeenCalledWith(

@@ -87,8 +87,8 @@ export function buildMdfModuleRows(
 
     return [
       {
-        id: module.moduleInstanceId,
-        moduleId: module.moduleId,
+        id: module.systemId,
+        moduleId: String(module.naturalId),
         moduleName: module.displayName,
         processingDomain: module.moduleType,
       },

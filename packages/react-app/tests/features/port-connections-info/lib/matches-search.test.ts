@@ -7,10 +7,10 @@ import {matchesSearch} from '~features/port-connections-info/lib/matches-search'
 import type {ConnectionRow} from '~features/port-connections-info/model/port-connections-info.types';
 
 const row: ConnectionRow = {
-  connectionType: 'MODULE_MODULE',
-  isDangling: false,
-  moduleId: '0x1A2B',
+  isInterUsecase: false,
+  linkKind: 'MODULE_MODULE',
   moduleName: 'Encoder',
+  moduleNaturalId: '0x1A2B',
   otherModuleSystemId: 'mod-sys-1',
   otherPortId: '0x03',
   subgraphSystemId: 'sg-sys-1',

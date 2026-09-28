@@ -32,7 +32,9 @@ export function selectModuleEnable(
 ): ModuleEnable {
   const moduleInstance = state.graphData?.moduleInstances[moduleInstanceId];
   const moduleDefinition = moduleInstance
-    ? state.moduleDefinitionsById[moduleInstance.moduleId]
+    ? state.moduleDefinitionsBySystemId[
+        moduleInstance.moduleDefinitionSystemId
+      ]
     : undefined;
   const enableSystemId = resolveEnableParamSystemId(moduleDefinition);
   if (!enableSystemId) {
@@ -53,13 +55,13 @@ export function selectModuleEnable(
     (param) => param.systemId === enableSystemId,
   );
   const enableElement = enableParameter?.elements[0];
-  if (!enableElement || enableElement.type !== 'CONFIG_ELEMENT') {
+  if (!enableElement || enableElement.type !== 'ConfigElement') {
     return {isCkvResolved: true, isPresent: true, isReady: false};
   }
 
   const activeAllowedValue = enableElement.allowedValues?.find(
     (allowedValue) =>
-      allowedValue.type === 'NAME_VALUE_PAIR' &&
+      !('bitMask' in allowedValue) &&
       allowedValue.value === enableElement.value,
   );
 

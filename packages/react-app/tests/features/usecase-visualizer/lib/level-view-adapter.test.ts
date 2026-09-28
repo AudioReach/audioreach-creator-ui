@@ -11,34 +11,34 @@ jest.mock('~shared/lib/logger');
 const graphData: UsecaseGraphData = {
   connections: [
     {
-      connectionId: 'link-1',
-      connectionType: 'data',
-      fromModuleId: 'sys-mod-1',
-      fromPortId: '10',
-      isDangling: false,
-      toModuleId: 'sys-mod-2',
-      toPortId: '20',
+      destinationPortSystemId: 'sys-port-20',
+      destinationSystemId: 'sys-mod-2',
+      linkKind: 'data',
+      linkType: 'NORMAL',
+      sourcePortSystemId: 'sys-port-10',
+      sourceSystemId: 'sys-mod-1',
+      systemId: 'link-1',
     },
     {
-      connectionId: 'link-2',
-      connectionType: 'control',
-      fromModuleId: 'sys-mod-1',
-      fromPortId: '30',
-      isDangling: false,
-      toModuleId: 'sys-mod-2',
-      toPortId: '40',
+      destinationPortSystemId: 'sys-port-40',
+      destinationSystemId: 'sys-mod-2',
+      linkKind: 'control',
+      linkType: 'NORMAL',
+      sourcePortSystemId: 'sys-port-30',
+      sourceSystemId: 'sys-mod-1',
+      systemId: 'link-2',
     },
   ],
   containers: {
     '5': {
-      containerId: '5',
       moduleInstances: ['sys-mod-1', 'sys-mod-2'],
-      subgraphId: '1',
+      subgraphSystemId: '1',
+      systemId: '5',
     },
   },
   moduleInstances: {
     'sys-mod-1': {
-      containerId: '5',
+      containerSystemId: '5',
       displayName: 'Decoder',
       inputPorts: [
         {
@@ -62,10 +62,10 @@ const graphData: UsecaseGraphData = {
           totalLinksAtPort: 1,
         },
       ],
-      moduleId: '100',
-      moduleInstanceId: 'sys-mod-1',
+      moduleDefinitionSystemId: '100',
       moduleName: 'Decoder',
       moduleType: 'Decoder',
+      naturalId: 100,
       outputPorts: [
         {
           activeLinks: 0,
@@ -79,10 +79,11 @@ const graphData: UsecaseGraphData = {
         },
       ],
       position: {x: 0, y: 0},
-      subgraphId: '1',
+      subgraphSystemId: '1',
+      systemId: 'sys-mod-1',
     },
     'sys-mod-2': {
-      containerId: '5',
+      containerSystemId: '5',
       displayName: 'Encoder',
       inputPorts: [
         {
@@ -106,13 +107,14 @@ const graphData: UsecaseGraphData = {
           totalLinksAtPort: 1,
         },
       ],
-      moduleId: '101',
-      moduleInstanceId: 'sys-mod-2',
+      moduleDefinitionSystemId: '101',
       moduleName: 'Encoder',
       moduleType: 'Encoder',
+      naturalId: 101,
       outputPorts: [],
       position: {x: 0, y: 0},
-      subgraphId: '1',
+      subgraphSystemId: '1',
+      systemId: 'sys-mod-2',
     },
   },
   selectedUsecases: [],
@@ -120,9 +122,9 @@ const graphData: UsecaseGraphData = {
     '1': {
       containers: ['5'],
       diffState: undefined,
-      subgraphId: '1',
       subgraphName: 'SG1',
       subgraphType: '',
+      systemId: '1',
     },
   },
   subsystems: {},
@@ -172,7 +174,7 @@ describe('buildLevelViewFromGraphData', () => {
     const link = view.dataLinks![0];
     expect(link.edgeKind).toBe('data');
     expect(link.sourceNodeId).toBe('sys-mod-1');
-    expect(link.sourcePortId).toBe('10');
+    expect(link.sourcePortId).toBe('sys-port-10');
     expect(link.id).toBe('link-1');
   });
 

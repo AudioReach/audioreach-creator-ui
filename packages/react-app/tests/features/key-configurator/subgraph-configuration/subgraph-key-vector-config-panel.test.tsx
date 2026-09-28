@@ -143,8 +143,8 @@ describe('SubgraphKeyVectorConfigPanel', () => {
 
   const mockConfiguredKeyValues = [
     {
-      keyInfo: {id: 0xab000000, name: 'Instance'},
-      valueInfo: {id: 1, name: 'Instance_1'},
+      key: {id: 0xab000000, name: 'Instance'},
+      value: {id: 1, name: 'Instance_1'},
     },
   ];
 
@@ -640,8 +640,8 @@ describe('SubgraphKeyVectorConfigPanel', () => {
 
     // Should call addConfiguredKey for each selected key-value pair
     expect(mockStoreState.addConfiguredKey).toHaveBeenCalledWith(1, {
-      keyInfo: {id: 0xab000000, name: 'Instance'},
-      valueInfo: {id: 1, name: 'Instance_1'},
+      key: {id: 0xab000000, name: 'Instance'},
+      value: {id: 1, name: 'Instance_1'},
     });
 
     // Keys list should be hidden

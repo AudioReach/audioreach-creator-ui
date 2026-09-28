@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export function elementKey(parameterId: string, ...path: string[]): string {
-  return [parameterId, ...path].join('/');
+export function elementKey(
+  itemId: string,
+  ...path: Array<string | undefined>
+): string {
+  return [itemId, ...path.map((segment) => segment ?? '')].join('/');
 }

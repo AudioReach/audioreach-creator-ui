@@ -18,7 +18,7 @@ import type {UsecaseCategory, UsecaseItem} from './usecase.types';
 function usecaseIdentifierToItem(uc: UsecaseIdentifier): UsecaseItem {
   return {
     expanded: false,
-    keyValueCollection: uc.keyValueCollection,
+    keyValuePairs: uc.keyValuePairs,
     name: formatUsecaseDisplay(uc),
     systemId: uc.systemId,
   };
@@ -69,7 +69,7 @@ export function mapSubsystemResultsToCategories(
   const groupItems: UsecaseItem[] = results.map((result) => ({
     children: result.usecases.map(usecaseIdentifierToItem),
     expanded: true,
-    keyValueCollection: result.filteredKv.keyValueCollection,
+    keyValuePairs: result.filteredKv.keyValuePairs,
     // No systemId for group headers yet
     name: formatUsecaseDisplay(result.filteredKv),
   }));

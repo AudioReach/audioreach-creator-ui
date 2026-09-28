@@ -5,8 +5,8 @@
 
 import type {KeyValueInfo} from '~entities/spf-module-data';
 
-function keyValueSortKey(keyValueCollection: KeyValueInfo[]): string {
-  return keyValueCollection.map((kv) => kv.valueInfo.valueSystemId).join(' ');
+function keyValueSortKey(keyValuePairs: KeyValueInfo[]): string {
+  return keyValuePairs.map((kv) => kv.value.systemId).join(' ');
 }
 
 /**

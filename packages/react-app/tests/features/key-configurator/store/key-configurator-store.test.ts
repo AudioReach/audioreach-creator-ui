@@ -265,7 +265,7 @@ describe('KeyConfiguratorStore', () => {
     const moduleContext: ModuleConfigurationContext = {
       entityId: 123,
       entityType: ConfigurationItemType.MODULE,
-      instanceId: 456,
+      moduleDefinitionSystemId: 'module-definition-1',
       systemId: 'system-1',
     };
 
@@ -281,7 +281,7 @@ describe('KeyConfiguratorStore', () => {
       ).toHaveBeenCalledWith(
         projectId,
         moduleContext.entityId,
-        moduleContext.instanceId,
+        moduleContext.moduleDefinitionSystemId,
         moduleContext.systemId,
       );
       expect(logger.info).toHaveBeenCalledWith(

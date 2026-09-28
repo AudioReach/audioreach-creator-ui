@@ -18,7 +18,7 @@ import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import type {
   CreateUsecasesResponseDto,
-  UsecaseIdentifierWithChangeInfoDto,
+  UsecaseChangeDetailsDto,
 } from '~entities/edit-session';
 
 type NavChoice = 'add' | 'keep' | 'switch';
@@ -34,16 +34,20 @@ interface Category {
   icon: LucideIcon;
   key: string;
   readOnly?: boolean;
-  rows: UsecaseIdentifierWithChangeInfoDto[];
+  rows: UsecaseChangeDetailsDto[];
   title: string;
 }
 
-function rowLabel(row: UsecaseIdentifierWithChangeInfoDto): string {
-  return row.usecaseAliasName ?? `${row.usecaseType} usecase ${row.systemId}`;
+function rowLabel(change: UsecaseChangeDetailsDto): string {
+  const snapshot = change.after ?? change.before;
+  return (
+    snapshot?.alias ??
+    `${snapshot?.isEc ? 'Ec' : 'Regular'} usecase ${change.systemId}`
+  );
 }
 
 function buildDefaultCheckedMap(
-  rows: UsecaseIdentifierWithChangeInfoDto[],
+  rows: UsecaseChangeDetailsDto[],
 ): Record<string, boolean> {
   const map: Record<string, boolean> = {};
   for (const row of rows) {
@@ -99,7 +103,7 @@ function CategorySection({
   checkedByChangeId: Record<string, boolean>;
   onToggle: (changeId: string, checked: boolean) => void;
   readOnly?: boolean;
-  rows: UsecaseIdentifierWithChangeInfoDto[];
+  rows: UsecaseChangeDetailsDto[];
   title?: string;
 }) {
   return (
@@ -126,7 +130,15 @@ function CategorySection({
 
 export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
   const {onCancel, onOK, open, response} = props;
-  const {created, deleted, updated} = response;
+  const created = response.changes.filter(
+    (change) => change.operation === 'CREATE',
+  );
+  const updated = response.changes.filter(
+    (change) => change.operation === 'UPDATE',
+  );
+  const deleted = response.changes.filter(
+    (change) => change.operation === 'DELETE',
+  );
 
   const [checkedByChangeId, setCheckedByChangeId] = useState<
     Record<string, boolean>

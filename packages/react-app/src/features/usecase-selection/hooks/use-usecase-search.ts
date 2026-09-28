@@ -10,6 +10,7 @@ import {
   mapUsecaseDtoToCategories,
   type UsecaseCategory,
 } from '~entities/usecases';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import {buildUsecaseApiFilter} from '../lib/search-filter';
@@ -77,14 +78,14 @@ export function useUsecaseSearch(
             return;
           }
           logger.info(
-            `[useUsecaseSearch] API response: success=${result.success} count=${result.data?.length ?? 0}`,
+            `[useUsecaseSearch] API response: blockingIssues=${hasBlockingIssues(result)} count=${result.data?.length ?? 0}`,
             {
               action: 'usecase_search',
               component: 'useUsecaseSearch',
               projectId: projectGroupId,
             },
           );
-          if (result.success && result.data) {
+          if (!hasBlockingIssues(result) && result.data) {
             const categories = mapUsecaseDtoToCategories(result.data);
             logger.info(
               `[useUsecaseSearch] mapped to ${categories.length} categories`,
@@ -99,7 +100,7 @@ export function useUsecaseSearch(
             logger.error('Usecase search failed', {
               action: 'usecase_search',
               component: 'useUsecaseSearch',
-              error: result.message,
+              error: getIssueMessage(result, 'Failed to search usecases'),
               projectId: projectGroupId,
             });
             // Show empty list so the user knows the search ran but found nothing
