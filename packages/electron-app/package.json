@@ -31,11 +31,23 @@
     "@audioreach-creator-ui/api-utils": "workspace:*",
     "@audioreach-creator-ui/react-app": "workspace:*",
     "@audioreach-creator-ui/tsconfig": "workspace:*",
-    "electron-store": "^11.0.2"
+    "@qualcomm-ui/core": "1.12.0",
+    "@qualcomm-ui/qds-core": "1.36.0",
+    "@qualcomm-ui/react": "1.28.0",
+    "@qualcomm-ui/react-core": "1.6.0",
+    "@qualcomm-ui/utils": "1.4.0",
+    "electron-store": "^11.0.2",
+    "lucide-react": "1.31.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@qualcomm-ui/tailwind-plugin": "1.10.0",
+    "@tailwindcss/cli": "4.3.3",
     "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "electron": "43.4.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
@@ -45,6 +57,7 @@
     "nyc": "^18.0.0",
     "ora": "^9.4.1",
     "shx": "^0.4.0",
+    "tailwindcss": "4.3.3",
     "tsx": "^4.23.12",
     "typescript": "5.9.3"
   }
