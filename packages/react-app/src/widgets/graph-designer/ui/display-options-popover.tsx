@@ -16,6 +16,7 @@ import {showToast} from '~shared/controls/global-toaster';
 const SAVE_DEBOUNCE_MS = 300;
 
 interface DisplayOptionsPopoverProps {
+  isEditable: boolean;
   preferences: UserPreferences;
   projectId: string;
   updatePreference: (path: string, value: unknown) => boolean;
@@ -34,7 +35,7 @@ function Section({
     <>
       {divider && <div className="border-neutral-01 border-t" />}
       <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase text-neutral-secondary">
+        <h3 className="text-neutral-secondary text-xs font-semibold uppercase">
           {title}
         </h3>
         {children}
@@ -44,6 +45,7 @@ function Section({
 }
 
 export function DisplayOptionsPopover({
+  isEditable,
   preferences,
   projectId,
   updatePreference,
@@ -98,9 +100,20 @@ export function DisplayOptionsPopover({
   const isUsecaseWorkflow = usecases.workflowType === 'usecase-workflow';
   const isSimplifySubsystemsDisabled =
     isUsecaseWorkflow && usecases.workflowLevel === 'usecase-level';
+  const showAllPortsCheckbox = (
+    <Checkbox
+      checked={isEditable || display.portVisibilityMode === 'all'}
+      disabled={isEditable}
+      label="Show all ports"
+      onCheckedChange={(checked) =>
+        savePreference('display.portVisibilityMode', checked ? 'all' : 'active')
+      }
+      size="sm"
+    />
+  );
 
   return (
-    <div className="w-55 flex flex-col gap-4">
+    <div className="flex w-55 flex-col gap-4">
       <Section divider={false} title="Graph View">
         <Checkbox
           checked={visualization.highlightPPModules}
@@ -192,17 +205,7 @@ export function DisplayOptionsPopover({
               }
               size="sm"
             />
-            <Checkbox
-              checked={display.portVisibilityMode === 'all'}
-              label="Show all ports"
-              onCheckedChange={(checked) =>
-                savePreference(
-                  'display.portVisibilityMode',
-                  checked ? 'all' : 'active',
-                )
-              }
-              size="sm"
-            />
+            {showAllPortsCheckbox}
           </div>
         )}
         <Checkbox
