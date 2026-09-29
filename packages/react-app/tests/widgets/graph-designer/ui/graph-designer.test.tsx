@@ -203,13 +203,21 @@ jest.mock('~widgets/graph-designer/ui/display-options-popover', () => ({
   DisplayOptionsPopover: () => <div data-testid="display-options-popover" />,
 }));
 
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 
 import type {UsecaseDto} from '~entities/usecases';
 import {
   GraphDesignerStoreContext,
   type GraphDesignerStore,
 } from '~features/graph-designer';
+import {SubsystemBrowser} from '~features/subsystem-browser/ui/subsystem-browser';
 import {deleteSelection} from '~features/graph-designer/lib/multi-select-delete';
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
@@ -225,6 +233,7 @@ import {
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
+import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
 import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
 import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
@@ -347,7 +356,9 @@ function renderGraphDesigner(options?: {
   addModuleToEmptyCanvas?: GraphDesignerStore['addModuleToEmptyCanvas'];
   graphData?: UsecaseGraphData;
   placeSubgraphFromPalette?: GraphDesignerStore['placeSubgraphFromPalette'];
+  renderSubsystemBrowser?: boolean;
   subgraphProvenanceById?: GraphDesignerStore['subgraphProvenanceById'];
+  subsystemData?: SubsystemBrowserTreeNode[];
   userPreferences?: UserPreferences;
 }) {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
@@ -364,6 +375,7 @@ function renderGraphDesigner(options?: {
     graphDataStatus: options?.graphData ? 'ready' : 'uninitialized',
     moduleListStatus: 'ready',
     selectedUsecases: options?.graphData ? ['uc-1'] : [],
+    subsystemData: options?.subsystemData ?? [],
     ...(options?.subgraphProvenanceById
       ? {subgraphProvenanceById: options.subgraphProvenanceById}
       : {}),
@@ -388,6 +400,7 @@ function renderGraphDesigner(options?: {
             tabId="tab-1"
             usecaseData={[]}
           />
+          {options?.renderSubsystemBrowser && <SubsystemBrowser />}
         </GraphDesignerStoreContext.Provider>
       </ProjectStoreContext.Provider>
     </SideNavProvider>,
@@ -402,6 +415,79 @@ beforeEach(() => {
 });
 
 describe('GraphDesigner - active boundary navigation', () => {
+  it('renders a nested subsystem path and navigates to its parent', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeBoundaryGraphData(),
+    });
+
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('child-ss');
+    });
+
+    expect(await screen.findByText('TOP')).toBeInTheDocument();
+    expect(screen.getByText('Boundary Subsystem')).toBeInTheDocument();
+    expect(screen.getByText('Child Subsystem')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Boundary Subsystem'));
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBe('ss-1');
+    });
+  });
+
+  it('returns to the root canvas and hides the breadcrumb when TOP is clicked', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeBoundaryGraphData(),
+    });
+
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('ss-1');
+    });
+
+    fireEvent.click(await screen.findByText('TOP'));
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBeNull();
+      expect(screen.queryByText('TOP')).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps browser selection synchronized after breadcrumb navigation', async () => {
+    const subsystemData: SubsystemBrowserTreeNode[] = [
+      {
+        children: [],
+        id: 1,
+        name: 'Boundary Subsystem',
+        subgraphIds: ['sg-1'],
+        systemId: 'ss-1',
+      },
+    ];
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeBoundaryGraphData(),
+      renderSubsystemBrowser: true,
+      subsystemData,
+    });
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Navigate to Boundary Subsystem',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBe('ss-1');
+      expect(screen.getByRole('navigation')).toHaveTextContent('TOP');
+    });
+
+    fireEvent.click(within(screen.getByRole('navigation')).getByText('TOP'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', {name: 'Navigate to TOP'}),
+      ).toHaveAttribute('aria-current', 'page');
+    });
+  });
+
   it('keeps the active boundary scoped and does not navigate on self-double-click', async () => {
     const boundaryGraphData = makeBoundaryGraphData();
     const {graphDesignerStore} = renderGraphDesigner({

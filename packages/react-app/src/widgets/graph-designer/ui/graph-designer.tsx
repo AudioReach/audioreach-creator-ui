@@ -75,6 +75,7 @@ import {
 } from '~features/usecase-visualizer';
 import {useUserPreferences} from '~shared/config/hooks';
 import {WORKFLOW_TYPES} from '~shared/config/user-preferences-types';
+import {ArcBreadcrumbs} from '~shared/controls/arc-breadcrumbs';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
@@ -109,6 +110,7 @@ import {mapSelectedNodesToConfigurationItems} from '../lib/node-to-config-item';
 import {subgraphNodeId, subgraphProxyNodeId} from '../lib/node-id';
 import {renderNodeContent} from '../lib/render-node-content';
 import {collapseSetForLevel} from '../lib/subgraph-collapse';
+import {buildSubsystemBreadcrumbPath} from '../lib/subsystem-breadcrumbs';
 
 import {DisplayOptionsPopover} from './display-options-popover';
 
@@ -238,6 +240,23 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const subsystemNavigationRequestId = useGraphDesignerStoreShallow(
     (s) => s.subsystemNavigationRequestId,
   );
+
+  const breadcrumbItems = useMemo(() => {
+    if (!graphData) {
+      return [];
+    }
+
+    const path = buildSubsystemBreadcrumbPath(
+      activeSubsystemId,
+      graphData.subsystems,
+    );
+    return path.map((segment, index) => ({
+      label: segment.label,
+      ...(index < path.length - 1
+        ? {onClick: () => navigateToSubsystem(segment.systemId)}
+        : {}),
+    }));
+  }, [activeSubsystemId, graphData, navigateToSubsystem]);
 
   // Module list, for deriving which modules are PP for Highlight PP Modules.
   const moduleList = useGraphDesignerStoreShallow((s) => s.moduleList);
@@ -727,8 +746,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const resolveSubgraphDisplay = useCallback(
     (subgraphSystemId: string) =>
       String(
-        subgraphBySystemId.get(subgraphSystemId)?.naturalId ??
-          subgraphSystemId,
+        subgraphBySystemId.get(subgraphSystemId)?.naturalId ?? subgraphSystemId,
       ),
     [subgraphBySystemId],
   );
@@ -1403,6 +1421,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         className="bg-primary relative flex-1 overflow-hidden"
         data-project-id={projectId}
       >
+        {breadcrumbItems.length > 0 && (
+          <div className="absolute top-[5px] left-3 z-10 max-w-[calc(100%-24px)]">
+            <ArcBreadcrumbs items={breadcrumbItems} />
+          </div>
+        )}
+
         {/* Search overlay – floats above the graph canvas at top-right */}
         <div
           className={`absolute top-[5px] right-3 z-10 w-[380px] max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${

@@ -15,7 +15,8 @@ const TOP_NODE_SYSTEM_ID = '__top__';
 const DEFAULT_EXPANDED_IDS = [TOP_NODE_ID];
 
 export const SubsystemBrowser: FC = () => {
-  const {navigateToSubsystem, subsystemData} = useSubsystemBrowser();
+  const {activeSubsystemId, navigateToSubsystem, subsystemData} =
+    useSubsystemBrowser();
 
   const handleOnClick = (systemId: string) => {
     if (systemId === TOP_NODE_SYSTEM_ID) {
@@ -54,6 +55,7 @@ export const SubsystemBrowser: FC = () => {
           data={treeData}
           defaultExpandedIds={DEFAULT_EXPANDED_IDS}
           onClick={handleOnClick}
+          selectedSystemId={activeSubsystemId ?? TOP_NODE_SYSTEM_ID}
         />
       </div>
     </div>

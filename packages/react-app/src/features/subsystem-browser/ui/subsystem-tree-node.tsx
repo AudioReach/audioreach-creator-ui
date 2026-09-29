@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {FC} from 'react';
+import type {FC, KeyboardEvent} from 'react';
 
 import {ChevronDown, ChevronRight, Dot} from 'lucide-react';
 
@@ -15,6 +15,7 @@ interface SubsystemTreeNodeProps {
   onClick: (systemId: string) => void;
   rootNode?: boolean;
   searchTerm: string;
+  selectedSystemId: string;
   toggleNode: (id: number) => void;
   treeNode: SubsystemBrowserTreeNode;
 }
@@ -24,6 +25,7 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
   onClick,
   rootNode = false,
   searchTerm,
+  selectedSystemId,
   toggleNode,
   treeNode,
 }) => {
@@ -66,6 +68,14 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
 
   // It decides the subsystem node visibility
   const isVisible = hasMatchInSubtree(treeNode, searchTerm);
+  const isSelected = treeNode.systemId === selectedSystemId;
+
+  const handleNavigationKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick(treeNode.systemId);
+    }
+  };
 
   return (
     <div style={{cursor: 'pointer', marginLeft: rootNode ? 0 : '1rem'}}>
@@ -93,9 +103,17 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
           )}
 
           <span
+            aria-current={isSelected ? 'page' : undefined}
             aria-label={`Navigate to ${treeNode.name}`}
+            className={
+              isSelected
+                ? 'bg-neutral-02 text-neutral-primary rounded'
+                : undefined
+            }
             onClick={() => onClick(treeNode.systemId)}
+            onKeyDown={handleNavigationKeyDown}
             role="button"
+            tabIndex={0}
             style={{fontWeight: 'bold'}}
             title={`ID: ${treeNode.id}`}
           >
@@ -111,6 +129,7 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             isExpanded={isExpanded}
             onClick={onClick}
             searchTerm={searchTerm}
+            selectedSystemId={selectedSystemId}
             toggleNode={toggleNode}
             treeNode={childNode}
           />
