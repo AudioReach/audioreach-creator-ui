@@ -113,8 +113,8 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             onClick={() => onClick(treeNode.systemId)}
             onKeyDown={handleNavigationKeyDown}
             role="button"
-            tabIndex={0}
             style={{fontWeight: 'bold'}}
+            tabIndex={0}
             title={`ID: ${treeNode.id}`}
           >
             {treeNode.name}

@@ -7,8 +7,8 @@ import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-contex
 
 export function useSubsystemBrowser() {
   return useGraphDesignerStoreShallow((state) => ({
-    addSubsystem: state.addSubsystem,
     activeSubsystemId: state.activeSubsystemId,
+    addSubsystem: state.addSubsystem,
     clearActiveSubsystem: state.clearActiveSubsystem,
     loadSubsystems: state.loadSubsystems,
     navigateToSubsystem: state.navigateToSubsystem,
