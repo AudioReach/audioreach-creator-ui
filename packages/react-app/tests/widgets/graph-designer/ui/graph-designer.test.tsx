@@ -426,7 +426,11 @@ describe('GraphDesigner - active boundary navigation', () => {
 
     expect(await screen.findByText('TOP')).toBeInTheDocument();
     expect(screen.getByText('Boundary Subsystem')).toBeInTheDocument();
-    expect(screen.getByText('Child Subsystem')).toBeInTheDocument();
+    expect(
+      screen.getByText('Child Subsystem', {
+        selector: 'li:last-child span',
+      }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Boundary Subsystem'));
 
@@ -450,6 +454,63 @@ describe('GraphDesigner - active boundary navigation', () => {
       expect(graphDesignerStore.getState().activeSubsystemId).toBeNull();
       expect(screen.queryByText('TOP')).not.toBeInTheDocument();
     });
+  });
+
+  it('navigates to a child from the active subsystem breadcrumb menu', async () => {
+    const graphData = makeBoundaryGraphData();
+    graphData.subsystems['ss-1'].childSubsystemIds = [
+      'child-ss',
+      'child-ss',
+      'missing',
+    ];
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData,
+    });
+
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('ss-1');
+    });
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Show children of Boundary Subsystem',
+      }),
+    );
+
+    expect(
+      screen.queryByRole('menuitem', {name: 'missing'}),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getAllByRole('menuitem', {name: 'Child Subsystem'}),
+    ).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('menuitem', {name: 'Child Subsystem'}));
+
+    await waitFor(() => {
+      expect(graphDesignerStore.getState().activeSubsystemId).toBe('child-ss');
+    });
+  });
+
+  it('hides the child-menu arrow when a subsystem has no valid children', async () => {
+    const graphData = makeBoundaryGraphData();
+    graphData.subsystems['ss-1'].childSubsystemIds = ['missing'];
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData,
+    });
+
+    act(() => {
+      graphDesignerStore.getState().navigateToSubsystem('ss-1');
+    });
+
+    expect(
+      await screen.findByText('Boundary Subsystem'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Show children of Boundary Subsystem',
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps browser selection synchronized after breadcrumb navigation', async () => {

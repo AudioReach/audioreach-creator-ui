@@ -250,12 +250,32 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       activeSubsystemId,
       graphData.subsystems,
     );
-    return path.map((segment, index) => ({
-      label: segment.label,
-      ...(index < path.length - 1
-        ? {onClick: () => navigateToSubsystem(segment.systemId)}
-        : {}),
-    }));
+    return path.map((segment, index) => {
+      const childSubsystemIds = segment.systemId
+        ? graphData.subsystems[segment.systemId]?.childSubsystemIds ?? []
+        : [];
+      const childItems = segment.systemId
+        ? [...new Set(childSubsystemIds)].flatMap((childSystemId) => {
+            const child = graphData.subsystems[childSystemId];
+            return child
+              ? [
+                  {
+                    label: child.subsystemName,
+                    onClick: () => navigateToSubsystem(child.subsystemId),
+                  },
+                ]
+              : [];
+          })
+        : [];
+
+      return {
+        label: segment.label,
+        ...(childItems.length > 0 ? {dropdownItems: childItems} : {}),
+        ...(index < path.length - 1
+          ? {onClick: () => navigateToSubsystem(segment.systemId)}
+          : {}),
+      };
+    });
   }, [activeSubsystemId, graphData, navigateToSubsystem]);
 
   // Module list, for deriving which modules are PP for Highlight PP Modules.

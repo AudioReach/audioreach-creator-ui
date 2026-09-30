@@ -3,15 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {
-  forwardRef,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import {forwardRef, type ReactNode, useCallback, useState} from 'react';
+
+import {ChevronDown} from 'lucide-react';
 
 import {Breadcrumbs} from '@qualcomm-ui/react/breadcrumbs';
+import {Menu} from '@qualcomm-ui/react/menu';
 import {Popover} from '@qualcomm-ui/react/popover';
 
 export interface ArcBreadcrumbDropdownItem {
@@ -85,181 +82,199 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
         item: ArcBreadcrumbItem,
         index: number,
       ) => {
-        const hasDropdown = item.dropdownItems && item.dropdownItems.length > 0;
-
-        if (hasDropdown) {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpenDropdownIndex(openDropdownIndex === index ? null : index);
-        } else {
-          item.onClick?.(event);
-          onItemClick?.(event, item, index);
-          setOpenDropdownIndex(null);
-        }
+        item.onClick?.(event);
+        onItemClick?.(event, item, index);
+        setOpenDropdownIndex(null);
       },
-      [openDropdownIndex, onItemClick],
+      [onItemClick],
     );
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (openDropdownIndex !== null) {
-          const target = event.target as Node;
-          requestAnimationFrame(() => {
-            const dropdownContent = document.querySelector(
-              `[data-dropdown-index="${openDropdownIndex}"]`,
-            );
-            if (dropdownContent && !dropdownContent.contains(target)) {
-              setOpenDropdownIndex(null);
-            }
-          });
-        }
-      };
-
-      if (openDropdownIndex !== null) {
-        document.addEventListener('mousedown', handleClickOutside);
-      }
-
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, [openDropdownIndex]);
-
-    const handleKeyDown = (
-      event: React.KeyboardEvent<HTMLElement>,
-      item: ArcBreadcrumbItem,
-      index: number,
-    ) => {
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        handleBreadcrumbClick(event as any, item, index);
+        event.currentTarget.click();
       }
     };
 
     const handleDropdownKeyDown = useCallback(
-      (
-        event: React.KeyboardEvent<HTMLDivElement>,
-        dropdownItem: ArcBreadcrumbDropdownItem,
-      ) => {
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          if (!dropdownItem.disabled) {
-            handleDropdownItemClick(event as any, dropdownItem);
-          }
+          event.currentTarget.click();
         }
       },
-      [handleDropdownItemClick],
+      [],
     );
 
+    const renderBreadcrumbItem = (
+      item: ArcBreadcrumbItem,
+      index: number,
+    ) => {
+      const hasDropdown =
+        item.dropdownItems && item.dropdownItems.length > 0;
+
+      return (
+        <Breadcrumbs.Item key={index}>
+          {hasDropdown ? (
+            <Popover.Root
+              onOpenChange={(open: boolean) => {
+                if (!open) {
+                  setOpenDropdownIndex(null);
+                }
+              }}
+              open={openDropdownIndex === index}
+              positioning={{
+                gutter: 4,
+                placement: 'bottom-start',
+                strategy: 'fixed',
+              }}
+            >
+              <Popover.Anchor className="inline-flex items-center">
+                {item.onClick || onItemClick ? (
+                  <span
+                    className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 whitespace-nowrap transition-colors focus:outline-2 focus:outline-offset-2"
+                    onClick={(event: React.MouseEvent<HTMLElement>) =>
+                      handleBreadcrumbClick(event, item, index)
+                    }
+                    onKeyDown={(event: React.KeyboardEvent<HTMLElement>) =>
+                      handleKeyDown(event)
+                    }
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {item.label}
+                  </span>
+                ) : (
+                  <span className="font-body-md text-neutral-primary inline-flex items-center px-2 py-1 whitespace-nowrap">
+                    {item.label}
+                  </span>
+                )}
+                <Popover.Trigger>
+                  {(triggerProps) => (
+                    <button
+                      {...triggerProps}
+                      aria-label={`Show children of ${item.label}`}
+                      className="text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded p-1 transition-colors focus:outline-2 focus:outline-offset-2"
+                      onClick={(
+                        event: React.MouseEvent<HTMLButtonElement>,
+                      ) => {
+                        event.stopPropagation();
+                        setOpenDropdownIndex(
+                          openDropdownIndex === index ? null : index,
+                        );
+                        triggerProps.onClick?.(event);
+                      }}
+                      type="button"
+                    >
+                      <ChevronDown aria-hidden size={16} />
+                    </button>
+                  )}
+                </Popover.Trigger>
+              </Popover.Anchor>
+              <Popover.Positioner>
+                <Popover.Content
+                  className="bg-primary border-neutral-02 z-[9999] min-w-[150px] rounded-md border p-2 shadow-lg"
+                  data-dropdown-index={index}
+                >
+                  <div className="flex flex-col gap-1">
+                    {item.dropdownItems!.map(
+                      (dropdownItem, dropdownIndex) => (
+                        <div
+                          key={`dropdown-${dropdownIndex}`}
+                          className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
+                            dropdownItem.disabled
+                              ? 'text-neutral-secondary cursor-not-allowed opacity-50'
+                              : 'text-neutral-primary hover:bg-secondary cursor-pointer'
+                          }`}
+                          onClick={(
+                            event: React.MouseEvent<HTMLDivElement>,
+                          ) => {
+                            if (!dropdownItem.disabled) {
+                              handleDropdownItemClick(event, dropdownItem);
+                            }
+                          }}
+                          onKeyDown={(
+                            event: React.KeyboardEvent<HTMLDivElement>,
+                          ) => {
+                            handleDropdownKeyDown(event);
+                          }}
+                          role="menuitem"
+                          tabIndex={dropdownItem.disabled ? -1 : 0}
+                        >
+                          {dropdownItem.icon && (
+                            <span className="mr-2 text-base">
+                              {dropdownItem.icon}
+                            </span>
+                          )}
+                          <span className="flex-1">{dropdownItem.label}</span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </Popover.Content>
+              </Popover.Positioner>
+            </Popover.Root>
+          ) : item.onClick || onItemClick ? (
+            <span
+              className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 whitespace-nowrap transition-colors focus:outline-2 focus:outline-offset-2"
+              onClick={(event: React.MouseEvent<HTMLElement>) =>
+                handleBreadcrumbClick(event, item, index)
+              }
+              onKeyDown={(event: React.KeyboardEvent<HTMLElement>) =>
+                handleKeyDown(event)
+              }
+              role="button"
+              tabIndex={0}
+            >
+              {item.label}
+            </span>
+          ) : (
+            <span className="font-body-md text-neutral-primary inline-flex items-center px-2 py-1 whitespace-nowrap">
+              {item.label}
+            </span>
+          )}
+        </Breadcrumbs.Item>
+      );
+    };
+
+    const hasOverflow = items.length > 4;
+    const overflowItems = hasOverflow ? items.slice(2, -1) : [];
+
     return (
-      <div className="relative min-h-8 w-full overflow-visible">
+      <div className="relative min-h-8 w-full overflow-hidden">
         <Breadcrumbs.Root ref={ref} className={className}>
           <Breadcrumbs.List>
-            {items.map((item, index) => {
-              const hasDropdown =
-                item.dropdownItems && item.dropdownItems.length > 0;
+            {hasOverflow ? (
+              <>
+                {renderBreadcrumbItem(items[0], 0)}
+                {renderBreadcrumbItem(items[1], 1)}
+                <Breadcrumbs.OverflowItem aria-label="Show hidden breadcrumbs">
+                  {overflowItems.map((item, index) => {
+                    const itemIndex = index + 2;
+                    const isClickable = item.onClick || onItemClick;
 
-              return (
-                <Breadcrumbs.Item key={index}>
-                  {hasDropdown ? (
-                    // For items with dropdown, use Popover outside of Breadcrumbs structure
-                    <Popover.Root
-                      onOpenChange={(open: boolean) => {
-                        if (!open) {
-                          setOpenDropdownIndex(null);
+                    return (
+                      <Menu.Item
+                        key={itemIndex}
+                        disabled={!isClickable}
+                        onClick={
+                          isClickable
+                            ? (event: React.MouseEvent<HTMLButtonElement>) =>
+                                handleBreadcrumbClick(event, item, itemIndex)
+                            : undefined
                         }
-                      }}
-                      open={openDropdownIndex === index}
-                      positioning={{
-                        gutter: 4,
-                        placement: 'bottom-start',
-                        strategy: 'absolute',
-                      }}
-                    >
-                      <Popover.Trigger>
-                        {(triggerProps) => (
-                          <button
-                            {...triggerProps}
-                            className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
-                            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                              handleBreadcrumbClick(event, item, index);
-                              triggerProps.onClick?.(event);
-                            }}
-                          >
-                            {item.label}
-                          </button>
-                        )}
-                      </Popover.Trigger>
-                      <Popover.Content
-                        className="bg-primary border-neutral-02 z-[9999] min-w-[150px] rounded-md border p-2 shadow-lg"
-                        data-dropdown-index={index}
+                        value={`breadcrumb-${itemIndex}`}
                       >
-                        <div className="flex flex-col gap-1">
-                          {item.dropdownItems!.map(
-                            (dropdownItem, dropdownIndex) => (
-                              <div
-                                key={`dropdown-${dropdownIndex}`}
-                                className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
-                                  dropdownItem.disabled
-                                    ? 'text-neutral-secondary cursor-not-allowed opacity-50'
-                                    : 'text-neutral-primary hover:bg-secondary cursor-pointer'
-                                }`}
-                                onClick={(
-                                  event: React.MouseEvent<HTMLDivElement>,
-                                ) => {
-                                  if (!dropdownItem.disabled) {
-                                    handleDropdownItemClick(
-                                      event,
-                                      dropdownItem,
-                                    );
-                                  }
-                                }}
-                                onKeyDown={(
-                                  event: React.KeyboardEvent<HTMLDivElement>,
-                                ) => {
-                                  handleDropdownKeyDown(event, dropdownItem);
-                                }}
-                                role="menuitem"
-                                tabIndex={dropdownItem.disabled ? -1 : 0}
-                              >
-                                {dropdownItem.icon && (
-                                  <span className="mr-2 text-base">
-                                    {dropdownItem.icon}
-                                  </span>
-                                )}
-                                <span className="flex-1">
-                                  {dropdownItem.label}
-                                </span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </Popover.Content>
-                    </Popover.Root>
-                  ) : item.onClick || onItemClick ? (
-                    // For clickable items without dropdown
-                    <span
-                      className="font-body-md text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded px-2 py-1 transition-colors focus:outline-2 focus:outline-offset-2"
-                      onClick={(event: React.MouseEvent<HTMLElement>) =>
-                        handleBreadcrumbClick(event, item, index)
-                      }
-                      onKeyDown={(event: React.KeyboardEvent<HTMLElement>) =>
-                        handleKeyDown(event, item, index)
-                      }
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {item.label}
-                    </span>
-                  ) : (
-                    // For non-clickable items
-                    <span className="font-body-md text-neutral-primary inline-flex items-center px-2 py-1">
-                      {item.label}
-                    </span>
-                  )}
-                </Breadcrumbs.Item>
-              );
-            })}
+                        {item.label}
+                      </Menu.Item>
+                    );
+                  })}
+                </Breadcrumbs.OverflowItem>
+                {renderBreadcrumbItem(items[items.length - 1], items.length - 1)}
+              </>
+            ) : (
+              items.map(renderBreadcrumbItem)
+            )}
           </Breadcrumbs.List>
         </Breadcrumbs.Root>
       </div>

@@ -347,9 +347,12 @@ describe('ArcBreadcrumbs - Generic Controls API', () => {
       const breadcrumbs = screen.getByRole('navigation');
       expect(breadcrumbs.children).toHaveLength(1);
       const list = breadcrumbs.querySelector('ol');
-      expect(list?.children).toHaveLength(100);
+      expect(list?.children).toHaveLength(4);
       expect(screen.getByText('Item 1')).toBeInTheDocument();
       expect(screen.getByText('Item 100')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {name: 'Show hidden breadcrumbs'}),
+      ).toBeInTheDocument();
     });
 
     it('should handle rapid re-renders without errors', () => {
@@ -409,26 +412,59 @@ describe('ArcBreadcrumbs - Generic Controls API', () => {
   });
 
   describe('Dropdown Functionality', () => {
-    it('should handle dropdown items', () => {
-      const dropdownItems = [
-        {label: 'Dropdown Item 1', onClick: jest.fn()},
-        {label: 'Dropdown Item 2', onClick: jest.fn()},
-      ];
-
+    it('keeps label navigation separate from the child-menu trigger', async () => {
+      const onChildClick = jest.fn();
+      const onParentClick = jest.fn();
+      const dropdownItems = [{label: 'Child', onClick: onChildClick}];
       const itemsWithDropdown: ArcBreadcrumbItem[] = [
         {
           dropdownItems,
-          label: 'Home',
+          label: 'Parent',
+          onClick: onParentClick,
         },
       ];
+      const user = userEvent.setup();
 
       render(<ArcBreadcrumbs items={itemsWithDropdown} />);
 
-      // Should render the dropdown trigger as a real button (without dropdown
-      // arrow in the text)
-      const homeButton = screen.getByText('Home');
-      expect(homeButton).toBeInTheDocument();
-      expect(homeButton.tagName).toBe('BUTTON');
+      await user.click(screen.getByRole('button', {name: 'Parent'}));
+
+      expect(onParentClick).toHaveBeenCalledWith(expect.any(Object));
+      expect(onChildClick).not.toHaveBeenCalled();
+
+      await user.click(
+        screen.getByRole('button', {name: 'Show children of Parent'}),
+      );
+      await user.click(screen.getByRole('menuitem', {name: 'Child'}));
+
+      expect(onChildClick).toHaveBeenCalledWith(expect.any(Object));
+    });
+  });
+
+  describe('Overflow Functionality', () => {
+    it('collapses intermediate breadcrumbs into the QUI overflow menu', async () => {
+      const onThirdItemClick = jest.fn();
+      const itemsWithOverflow: ArcBreadcrumbItem[] = [
+        {label: 'Root'},
+        {label: 'First'},
+        {label: 'Second', onClick: onThirdItemClick},
+        {label: 'Third'},
+        {label: 'Active'},
+      ];
+      const user = userEvent.setup();
+
+      render(<ArcBreadcrumbs items={itemsWithOverflow} />);
+
+      expect(
+        screen.getByRole('button', {name: 'Show hidden breadcrumbs'}),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Root')).toBeInTheDocument();
+      expect(screen.getByText('First')).toBeInTheDocument();
+      expect(screen.getByText('Active')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', {name: 'Second'}));
+
+      expect(onThirdItemClick).toHaveBeenCalledWith(expect.any(Object));
     });
   });
 });
