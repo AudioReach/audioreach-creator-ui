@@ -547,11 +547,13 @@ jest.mock('@qualcomm-ui/react/menu', () => {
   const Item = ({
     children,
     disabled,
+    onClick,
     onSelect,
     value,
   }: {
     children?: React.ReactNode;
     disabled?: boolean;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
     onSelect?: () => void;
     value: string;
   }) =>
@@ -560,7 +562,10 @@ jest.mock('@qualcomm-ui/react/menu', () => {
       {
         'data-menu-item': value,
         disabled,
-        onClick: () => onSelect && onSelect(),
+        onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+          onClick?.(event);
+          onSelect?.();
+        },
         type: 'button',
       },
       children,
@@ -664,6 +669,16 @@ jest.mock('@qualcomm-ui/react/breadcrumbs', () => ({
     List: jest.fn().mockImplementation(({children, ...props}) => {
       return createElement('ol', {...props}, children);
     }),
+    OverflowItem: jest
+      .fn()
+      .mockImplementation(({'aria-label': ariaLabel, children, ...props}) => {
+        return createElement(
+          'li',
+          props,
+          createElement('button', {'aria-label': ariaLabel, type: 'button'}, '…'),
+          children,
+        );
+      }),
     Root: jest.fn().mockImplementation(({children, className, ...props}) => {
       return createElement(
         'nav',
@@ -695,6 +710,13 @@ jest.mock('@qualcomm-ui/react/inline-icon-button', () => ({
 
 jest.mock('@qualcomm-ui/react/popover', () => ({
   Popover: {
+    Anchor: jest.fn().mockImplementation(({children, ...props}) => {
+      return createElement(
+        'div',
+        {'data-testid': 'popover-anchor', ...props},
+        children,
+      );
+    }),
     Content: jest.fn().mockImplementation(({children, ...props}) => {
       return createElement(
         'div',

@@ -9,6 +9,7 @@ import {ChevronsDown, ChevronsUp} from 'lucide-react';
 
 import {InlineIconButton} from '@qualcomm-ui/react/inline-icon-button';
 
+import {findSubsystemAncestorNodeIds} from '~features/subsystem-browser/lib/subsystem-tree-selection';
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
@@ -19,6 +20,7 @@ interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
   defaultExpandedIds?: number[];
   onClick: (systemId: string) => void;
+  selectedSystemId: string;
 }
 
 const EMPTY_DEFAULT_EXPANDED_IDS: number[] = [];
@@ -71,6 +73,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
   data,
   defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
   onClick,
+  selectedSystemId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
@@ -94,6 +97,21 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
       return next;
     });
   }, [defaultExpandedIds]);
+
+  useEffect(() => {
+    const ancestorIds = findSubsystemAncestorNodeIds(data, selectedSystemId);
+    if (ancestorIds.length === 0) {
+      return;
+    }
+
+    setExpandedIds((previous) => {
+      const next = {...previous};
+      ancestorIds.slice(0, -1).forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+  }, [data, selectedSystemId]);
 
   // Debounce the search term
   useEffect(() => {
@@ -179,6 +197,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
           onClick={onClick}
           rootNode
           searchTerm={debouncedSearchTerm} // Using the debounced term for visibility to keep it in sync with expansion
+          selectedSystemId={selectedSystemId}
           toggleNode={toggleNode}
           treeNode={treeNode}
         />
