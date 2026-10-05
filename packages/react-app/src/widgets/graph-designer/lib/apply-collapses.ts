@@ -164,8 +164,8 @@ export function applyCollapses(
     proxyDataLinks.push({
       edgeKind: 'proxy-data',
       id: `proxy-${e.id}`,
-      isDangling: e.isDangling,
       isEcLink: e.isEcLink,
+      isInterUsecase: e.isInterUsecase,
       kind: 'standard',
       label: e.label,
       locked: true,
@@ -215,7 +215,7 @@ export function applyCollapses(
     proxyControlLinks.push({
       edgeKind: 'proxy-control',
       id: `proxy-${e.id}`,
-      isDangling: e.isDangling,
+      isInterUsecase: e.isInterUsecase,
       label: e.label,
       locked: true,
       meta: e.meta,

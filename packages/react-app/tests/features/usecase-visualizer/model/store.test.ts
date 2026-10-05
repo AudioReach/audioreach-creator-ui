@@ -292,7 +292,7 @@ describe('createVisualizerStore — two-click edge modes', () => {
       .startConnection(
         'source',
         {id: 'start', portIoType: 'control'},
-        'dangling',
+        'interUsecase',
         'either',
       );
     store
@@ -305,7 +305,7 @@ describe('createVisualizerStore — two-click edge modes', () => {
 
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'control',
-      edgeMode: 'dangling',
+      edgeMode: 'interUsecase',
       sourceNodeId: 'source',
       sourcePortId: 'start',
       targetNodeId: 'target',

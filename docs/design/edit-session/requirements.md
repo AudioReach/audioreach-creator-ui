@@ -385,13 +385,13 @@ options when no connection is active:
 
 - **Start connection**: begins a connection operation from this port.
 - **Start EC Link**: begins an EC data-link operation from this port.
-- **Start Dangling Data Link**: begins a Dangling data-link operation
+- **Start InterUsecase Data Link**: begins an InterUsecase data-link operation
   from this port.
 
 Right-clicking a control port shows **Start connection** and **Start
-Dangling Control Link**. When a connection is already in progress, exactly
+InterUsecase Control Link**. When a connection is already in progress, exactly
 one completion option is shown: **End connection** for normal
-links, **Complete EC Link** for EC links, or the matching Dangling Data or
+links, **Complete EC Link** for EC links, or the matching InterUsecase Data or
 Control completion option.
 
 ---

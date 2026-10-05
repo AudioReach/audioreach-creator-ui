@@ -854,7 +854,7 @@ describe('buildSubsystemLevelViewFromGraphData', () => {
   });
 });
 
-describe('buildLevelViewFromGraphData — dangling link passthrough', () => {
+describe('buildLevelViewFromGraphData — interUsecase link passthrough', () => {
   const dataWithConnection = (
     linkKind: 'control' | 'data',
     isInterUsecase: boolean,
@@ -880,7 +880,7 @@ describe('buildLevelViewFromGraphData — dangling link passthrough', () => {
     ['control', true],
     ['control', false],
   ] as const)(
-    'derives isDangling: %s from a %s Connection linkType',
+    'derives isInterUsecase: %s from a %s Connection linkType',
     (linkKind, isInterUsecase) => {
       const lv = buildLevelViewFromGraphData(
         dataWithConnection(linkKind, isInterUsecase),
@@ -889,7 +889,7 @@ describe('buildLevelViewFromGraphData — dangling link passthrough', () => {
 
       const link =
         linkKind === 'data' ? lv.dataLinks?.[0] : lv.controlLinks?.[0];
-      expect(link?.isDangling).toBe(isInterUsecase);
+      expect(link?.isInterUsecase).toBe(isInterUsecase);
     },
   );
 });

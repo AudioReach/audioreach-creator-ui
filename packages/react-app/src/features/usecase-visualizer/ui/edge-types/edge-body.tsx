@@ -16,8 +16,8 @@ export interface EdgeBodyProps {
   arrowMarkerId?: string;
   dashed?: boolean;
   edgeId: string;
-  isDangling?: boolean;
   isEcLink?: boolean;
+  isInterUsecase?: boolean;
   label?: ReactNode;
   labelX: number;
   labelY: number;
@@ -35,8 +35,8 @@ export function EdgeBody({
   arrowMarkerId,
   dashed,
   edgeId,
-  isDangling,
   isEcLink,
+  isInterUsecase,
   label,
   labelX,
   labelY,
@@ -52,7 +52,7 @@ export function EdgeBody({
 
   const stroke = selected
     ? 'var(--color-border-support-info)'
-    : isDangling
+    : isInterUsecase
       ? 'var(--color-border-support-success)'
       : isEcLink
         ? 'var(--color-category-purple-strong)'

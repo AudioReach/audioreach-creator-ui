@@ -144,8 +144,8 @@ export type AnyEdge = ControlLink | DataLink | ProxyControlLink | ProxyDataLink;
 
 export interface EdgeBase {
   id: string;
-  /** Used to style dangling links, including collapsed proxy links. */
-  isDangling?: boolean;
+  /** Used to style interUsecase links, including collapsed proxy links. */
+  isInterUsecase?: boolean;
   label?: string;
   /** Excluded from Delete key and context menu. */
   locked?: boolean;

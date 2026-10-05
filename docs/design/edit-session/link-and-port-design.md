@@ -156,7 +156,7 @@ async function connectPorts(
   targetNodeId: string,
   targetPortId: string,
   edgeKind: 'control' | 'data',
-  edgeMode: 'normal' | 'EC' | 'dangling',
+  edgeMode: 'normal' | 'EC' | 'interUsecase',
 ): Promise<boolean>
 ```
 
@@ -187,14 +187,14 @@ something this doc relocates. Added to `VisualizerInternalStore`:
 
 ```typescript
 connectionInProgress: {
-  edgeMode: 'normal' | 'EC' | 'dangling';
+  edgeMode: 'normal' | 'EC' | 'interUsecase';
   nodeId: string;
   port: Port;
 } | null;
 startConnection: (
   nodeId: string,
   port: Port,
-  edgeMode: 'normal' | 'EC' | 'dangling',
+  edgeMode: 'normal' | 'EC' | 'interUsecase',
 ) => void;
 completeConnection: (nodeId: string, port: Port) => void; // clears state, then emits the link payload via onEdgeConnected
 cancelConnection: () => void; // Escape — clears state, no API call
@@ -228,7 +228,7 @@ target payload instead of reaching into the Visualizer's store:
 export type ContextMenuTarget =
   | ...
   | {
-      connectionInProgress: {edgeMode: 'normal' | 'EC' | 'dangling'} | null;
+      connectionInProgress: {edgeMode: 'normal' | 'EC' | 'interUsecase'} | null;
       kind: 'port';
       nodeId: string;
       port: Port;
@@ -371,12 +371,12 @@ specified).
 FR-PORT-06's menu items are determined by port type and active edge mode:
 
 - For a data port with no active connection: `Start connection`, `Start EC
-Link`, and `Start Dangling Data Link` appear.
+Link`, and `Start InterUsecase Data Link` appear.
 - For a control port with no active connection: `Start connection` and `Start
-Dangling Control Link` appear.
+InterUsecase Control Link` appear.
 - With an active connection, exactly one completion item appears. Normal uses
   `End connection` / `end-connection`; EC uses `Complete EC Link`
-  / `complete-ec-link`; Dangling uses the data or control completion item
+  / `complete-ec-link`; InterUsecase uses the data or control completion item
   matching the target port.
 
 The start items store `edgeMode` in the Visualizer. Every completion invokes
@@ -491,18 +491,18 @@ interface CreateDataLinkRequest {
   sourceNodeSystemId: string;
   sourcePortSystemId: string;
   /** Defaults to 'normal' server-side when omitted. */
-  type?: 'EC' | 'dangling' | 'normal';
+  type?: 'EC' | 'interUsecase' | 'normal';
 }
 ```
 
 `CreateControlLinkRequest` — start/end field names instead of
-source/destination, and `isDangling` is required:
+source/destination, and `isInterUsecase` is required:
 
 ```typescript
 interface CreateControlLinkRequest {
   endComponentSystemId: string;
   endPortSystemId: string;
-  isDangling: boolean;
+  isInterUsecase: boolean;
   parentSystemId?: string;
   startComponentSystemId: string;
   startPortSystemId: string;
@@ -576,8 +576,8 @@ to this doc:
 - **Unit — endpoint selection**: module↔module uses the plain endpoint;
   module↔subsystem-port and subsystem↔subsystem use the `-with-subsystems`
   variant.
-- **Unit — edge mode propagation**: normal, EC, and Dangling data links
-  send the selected `type`; control links send `isDangling: false`.
+- **Unit — edge mode propagation**: normal, EC, and InterUsecase data links
+  send the selected `type`; control links send `isInterUsecase: false`.
 - **Unit — control-port warning**: `totalLinksAtPort > maxConnections`
   triggers a warning toast only when `edgeKind === 'control'`; the
   identical over-limit condition on a data port triggers nothing.

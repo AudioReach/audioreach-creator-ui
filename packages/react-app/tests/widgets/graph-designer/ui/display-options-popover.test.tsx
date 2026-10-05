@@ -150,7 +150,7 @@ describe('DisplayOptionsPopover', () => {
       screen.getByRole('checkbox', {name: 'Show Control Links'}),
     ).toBeChecked();
     expect(
-      screen.getByRole('checkbox', {name: 'Show Dangling Links'}),
+      screen.getByRole('checkbox', {name: 'Show InterUsecase Links'}),
     ).toBeChecked();
   });
 

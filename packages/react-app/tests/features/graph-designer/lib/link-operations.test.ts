@@ -212,7 +212,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLink).not.toHaveBeenCalled();
   });
 
-  it('uses INTER_USECASE linkType for dangling control links', async () => {
+  it('uses INTER_USECASE linkType for interUsecase control links', async () => {
     const {get} = makeStore();
     mockCreateControlLink.mockResolvedValue({
       data: {
@@ -232,7 +232,7 @@ describe('createLinkOperations — connectPorts', () => {
       'mod-B',
       '20',
       'control',
-      'dangling',
+      'interUsecase',
     );
 
     expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {

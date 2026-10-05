@@ -32,21 +32,21 @@ describe('filterConnectionRows', () => {
 
   it('"sg" returns only rows where isInterUsecase is false', () => {
     const sgRow = makeRow({isInterUsecase: false, systemId: 'link-1'});
-    const danglingRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
-    const result = filterConnectionRows([sgRow, danglingRow], 'sg');
+    const interUsecaseRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
+    const result = filterConnectionRows([sgRow, interUsecaseRow], 'sg');
     expect(result).toEqual([sgRow]);
   });
 
-  it('"dangling" returns only rows where isInterUsecase is true', () => {
+  it('"interUsecase" returns only rows where isInterUsecase is true', () => {
     const sgRow = makeRow({isInterUsecase: false, systemId: 'link-1'});
-    const danglingRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
-    const result = filterConnectionRows([sgRow, danglingRow], 'dangling');
-    expect(result).toEqual([danglingRow]);
+    const interUsecaseRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
+    const result = filterConnectionRows([sgRow, interUsecaseRow], 'interUsecase');
+    expect(result).toEqual([interUsecaseRow]);
   });
 
-  it('returns an empty array when no rows match "dangling"', () => {
+  it('returns an empty array when no rows match "interUsecase"', () => {
     const rows = [makeRow({isInterUsecase: false})];
-    expect(filterConnectionRows(rows, 'dangling')).toEqual([]);
+    expect(filterConnectionRows(rows, 'interUsecase')).toEqual([]);
   });
 
   it('returns an empty array unchanged for "all" on an empty input', () => {
