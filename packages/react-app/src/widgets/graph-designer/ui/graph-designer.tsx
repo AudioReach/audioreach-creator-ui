@@ -100,6 +100,7 @@ import {
   buildDroppedModulePositionOverrides,
   type ModuleDropPlacement,
 } from '../lib/dropped-module-position-overrides';
+import {usecaseSelectionsMatch} from '../lib/usecase-selection';
 import {
   buildLevelViewFromGraphData,
   buildSubsystemLevelViewFromGraphData,
@@ -296,6 +297,34 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Compares levelId plus subgraph ids together, so a link mutation doesn't reset the subgraphs the user manually expanded or collapsed.
   const appliedLevelSignatureRef = useRef<string | undefined>(undefined);
+
+  // Keep subsystem navigation when Graph Designer is remounted after switching
+  // to a project tab. The subsystem scope should only reset when the selected
+  // usecases actually change.
+  const previousSelectedUsecasesRef = useRef(selectedUsecases);
+
+  useEffect(() => {
+    // Compare previous and latest usecase selections by system ID.
+    // Only a change in system IDs should reset the selected subsystem.
+    const previousSelectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
+      previousSelectedUsecasesRef.current,
+      usecaseData,
+    );
+    const selectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
+      selectedUsecases,
+      usecaseData,
+    );
+
+    if (
+      !usecaseSelectionsMatch(
+        previousSelectedUsecaseSystemIds,
+        selectedUsecaseSystemIds,
+      )
+    ) {
+      clearActiveSubsystem();
+    }
+    previousSelectedUsecasesRef.current = selectedUsecases;
+  }, [clearActiveSubsystem, selectedUsecases, usecaseData]);
 
   // Applies expandSubgraphs to the current level; overlay only on checkbox click.
   useEffect(() => {
@@ -579,7 +608,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // Effect A — trigger load when selection changes
   useEffect(() => {
     resetSearch();
-    clearActiveSubsystem();
     clearLevelView();
     setCollapseByLevel({});
     setPositionOverridesByLevel({});
@@ -604,7 +632,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   }, [
     selectedUsecases,
     resolvedData,
-    clearActiveSubsystem,
     clearLevelView,
     filterComponentsBySubsystem,
     initializeEmptyGraphData,
