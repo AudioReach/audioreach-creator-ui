@@ -38,7 +38,7 @@ export function ConnectionsTable({
         header: () => 'Module Name',
       }),
       columnHelper.accessor('isInterUsecase', {
-        cell: (info) => (info.getValue() ? 'Dangling' : 'Subgraph'),
+        cell: (info) => (info.getValue() ? 'InterUsecase' : 'Subgraph'),
         header: () => 'Connection Type',
       }),
     ];

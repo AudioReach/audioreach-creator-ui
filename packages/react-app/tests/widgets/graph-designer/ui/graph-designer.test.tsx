@@ -23,7 +23,7 @@ interface MockUsecaseVisualizerProps {
   eventHandlers?: {
     onEdgeConnected?: (payload: {
       edgeKind: 'control' | 'data';
-      edgeMode: 'EC' | 'dangling' | 'normal';
+      edgeMode: 'EC' | 'interUsecase' | 'normal';
       sourceNodeId: string;
       sourcePortId: string;
       targetNodeId: string;

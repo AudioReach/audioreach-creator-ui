@@ -171,7 +171,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     highlightPPModules,
     showContainerIds,
     showControlLinks,
-    showDanglingLinks,
+    showInterUsecaseLinks,
     showModuleInstanceIds,
     showSubgraphIds,
     viewMode,
@@ -402,14 +402,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     const linkFiltered = applyLinkVisibility(
       collapsed,
       showControlLinks,
-      showDanglingLinks,
+      showInterUsecaseLinks,
     );
     return applyPpHighlight(linkFiltered, ppModuleIds);
   }, [
     levelView,
     collapsedSubgraphs,
     showControlLinks,
-    showDanglingLinks,
+    showInterUsecaseLinks,
     ppModuleIds,
   ]);
 

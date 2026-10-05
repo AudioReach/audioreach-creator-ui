@@ -20,7 +20,7 @@ jest.mock('~shared/config/hooks', () => ({
         highlightPPModules: false,
         showContainerIds: false,
         showControlLinks: true,
-        showDanglingLinks: true,
+        showInterUsecaseLinks: true,
         showMdfModules: false,
         showModuleInstanceIds: false,
         showSubgraphIds: false,

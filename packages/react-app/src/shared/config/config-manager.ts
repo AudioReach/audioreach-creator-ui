@@ -34,7 +34,7 @@ const USER_PREFERENCE_PATHS = new Set([
   'visualization.highlightPPModules',
   'visualization.showContainerIds',
   'visualization.showControlLinks',
-  'visualization.showDanglingLinks',
+  'visualization.showInterUsecaseLinks',
   'visualization.showMdfModules',
   'visualization.showModuleInstanceIds',
   'visualization.showSubgraphIds',

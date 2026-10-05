@@ -115,7 +115,7 @@ describe('ConnectionsTable', () => {
     expect(screen.getByText(rowA.moduleName)).toBeInTheDocument();
     expect(screen.getByText('Subgraph')).toBeInTheDocument();
     expect(screen.getByText(rowB.moduleName)).toBeInTheDocument();
-    expect(screen.getByText('Dangling')).toBeInTheDocument();
+    expect(screen.getByText('InterUsecase')).toBeInTheDocument();
     expect(screen.queryByText('Module Id')).not.toBeInTheDocument();
     expect(screen.queryByText('Subgraph Id')).not.toBeInTheDocument();
   });

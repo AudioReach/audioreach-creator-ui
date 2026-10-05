@@ -83,7 +83,7 @@ jest.mock('~features/port-connections-info/ui/connections-filter', () => ({
     >
       <option value="all">All</option>
       <option value="sg">Subgraph</option>
-      <option value="dangling">Dangling</option>
+      <option value="interUsecase">InterUsecase</option>
     </select>
   ),
 }));
@@ -140,10 +140,10 @@ const rowB: ConnectionRow = {
   usecases: [uc1],
 };
 const rowSg: ConnectionRow = {...rowA, isInterUsecase: false, systemId: 'row-sg'};
-const rowDangling: ConnectionRow = {
+const rowInterUsecase: ConnectionRow = {
   ...rowB,
   isInterUsecase: true,
-  systemId: 'row-dangling',
+  systemId: 'row-interUsecase',
 };
 
 const baseProps = {
@@ -245,7 +245,7 @@ describe('PortConnectionsInfoPopup — filter/search non-destructiveness (I2)', 
         state={{
           componentSystemId: 'comp-1',
           portSystemId: 'port-1',
-          rows: [rowSg, rowDangling],
+          rows: [rowSg, rowInterUsecase],
           status: 'ready',
         }}
       />,
@@ -255,10 +255,10 @@ describe('PortConnectionsInfoPopup — filter/search non-destructiveness (I2)', 
 
     await user.selectOptions(
       screen.getByTestId('connections-filter'),
-      'dangling',
+      'interUsecase',
     );
     expect(screen.queryByTestId('row-row-sg')).not.toBeInTheDocument();
-    expect(screen.getByTestId('row-row-dangling')).toBeInTheDocument();
+    expect(screen.getByTestId('row-row-interUsecase')).toBeInTheDocument();
 
     await user.selectOptions(screen.getByTestId('connections-filter'), 'all');
     expect(screen.getByTestId('row-row-sg')).toHaveAttribute(
@@ -581,7 +581,7 @@ describe('PortConnectionsInfoPopup — integration', () => {
         state={{
           componentSystemId: 'comp-1',
           portSystemId: 'port-1',
-          rows: [rowSg, rowDangling],
+          rows: [rowSg, rowInterUsecase],
           status: 'ready',
         }}
       />,
@@ -593,11 +593,11 @@ describe('PortConnectionsInfoPopup — integration', () => {
 
     await user.selectOptions(
       screen.getByTestId('connections-filter'),
-      'dangling',
+      'interUsecase',
     );
     expect(screen.queryByTestId('row-row-sg')).not.toBeInTheDocument();
 
-    await user.click(screen.getByTestId('row-row-dangling'));
+    await user.click(screen.getByTestId('row-row-interUsecase'));
     await user.click(screen.getByTestId('uc-uc-1'));
 
     await user.selectOptions(screen.getByTestId('connections-filter'), 'all');

@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 1.0 | 2026-07-27 | Initial merge of `display-options.md`, `port-visibility.md`, and the `expand-collapse-subgraphs` design into one doc. |
 | 1.1 | 2026-07-30 | Expand Subgraphs checkbox now reads and writes `visualization.expandSubgraphs` directly via `savePreference`; `subgraph-collapse.ts` keeps only `allSubgraphIds` and `collapseSetForLevel`. Also adds a progress overlay — a blurred backdrop with a QUI `ProgressRing` and an "Expanding Subgraphs"/"Collapsing Subgraphs" label — shown while `graph-designer.tsx` applies a checkbox click. |
-| 1.2 | 2026-08-03 | Wires up Show Control Links, Show Dangling Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isDangling` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/dangling link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
+| 1.2 | 2026-08-03 | Wires up Show Control Links, Show InterUsecase Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isInterUsecase` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/interUsecase link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
 | 1.3 | 2026-09-07 | Wires Detailed View ID preferences through `nodeDisplayConfig`; adds Container ID rendering and ensures Compact View hides subgraph, container, and module instance IDs regardless of checkbox state. |
 
 ## Feature Overview and Strategic Fit
@@ -29,7 +29,7 @@ rendering is documented in its own subsection below (see *Port Visibility*
 and *Expand/Collapse All Subgraphs*), since each is a self-contained slice of
 this same Display Options design rather than an independent feature.
 
-Three more controls — **Show Control Links**, **Show Dangling Links**, and
+Three more controls — **Show Control Links**, **Show InterUsecase Links**, and
 **Highlight PP Modules** — ship the same way: the checkboxes and their
 preferences already exist and persist correctly, but nothing downstream
 reads them. See *Link Visibility and PP Highlight* below.
@@ -66,17 +66,17 @@ Implementation: see *Expand/Collapse Design* under Component Design.
 
 ### Link Visibility and PP Highlight
 
-**Show Control Links** and **Show Dangling Links** wire up two independent
+**Show Control Links** and **Show InterUsecase Links** wire up two independent
 link-visibility toggles. A link is rendered only if
-`(isDangling ? showDanglingLinks : true) && (isControlLink ? showControlLinks : true)`:
+`(isInterUsecase ? showInterUsecaseLinks : true) && (isControlLink ? showControlLinks : true)`:
 unchecking Show Control Links hides every control link regardless of its
-dangling state; unchecking Show Dangling Links hides any dangling link —
+interUsecase state; unchecking Show InterUsecase Links hides any interUsecase link —
 data or control — regardless of the control-link toggle. A normal
-(non-dangling) data link is never affected by either checkbox.
+(non-interUsecase) data link is never affected by either checkbox.
 
-Neither the backend's `isDangling` flag nor a link's control/data kind
+Neither the backend's `isInterUsecase` flag nor a link's control/data kind
 previously reached the rendered graph in a form these checkboxes could act
-on — wiring this up threads `isDangling` from the DTO through to the
+on — wiring this up threads `isInterUsecase` from the DTO through to the
 rendered `DataLink`/`ControlLink`. See *Link Visibility Design* under
 Component Design.
 
@@ -122,16 +122,16 @@ Design* under Component Design.
   function `applyPortVisibility(level, effectiveMode)` that filters each
   module's `ports` array.
 - `features/graph-designer/model/graph-data-slice.ts` — `Connection` gains
-  `isDangling: boolean`, copied from `DataLinkDto`/`ControlLinkDto` in the
+  `isInterUsecase: boolean`, copied from `DataLinkDto`/`ControlLinkDto` in the
   DTO-to-`Connection` mapping loops.
 - `entities/graph/model/graph.types.ts` — `EdgeBase` gains
-  `isDangling?: boolean` (inherited by `DataLink`/`ControlLink`; optional
-  since proxy links have no natural dangling value). `ModuleNode` gains
+  `isInterUsecase?: boolean` (inherited by `DataLink`/`ControlLink`; optional
+  since proxy links have no natural interUsecase value). `ModuleNode` gains
   `isPpModule?: boolean`.
 - `widgets/graph-designer/lib/level-view-adapter.ts` — copies
-  `Connection.isDangling` onto the `DataLink`/`ControlLink` it constructs.
+  `Connection.isInterUsecase` onto the `DataLink`/`ControlLink` it constructs.
 - `widgets/graph-designer/lib/apply-link-visibility.ts` — new file. Pure
-  function `applyLinkVisibility(level, showControlLinks, showDanglingLinks)`
+  function `applyLinkVisibility(level, showControlLinks, showInterUsecaseLinks)`
   that filters `dataLinks`/`controlLinks` per the visibility rule above.
 - `widgets/graph-designer/lib/apply-pp-highlight.ts` — new file. Pure
   function `applyPpHighlight(level, ppModuleIds)` that stamps
@@ -177,7 +177,7 @@ its value here (see Error Handling below).
 | --- | --- | --- |
 | `visualization.highlightPPModules` | `false` | Highlight PP Modules checkbox |
 | `visualization.showControlLinks` | `true` | Show Control Links checkbox |
-| `visualization.showDanglingLinks` | `true` | Show Dangling Links checkbox |
+| `visualization.showInterUsecaseLinks` | `true` | Show InterUsecase Links checkbox |
 | `usecases.workflowType` | `'usecase-workflow'` | Workflow radio (Usecase Workflow / System Workflow) |
 | `usecases.workflowLevel` | `'usecase-level'` | Nested Subsystem level / Usecase level radio |
 | `display.portVisibilityMode` | `'active'` | Show all ports checkbox |
@@ -199,10 +199,10 @@ its value here (see Error Handling below).
 | Display Options entry | As a user, I want a single Display Options entry in the side nav | Must Have | Functional |
 | Popover opens on click | As a user, I want to click Display Options to open a Popover | Must Have | Functional |
 | Show Control Links checkbox | As a user, I want to check or uncheck Show Control Links from the Popover | Must Have | Functional |
-| Show Dangling Links checkbox | As a user, I want to check or uncheck Show Dangling Links from the Popover | Must Have | Functional |
+| Show InterUsecase Links checkbox | As a user, I want to check or uncheck Show InterUsecase Links from the Popover | Must Have | Functional |
 | Highlight PP Modules checkbox | As a user, I want to check or uncheck Highlight PP Modules from the Popover | Must Have | Functional |
-| Link Visibility — filter rule | A link is visible only if `(isDangling ? showDanglingLinks : true) && (isControlLink ? showControlLinks : true)`. Show Control Links hides every control link when off, regardless of dangling state. Show Dangling Links hides any dangling link — data or control — when off, regardless of the control-link toggle. A non-dangling data link is never hidden by either. | Must Have | Functional |
-| Link Visibility — dangling data threading | `isDangling` from `DataLinkDto`/`ControlLinkDto` is threaded through `Connection` and into the rendered `DataLink`/`ControlLink` so the filter above has data to act on. | Must Have | Functional |
+| Link Visibility — filter rule | A link is visible only if `(isInterUsecase ? showInterUsecaseLinks : true) && (isControlLink ? showControlLinks : true)`. Show Control Links hides every control link when off, regardless of interUsecase state. Show InterUsecase Links hides any interUsecase link — data or control — when off, regardless of the control-link toggle. A non-interUsecase data link is never hidden by either. | Must Have | Functional |
+| Link Visibility — interUsecase data threading | `isInterUsecase` from `DataLinkDto`/`ControlLinkDto` is threaded through `Connection` and into the rendered `DataLink`/`ControlLink` so the filter above has data to act on. | Must Have | Functional |
 | Link Visibility — resize and live update on toggle | Toggling either checkbox re-filters the `LevelView` immediately. Runs post-layout (same stage as PP Highlight) — it is purely visual and never re-triggers ELK. | Must Have | Functional |
 | PP Highlight — module match rule | A module is highlighted when its module definition's `moduleInfo.moduleTypeInfo.majorModuleType === 'PP'`. | Must Have | Functional |
 | PP Highlight — no relayout on toggle | Toggling Highlight PP Modules is purely visual — it never re-triggers ELK layout. | Must Have | Functional |
@@ -243,7 +243,7 @@ its value here (see Error Handling below).
   Usecase Name
 - Checkboxes show the current on/off state; "Show all ports" only appears
   once Detailed View is selected. "Expand Subgraphs", "Show Control Links",
-  "Show Dangling Links", and "Highlight PP Modules" are always visible and
+  "Show InterUsecase Links", and "Highlight PP Modules" are always visible and
   each reflects its preference directly.
 - RadioGroup controls show the current selection
 - Every change writes immediately to the user preferences store (see
@@ -262,7 +262,7 @@ View):**
 │ GRAPH VIEW                             │
 │ ☐ Highlight PP Modules                 │
 │ ☑ Show Control Links                   │
-│ ☑ Show Dangling Links                  │
+│ ☑ Show InterUsecase Links              │
 ├───────────────────────────────────────┤
 │ WORKFLOW                               │
 │ ● Usecase Workflow                     │
@@ -326,7 +326,7 @@ since the two already share a parent.
 **Graph View** — three Checkboxes:
 - Highlight PP Modules
 - Show Control Links
-- Show Dangling Links
+- Show InterUsecase Links
 
 See *Link Visibility Design* and *PP Highlight Design* below for how
 `graph-designer.tsx` applies these three.
@@ -368,15 +368,15 @@ when the user makes a change.
 ### Link Visibility Design
 
 **Data threading.** `DataLinkDto`/`ControlLinkDto` already carry
-`isDangling: boolean` from the backend, but `graph-data-slice.ts`'s
+`isInterUsecase: boolean` from the backend, but `graph-data-slice.ts`'s
 DTO-to-`Connection` mapping drops it. `Connection` needs an
-`isDangling: boolean` field, copied from the DTO. `EdgeBase`
-(`entities/graph/model/graph.types.ts`) needs an `isDangling?: boolean`
+`isInterUsecase: boolean` field, copied from the DTO. `EdgeBase`
+(`entities/graph/model/graph.types.ts`) needs an `isInterUsecase?: boolean`
 field — optional since `ProxyDataLink`/`ProxyControlLink` have no natural
-dangling value once collapsed. `level-view-adapter.ts` copies
-`Connection.isDangling` onto the `DataLink`/`ControlLink` it builds.
+interUsecase value once collapsed. `level-view-adapter.ts` copies
+`Connection.isInterUsecase` onto the `DataLink`/`ControlLink` it builds.
 
-**`applyLinkVisibility(level, showControlLinks, showDanglingLinks)`.**
+**`applyLinkVisibility(level, showControlLinks, showInterUsecaseLinks)`.**
 Returns `level` unchanged when both flags are `true`; otherwise filters
 `dataLinks`/`controlLinks` per the Requirements rule. `proxyDataLinks`/
 `proxyControlLinks` are untouched — they're synthesized downstream, after
@@ -590,9 +590,9 @@ Not applicable on frontend.
 - `expandSubgraphs` and `display.portVisibilityMode` already exist in the
   preferences schema; wiring them up changes no persisted shape, only which
   code reads them
-- `showControlLinks`, `showDanglingLinks`, and `highlightPPModules` are the
+- `showControlLinks`, `showInterUsecaseLinks`, and `highlightPPModules` are the
   same — already-persisted preferences; wiring them up adds no new
-  persisted shape. `isDangling`/`isPpModule` are runtime-only fields on
+  persisted shape. `isInterUsecase`/`isPpModule` are runtime-only fields on
   `LevelView`/`ModuleNode`, never written to disk.
 
 ---
@@ -616,7 +616,7 @@ Not applicable on frontend.
   subgraphs, negligible next to the `applyCollapses` / layout pipeline that
   already runs per render.
 - `applyLinkVisibility` is O(links), and runs **after** layout in the `graph`
-  useMemo — toggling Show Control Links/Show Dangling Links never
+  useMemo — toggling Show Control Links/Show InterUsecase Links never
   re-triggers ELK, only a cheap re-filter of the already-positioned link
   lists.
 - `applyPpHighlight` is O(modules), and runs **after** layout in the `graph`
@@ -670,17 +670,17 @@ Not applicable on frontend.
   for empty/absent `subgraphs`
 - `collapseSetForLevel`: returns an empty set when `expandSubgraphs` is
   `true`; returns every subgraph id when `false`
-- `applyLinkVisibility`: `showControlLinks=true, showDanglingLinks=true`
+- `applyLinkVisibility`: `showControlLinks=true, showInterUsecaseLinks=true`
   returns the input unchanged (reference equality); `showControlLinks=false`
-  removes every control link regardless of dangling state while data links
-  are untouched; `showDanglingLinks=false` removes every dangling link
+  removes every control link regardless of interUsecase state while data links
+  are untouched; `showInterUsecaseLinks=false` removes every interUsecase link
   (data or control) regardless of the control-link toggle; both `false`
-  leaves only non-dangling data links; a level with no `dataLinks`/
+  leaves only non-interUsecase data links; a level with no `dataLinks`/
   `controlLinks` keys filters to empty arrays without throwing;
   `proxyDataLinks`/`proxyControlLinks` are always returned unchanged
-- `buildLevelViewFromGraphData` — `isDangling` passthrough: a `Connection`
-  with `isDangling: true`/`false` produces a `DataLink`/`ControlLink` with
-  the same `isDangling` value (not omitted, since `Connection.isDangling`
+- `buildLevelViewFromGraphData` — `isInterUsecase` passthrough: a `Connection`
+  with `isInterUsecase: true`/`false` produces a `DataLink`/`ControlLink` with
+  the same `isInterUsecase` value (not omitted, since `Connection.isInterUsecase`
   is non-optional)
 - `applyPpHighlight`: an empty `ppModuleIds` returns the input unchanged
   (reference equality); a module whose `moduleId` (as string) is in the set
@@ -705,7 +705,7 @@ Not applicable on frontend.
 - Click Display Options → QUI Popover opens
 - Check/uncheck Show Control Links, Show MDF Modules → correct preference
   save triggered
-- Check/uncheck Show Dangling Links, Highlight PP Modules → correct
+- Check/uncheck Show InterUsecase Links, Highlight PP Modules → correct
   preference save triggered
 - Select Detailed View → correct preference save triggered, ID checkboxes
   and Show all ports appear
@@ -727,7 +727,7 @@ Not applicable on frontend.
 
 **End-to-End equivalent:**
 
-- Uncheck Show Dangling Links / Show MDF Modules → close Popover → simulate
+- Uncheck Show InterUsecase Links / Show MDF Modules → close Popover → simulate
   reload → verify preference still off
 - Uncheck Show Control Links, check Highlight PP Modules → close → reopen →
   verify both persisted
@@ -764,11 +764,11 @@ remaining visual behavior is verified manually in the running app:
   flicker (module positions do not shift) — including the first time it's
   checked before the module palette has ever been opened, which triggers a
   background `loadModuleList()`.
-- Load a usecase with at least one link with `isDangling: true`. Unchecking
-  Show Control Links hides every control link (dangling or not); dangling
-  data links stay visible. Unchecking Show Dangling Links hides every
-  dangling link (data and control); non-dangling control links stay
-  visible. Both unchecked leaves only non-dangling data links. Each toggle
+- Load a usecase with at least one link with `isInterUsecase: true`. Unchecking
+  Show Control Links hides every control link (interUsecase or not); interUsecase
+  data links stay visible. Unchecking Show InterUsecase Links hides every
+  interUsecase link (data and control); non-interUsecase control links stay
+  visible. Both unchecked leaves only non-interUsecase data links. Each toggle
   applies immediately with no visible relayout flicker (module/container/
   subgraph positions do not shift).
 

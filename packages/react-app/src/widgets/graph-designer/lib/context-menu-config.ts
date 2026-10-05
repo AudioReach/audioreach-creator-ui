@@ -21,27 +21,27 @@ import type {
 } from '~features/usecase-visualizer';
 
 const LINK_MENU_ACTIONS = {
-  completeDanglingControlLink: 'complete-dangling-control-link',
-  completeDanglingDataLink: 'complete-dangling-data-link',
   completeEcLink: 'complete-ec-link',
+  completeInterUsecaseControlLink: 'complete-interUsecase-control-link',
+  completeInterUsecaseDataLink: 'complete-interUsecase-data-link',
   endConnection: 'end-connection',
   startConnection: 'start-connection',
-  startDanglingControlLink: 'start-dangling-control-link',
-  startDanglingDataLink: 'start-dangling-data-link',
   startEcLink: 'start-ec-link',
+  startInterUsecaseControlLink: 'start-interUsecase-control-link',
+  startInterUsecaseDataLink: 'start-interUsecase-data-link',
 } as const;
 
 const START_EDGE_MODES = {
   [LINK_MENU_ACTIONS.startConnection]: 'normal',
-  [LINK_MENU_ACTIONS.startDanglingControlLink]: 'dangling',
-  [LINK_MENU_ACTIONS.startDanglingDataLink]: 'dangling',
   [LINK_MENU_ACTIONS.startEcLink]: 'EC',
+  [LINK_MENU_ACTIONS.startInterUsecaseControlLink]: 'interUsecase',
+  [LINK_MENU_ACTIONS.startInterUsecaseDataLink]: 'interUsecase',
 } as const satisfies Record<string, EdgeMode>;
 
 const COMPLETE_LINK_ACTIONS: ReadonlySet<string> = new Set([
   LINK_MENU_ACTIONS.completeEcLink,
-  LINK_MENU_ACTIONS.completeDanglingControlLink,
-  LINK_MENU_ACTIONS.completeDanglingDataLink,
+  LINK_MENU_ACTIONS.completeInterUsecaseControlLink,
+  LINK_MENU_ACTIONS.completeInterUsecaseDataLink,
   LINK_MENU_ACTIONS.endConnection,
 ]);
 
@@ -109,17 +109,17 @@ function buildPortItems(
 ): ContextMenuItem[] {
   if (connectionInProgress) {
     const completeItems = {
-      dangling: {
+      EC: {id: LINK_MENU_ACTIONS.completeEcLink, label: 'Complete EC Link'},
+      interUsecase: {
         id:
           portIoType === PORT_IO_TYPE.CONTROL
-            ? LINK_MENU_ACTIONS.completeDanglingControlLink
-            : LINK_MENU_ACTIONS.completeDanglingDataLink,
+            ? LINK_MENU_ACTIONS.completeInterUsecaseControlLink
+            : LINK_MENU_ACTIONS.completeInterUsecaseDataLink,
         label:
           portIoType === PORT_IO_TYPE.CONTROL
-            ? 'Complete Dangling Control Link'
-            : 'Complete Dangling Data Link',
+            ? 'Complete InterUsecase Control Link'
+            : 'Complete InterUsecase Data Link',
       },
-      EC: {id: LINK_MENU_ACTIONS.completeEcLink, label: 'Complete EC Link'},
       normal: {id: LINK_MENU_ACTIONS.endConnection, label: 'End connection'},
     } satisfies Record<EdgeMode, ContextMenuItem>;
     return [completeItems[connectionInProgress.edgeMode]];
@@ -133,8 +133,8 @@ function buildPortItems(
     return [
       startConnection,
       {
-        id: LINK_MENU_ACTIONS.startDanglingControlLink,
-        label: 'Start Dangling Control Link',
+        id: LINK_MENU_ACTIONS.startInterUsecaseControlLink,
+        label: 'Start InterUsecase Control Link',
       },
     ];
   }
@@ -143,8 +143,8 @@ function buildPortItems(
       startConnection,
       {id: LINK_MENU_ACTIONS.startEcLink, label: 'Start EC Link'},
       {
-        id: LINK_MENU_ACTIONS.startDanglingDataLink,
-        label: 'Start Dangling Data Link',
+        id: LINK_MENU_ACTIONS.startInterUsecaseDataLink,
+        label: 'Start InterUsecase Data Link',
       },
     ];
   }

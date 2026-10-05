@@ -52,7 +52,7 @@ visually unchanged.
    lookup and the graph designer's subgraph-list lookup, respectively);
    toggling it never re-fetches and never affects row selection or
    checklist state.
-6. A segmented control (**All / Subgraph / Dangling**) narrows the
+6. A segmented control (**All / Subgraph / InterUsecase**) narrows the
    visible rows without a new fetch; the search box filters by
    `sg:`/`iid:`/`mod:` prefix or a plain substring against Module Name,
    also without a new fetch — matching still applies to Subgraph Id and
@@ -79,7 +79,7 @@ visually unchanged.
 ```
 ┌─ Port Connections Information ────────────────────────────────────────┐
 │                                                                        │
-│  ┌─ sg: / iid: / mod: / text ─┐ ┌─ All ─┬─Subgraph─┬─Dangling─┐  Advanced│
+│  ┌─ sg: / iid: / mod: / text ─┐ ┌─ All ─┬─Subgraph─┬─InterUsecase─┐  Advanced│
 │  └───────────────────────────┘ └───────┴──────────┴──────────┘  details │
 │    search box                    connections-filter.tsx          [○──] │
 │                                                                        │
@@ -218,7 +218,7 @@ interface DataLinkWithUsecasesLinkDto {
   destinationId: string;
   destinationPortId: string;
   editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
-  isDangling: boolean;
+  isInterUsecase: boolean;
   relatedEndPointLinks: EndPointLink[];
   sourceId: string;
   sourcePortId: string;
@@ -231,7 +231,7 @@ interface ControlLinkWithUsecasesLinkDto {
   destinationId: string;
   destinationPortId: string;
   editType?: 'Added' | 'Removed' | 'Modified' | 'Unchanged';
-  isDangling: boolean;
+  isInterUsecase: boolean;
   relatedEndPointLinks: EndPointLink[];
   sourceId: string;
   sourcePortId: string;
@@ -262,11 +262,11 @@ export interface SpfModuleDto {
 **`model/port-connections-info.types.ts`** (new, in the feature slice):
 
 ```ts
-export type ConnectionFilter = 'all' | 'sg' | 'dangling';
+export type ConnectionFilter = 'all' | 'sg' | 'interUsecase';
 
 export interface ConnectionRow {
   connectionType: ConnectionType;
-  isDangling: boolean;
+  isInterUsecase: boolean;
   moduleId: string; // hex — from the batched module lookup's SpfModuleDto.id
   moduleName: string; // from the batched module lookup's SpfModuleDto.name
   otherModuleSystemId: string; // self/other-resolved; key into the batched lookup response
@@ -613,7 +613,7 @@ export function buildConnectionRows(
     const otherModule = moduleBySystemId.get(otherModuleSystemId);
     return {
       connectionType: link.connectionType,
-      isDangling: link.isDangling,
+      isInterUsecase: link.isInterUsecase,
       moduleId: otherModule
         ? (ConvertNumberToHexString(otherModule.id) ?? String(otherModule.id))
         : otherModuleSystemId,
@@ -648,8 +648,8 @@ export function filterConnectionRows(
   rows: ConnectionRow[],
   filter: ConnectionFilter,
 ): ConnectionRow[] {
-  if (filter === 'sg') return rows.filter((r) => !r.isDangling);
-  if (filter === 'dangling') return rows.filter((r) => r.isDangling);
+  if (filter === 'sg') return rows.filter((r) => !r.isInterUsecase);
+  if (filter === 'interUsecase') return rows.filter((r) => r.isInterUsecase);
   return rows;
 }
 ```
@@ -682,7 +682,7 @@ ui/
                                        Module Id/Subgraph Id columns
                                        conditional on showAdvancedDetails
   connections-filter.tsx            — QUI SegmentedControl
-                                       (All / Subgraph / Dangling)
+                                       (All / Subgraph / InterUsecase)
   advanced-details-toggle.tsx        — QUI Switch, off by default
   usecase-checklist.tsx             — Checkbox list for the selected
                                        row's usecases, with select-all/
@@ -964,8 +964,8 @@ filter/row interaction.
 
 **Unit — `filter-connection-rows.ts`:**
 
-- `'all'` → all rows unchanged. `'sg'` → only `isDangling === false`.
-  `'dangling'` → only `isDangling === true`.
+- `'all'` → all rows unchanged. `'sg'` → only `isInterUsecase === false`.
+  `'interUsecase'` → only `isInterUsecase === true`.
 
 **Unit — `use-port-connections-info.ts`:**
 

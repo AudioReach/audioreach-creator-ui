@@ -31,7 +31,7 @@ export function DataLinkEdge(props: DataLinkEdgeProps) {
     targetX,
     targetY,
   } = props;
-  const {isDangling, isEcLink} = data ?? {};
+  const {isEcLink, isInterUsecase} = data ?? {};
 
   const boundaryId =
     typeof data?.boundaryId === 'string' ? data.boundaryId : undefined;
@@ -60,8 +60,8 @@ export function DataLinkEdge(props: DataLinkEdgeProps) {
     <EdgeBody
       arrowMarkerId={DATA_ARROW_MARKER_ID}
       edgeId={id}
-      isDangling={isDangling}
       isEcLink={isEcLink}
+      isInterUsecase={isInterUsecase}
       label={label}
       labelX={labelX}
       labelY={labelY}

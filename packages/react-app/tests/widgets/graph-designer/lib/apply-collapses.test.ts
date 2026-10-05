@@ -197,18 +197,18 @@ describe('applyCollapses', () => {
     );
   });
 
-  it('preserves dangling state on collapsed data and control links', () => {
+  it('preserves interUsecase state on collapsed data and control links', () => {
     const level = baseLevelWithControlLink();
-    level.dataLinks![1].isDangling = true;
-    level.controlLinks![0].isDangling = true;
+    level.dataLinks![1].isInterUsecase = true;
+    level.controlLinks![0].isInterUsecase = true;
 
     const out = applyCollapses(level, new Set([1]));
 
     expect(out.proxyDataLinks?.[0]).toEqual(
-      expect.objectContaining({isDangling: true}),
+      expect.objectContaining({isInterUsecase: true}),
     );
     expect(out.proxyControlLinks?.[0]).toEqual(
-      expect.objectContaining({isDangling: true}),
+      expect.objectContaining({isInterUsecase: true}),
     );
   });
 

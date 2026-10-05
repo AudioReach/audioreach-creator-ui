@@ -40,7 +40,7 @@ export const VISUALIZER_MODE = {
 export type VisualizerMode =
   (typeof VISUALIZER_MODE)[keyof typeof VISUALIZER_MODE];
 
-export type EdgeMode = 'EC' | 'dangling' | 'normal';
+export type EdgeMode = 'EC' | 'interUsecase' | 'normal';
 
 export type ConnectionCommand =
   {command: 'complete'} | {command: 'start'; edgeMode: EdgeMode};

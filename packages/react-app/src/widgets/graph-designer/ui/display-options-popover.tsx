@@ -119,10 +119,10 @@ export function DisplayOptionsPopover({
           size="sm"
         />
         <Checkbox
-          checked={visualization.showDanglingLinks}
-          label="Show Dangling Links"
+          checked={visualization.showInterUsecaseLinks}
+          label="Show InterUsecase Links"
           onCheckedChange={(checked) =>
-            savePreference('visualization.showDanglingLinks', checked)
+            savePreference('visualization.showInterUsecaseLinks', checked)
           }
           size="sm"
         />

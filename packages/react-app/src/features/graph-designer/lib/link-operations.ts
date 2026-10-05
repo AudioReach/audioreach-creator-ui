@@ -45,10 +45,10 @@ const DELETE_LINK_BY_TYPE = {
   data: {deleteFn: deleteDataLink, key: 'dataLinks' as const},
 };
 
-type EdgeMode = 'EC' | 'dangling' | 'normal';
+type EdgeMode = 'EC' | 'interUsecase' | 'normal';
 
 function toDataLinkType(edgeMode: EdgeMode): LinkType {
-  return edgeMode === 'dangling'
+  return edgeMode === 'interUsecase'
     ? 'INTER_USECASE'
     : edgeMode === 'normal'
       ? 'NORMAL'

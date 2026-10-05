@@ -15,7 +15,7 @@ export function filterConnectionRows(
   if (filter === 'sg') {
     return rows.filter((r) => !r.isInterUsecase);
   }
-  if (filter === 'dangling') {
+  if (filter === 'interUsecase') {
     return rows.filter((r) => r.isInterUsecase);
   }
   return rows;

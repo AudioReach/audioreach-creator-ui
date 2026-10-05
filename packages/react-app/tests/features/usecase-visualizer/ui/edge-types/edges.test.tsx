@@ -84,10 +84,10 @@ describe('DataLinkEdge', () => {
     expect(path.style.stroke).toContain('--color-border-neutral-10');
   });
 
-  it('uses the success stroke for dangling links', () => {
+  it('uses the success stroke for interUsecase links', () => {
     const {container} = renderEdge(
       <DataLinkEdge
-        {...makeEdgeProps({data: {isDangling: true}, id: 'd1'})}
+        {...makeEdgeProps({data: {isInterUsecase: true}, id: 'd1'})}
       />,
     );
     expect(findEdgePath(container).style.stroke).toContain(
@@ -169,10 +169,10 @@ describe('ControlLinkEdge', () => {
     expect(path.style.strokeWidth).toBe('2');
   });
 
-  it('uses the success stroke for dangling links', () => {
+  it('uses the success stroke for interUsecase links', () => {
     const {container} = renderEdge(
       <ControlLinkEdge
-        {...makeEdgeProps({data: {isDangling: true}, id: 'c1'})}
+        {...makeEdgeProps({data: {isInterUsecase: true}, id: 'c1'})}
       />,
     );
     expect(findEdgePath(container).style.stroke).toContain(

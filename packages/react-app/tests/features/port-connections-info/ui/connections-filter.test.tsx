@@ -47,13 +47,13 @@ describe('ConnectionsFilter', () => {
     render(<ConnectionsFilter onChange={jest.fn()} value="all" />);
     expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.getByText('Subgraph')).toBeInTheDocument();
-    expect(screen.getByText('Dangling')).toBeInTheDocument();
+    expect(screen.getByText('InterUsecase')).toBeInTheDocument();
   });
 
   it.each([
     ['All', 'all'],
     ['Subgraph', 'sg'],
-    ['Dangling', 'dangling'],
+    ['InterUsecase', 'interUsecase'],
   ] as const)('calls onChange with %s -> %s', (label, expectedValue) => {
     const onChange = jest.fn();
     render(<ConnectionsFilter onChange={onChange} value="all" />);

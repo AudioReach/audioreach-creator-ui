@@ -6,33 +6,33 @@
 import type {LevelView} from '~entities/graph';
 
 /**
- * Pure control/dangling link visibility filter.
+ * Pure control/interUsecase link visibility filter.
  *
- * showControlLinks toggles all control links regardless of dangling state.
- * showDanglingLinks toggles any link (data or control) with isDangling
- * true, regardless of the control-link toggle. A non-dangling data link is
+ * showControlLinks toggles all control links regardless of interUsecase state.
+ * showInterUsecaseLinks toggles any link (data or control) with isInterUsecase
+ * true, regardless of the control-link toggle. A non-interUsecase data link is
  * never affected by either flag.
  */
 export function applyLinkVisibility(
   level: LevelView,
   showControlLinks: boolean,
-  showDanglingLinks: boolean,
+  showInterUsecaseLinks: boolean,
 ): LevelView {
-  if (showControlLinks && showDanglingLinks) {
+  if (showControlLinks && showInterUsecaseLinks) {
     return level;
   }
 
-  const isVisible = (isDangling: boolean | undefined, isControl: boolean) =>
-    (isDangling ? showDanglingLinks : true) &&
+  const isVisible = (isInterUsecase: boolean | undefined, isControl: boolean) =>
+    (isInterUsecase ? showInterUsecaseLinks : true) &&
     (isControl ? showControlLinks : true);
 
   return {
     ...level,
     controlLinks: (level.controlLinks ?? []).filter((l) =>
-      isVisible(l.isDangling, true),
+      isVisible(l.isInterUsecase, true),
     ),
     dataLinks: (level.dataLinks ?? []).filter((l) =>
-      isVisible(l.isDangling, false),
+      isVisible(l.isInterUsecase, false),
     ),
   };
 }

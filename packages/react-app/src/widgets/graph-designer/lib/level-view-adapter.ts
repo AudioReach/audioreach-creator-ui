@@ -264,7 +264,7 @@ export function buildLevelViewFromGraphData(
       dataLinks.push({
         edgeKind: EDGE_KIND.DATA,
         id: c.systemId,
-        isDangling: isInterUsecaseLink(c.linkType),
+        isInterUsecase: isInterUsecaseLink(c.linkType),
         ...(c.isEcLink === undefined ? {} : {isEcLink: c.isEcLink}),
         meta: {systemId: c.systemId},
         sourceNodeId: c.sourceSystemId,
@@ -276,7 +276,7 @@ export function buildLevelViewFromGraphData(
       controlLinks.push({
         edgeKind: EDGE_KIND.CONTROL,
         id: c.systemId,
-        isDangling: isInterUsecaseLink(c.linkType),
+        isInterUsecase: isInterUsecaseLink(c.linkType),
         meta: {systemId: c.systemId},
         sourceNodeId: c.sourceSystemId,
         sourcePortId: c.sourcePortSystemId,

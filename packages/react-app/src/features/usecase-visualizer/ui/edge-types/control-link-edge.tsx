@@ -28,7 +28,7 @@ export function ControlLinkEdge(props: ControlLinkEdgeProps) {
     targetX,
     targetY,
   } = props;
-  const {isDangling} = data ?? {};
+  const {isInterUsecase} = data ?? {};
 
   const [path, labelX, labelY] = getBezierPath({
     sourcePosition,
@@ -45,7 +45,7 @@ export function ControlLinkEdge(props: ControlLinkEdgeProps) {
     <EdgeBody
       dashed
       edgeId={id}
-      isDangling={isDangling}
+      isInterUsecase={isInterUsecase}
       label={label}
       labelX={labelX}
       labelY={labelY}

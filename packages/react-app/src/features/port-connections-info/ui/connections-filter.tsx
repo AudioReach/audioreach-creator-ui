@@ -27,7 +27,7 @@ export function ConnectionsFilter({onChange, value}: ConnectionsFilterProps) {
     >
       <SegmentedControl.Item text="All" value="all" />
       <SegmentedControl.Item text="Subgraph" value="sg" />
-      <SegmentedControl.Item text="Dangling" value="dangling" />
+      <SegmentedControl.Item text="InterUsecase" value="interUsecase" />
     </SegmentedControl.Root>
   );
 }

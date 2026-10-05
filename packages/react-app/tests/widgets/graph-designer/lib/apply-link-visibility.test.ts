@@ -12,7 +12,7 @@ function baseLevel(): LevelView {
       {
         edgeKind: 'control',
         id: 'control-normal',
-        isDangling: false,
+        isInterUsecase: false,
         sourceNodeId: 'module-1',
         sourcePortId: 'ctrl-out',
         targetNodeId: 'module-2',
@@ -20,8 +20,8 @@ function baseLevel(): LevelView {
       },
       {
         edgeKind: 'control',
-        id: 'control-dangling',
-        isDangling: true,
+        id: 'control-interUsecase',
+        isInterUsecase: true,
         sourceNodeId: 'module-1',
         sourcePortId: 'ctrl-out-2',
         targetNodeId: 'module-2',
@@ -32,7 +32,7 @@ function baseLevel(): LevelView {
       {
         edgeKind: 'data',
         id: 'data-normal',
-        isDangling: false,
+        isInterUsecase: false,
         sourceNodeId: 'module-1',
         sourcePortId: 'out-1',
         targetNodeId: 'module-2',
@@ -40,8 +40,8 @@ function baseLevel(): LevelView {
       },
       {
         edgeKind: 'data',
-        id: 'data-dangling',
-        isDangling: true,
+        id: 'data-interUsecase',
+        isInterUsecase: true,
         sourceNodeId: 'module-1',
         sourcePortId: 'out-2',
         targetNodeId: 'module-2',
@@ -79,27 +79,27 @@ describe('applyLinkVisibility', () => {
     expect(applyLinkVisibility(level, true, true)).toBe(level);
   });
 
-  // Show Control Links off: every control link hidden regardless of dangling state
+  // Show Control Links off: every control link hidden regardless of interUsecase state
   it('removes every control link when showControlLinks is false', () => {
     const out = applyLinkVisibility(baseLevel(), false, true);
 
     expect(out.controlLinks).toEqual([]);
     expect(out.dataLinks?.map((l) => l.id).sort()).toEqual([
-      'data-dangling',
+      'data-interUsecase',
       'data-normal',
     ]);
   });
 
-  // Show Dangling Links off: every dangling link (data or control) hidden regardless of type
-  it('removes every dangling link when showDanglingLinks is false', () => {
+  // Show InterUsecase Links off: every interUsecase link (data or control) hidden regardless of type
+  it('removes every interUsecase link when showInterUsecaseLinks is false', () => {
     const out = applyLinkVisibility(baseLevel(), true, false);
 
     expect(out.controlLinks?.map((l) => l.id)).toEqual(['control-normal']);
     expect(out.dataLinks?.map((l) => l.id)).toEqual(['data-normal']);
   });
 
-  // Both off: only the non-dangling data link survives
-  it('leaves only non-dangling data links when both flags are false', () => {
+  // Both off: only the non-interUsecase data link survives
+  it('leaves only non-interUsecase data links when both flags are false', () => {
     const out = applyLinkVisibility(baseLevel(), false, false);
 
     expect(out.controlLinks).toEqual([]);

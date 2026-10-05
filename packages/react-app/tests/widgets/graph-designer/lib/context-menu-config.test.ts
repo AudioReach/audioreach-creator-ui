@@ -79,7 +79,7 @@ describe('context-menu-config', () => {
     expect(withoutConnection.map((item) => item.id)).toEqual([
       'start-connection',
       'start-ec-link',
-      'start-dangling-data-link',
+      'start-interUsecase-data-link',
     ]);
   });
 
@@ -93,14 +93,14 @@ describe('context-menu-config', () => {
     });
     expect(items.map((item) => item.id)).toEqual([
       'start-connection',
-      'start-dangling-control-link',
+      'start-interUsecase-control-link',
     ]);
   });
 
   it.each([
     ['normal', 'end-connection'],
     ['EC', 'complete-ec-link'],
-    ['dangling', 'complete-dangling-data-link'],
+    ['interUsecase', 'complete-interUsecase-data-link'],
   ] as const)('returns %s data completion item', (edgeMode, itemId) => {
     const config = configFor(makeStore());
     const items = config.getItems({
@@ -112,18 +112,18 @@ describe('context-menu-config', () => {
     expect(items.map((item) => item.id)).toEqual([itemId]);
   });
 
-  it('returns the Dangling control completion item for a control port', () => {
+  it('returns the InterUsecase control completion item for a control port', () => {
     const config = configFor(makeStore());
     const items = config.getItems({
-      connectionInProgress: {edgeMode: 'dangling'},
+      connectionInProgress: {edgeMode: 'interUsecase'},
       kind: 'port',
       nodeId: 'module-1',
       port: {id: 'port-1', portIoType: 'control'},
     });
     expect(items).toEqual([
       {
-        id: 'complete-dangling-control-link',
-        label: 'Complete Dangling Control Link',
+        id: 'complete-interUsecase-control-link',
+        label: 'Complete InterUsecase Control Link',
       },
     ]);
   });
@@ -131,12 +131,12 @@ describe('context-menu-config', () => {
   it.each([
     ['start-connection', {command: 'start', edgeMode: 'normal'}],
     ['start-ec-link', {command: 'start', edgeMode: 'EC'}],
-    ['start-dangling-data-link', {command: 'start', edgeMode: 'dangling'}],
-    ['start-dangling-control-link', {command: 'start', edgeMode: 'dangling'}],
+    ['start-interUsecase-data-link', {command: 'start', edgeMode: 'interUsecase'}],
+    ['start-interUsecase-control-link', {command: 'start', edgeMode: 'interUsecase'}],
     ['end-connection', {command: 'complete'}],
     ['complete-ec-link', {command: 'complete'}],
-    ['complete-dangling-data-link', {command: 'complete'}],
-    ['complete-dangling-control-link', {command: 'complete'}],
+    ['complete-interUsecase-data-link', {command: 'complete'}],
+    ['complete-interUsecase-control-link', {command: 'complete'}],
   ] as const)('maps %s to a connection command', (actionId, command) => {
     const config = configFor(makeStore());
     const target = {
@@ -212,7 +212,7 @@ describe('context-menu-config', () => {
     ).toEqual([
       'start-connection',
       'start-ec-link',
-      'start-dangling-data-link',
+      'start-interUsecase-data-link',
     ]);
     expect(
       config

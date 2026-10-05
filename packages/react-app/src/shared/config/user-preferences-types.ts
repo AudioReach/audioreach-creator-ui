@@ -11,7 +11,7 @@ export interface VisualizationPreferences {
   highlightPPModules: boolean;
   showContainerIds: boolean;
   showControlLinks: boolean;
-  showDanglingLinks: boolean;
+  showInterUsecaseLinks: boolean;
   showMdfModules: boolean;
   showModuleInstanceIds: boolean;
   showSubgraphIds: boolean;
@@ -74,7 +74,7 @@ export const DEFAULT_VISUALIZATION_PREFERENCES: VisualizationPreferences = {
   highlightPPModules: false,
   showContainerIds: false,
   showControlLinks: true,
-  showDanglingLinks: true,
+  showInterUsecaseLinks: true,
   showMdfModules: false,
   showModuleInstanceIds: false,
   showSubgraphIds: false,

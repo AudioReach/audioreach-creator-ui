@@ -5,7 +5,7 @@
 
 import type {UsecaseDto} from '~entities/usecases';
 
-export type ConnectionFilter = 'all' | 'sg' | 'dangling';
+export type ConnectionFilter = 'all' | 'sg' | 'interUsecase';
 
 export interface ConnectionRow {
   isInterUsecase: boolean;

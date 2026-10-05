@@ -353,25 +353,25 @@ describe('context menu', () => {
     });
   });
 
-  it('passes Dangling control edge mode through the context-menu flow', async () => {
+  it('passes InterUsecase control edge mode through the context-menu flow', async () => {
     const onEdgeConnected = jest.fn();
     const onAction = jest.fn((actionId: string) =>
-      actionId === 'start-dangling-control-link'
-        ? {command: 'start' as const, edgeMode: 'dangling' as const}
+      actionId === 'start-interUsecase-control-link'
+        ? {command: 'start' as const, edgeMode: 'interUsecase' as const}
         : {command: 'complete' as const},
     );
     const getItems = jest
       .fn<ContextMenuItem[], [ContextMenuTarget]>()
       .mockReturnValueOnce([
         {
-          id: 'start-dangling-control-link',
-          label: 'Start Dangling Control Link',
+          id: 'start-interUsecase-control-link',
+          label: 'Start InterUsecase Control Link',
         },
       ])
       .mockReturnValueOnce([
         {
-          id: 'complete-dangling-control-link',
-          label: 'Complete Dangling Control Link',
+          id: 'complete-interUsecase-control-link',
+          label: 'Complete InterUsecase Control Link',
         },
       ]);
     const source = makeModule({
@@ -396,18 +396,18 @@ describe('context menu', () => {
         {data: source, id: source.id, type: 'module'},
       );
     });
-    fireEvent.click(screen.getByText('Start Dangling Control Link'));
+    fireEvent.click(screen.getByText('Start InterUsecase Control Link'));
     await act(async () => {
       latestReactFlowProps.current?.onNodeContextMenu?.(
         fakeEvent(container.querySelector('[data-port-id="end"]') as Element),
         {data: target, id: target.id, type: 'module'},
       );
     });
-    fireEvent.click(screen.getByText('Complete Dangling Control Link'));
+    fireEvent.click(screen.getByText('Complete InterUsecase Control Link'));
 
     expect(onEdgeConnected).toHaveBeenCalledWith({
       edgeKind: 'control',
-      edgeMode: 'dangling',
+      edgeMode: 'interUsecase',
       sourceNodeId: 'source',
       sourcePortId: 'start',
       targetNodeId: 'target',
