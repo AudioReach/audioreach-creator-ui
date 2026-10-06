@@ -313,7 +313,14 @@ export function ModuleList(): ReactElement {
                   </li>
                 }
               >
-                {module.description || 'Unknown'}
+                <div
+                  style={{
+                    maxWidth: 'min(24rem, calc(100vw - 2rem))',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {module.description || 'Unknown'}
+                </div>
               </Tooltip>
             ))}
           </ul>

@@ -125,4 +125,30 @@ describe('ModuleList', () => {
     expect(screen.queryByText('SISO ADSP')).not.toBeInTheDocument();
     expect(screen.queryByText('Uncategorized CDSP')).not.toBeInTheDocument();
   });
+
+  it('bounds long module descriptions inside the tooltip content', () => {
+    const longDescription = 'PCM source details '.repeat(40);
+    mockUseModuleList.mockReturnValue({
+      loadModuleList: jest.fn(),
+      moduleList: [{...modules[0], description: longDescription}],
+      moduleListSearchQuery: '',
+      moduleListStatus: 'ready',
+      selectedDspTypes: ['ADSP'],
+      selectedModuleTypes: [],
+      setModuleListSearchQuery: jest.fn(),
+      setSelectedDspTypes: jest.fn(),
+      setSelectedModuleTypes: jest.fn(),
+    });
+
+    render(<ModuleList />);
+
+    const tooltipContent = screen.getByTestId('q-tooltip').lastElementChild;
+
+    expect(tooltipContent).toBeInTheDocument();
+    expect(tooltipContent).toHaveTextContent(longDescription.trim());
+    expect(tooltipContent).toHaveStyle({
+      maxWidth: 'min(24rem, calc(100vw - 2rem))',
+      overflowWrap: 'anywhere',
+    });
+  });
 });
