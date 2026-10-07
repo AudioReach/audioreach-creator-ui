@@ -111,11 +111,12 @@ function seedProjectConfig() {
  * An inner Wrapper calls useUserPreferences() and passes the result down
  * as props, mirroring how GraphDesigner renders the popover in production.
  */
-function renderPopover(projectId: string = PROJECT_ID) {
+function renderPopover(projectId: string = PROJECT_ID, isEditable = false) {
   function Wrapper() {
     const {preferences, updatePreference} = useUserPreferences();
     return (
       <DisplayOptionsPopover
+        isEditable={isEditable}
         preferences={preferences}
         projectId={projectId}
         updatePreference={updatePreference}
@@ -364,6 +365,22 @@ describe('DisplayOptionsPopover', () => {
 
     const saved = ConfigFileManager.instance.getUserPreferences(PROJECT_ID);
     expect(saved.display.portVisibilityMode).toBe('all');
+  });
+
+  it('forces Show all ports on and disables it in edit mode', async () => {
+    const user = userEvent.setup();
+    renderPopover(PROJECT_ID, true);
+
+    await user.click(screen.getByTestId('q-radio-select-detailed'));
+
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'Show all ports',
+    });
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+
+    const saved = ConfigFileManager.instance.getUserPreferences(PROJECT_ID);
+    expect(saved.display.portVisibilityMode).toBe('active');
   });
 
   // Expand Subgraphs is unchecked since expandSubgraphs defaults to false

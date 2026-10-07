@@ -41,8 +41,9 @@ The "Show all ports" checkbox is bound to `display.portVisibilityMode`
 Wiring it up filters module instance ports down to only _active_ ports by
 default — see the *active port definition* in Requirements below for the
 exact rule — decluttering graphs with many unused ports, with the option to
-see all ports on demand. Implementation: see *Port Visibility Design* under
-Component Design.
+see all ports on demand. While edit mode is active, all ports are always
+shown, and the checkbox is checked and disabled. Implementation: see *Port
+Visibility Design* under Component Design.
 
 ### Expand/Collapse All Subgraphs
 
@@ -208,7 +209,7 @@ its value here (see Error Handling below).
 | PP Highlight — no relayout on toggle | Toggling Highlight PP Modules is purely visual — it never re-triggers ELK layout. | Must Have | Functional |
 | Port Visibility — active port definition | A module port is active if its id appears as `sourcePortId`/`targetPortId` in `dataLinks`, `controlLinks`, `proxyDataLinks`, or `proxyControlLinks`. Applies to input, output, and control ports. `SubsystemNode`/`SubgraphProxyNode` ports have no active/non-active distinction — all are treated as active. | Must Have | Functional |
 | Port Visibility — reuse existing control | The existing "Show all ports" checkbox and `display.portVisibilityMode` preference drive this feature. No new control or preference. Only visible under Detailed View. | Must Have | Functional |
-| Port Visibility — effective visibility rule | Effective mode = `viewMode === 'detailed' ? portVisibilityMode : 'active'`. Compact View always forces active-only; Detailed View honors the saved preference. | Must Have | Functional |
+| Port Visibility — effective visibility rule | Effective mode = `isEditable ? 'all' : (viewMode === 'detailed' ? portVisibilityMode : 'active')`. Edit mode always shows all ports; otherwise Compact View forces active-only and Detailed View honors the saved preference. | Must Have | Functional |
 | Port Visibility — resize and live update on toggle | Toggling re-filters the `LevelView` and re-runs ELK layout immediately (filter before layout, not after) — module, container, and subgraph boxes resize/repack to the true visible-port count, with no usecase reselect or reload needed. | Must Have | Functional |
 | Expand Subgraphs — wire the control | The existing checkbox drives rendering, scoped to the currently-viewed `levelId`: checking expands all subgraphs at that level (collapse set → empty); unchecking collapses all to proxy nodes (collapse set → all subgraph ids at that level, from the **raw** `levelView`). No new control or preference key. | Must Have | Functional |
 | Expand Subgraphs — individual toggles overridden | Per-subgraph header buttons still work, but any change to the `expandSubgraphs` preference re-applies to every subgraph at the current level, overriding whatever those buttons had set there. | Must Have | Functional |
@@ -343,8 +344,10 @@ See *Link Visibility Design* and *PP Highlight Design* below for how
   Show Module Instance IDs, and Show all ports — four additional
   Checkboxes, indented under the Detailed View option. Show all ports maps
   to `display.portVisibilityMode` (`'all'` when checked, `'active'` when
-  unchecked); see *Port Visibility Design* below for how the effective mode
-  is computed and applied.
+  unchecked); while edit mode is active, it is checked and disabled and all
+  ports are shown regardless of the saved preference or view mode. See *Port
+  Visibility Design* below for how the effective mode is computed and
+  applied.
 - **Expand Subgraphs** — Checkbox, always visible. `checked` reads
   `visualization.expandSubgraphs` directly; `onCheckedChange` calls
   `savePreference('visualization.expandSubgraphs', checked)` — the same
@@ -477,10 +480,18 @@ Effective mode is computed once in `GraphDesigner`:
 
 ```ts
 const effectivePortVisibilityMode =
-  preferences.visualization.viewMode === 'detailed'
-    ? preferences.display.portVisibilityMode
-    : 'active';
+  isEditable
+    ? 'all'
+    : preferences.visualization.viewMode === 'detailed'
+      ? preferences.display.portVisibilityMode
+      : 'active';
 ```
+
+`isEditable` is true while the graph is in edit mode. Edit mode takes
+precedence over both the selected view mode and the saved
+`display.portVisibilityMode` preference, so all ports remain visible while
+editing. The "Show all ports" checkbox is checked and disabled during edit
+mode; leaving edit mode restores the saved preference without changing it.
 
 **Pipeline wiring:** `graph-designer.tsx`'s Effect B (builds `LevelView`
 from `graphData`) gains a filter step before layout, and re-runs when the
@@ -651,7 +662,9 @@ Not applicable on frontend.
 - A Tooltip explaining why Simplified Subsystems is disabled appears only
   while it is disabled
 - Show all ports is hidden outside Detailed View and saves
-  `display.portVisibilityMode` as `'all'`/`'active'` when checked/unchecked
+  `display.portVisibilityMode` as `'all'`/`'active'` when checked/unchecked;
+  during edit mode it is checked and disabled, and entering edit mode does
+  not change the saved preference
 - Expand Subgraphs reflects `visualization.expandSubgraphs` directly and
   saves the new value via `savePreference` when clicked — same pattern as
   every other checkbox
@@ -663,8 +676,9 @@ Not applicable on frontend.
   (a port referenced only via a proxy link still counts as active); a
   module with no connections yields an empty `ports` array; `height`/
   `width`/other fields are left untouched
-- Effective port-visibility mode: `viewMode: 'compact'` forces `'active'`
-  regardless of `portVisibilityMode`; `viewMode: 'detailed'` passes
+- Effective port-visibility mode: edit mode forces `'all'` regardless of
+  `viewMode` or `portVisibilityMode`; outside edit mode,
+  `viewMode: 'compact'` forces `'active'` and `viewMode: 'detailed'` passes
   `portVisibilityMode` through unchanged
 - `allSubgraphIds`: returns every id from `level.subgraphs`; returns `[]`
   for empty/absent `subgraphs`
@@ -709,6 +723,9 @@ Not applicable on frontend.
   preference save triggered
 - Select Detailed View → correct preference save triggered, ID checkboxes
   and Show all ports appear
+- Enter edit mode → Show all ports is checked and disabled, and all ports are
+  rendered regardless of the saved preference; leaving edit mode restores the
+  saved preference
 - With all three ID checkboxes checked, Compact View hides subgraph,
   container, and module instance IDs; Detailed View shows all three
 - Select System Workflow → correct preference save triggered,
@@ -745,11 +762,13 @@ remaining visual behavior is verified manually in the running app:
 
 - Toggling "Show all ports" re-runs layout and updates module box sizes and
   port handles, without reselecting the usecase or reloading the graph data
-- Compact View shows only active ports regardless of the saved
-  `portVisibilityMode` value
-- Detailed View with `portVisibilityMode: 'all'` shows all ports and larger
-  module boxes; with `'active'` shows only connected ports and
-  correspondingly smaller, tightly-packed boxes
+- Outside edit mode, Compact View shows only active ports regardless of the
+  saved `portVisibilityMode` value
+- Outside edit mode, Detailed View with `portVisibilityMode: 'all'` shows all
+  ports and larger module boxes; with `'active'` shows only connected ports
+  and correspondingly smaller, tightly-packed boxes
+- In edit mode, all ports are shown and the Show all ports checkbox is checked
+  and disabled; leaving edit mode restores the saved visibility preference
 - A fresh load is all-collapsed (default is `false`); checking Expand
   Subgraphs expands all subgraphs at the current level, unchecking
   re-collapses them
