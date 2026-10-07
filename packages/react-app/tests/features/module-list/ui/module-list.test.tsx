@@ -21,6 +21,7 @@ jest.mock('@qualcomm-ui/react/popover', () => ({
 }));
 
 const mockUseModuleList = jest.fn();
+let mockEditModeState: 'edit' | 'view' = 'edit';
 
 jest.mock('~features/graph-designer', () => ({
   useModuleList: () => mockUseModuleList(),
@@ -33,13 +34,12 @@ jest.mock('~shared/config/utils', () => ({
 jest.mock('~shared/store', () => ({
   useProjectStoreShallow: (
     selector: (state: {editModeState: string}) => unknown,
-  ) => selector({editModeState: 'edit'}),
+  ) => selector({editModeState: mockEditModeState}),
 }));
 
 jest.mock('~shared/store/global-store', () => ({
-  useGlobalStore: (
-    selector: (state: {activeProjectId: string}) => unknown,
-  ) => selector({activeProjectId: 'project-1'}),
+  useGlobalStore: (selector: (state: {activeProjectId: string}) => unknown) =>
+    selector({activeProjectId: 'project-1'}),
 }));
 
 import {render, screen} from '@testing-library/react';
@@ -104,6 +104,7 @@ const modules: ModuleDefinition[] = [
 
 describe('ModuleList', () => {
   beforeEach(() => {
+    mockEditModeState = 'edit';
     mockUseModuleList.mockReturnValue({
       loadModuleList: jest.fn(),
       moduleList: modules,
@@ -115,6 +116,27 @@ describe('ModuleList', () => {
       setSelectedDspTypes: jest.fn(),
       setSelectedModuleTypes: jest.fn(),
     });
+  });
+
+  it('marks module rows as draggable in edit mode', () => {
+    render(<ModuleList />);
+
+    const row = screen.getByText('PP ADSP').closest('li');
+    expect(row).toHaveAttribute('aria-disabled', 'false');
+    expect(row).toHaveAttribute('draggable', 'true');
+  });
+
+  it('disables module rows in read-only mode', () => {
+    mockEditModeState = 'view';
+
+    render(<ModuleList />);
+
+    const row = screen.getByText('PP ADSP').closest('li');
+    expect(row).toHaveAttribute('aria-disabled', 'true');
+    expect(row).toHaveAttribute('draggable', 'false');
+    expect(
+      screen.getAllByText('Switch to edit mode to drag modules'),
+    ).toHaveLength(2);
   });
 
   it('shows modules without a category regardless of selected module types', () => {

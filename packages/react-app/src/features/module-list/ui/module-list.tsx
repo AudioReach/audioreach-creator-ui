@@ -288,41 +288,57 @@ export function ModuleList(): ReactElement {
       ) : (
         <>
           <ul className="flex flex-col gap-1">
-            {filteredModules.map((module) => (
-              <Tooltip
-                key={module.moduleId}
-                trigger={
-                  <li
-                    className="flex cursor-default items-center gap-3"
-                    draggable={isEditable}
-                    onDragStart={(e) => handleDragStart(module, e)}
-                  >
-                    {module.builtIn ? (
-                      <Box className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <Boxes className="h-4 w-4 shrink-0" />
-                    )}
-                    <div className="flex flex-col gap-0">
-                      <span className="text-[11px] font-semibold">
-                        {module.moduleName}
-                      </span>
-                      <span className="text-neutral-secondary text-[10px]">
-                        {module.dspType} • {module.category}
-                      </span>
-                    </div>
-                  </li>
-                }
-              >
-                <div
-                  style={{
-                    maxWidth: 'min(24rem, calc(100vw - 2rem))',
-                    overflowWrap: 'anywhere',
-                  }}
+            {filteredModules.map((module) => {
+              const disabledReason = isEditable
+                ? null
+                : 'Switch to edit mode to drag modules';
+              const canDragModule = disabledReason === null;
+
+              return (
+                <Tooltip
+                  key={module.moduleId}
+                  trigger={
+                    <li
+                      aria-disabled={disabledReason !== null}
+                      className={`flex cursor-default items-center gap-3 ${
+                        disabledReason ? 'opacity-50' : ''
+                      }`}
+                      draggable={canDragModule}
+                      onDragStart={(event) => {
+                        if (!canDragModule) {
+                          event.preventDefault();
+                          return;
+                        }
+                        handleDragStart(module, event);
+                      }}
+                    >
+                      {module.builtIn ? (
+                        <Box className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <Boxes className="h-4 w-4 shrink-0" />
+                      )}
+                      <div className="flex flex-col gap-0">
+                        <span className="text-[11px] font-semibold">
+                          {module.moduleName}
+                        </span>
+                        <span className="text-neutral-secondary text-[10px]">
+                          {module.dspType} • {module.category}
+                        </span>
+                      </div>
+                    </li>
+                  }
                 >
-                  {module.description || 'Unknown'}
-                </div>
-              </Tooltip>
-            ))}
+                  <div
+                    style={{
+                      maxWidth: 'min(24rem, calc(100vw - 2rem))',
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {disabledReason || module.description || 'Unknown'}
+                  </div>
+                </Tooltip>
+              );
+            })}
           </ul>
 
           {filteredModules.length === 0 && (
