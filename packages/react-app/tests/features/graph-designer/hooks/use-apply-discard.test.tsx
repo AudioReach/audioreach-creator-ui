@@ -721,6 +721,18 @@ describe('useApplyDiscard', () => {
     it('discarded reloads before mark-clean/exit-edit and shows a success toast', async () => {
       const store = makeStore();
       store.getState().markDirty();
+      // Display name differs from system ID so the test fails if reload uses the display name.
+      store.setState({
+        graphData: {
+          connections: [],
+          containers: {},
+          moduleInstances: {},
+          selectedUsecases: ['uc-system-1'],
+          subgraphs: {},
+          subsystems: {},
+        },
+        selectedUsecases: ['Usecase 1'],
+      });
       const outcome: DiscardOutcome = {
         cascadedChangeIds: [],
         kind: 'discarded',
