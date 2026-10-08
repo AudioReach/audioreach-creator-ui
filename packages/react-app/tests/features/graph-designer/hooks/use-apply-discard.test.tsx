@@ -754,6 +754,38 @@ describe('useApplyDiscard', () => {
       markCleanSpy.mockRestore();
     });
 
+    // Verifies Discard reloads the graph with canonical usecase IDs and exits Edit mode.
+    it('reloads discarded graph data with canonical selected usecase IDs', async () => {
+      const store = makeStore();
+      store.setState({
+        graphData: {
+          connections: [],
+          containers: {},
+          moduleInstances: {},
+          selectedUsecases: ['uc-system-1'],
+          subgraphs: {},
+          subsystems: {},
+        },
+        selectedUsecases: ['Usecase 1'],
+      });
+      mockRunDiscard.mockResolvedValue({
+        cascadedChangeIds: [],
+        kind: 'discarded',
+      });
+      const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
+      const {result} = renderApplyDiscard(store);
+
+      await act(async () => {
+        await result.current.discard();
+      });
+
+      expect(loadGraphDataSpy).toHaveBeenCalledWith(['uc-system-1'], {
+        filterBySubsystem: false,
+      });
+      expect(store.getState().mode).toBe('view');
+      loadGraphDataSpy.mockRestore();
+    });
+
     it('discarded keeps the session dirty and in edit mode when the reload fails', async () => {
       const store = makeStore();
       store.getState().markDirty();
