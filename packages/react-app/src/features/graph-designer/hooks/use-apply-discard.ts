@@ -265,7 +265,7 @@ async function performDiscard(
   const reload = async (): Promise<void> => {
     await store
       .getState()
-      .loadGraphData(store.getState().selectedUsecases, {
+      .loadGraphData(store.getState().graphData?.selectedUsecases ?? [], {
         filterBySubsystem: filterComponentsBySubsystem,
       });
   };
