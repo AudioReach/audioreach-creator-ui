@@ -24,6 +24,24 @@ function usecaseIdentifierToItem(uc: UsecaseIdentifier): UsecaseItem {
   };
 }
 
+function formatSubsystemGroupName(
+  result: SubsystemFilteredUsecasesDto,
+): string {
+  const subsystemNames = result.filteredKv.subsystems
+    .map((subsystem) => subsystem.name)
+    .filter(Boolean)
+    .join(' / ');
+  const keyValueLabel = formatUsecaseDisplay(result.filteredKv);
+
+  if (!subsystemNames) {
+    return keyValueLabel;
+  }
+  if (!keyValueLabel) {
+    return subsystemNames;
+  }
+  return `${subsystemNames} - ${keyValueLabel}`;
+}
+
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
 /**
@@ -71,7 +89,7 @@ export function mapSubsystemResultsToCategories(
     expanded: true,
     keyValuePairs: result.filteredKv.keyValuePairs,
     // No systemId for group headers yet
-    name: formatUsecaseDisplay(result.filteredKv),
+    name: formatSubsystemGroupName(result),
   }));
 
   return [

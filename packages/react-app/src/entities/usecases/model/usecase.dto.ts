@@ -23,6 +23,12 @@ export interface UsecaseDto {
  */
 export interface SubsystemFilteredKv {
   keyValuePairs: KeyValueInfo[];
+  subsystems: SubsystemFilterInfo[];
+}
+
+export interface SubsystemFilterInfo {
+  name: string;
+  subsystemNaturalId: number;
 }
 
 export type UsecaseIdentifier = UsecaseDto;
