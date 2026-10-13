@@ -110,7 +110,7 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
       onBlur,
       onClear,
       onFocus,
-      onFocusChange: _onFocusChange,
+      onFocusChange,
       onValueChange,
       placeholder,
       readOnly,
@@ -170,9 +170,15 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
         min: inputProps?.min,
         minLength: inputProps?.minLength,
         name,
-        onBlur,
+        onBlur: (event: React.FocusEvent<HTMLInputElement>) => {
+          onFocusChange?.(false);
+          onBlur?.(event);
+        },
         onChange: handleChange,
-        onFocus,
+        onFocus: (event: React.FocusEvent<HTMLInputElement>) => {
+          onFocusChange?.(true);
+          onFocus?.(event);
+        },
         pattern: inputProps?.pattern,
         placeholder,
         readOnly,
