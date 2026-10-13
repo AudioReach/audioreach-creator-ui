@@ -45,6 +45,7 @@ import {
 import {Theme} from '~entities/appearance';
 import {logger} from '~shared/lib/logger';
 import {useTheme} from '~shared/providers/theme-provider';
+import type {DeleteSelectionResult} from '~shared/types';
 
 import '@xyflow/react/dist/style.css';
 
@@ -105,6 +106,49 @@ interface OpenContextMenu {
   target: ContextMenuTarget;
   x: number;
   y: number;
+}
+
+function removeDeletedSelection(
+  store: ReturnType<typeof createVisualizerStore>,
+  result: DeleteSelectionResult | void,
+) {
+  if (!result) {
+    return;
+  }
+  const deletedEdgeIds = new Set(result.deletedEdgeIds);
+  const deletedNodeIds = new Set(result.deletedNodeIds);
+  if (deletedEdgeIds.size === 0 && deletedNodeIds.size === 0) {
+    return;
+  }
+
+  const state = store.getState();
+  const removedEdges = state.selection.selectedEdges.filter((edge) =>
+    deletedEdgeIds.has(edge.id),
+  );
+  const removedNodes = state.selection.selectedNodes.filter((node) =>
+    deletedNodeIds.has(node.systemId),
+  );
+  if (removedEdges.length === 0 && removedNodes.length === 0) {
+    return;
+  }
+
+  const selectedEdges = state.selection.selectedEdges.filter(
+    (edge) => !deletedEdgeIds.has(edge.id),
+  );
+  const selectedNodes = state.selection.selectedNodes.filter(
+    (node) => !deletedNodeIds.has(node.systemId),
+  );
+  state.setSelection(selectedNodes, selectedEdges);
+  state.eventHandlers?.onSelectionChange?.({
+    delta: {
+      addedEdges: [],
+      addedNodes: [],
+      removedEdges,
+      removedNodes,
+    },
+    selectedEdges,
+    selectedNodes,
+  });
 }
 
 function buildNodeTarget(data: AnyNode): ContextMenuTarget {
@@ -403,8 +447,19 @@ function VisualizerCanvas({
   }, [onScreenshotApiReady, rfInstance]); // intentionally empty — captured once at mount
 
   useEffect(() => {
-    const nextNodes = toReactFlowNodes(graph);
-    const nextEdges = toReactFlowEdges(graph);
+    const state = store.getState();
+    const selectedNodeIds = new Set(
+      state.selection.selectedNodes.map((node) => node.id),
+    );
+    const selectedEdgeIds = new Set(
+      state.selection.selectedEdges.map((edge) => edge.id),
+    );
+    const nextNodes = toReactFlowNodes(graph).map((node) =>
+      selectedNodeIds.has(node.id) ? {...node, selected: true} : node,
+    );
+    const nextEdges = toReactFlowEdges(graph).map((edge) =>
+      selectedEdgeIds.has(edge.id) ? {...edge, selected: true} : edge,
+    );
     setRfNodes(nextNodes);
     setRfEdges(nextEdges);
 
@@ -416,7 +471,6 @@ function VisualizerCanvas({
     const proxiesChanged = proxiesCount !== prevProxiesCountRef.current;
 
     if (levelChanged || proxiesChanged) {
-      const state = store.getState();
       const prior = state.selection;
       if (prior.selectedNodes.length > 0 || prior.selectedEdges.length > 0) {
         state.clearSelection();
@@ -529,12 +583,20 @@ function VisualizerCanvas({
               rfEdgesRef.current.find((e) => e.id === id)?.data?.locked !==
               true,
           );
-        if (nodeIds.length > 0) {
-          state.eventHandlers?.onNodesDeleted?.({nodeIds});
-        }
-        if (edgeIds.length > 0) {
-          state.eventHandlers?.onEdgesDeleted?.({edgeIds});
-        }
+        void (async () => {
+          if (nodeIds.length > 0) {
+            const result = await state.eventHandlers?.onNodesDeleted?.({
+              nodeIds,
+            });
+            removeDeletedSelection(store, result);
+          }
+          if (edgeIds.length > 0) {
+            const result = await state.eventHandlers?.onEdgesDeleted?.({
+              edgeIds,
+            });
+            removeDeletedSelection(store, result);
+          }
+        })();
       }
     };
     el.addEventListener('keydown', handleKeyDown);

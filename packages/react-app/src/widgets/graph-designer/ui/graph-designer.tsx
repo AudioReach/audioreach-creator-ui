@@ -943,16 +943,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   );
 
   const handleNodesDeleted = useCallback(
-    ({nodeIds}: {nodeIds: string[]}) => {
-      void deleteSelection(store.getState, nodeIds, []);
-    },
+    ({nodeIds}: {nodeIds: string[]}) =>
+      deleteSelection(store.getState, nodeIds, []),
     [store],
   );
 
   const handleEdgesDeleted = useCallback(
-    ({edgeIds}: {edgeIds: string[]}) => {
-      void deleteSelection(store.getState, [], edgeIds);
-    },
+    ({edgeIds}: {edgeIds: string[]}) =>
+      deleteSelection(store.getState, [], edgeIds),
     [store],
   );
   const eventHandlers = useMemo(

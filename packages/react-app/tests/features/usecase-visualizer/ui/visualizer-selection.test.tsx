@@ -366,6 +366,38 @@ describe('selection and delta', () => {
     ]);
   });
 
+  it('preserves selected surviving nodes when graph data changes on the same level', () => {
+    const onSelectionChange = jest.fn<void, [SelectionChangePayload]>();
+    const {rerender} = render(
+      <UsecaseVisualizer
+        eventHandlers={{onSelectionChange}}
+        graph={makeGraph()}
+      />,
+    );
+
+    latestReactFlowProps.current?.onSelectionChange?.({
+      edges: [],
+      nodes: [nodeRef('n1')],
+    });
+    onSelectionChange.mockClear();
+
+    rerender(
+      <UsecaseVisualizer
+        eventHandlers={{onSelectionChange}}
+        graph={{
+          ...makeGraph(),
+          modules: [{...makeModule('n1'), width: 180}, makeModule('n2')],
+        }}
+      />,
+    );
+
+    const selectedNode = latestReactFlowProps.current?.nodes.find(
+      (node) => node.id === 'n1',
+    );
+    expect(selectedNode?.selected).toBe(true);
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
   it('focuses the requested node and acknowledges the request', () => {
     const onFocusNodeRequestHandled = jest.fn();
 

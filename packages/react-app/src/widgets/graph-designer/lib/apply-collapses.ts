@@ -39,16 +39,19 @@ function buildCollapseContext(
 ): CollapseContext {
   const insideNodeToSubgraph = new Map<string, number>();
 
+  const subgraphNodeIdToSubgraphId = new Map(
+    (level.subgraphs ?? [])
+      .filter((subgraph) => collapsed.has(subgraph.subgraphId))
+      .map((subgraph) => [subgraph.id, subgraph.subgraphId]),
+  );
   const containerToSubgraph = new Map<string, number>();
   for (const c of level.containers ?? []) {
-    // container parentId is `subgraph-${id}`
-    const match = c.parentId?.match(/subgraph-(\d+)/);
-    if (match) {
-      const sgId = parseInt(match[1], 10);
-      if (collapsed.has(sgId)) {
-        containerToSubgraph.set(c.id, sgId);
-        insideNodeToSubgraph.set(c.id, sgId);
-      }
+    const sgId = c.parentId
+      ? subgraphNodeIdToSubgraphId.get(c.parentId)
+      : undefined;
+    if (sgId !== undefined) {
+      containerToSubgraph.set(c.id, sgId);
+      insideNodeToSubgraph.set(c.id, sgId);
     }
   }
   for (const m of level.modules ?? []) {

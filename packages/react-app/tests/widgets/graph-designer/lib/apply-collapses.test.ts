@@ -122,6 +122,17 @@ describe('applyCollapses', () => {
     expect(out.containers?.map((c) => c.id)).toEqual(['container-2:2']);
   });
 
+  it('removes descendants when subgraph node ids use system ids', () => {
+    const level = baseLevel();
+    level.subgraphs![0].id = 'subgraph-system-id-1';
+    level.containers![0].parentId = 'subgraph-system-id-1';
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.modules?.map((module) => module.id)).toEqual(['module-3']);
+    expect(out.containers?.map((node) => node.id)).toEqual(['container-2:2']);
+  });
+
   it('drops wholly-internal edges and keeps wholly-external edges', () => {
     const out = applyCollapses(baseLevel(), new Set([1]));
     // d-internal was inside SG1 → dropped; no plain data links remain (d-cross
