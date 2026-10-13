@@ -32,6 +32,24 @@ export function QFormatControl({
   );
   const hexTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingValueRef = useRef<string | null>(null);
+
+  const flushPendingValue = (): void => {
+    const pendingValue = pendingValueRef.current;
+    if (pendingValue === null) {
+      return;
+    }
+    if (hexTimerRef.current) {
+      clearTimeout(hexTimerRef.current);
+      hexTimerRef.current = null;
+    }
+    if (decTimerRef.current) {
+      clearTimeout(decTimerRef.current);
+      decTimerRef.current = null;
+    }
+    pendingValueRef.current = null;
+    onValueChange(key, pendingValue);
+  };
 
   useEffect(
     () => () => {
@@ -54,6 +72,7 @@ export function QFormatControl({
         disabled={disabled}
         onFocusChange={(focused) => {
           if (!focused) {
+            flushPendingValue();
             onAutoCommit?.();
           }
         }}
@@ -66,10 +85,12 @@ export function QFormatControl({
           if (hexTimerRef.current) {
             clearTimeout(hexTimerRef.current);
           }
-          hexTimerRef.current = setTimeout(
-            () => onValueChange(key, value),
-            100,
-          );
+          pendingValueRef.current = value;
+          hexTimerRef.current = setTimeout(() => {
+            pendingValueRef.current = null;
+            hexTimerRef.current = null;
+            onValueChange(key, value);
+          }, 100);
         }}
         size="sm"
         value={hexVal}
@@ -81,6 +102,7 @@ export function QFormatControl({
         disabled={disabled}
         onFocusChange={(focused) => {
           if (!focused) {
+            flushPendingValue();
             onAutoCommit?.();
           }
         }}
@@ -95,10 +117,12 @@ export function QFormatControl({
             if (decTimerRef.current) {
               clearTimeout(decTimerRef.current);
             }
-            decTimerRef.current = setTimeout(
-              () => onValueChange(key, newHex),
-              100,
-            );
+            pendingValueRef.current = newHex;
+            decTimerRef.current = setTimeout(() => {
+              pendingValueRef.current = null;
+              decTimerRef.current = null;
+              onValueChange(key, newHex);
+            }, 100);
           }
         }}
         size="sm"

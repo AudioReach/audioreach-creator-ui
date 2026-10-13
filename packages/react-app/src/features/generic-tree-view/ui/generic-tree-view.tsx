@@ -9,6 +9,7 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useReducer,
   useRef,
   useState,
   useTransition,
@@ -32,6 +33,23 @@ import {ParameterDetailPane} from './components/parameter-detail-pane';
 import {ParameterListPanel} from './components/parameter-list-panel';
 import {Toolbar} from './components/toolbar';
 import {ViewSwitchOverlay} from './components/view-switch-overlay';
+
+interface AutoCommitRequestState {
+  pending: boolean;
+  revision: number;
+}
+
+type AutoCommitRequestAction = 'consume' | 'request';
+
+function autoCommitRequestReducer(
+  state: AutoCommitRequestState,
+  action: AutoCommitRequestAction,
+): AutoCommitRequestState {
+  if (action === 'consume') {
+    return {...state, pending: false};
+  }
+  return {pending: true, revision: state.revision + 1};
+}
 
 function GenericTreeViewInner(
   props: GenericTreeViewProps,
@@ -95,6 +113,10 @@ function GenericTreeViewInner(
   );
   const [invalidPaths, setInvalidPaths] = useState<Set<string>>(
     () => new Set(initialUiState?.invalidPaths ?? []),
+  );
+  const [autoCommitRequest, dispatchAutoCommitRequest] = useReducer(
+    autoCommitRequestReducer,
+    {pending: false, revision: 0},
   );
   const [resetKey, setResetKey] = useState(0);
 
@@ -473,11 +495,19 @@ function GenericTreeViewInner(
     [dirtyPaths, data.items, elementValues, arrayCounts],
   );
 
-  const tryAutoCommit = useCallback(() => {
-    if (!autoCommit || readOnly) {
+  const requestAutoCommit = useCallback(() => {
+    dispatchAutoCommitRequest('request');
+  }, []);
+
+  useEffect(() => {
+    if (!autoCommitRequest.pending) {
       return;
     }
-    if (dirtyPaths.size === 0 || invalidPaths.size > 0) {
+    dispatchAutoCommitRequest('consume');
+    if (!autoCommit || readOnly || dirtyPaths.size === 0) {
+      return;
+    }
+    if (invalidPaths.size > 0) {
       return;
     }
     logger.debug(
@@ -485,7 +515,14 @@ function GenericTreeViewInner(
       {action: 'autoCommit', component: 'GenericTreeView'},
     );
     autoCommit.onCommit(buildDirtyItems());
-  }, [autoCommit, readOnly, dirtyPaths, invalidPaths, buildDirtyItems]);
+  }, [
+    autoCommit,
+    autoCommitRequest,
+    readOnly,
+    dirtyPaths,
+    invalidPaths,
+    buildDirtyItems,
+  ]);
 
   const matchSets = useMemo(
     () => (searchText ? buildMatchSets(data, searchText) : null),
@@ -792,7 +829,7 @@ function GenericTreeViewInner(
                   expandedIds={expandedIds}
                   invalidPaths={invalidPaths}
                   matchSets={matchSets}
-                  onAutoCommit={tryAutoCommit}
+                  onAutoCommit={autoCommit ? requestAutoCommit : undefined}
                   onExpandedChange={handleExpandedChange}
                   onValueChange={handleValueChange}
                   policyFilter={policyFilter}
@@ -820,7 +857,7 @@ function GenericTreeViewInner(
                 items={visibleItems}
                 matchSets={matchSets}
                 moduleName={title}
-                onAutoCommit={tryAutoCommit}
+                onAutoCommit={autoCommit ? requestAutoCommit : undefined}
                 onExpandedChange={handleLegacyExpandedChange}
                 onValueChange={handleValueChange}
                 policyFilter={policyFilter}

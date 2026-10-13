@@ -23,6 +23,20 @@ export function HexInputControl({
   onValueChange,
 }: HexInputControlProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingValueRef = useRef<string | null>(null);
+
+  const flushPendingValue = (): void => {
+    const pendingValue = pendingValueRef.current;
+    if (pendingValue === null) {
+      return;
+    }
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingValueRef.current = null;
+    onValueChange(key, pendingValue);
+  };
 
   useEffect(
     () => () => {
@@ -42,6 +56,7 @@ export function HexInputControl({
       disabled={disabled}
       onFocusChange={(focused) => {
         if (!focused) {
+          flushPendingValue();
           onAutoCommit?.();
         }
       }}
@@ -49,7 +64,12 @@ export function HexInputControl({
         if (timerRef.current) {
           clearTimeout(timerRef.current);
         }
-        timerRef.current = setTimeout(() => onValueChange(key, value), 100);
+        pendingValueRef.current = value;
+        timerRef.current = setTimeout(() => {
+          pendingValueRef.current = null;
+          timerRef.current = null;
+          onValueChange(key, value);
+        }, 100);
       }}
       size="sm"
     />

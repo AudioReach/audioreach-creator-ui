@@ -1342,6 +1342,56 @@ describe('reset bumps resetKey', () => {
 // ── autoCommit ────────────────────────────────────────────────────────────────
 
 describe('autoCommit', () => {
+  it('commits a valid text edit only after blur', () => {
+    const onCommit = jest.fn();
+    render(
+      <GenericTreeView
+        autoCommit={{onCommit}}
+        data={makeData()}
+        title="Test"
+      />,
+    );
+    onCommit.mockClear();
+
+    fireInputChange('100/gain', '99');
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(onCommit).not.toHaveBeenCalled();
+
+    fireEvent.blur(getInputByAriaLabel('100/gain'));
+
+    expect(onCommit).toHaveBeenCalledWith([
+      expect.objectContaining({
+        elements: [expect.objectContaining({name: 'gain', value: '99'})],
+        id: '100',
+      }),
+    ]);
+  });
+
+  it('commits a pending text edit when it blurs before debounce completes', () => {
+    const onCommit = jest.fn();
+    render(
+      <GenericTreeView
+        autoCommit={{onCommit}}
+        data={makeData()}
+        title="Test"
+      />,
+    );
+    onCommit.mockClear();
+
+    fireInputChange('100/gain', '99');
+    fireEvent.blur(getInputByAriaLabel('100/gain'));
+
+    expect(onCommit).toHaveBeenCalledWith([
+      expect.objectContaining({
+        elements: [expect.objectContaining({name: 'gain', value: '99'})],
+        id: '100',
+      }),
+    ]);
+  });
+
   it('onAutoCommit is not called when readOnly is true, even if data is dirty', () => {
     // We verify that tryAutoCommit guards on readOnly by checking the prop
     // wiring. Since the mock tree does not trigger blur events that propagate
