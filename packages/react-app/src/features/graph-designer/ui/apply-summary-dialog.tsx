@@ -20,8 +20,12 @@ import type {
   CreateUsecasesResponseDto,
   UsecaseChangeDetailsDto,
 } from '~entities/edit-session';
+import {formatAsKeysValues, formatUsecaseDisplay} from '~entities/usecases';
+import {useUserPreferences} from '~shared/config/hooks';
+import type {UserPreferences} from '~shared/config/user-preferences-types';
 
 type NavChoice = 'add' | 'keep' | 'switch';
+type UsecaseNamePreference = UserPreferences['usecases']['namePreference'];
 
 interface ApplySummaryDialogProps {
   onCancel: () => void;
@@ -38,11 +42,35 @@ interface Category {
   title: string;
 }
 
-function rowLabel(change: UsecaseChangeDetailsDto): string {
+function populated(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function rowLabel(
+  change: UsecaseChangeDetailsDto,
+  namePreference: UsecaseNamePreference,
+): string {
   const snapshot = change.after ?? change.before;
+  if (!snapshot) {
+    return 'Regular usecase';
+  }
+  const keyValuePairs = {keyValuePairs: snapshot.gkv};
+  const aliasLabel = populated(snapshot.alias ?? '');
+  const keyValueLabel = populated(formatAsKeysValues(keyValuePairs));
+  const valueLabel = populated(formatUsecaseDisplay(keyValuePairs));
+  const preferredLabel =
+    namePreference === 'alias'
+      ? aliasLabel
+      : namePreference === 'keyvalues'
+        ? keyValueLabel
+        : valueLabel;
   return (
-    snapshot?.alias ??
-    `${snapshot?.isEc ? 'Ec' : 'Regular'} usecase ${change.systemId}`
+    preferredLabel ??
+    valueLabel ??
+    keyValueLabel ??
+    aliasLabel ??
+    `${snapshot.isEc ? 'Ec' : 'Regular'} usecase`
   );
 }
 
@@ -95,12 +123,14 @@ function DeletedInfoTooltip() {
 
 function CategorySection({
   checkedByChangeId,
+  namePreference,
   onToggle,
   readOnly,
   rows,
   title,
 }: {
   checkedByChangeId: Record<string, boolean>;
+  namePreference: UsecaseNamePreference;
   onToggle: (changeId: string, checked: boolean) => void;
   readOnly?: boolean;
   rows: UsecaseChangeDetailsDto[];
@@ -118,7 +148,7 @@ function CategorySection({
         <Checkbox
           key={row.changeId}
           checked={checkedByChangeId[row.changeId]}
-          label={rowLabel(row)}
+          label={rowLabel(row, namePreference)}
           onCheckedChange={(checked) => onToggle(row.changeId, checked)}
           readOnly={readOnly}
           size="sm"
@@ -130,6 +160,8 @@ function CategorySection({
 
 export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
   const {onCancel, onOK, open, response} = props;
+  const {preferences} = useUserPreferences();
+  const namePreference = preferences.usecases.namePreference;
   const created = response.changes.filter(
     (change) => change.operation === 'CREATE',
   );
@@ -217,6 +249,7 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
                       <Accordion.ItemContent>
                         <CategorySection
                           checkedByChangeId={checkedByChangeId}
+                          namePreference={namePreference}
                           onToggle={toggleRow}
                           readOnly={category.readOnly}
                           rows={category.rows}
@@ -231,6 +264,7 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
                 <CategorySection
                   key={category.key}
                   checkedByChangeId={checkedByChangeId}
+                  namePreference={namePreference}
                   onToggle={toggleRow}
                   readOnly={category.readOnly}
                   rows={category.rows}
