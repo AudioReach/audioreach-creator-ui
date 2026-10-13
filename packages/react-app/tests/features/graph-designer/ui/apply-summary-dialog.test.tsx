@@ -123,14 +123,28 @@ jest.mock('@qualcomm-ui/react/tooltip', () => ({
   },
 }));
 
+let mockNamePreference: 'alias' | 'keyvalues' | 'values' = 'alias';
+
+jest.mock('~shared/config/hooks', () => ({
+  useUserPreferences: () => ({
+    getPreference: jest.fn(),
+    preferences: {usecases: {namePreference: mockNamePreference}},
+    updatePreference: jest.fn(),
+  }),
+}));
+
 import type {
   CreateUsecasesResponseDto,
   UsecaseChangeDetailsDto,
 } from '~entities/edit-session';
+import type {KeyValueInfo} from '~entities/usecases';
 import {ApplySummaryDialog} from '~features/graph-designer/ui/apply-summary-dialog';
 
 const makeRow = (
-  overrides: Partial<UsecaseChangeDetailsDto> & {alias?: string | null} = {},
+  overrides: Partial<UsecaseChangeDetailsDto> & {
+    alias?: string | null;
+    gkv?: KeyValueInfo[];
+  } = {},
 ): UsecaseChangeDetailsDto => ({
   after: {
     alias: overrides.alias ?? null,
@@ -138,7 +152,7 @@ const makeRow = (
     categories: [],
     controlLinks: [],
     dataLinks: [],
-    gkv: [],
+    gkv: overrides.gkv ?? [],
     isEc: false,
     subgraphSystemIds: [],
   },
@@ -173,6 +187,10 @@ const makeRows = (
   );
 
 describe('ApplySummaryDialog', () => {
+  beforeEach(() => {
+    mockNamePreference = 'alias';
+  });
+
   it('expands every category by default when total rows are at or below the threshold', () => {
     render(
       <ApplySummaryDialog
@@ -249,6 +267,141 @@ describe('ApplySummaryDialog', () => {
     expect(screen.getByText('Updated Alias')).toBeInTheDocument();
     expect(screen.queryByText('Created')).not.toBeInTheDocument();
     expect(screen.queryByText('Deleted')).not.toBeInTheDocument();
+  });
+
+  it('uses key-value labels when preferred', () => {
+    mockNamePreference = 'keyvalues';
+
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({
+          changes: [
+            makeRow({
+              alias: '',
+              changeId: 'created-1',
+              gkv: [
+                {
+                  key: {
+                    name: 'DeviceRX',
+                    naturalId: 1,
+                    systemId: 'key-device-rx',
+                  },
+                  value: {
+                    name: 'BT_Rx',
+                    naturalId: 2,
+                    systemId: 'value-bt-rx',
+                  },
+                },
+                {
+                  key: {
+                    name: 'BtProfile',
+                    naturalId: 3,
+                    systemId: 'key-bt-profile',
+                  },
+                  value: {
+                    name: 'SCO',
+                    naturalId: 4,
+                    systemId: 'value-sco',
+                  },
+                },
+              ],
+              systemId: 'created-system-id',
+            }),
+          ],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText('[DeviceRX: BT_Rx] [BtProfile: SCO]'),
+    ).toBeInTheDocument();
+  });
+
+  it('uses value-only labels when preferred', () => {
+    mockNamePreference = 'values';
+
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({
+          changes: [
+            makeRow({
+              alias: 'Created Alias',
+              changeId: 'created-1',
+              gkv: [
+                {
+                  key: {
+                    name: 'DeviceRX',
+                    naturalId: 1,
+                    systemId: 'key-device-rx',
+                  },
+                  value: {
+                    name: 'BT_Rx',
+                    naturalId: 2,
+                    systemId: 'value-bt-rx',
+                  },
+                },
+                {
+                  key: {
+                    name: 'BtProfile',
+                    naturalId: 3,
+                    systemId: 'key-bt-profile',
+                  },
+                  value: {
+                    name: 'SCO',
+                    naturalId: 4,
+                    systemId: 'value-sco',
+                  },
+                },
+              ],
+              systemId: 'created-system-id',
+            }),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByLabelText(/BT_Rx.*SCO/)).toBeInTheDocument();
+  });
+
+  it('falls back from blank aliases to value-only labels', () => {
+    render(
+      <ApplySummaryDialog
+        onCancel={jest.fn()}
+        onOK={jest.fn()}
+        open
+        response={buildResponse({
+          changes: [
+            makeRow({
+              alias: '',
+              changeId: 'created-1',
+              gkv: [
+                {
+                  key: {
+                    name: 'DeviceRX',
+                    naturalId: 1,
+                    systemId: 'key-device-rx',
+                  },
+                  value: {
+                    name: 'BT_Rx',
+                    naturalId: 2,
+                    systemId: 'value-bt-rx',
+                  },
+                },
+              ],
+              systemId: 'created-system-id',
+            }),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByLabelText('BT_Rx')).toBeInTheDocument();
   });
 
   it('hides the radio group when there are no created rows', () => {

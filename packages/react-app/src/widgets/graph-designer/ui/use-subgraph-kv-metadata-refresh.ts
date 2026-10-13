@@ -5,7 +5,6 @@
 
 import {useCallback, useEffect, useRef} from 'react';
 
-import {NODE_KIND} from '~entities/graph';
 import {
   applySubgraphKvMetadata,
   resolveSubgraphKvMetadata,
@@ -18,7 +17,6 @@ import {
 } from '~features/graph-designer';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
-import type {SelectedNodeRef} from '~shared/types';
 
 /**
  * Owns the SGKV metadata lifecycle while Graph Designer is mounted. This hook
@@ -28,47 +26,33 @@ import type {SelectedNodeRef} from '~shared/types';
 interface MetadataSnapshot {
   graphData: UsecaseGraphData;
   mode: 'edit' | 'view';
-  selectedSubgraphIds: string[];
+  subgraphIds: string[];
 }
 
-function getSelectedSubgraphIds(
-  graphData: UsecaseGraphData,
-  selectedNodes: SelectedNodeRef[],
-): string[] {
-  return [
-    ...new Set(
-      selectedNodes
-        .filter(
-          (node) =>
-            (node.nodeKind === NODE_KIND.SUBGRAPH ||
-              node.nodeKind === NODE_KIND.SUBGRAPH_PROXY) &&
-            node.systemId in graphData.subgraphs,
-        )
-        .map((node) => node.systemId),
-    ),
-  ].toSorted();
+interface MetadataResolutionResult {
+  metadata: SubgraphKvMetadataById | null;
+  subgraphSystemId: string;
 }
 
 /**
- * Refreshes metadata only for subgraphs selected on the canvas. Each lookup
- * uses the subgraph natural ID to avoid an all-project catalog scan.
+ * Refreshes metadata for every graph subgraph to derive their default vectors.
  */
 export function useSubgraphKvMetadataRefresh(projectId: string): void {
   const graphDesignerStore = useGraphDesignerStore();
-  const {graphData, graphDataStatus, mode, selectedNodes} =
-    useGraphDesignerStoreShallow((state) => ({
+  const {graphData, graphDataStatus, mode} = useGraphDesignerStoreShallow(
+    (state) => ({
       graphData: state.graphData,
       graphDataStatus: state.graphDataStatus,
       mode: state.mode,
-      selectedNodes: state.selectedNodes,
-    }));
+    }),
+  );
   // Metadata writes replace Graph Data references; remember the replacement to
   // avoid launching the same request again from this hook's resulting render.
   const lastMetadataSync = useRef<MetadataSnapshot | null>(null);
   // React effects can rerun before the request completes. Keep this outside
   // Zustand so duplicate lifecycle work does not create duplicate API calls.
   const inFlightSyncKeys = useRef(new WeakMap<UsecaseGraphData, Set<string>>());
-  // Only the current selection batch may clear the shared loading indicator.
+  // Only the current graph snapshot may clear the shared loading indicator.
   const metadataRefreshRequestId = useRef(0);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -78,11 +62,8 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
     if (!graphSnapshot || snapshot.graphDataStatus !== 'ready') {
       return;
     }
-    const selectedSubgraphIds = getSelectedSubgraphIds(
-      graphSnapshot,
-      snapshot.selectedNodes,
-    );
-    if (selectedSubgraphIds.length === 0) {
+    const subgraphIds = Object.keys(graphSnapshot.subgraphs).toSorted();
+    if (subgraphIds.length === 0) {
       metadataRefreshRequestId.current += 1;
       snapshot.setSgKvMetadataRefreshing(false);
       return;
@@ -90,13 +71,12 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
     if (
       lastMetadataSync.current?.graphData === graphSnapshot &&
       lastMetadataSync.current.mode === snapshot.mode &&
-      lastMetadataSync.current.selectedSubgraphIds.join(',') ===
-        selectedSubgraphIds.join(',')
+      lastMetadataSync.current.subgraphIds.join(',') === subgraphIds.join(',')
     ) {
       return;
     }
 
-    const syncKey = `${snapshot.mode}:${selectedSubgraphIds.join(',')}`;
+    const syncKey = `${snapshot.mode}:${subgraphIds.join(',')}`;
     const graphSyncKeys = inFlightSyncKeys.current.get(graphSnapshot);
     if (graphSyncKeys?.has(syncKey)) {
       return;
@@ -128,8 +108,8 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
           .map(([subgraphSystemId]) => subgraphSystemId)
       : [];
     try {
-      const metadataBySelectedSubgraph = await Promise.all(
-        selectedSubgraphIds.map((subgraphSystemId) =>
+      const metadataResults = await Promise.all(
+        subgraphIds.map((subgraphSystemId) =>
           resolveSubgraphKvMetadata({
             palettePlacedSubgraphIds,
             projectId,
@@ -140,21 +120,37 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
             vectorsBySubgraphId: {
               [subgraphSystemId]: vectorsBySubgraphId[subgraphSystemId] ?? [],
             },
-          }),
+          })
+            .catch((error): null => {
+              logger.warn(
+                `Subgraph KV metadata resolution failed (${subgraphSystemId})`,
+                {
+                  action: 'resolve_subgraph_kv_metadata',
+                  component: 'GraphDesigner',
+                  error:
+                    error instanceof Error ? error.message : 'Unknown error',
+                  projectId,
+                },
+              );
+              return null;
+            })
+            .then(
+              (metadata): MetadataResolutionResult => ({
+                metadata,
+                subgraphSystemId,
+              }),
+            ),
         ),
       );
-      const resolvedMetadata = metadataBySelectedSubgraph.filter(
-        (subgraphMetadata): subgraphMetadata is SubgraphKvMetadataById =>
-          subgraphMetadata !== null,
+      const failedSubgraphIds = metadataResults
+        .filter(({metadata}) => metadata === null)
+        .map(({subgraphSystemId}) => subgraphSystemId);
+      const metadata = Object.assign(
+        {},
+        ...metadataResults.flatMap(({metadata: resolvedMetadata}) =>
+          resolvedMetadata ? [resolvedMetadata] : [],
+        ),
       );
-      const metadata =
-        resolvedMetadata.length === metadataBySelectedSubgraph.length
-          ? Object.assign({}, ...resolvedMetadata)
-          : null;
-      if (!metadata) {
-        showToast('Unable to refresh subgraph KV metadata', 'warning');
-        return;
-      }
 
       const currentState = graphDesignerStore.getState();
       // A different graph or mode may have arrived while metadata was loading.
@@ -173,10 +169,18 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
       } else {
         currentState.updateSgKvMetadata(metadata);
       }
+      if (failedSubgraphIds.length > 0) {
+        const subgraphLabel =
+          failedSubgraphIds.length === 1 ? 'subgraph' : 'subgraphs';
+        showToast(
+          `Unable to derive default KV selections for ${failedSubgraphIds.length} ${subgraphLabel}. Select KV values manually.`,
+          'warning',
+        );
+      }
       lastMetadataSync.current = {
         graphData: graphDesignerStore.getState().graphData ?? graphSnapshot,
         mode: snapshot.mode,
-        selectedSubgraphIds,
+        subgraphIds,
       };
     } catch (error) {
       logger.error('Subgraph KV metadata synchronization failed', {
@@ -200,5 +204,5 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
   // Dependencies describe the lifecycle boundaries that invalidate metadata.
   useEffect(() => {
     void refresh();
-  }, [graphData, graphDataStatus, mode, refresh, projectId, selectedNodes]);
+  }, [graphData, graphDataStatus, mode, refresh, projectId]);
 }
