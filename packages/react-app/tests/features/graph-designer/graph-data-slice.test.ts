@@ -2037,6 +2037,141 @@ describe('createGraphDataSlice - store-only property updates', () => {
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
   });
+
+  it('updates module ports from a returned port-count patch module', () => {
+    const store = makeStoreWithGraphData();
+    const returnedModule = makeSpfModuleDto({
+      alias: 'Module 1',
+      containerSystemId: 'cnt-1',
+      dataPorts: [
+        {
+          name: 'Output A',
+          naturalId: 1,
+          portIoType: 'Output',
+          portType: 'Dynamic',
+          systemId: 'out-1',
+          totalLinksAtPort: 0,
+        },
+        {
+          name: 'Output B',
+          naturalId: 2,
+          portIoType: 'Output',
+          portType: 'Dynamic',
+          systemId: 'out-2',
+          totalLinksAtPort: 0,
+        },
+      ],
+      maxOutputPortsSupported: 2,
+      moduleDefinitionSystemId: '100',
+      name: 'Module 1',
+      subgraphSystemId: 'sg-1',
+      systemId: 'mod-1',
+    });
+
+    store
+      .getState()
+      .updateModulePortCountLocal(
+        'mod-1',
+        'maxOutputPorts',
+        2,
+        returnedModule,
+      );
+
+    const module = store.getState().graphData?.moduleInstances['mod-1'];
+    expect(module).toEqual(
+      expect.objectContaining({
+        maxOutputPorts: 2,
+        position: {x: 0, y: 0},
+      }),
+    );
+    expect(module?.outputPorts.map((port) => port.portSystemId)).toEqual([
+      'out-1',
+      'out-2',
+    ]);
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('retains CKVs and tags when a refreshed module omits them', () => {
+    const store = makeStoreWithGraphData();
+    const ckvs = [
+      {
+        keyValuePairs: [],
+        supportedParameters: [],
+        systemId: 'ckv-1',
+      },
+    ];
+    const tags = [
+      {
+        naturalId: 1,
+        systemId: 'tag-1',
+        tagName: 'tag',
+        tkvs: [],
+      },
+    ];
+    const graphData = store.getState().graphData!;
+    store.setState({
+      graphData: {
+        ...graphData,
+        moduleInstances: {
+          ...graphData.moduleInstances,
+          'mod-1': {...graphData.moduleInstances['mod-1'], ckvs, tags},
+        },
+      },
+    });
+    const refreshedModule = makeSpfModuleDto({
+      alias: 'Module 1',
+      containerSystemId: 'cnt-1',
+      maxInputPortsSupported: 2,
+      moduleDefinitionSystemId: '100',
+      name: 'Module 1',
+      subgraphSystemId: 'sg-1',
+      systemId: 'mod-1',
+    });
+
+    store
+      .getState()
+      .updateModulePortCountLocal('mod-1', 'maxInputPorts', 2, refreshedModule);
+
+    const module = store.getState().graphData?.moduleInstances['mod-1'];
+    expect(module?.ckvs).toEqual(ckvs);
+    expect(module?.tags).toEqual(tags);
+  });
+
+  it('treats 0xffffffff max port count as unspecified', () => {
+    const store = makeStoreWithGraphData();
+    const returnedModule = makeSpfModuleDto({
+      alias: 'Module 1',
+      containerSystemId: 'cnt-1',
+      dataPorts: [
+        {
+          name: 'Output A',
+          naturalId: 1,
+          portIoType: 'Output',
+          portType: 'Dynamic',
+          systemId: 'out-1',
+          totalLinksAtPort: 0,
+        },
+      ],
+      maxOutputPortsSupported: 0xffffffff,
+      moduleDefinitionSystemId: '100',
+      name: 'Module 1',
+      subgraphSystemId: 'sg-1',
+      systemId: 'mod-1',
+    });
+
+    store
+      .getState()
+      .updateModulePortCountLocal(
+        'mod-1',
+        'maxOutputPorts',
+        1,
+        returnedModule,
+      );
+
+    const module = store.getState().graphData?.moduleInstances['mod-1'];
+    expect(module?.maxOutputPorts).toBeUndefined();
+    expect(module?.outputPorts).toHaveLength(1);
+  });
 });
 
 describe('applyComponentCollection', () => {
