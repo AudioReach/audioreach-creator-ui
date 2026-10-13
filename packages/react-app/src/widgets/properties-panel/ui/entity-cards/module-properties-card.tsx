@@ -6,6 +6,7 @@
 import {useCallback} from 'react';
 
 import {patchSpfModule} from '~entities/spf-modules';
+import {getModulesBySystemIds, type SpfModuleDto} from '~entities/usecases';
 import type {
   ModuleInstance,
   Port,
@@ -23,12 +24,15 @@ import {SchemaPropertiesTree} from '../shared/schema-properties-tree';
 import {CopyableIdRow, MissingEntityAlert, PortsList} from './card-fields';
 
 type PortCountField = 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts';
+type MutationRunner = <T>(action: () => Promise<T>) => Promise<T>;
 type ModuleWithPortCounts = ModuleInstance &
   Partial<Record<PortCountField, number>>;
+const UNSPECIFIED_PORT_COUNT = 0xffffffff;
 
 export interface ModulePropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
+  isMutating?: boolean;
   moduleId: string;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
@@ -36,20 +40,24 @@ export interface ModulePropertiesCardProps extends EntityCollapseProps {
     moduleId: string,
     field: PortCountField,
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   projectId: string;
+  runMutation?: MutationRunner;
 }
 
 export function ModulePropertiesCard({
   graphData,
   isCollapsed,
   isEditing,
+  isMutating = false,
   moduleId,
   onModuleAliasChange,
   onModuleContainerChange,
   onModulePortCountChange,
   onToggle,
   projectId,
+  runMutation,
 }: ModulePropertiesCardProps) {
   const module = graphData.moduleInstances[moduleId];
 
@@ -61,6 +69,7 @@ export function ModulePropertiesCard({
     <ModulePropertiesCardBody
       isCollapsed={isCollapsed}
       isEditing={isEditing}
+      isMutating={isMutating}
       module={module}
       moduleId={moduleId}
       onModuleAliasChange={onModuleAliasChange}
@@ -68,6 +77,7 @@ export function ModulePropertiesCard({
       onModulePortCountChange={onModulePortCountChange}
       onToggle={onToggle}
       projectId={projectId}
+      runMutation={runMutation}
     />
   );
 }
@@ -75,6 +85,7 @@ export function ModulePropertiesCard({
 function ModulePropertiesCardBody({
   isCollapsed,
   isEditing,
+  isMutating,
   module,
   moduleId,
   onModuleAliasChange,
@@ -82,9 +93,11 @@ function ModulePropertiesCardBody({
   onModulePortCountChange,
   onToggle,
   projectId,
+  runMutation,
 }: {
   isCollapsed?: boolean;
   isEditing: boolean;
+  isMutating: boolean;
   module: ModuleInstance;
   moduleId: string;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
@@ -93,9 +106,11 @@ function ModulePropertiesCardBody({
     moduleId: string,
     field: PortCountField,
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   onToggle?: () => void;
   projectId: string;
+  runMutation?: MutationRunner;
 }) {
   const schemaData = useModuleCardData({moduleId, projectId});
   const aliasSave = useStaticFieldSave({
@@ -148,6 +163,7 @@ function ModulePropertiesCardBody({
     moduleId,
     onModulePortCountChange,
     projectId,
+    runMutation,
     value: modulePortCount(module, 'maxInputPorts', module.inputPorts, 'data'),
   });
   const outputCountSave = usePortCountSave({
@@ -155,6 +171,7 @@ function ModulePropertiesCardBody({
     moduleId,
     onModulePortCountChange,
     projectId,
+    runMutation,
     value: modulePortCount(
       module,
       'maxOutputPorts',
@@ -167,6 +184,7 @@ function ModulePropertiesCardBody({
     moduleId,
     onModulePortCountChange,
     projectId,
+    runMutation,
     value: modulePortCount(
       module,
       'maxControlPorts',
@@ -207,8 +225,9 @@ function ModulePropertiesCardBody({
         isSaving={inputCountSave.isSaving}
         label="Max Input Ports"
         mode="number"
-        onChange={(value) => void inputCountSave.saveImmediate(Number(value))}
-        readOnly={!hasDynamicDataPort(module.inputPorts)}
+        onBlur={(value) => void inputCountSave.saveImmediate(Number(value))}
+        onChange={(value) => inputCountSave.setValue(Number(value))}
+        readOnly={isMutating || !hasDynamicDataPort(module.inputPorts)}
         value={inputCountSave.value}
       />
       <PropertyRow
@@ -217,8 +236,9 @@ function ModulePropertiesCardBody({
         isSaving={outputCountSave.isSaving}
         label="Max Output Ports"
         mode="number"
-        onChange={(value) => void outputCountSave.saveImmediate(Number(value))}
-        readOnly={!hasDynamicDataPort(module.outputPorts)}
+        onBlur={(value) => void outputCountSave.saveImmediate(Number(value))}
+        onChange={(value) => outputCountSave.setValue(Number(value))}
+        readOnly={isMutating || !hasDynamicDataPort(module.outputPorts)}
         value={outputCountSave.value}
       />
       <PropertyRow
@@ -227,7 +247,9 @@ function ModulePropertiesCardBody({
         isSaving={controlCountSave.isSaving}
         label="Max Control Ports"
         mode="number"
-        onChange={(value) => void controlCountSave.saveImmediate(Number(value))}
+        onBlur={(value) => void controlCountSave.saveImmediate(Number(value))}
+        onChange={(value) => controlCountSave.setValue(Number(value))}
+        readOnly={isMutating || !hasDynamicControlPort(module.inputPorts)}
         value={controlCountSave.value}
       />
       <PortsList ports={module.inputPorts} title="Input Ports" />
@@ -250,6 +272,10 @@ function hasDynamicDataPort(ports: Port[]): boolean {
   return ports.some((port) => port.portType === 'data' && !port.isStatic);
 }
 
+function hasDynamicControlPort(ports: Port[]): boolean {
+  return ports.some((port) => port.portType === 'control' && !port.isStatic);
+}
+
 function portCount(ports: Port[], portType: 'control' | 'data'): number {
   return ports.filter((port) => port.portType === portType).length;
 }
@@ -260,10 +286,16 @@ function modulePortCount(
   ports: Port[],
   portType: 'control' | 'data',
 ): number {
-  const explicitCount = (module as ModuleWithPortCounts)[field];
+  const explicitCount = normalizePortCount(
+    (module as ModuleWithPortCounts)[field],
+  );
   return typeof explicitCount === 'number'
     ? explicitCount
     : portCount(ports, portType);
+}
+
+function normalizePortCount(value: number | undefined): number | undefined {
+  return value === UNSPECIFIED_PORT_COUNT ? undefined : value;
 }
 
 function patchFieldForPortCount(field: PortCountField): {
@@ -281,11 +313,26 @@ function patchFieldForPortCount(field: PortCountField): {
   }
 }
 
+function portCountValueFromModule(
+  module: SpfModuleDto,
+  field: PortCountField,
+): number | undefined {
+  switch (field) {
+    case 'maxControlPorts':
+      return normalizePortCount(module.maxControlPortsSupported);
+    case 'maxInputPorts':
+      return normalizePortCount(module.maxInputPortsSupported);
+    case 'maxOutputPorts':
+      return normalizePortCount(module.maxOutputPortsSupported);
+  }
+}
+
 function usePortCountSave({
   field,
   moduleId,
   onModulePortCountChange,
   projectId,
+  runMutation,
   value,
 }: {
   field: PortCountField;
@@ -294,32 +341,55 @@ function usePortCountSave({
     moduleId: string,
     field: PortCountField,
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   projectId: string;
+  runMutation?: MutationRunner;
   value: number;
 }) {
   return useStaticFieldSave({
     delayMs: 0,
     onSave: useCallback(
       async (nextValue: number) => {
-        const [requestField] = Object.keys(
-          patchFieldForPortCount(field),
-        ) as Array<keyof ReturnType<typeof patchFieldForPortCount>>;
-        const result = await patchSpfModule(projectId, moduleId, {
-          [requestField]: nextValue,
-        });
+        const save = async () => {
+          const [requestField] = Object.keys(
+            patchFieldForPortCount(field),
+          ) as Array<keyof ReturnType<typeof patchFieldForPortCount>>;
+          const result = await patchSpfModule(projectId, moduleId, {
+            [requestField]: nextValue,
+          });
 
-        if (hasBlockingIssues(result)) {
-          return {
-            message: getIssueMessage(result, 'Failed to save module'),
-            ok: false,
-          };
+          if (hasBlockingIssues(result)) {
+            return {
+              message: getIssueMessage(result, 'Failed to save module'),
+              ok: false,
+            };
+          }
+
+          const refreshResult = await getModulesBySystemIds(projectId, [moduleId]);
+          const refreshedModule =
+            refreshResult.data?.find((module) => module.systemId === moduleId) ??
+            result.data;
+          const committedValue = refreshedModule
+            ? (portCountValueFromModule(refreshedModule, field) ?? nextValue)
+            : nextValue;
+
+          onModulePortCountChange(
+            moduleId,
+            field,
+            committedValue,
+            refreshedModule,
+          );
+          return {ok: true, value: committedValue};
+        };
+
+        try {
+          return runMutation ? await runMutation(save) : await save();
+        } catch {
+          return {message: 'Another graph update is in progress', ok: false};
         }
-
-        onModulePortCountChange(moduleId, field, nextValue);
-        return {ok: true, value: nextValue};
       },
-      [field, moduleId, onModulePortCountChange, projectId],
+      [field, moduleId, onModulePortCountChange, projectId, runMutation],
     ),
     value,
   });

@@ -22,6 +22,7 @@ export interface PropertyRowProps {
   isSaving?: boolean;
   label: string;
   mode: 'number' | 'select' | 'text';
+  onBlur?: (value: PropertyValue) => void;
   onChange: (value: PropertyValue) => void;
   options?: PropertyOption[];
   readOnly?: boolean;
@@ -34,6 +35,7 @@ export function PropertyRow({
   isSaving,
   label,
   mode,
+  onBlur,
   onChange,
   options = [],
   readOnly,
@@ -51,6 +53,7 @@ export function PropertyRow({
               disabled={disabled}
               label={label}
               mode={mode}
+              onBlur={onBlur}
               onChange={onChange}
               options={options}
               value={value}
@@ -72,6 +75,7 @@ interface PropertyRowControlProps {
   disabled: boolean;
   label: string;
   mode: 'number' | 'select' | 'text';
+  onBlur?: (value: PropertyValue) => void;
   onChange: (value: PropertyValue) => void;
   options: PropertyOption[];
   value: PropertyValue;
@@ -81,6 +85,7 @@ function PropertyRowControl({
   disabled,
   label,
   mode,
+  onBlur,
   onChange,
   options,
   value,
@@ -102,6 +107,9 @@ function PropertyRowControl({
       aria-label={label}
       clearable={false}
       inputProps={{type: mode === 'number' ? 'number' : 'text'}}
+      onBlur={() => {
+        onBlur?.(mode === 'number' ? Number(value) : value);
+      }}
       onValueChange={(nextValue) => {
         onChange(mode === 'number' ? Number(nextValue) : nextValue);
       }}

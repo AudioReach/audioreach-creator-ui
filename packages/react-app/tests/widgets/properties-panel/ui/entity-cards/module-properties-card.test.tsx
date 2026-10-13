@@ -14,15 +14,22 @@ jest.mock('~entities/spf-modules', () => ({
   patchSpfModule: jest.fn(),
 }));
 
-import {render, screen, waitFor} from '@testing-library/react';
+jest.mock('~entities/usecases', () => ({
+  getModulesBySystemIds: jest.fn(),
+}));
 
-import {fetchSpfModuleProperties} from '~entities/spf-modules';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+
+import {fetchSpfModuleProperties, patchSpfModule} from '~entities/spf-modules';
+import {getModulesBySystemIds} from '~entities/usecases';
 import {ModulePropertiesCard} from '~widgets/properties-panel/ui/entity-cards/module-properties-card';
 
 import {makeGraphData} from './test-graph-data';
 import {makeProperty} from './test-properties';
 
 const mockFetchSpfModuleProperties = jest.mocked(fetchSpfModuleProperties);
+const mockGetModulesBySystemIds = jest.mocked(getModulesBySystemIds);
+const mockPatchSpfModule = jest.mocked(patchSpfModule);
 
 describe('ModulePropertiesCard', () => {
   beforeEach(() => {
@@ -32,11 +39,17 @@ describe('ModulePropertiesCard', () => {
       message: 'ok',
       success: true,
     });
+    mockGetModulesBySystemIds.mockResolvedValue({
+      data: [],
+      message: 'ok',
+      success: true,
+    });
   });
 
   it('renders static fields, dynamic port editability, and schema data', async () => {
     const graphData = makeGraphData();
     graphData.moduleInstances['mod-1'].containerSystemId = '1';
+    graphData.moduleInstances['mod-1'].maxInputPorts = 0xffffffff;
 
     render(
       <ModulePropertiesCard
@@ -60,10 +73,59 @@ describe('ModulePropertiesCard', () => {
     ).toBeEnabled();
     expect(screen.getByDisplayValue('3')).toHaveAttribute('readOnly');
     expect(screen.getByDisplayValue('4')).not.toHaveAttribute('readOnly');
+    expect(screen.getByDisplayValue('1')).not.toHaveAttribute('readOnly');
+    expect(screen.queryByDisplayValue('4294967295')).not.toBeInTheDocument();
     await waitFor(() =>
       expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
     );
     expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument();
+  });
+
+  it('makes control port count read-only when control ports are static', async () => {
+    const graphData = makeGraphData();
+    graphData.moduleInstances['mod-1'].inputPorts = graphData.moduleInstances[
+      'mod-1'
+    ].inputPorts.map((port) =>
+      port.portType === 'control' ? {...port, isStatic: true} : port,
+    );
+
+    render(
+      <ModulePropertiesCard
+        graphData={graphData}
+        isEditing
+        moduleId="mod-1"
+        onModuleAliasChange={jest.fn()}
+        onModuleContainerChange={jest.fn()}
+        onModulePortCountChange={jest.fn()}
+        projectId="proj-1"
+      />,
+    );
+
+    expect(screen.getByDisplayValue('1')).toHaveAttribute('readOnly');
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+    );
+  });
+
+  it('makes port-count fields read-only while a graph mutation is active', async () => {
+    render(
+      <ModulePropertiesCard
+        graphData={makeGraphData()}
+        isEditing
+        isMutating
+        moduleId="mod-1"
+        onModuleAliasChange={jest.fn()}
+        onModuleContainerChange={jest.fn()}
+        onModulePortCountChange={jest.fn()}
+        projectId="proj-1"
+      />,
+    );
+
+    expect(screen.getByDisplayValue('4')).toHaveAttribute('readOnly');
+    expect(screen.getByDisplayValue('1')).toHaveAttribute('readOnly');
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+    );
   });
 
   it('supports card-level collapse controls', async () => {
@@ -90,5 +152,92 @@ describe('ModulePropertiesCard', () => {
     await waitFor(() =>
       expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
     );
+  });
+
+  it('passes returned port-count module data to the local graph update', async () => {
+    const onModulePortCountChange = jest.fn();
+    const runMutation = jest.fn((action: () => Promise<unknown>) => action());
+    const patchedModule = {
+      alias: 'Source Module',
+      containerSystemId: 'cnt-1',
+      controlPorts: [],
+      dataPorts: [],
+      maxControlPortsSupported: 1,
+      maxInputPortsSupported: 3,
+      maxOutputPortsSupported: 2,
+      moduleDefinitionSystemId: '100',
+      name: 'Source Module',
+      naturalId: 100,
+      relatedEndPointLinks: [],
+      subgraphSystemId: 'sg-1',
+      systemId: 'mod-1',
+    };
+    const refreshedModule = {
+      ...patchedModule,
+      dataPorts: [
+        {
+          name: 'Output A',
+          naturalId: 1,
+          portIoType: 'Output' as const,
+          portType: 'Dynamic' as const,
+          systemId: 'out-1',
+          totalLinksAtPort: 0,
+        },
+        {
+          name: 'Output B',
+          naturalId: 2,
+          portIoType: 'Output' as const,
+          portType: 'Dynamic' as const,
+          systemId: 'out-2',
+          totalLinksAtPort: 0,
+        },
+      ],
+    };
+    mockPatchSpfModule.mockResolvedValue({
+      data: patchedModule,
+      message: 'ok',
+      success: true,
+    });
+    mockGetModulesBySystemIds.mockResolvedValue({
+      data: [refreshedModule],
+      message: 'ok',
+      success: true,
+    });
+
+    render(
+      <ModulePropertiesCard
+        graphData={makeGraphData()}
+        isEditing
+        moduleId="mod-1"
+        onModuleAliasChange={jest.fn()}
+        onModuleContainerChange={jest.fn()}
+        onModulePortCountChange={onModulePortCountChange}
+        projectId="proj-1"
+        runMutation={runMutation}
+      />,
+    );
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+    );
+
+    const outputPortsInput = screen.getByDisplayValue('4');
+    fireEvent.change(outputPortsInput, {
+      target: {value: '2'},
+    });
+    expect(patchSpfModule).not.toHaveBeenCalled();
+    expect(onModulePortCountChange).not.toHaveBeenCalled();
+
+    fireEvent.blur(outputPortsInput);
+
+    await waitFor(() =>
+      expect(onModulePortCountChange).toHaveBeenLastCalledWith(
+        'mod-1',
+        'maxOutputPorts',
+        2,
+        refreshedModule,
+      ),
+    );
+    expect(getModulesBySystemIds).toHaveBeenCalledWith('proj-1', ['mod-1']);
+    expect(runMutation).toHaveBeenCalledTimes(1);
   });
 });
