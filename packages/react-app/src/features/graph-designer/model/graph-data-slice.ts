@@ -76,6 +76,8 @@ export interface ModuleInstance {
   tags?: TagInfoDto[];
 }
 
+const UNSPECIFIED_PORT_COUNT = 0xffffffff;
+
 export interface Connection {
   destinationPortSystemId: string;
   destinationSystemId: string;
@@ -220,6 +222,7 @@ export interface GraphDataSlice {
     moduleSystemId: string,
     field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   /** Replaces derived View-mode selected/EC flags without changing vectors. */
   updateSgKvMetadata: (
@@ -483,9 +486,13 @@ function toModuleInstance(
       totalLinksAtPort: p.totalLinksAtPort,
     }));
   return {
+    ckvs: m.ckvs ?? existing?.ckvs,
     containerSystemId: m.containerSystemId,
     displayName: m.alias || m.name,
     inputPorts: [...inputPorts, ...controlPorts],
+    maxControlPorts: normalizePortCount(m.maxControlPortsSupported),
+    maxInputPorts: normalizePortCount(m.maxInputPortsSupported),
+    maxOutputPorts: normalizePortCount(m.maxOutputPortsSupported),
     moduleDefinitionSystemId: m.moduleDefinitionSystemId,
     moduleName: m.name,
     moduleType,
@@ -494,7 +501,12 @@ function toModuleInstance(
     position: existing?.position ?? {x: 0, y: 0},
     subgraphSystemId: m.subgraphSystemId,
     systemId: m.systemId,
+    tags: m.tags ?? existing?.tags,
   };
+}
+
+function normalizePortCount(value: number | undefined): number | undefined {
+  return value === UNSPECIFIED_PORT_COUNT ? undefined : value;
 }
 
 /**
@@ -1429,19 +1441,28 @@ export function createGraphDataSlice<
       moduleSystemId: string,
       field: 'maxControlPorts' | 'maxInputPorts' | 'maxOutputPorts',
       value: number,
+      module?: SpfModuleDto,
     ): void => {
       const {graphData} = get();
       const current = graphData?.moduleInstances[moduleSystemId];
       if (!graphData || !current) {
         return;
       }
+      const moduleInstances = module
+        ? upsertModule(
+            graphData.moduleInstances,
+            module,
+            current.moduleType,
+            graphData.connections,
+          )
+        : {
+            ...graphData.moduleInstances,
+            [moduleSystemId]: {...current, [field]: value},
+          };
       set({
         graphData: {
           ...graphData,
-          moduleInstances: {
-            ...graphData.moduleInstances,
-            [moduleSystemId]: {...current, [field]: value},
-          },
+          moduleInstances,
         },
       } as unknown as Partial<S>);
       get().markDirty();
