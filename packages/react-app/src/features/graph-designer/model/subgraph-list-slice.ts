@@ -28,12 +28,15 @@ export interface SubgraphDefinition {
 
 export interface SubgraphListSlice {
   loadSubgraphList: () => Promise<void>;
+  mergeSubgraphDetails: (subgraphs: SubgraphResponseDto[]) => void;
   selectedSubgraphTypes: string[];
   setSelectedSubgraphTypes: (types: string[]) => void;
   setSubgraphListSearchQuery: (query: string) => void;
+  subgraphDetailsById: Record<string, SubgraphResponseDto>;
   subgraphList: SubgraphDefinition[];
   subgraphListSearchQuery: string;
   subgraphListStatus: SliceStatus;
+  updateCachedSubgraphName: (subgraphSystemId: string, name: string) => void;
 }
 
 type SetState<T> = StoreApi<T>['setState'];
@@ -61,6 +64,24 @@ function toSubgraphDefinition(dto: SubgraphResponseDto): SubgraphDefinition {
     subgraphType: dto.subGraphSharedType,
     systemId: dto.systemId,
   };
+}
+
+function toSubgraphDetailsById(
+  subgraphs: SubgraphResponseDto[],
+): Record<string, SubgraphResponseDto> {
+  return Object.fromEntries(
+    subgraphs.map((subgraph) => [subgraph.systemId, subgraph]),
+  );
+}
+
+function toSubgraphList(
+  subgraphDetailsById: Record<string, SubgraphResponseDto>,
+): SubgraphDefinition[] {
+  return Object.values(subgraphDetailsById).map(toSubgraphDefinition);
+}
+
+function isSubgraphType(value: unknown): value is string {
+  return typeof value === 'string';
 }
 
 // ---------------------------------------------------------------------------
@@ -106,14 +127,19 @@ export function createSubgraphListSlice(
           return;
         }
 
-        const subgraphs = result.data.map(toSubgraphDefinition);
+        const subgraphDetailsById = toSubgraphDetailsById(result.data);
+        const subgraphs = toSubgraphList(subgraphDetailsById);
         const allSubgraphTypes = [
-          ...new Set(subgraphs.map((s) => s.subgraphType)),
+          ...new Set(
+            subgraphs.map((s) => s.subgraphType).filter(isSubgraphType),
+          ),
         ].sort();
+        const cachedSubgraphTypes =
+          subgraphFilterCache.get(projectId)?.filter(isSubgraphType);
 
         setSlice({
-          selectedSubgraphTypes:
-            subgraphFilterCache.get(projectId) ?? allSubgraphTypes,
+          selectedSubgraphTypes: cachedSubgraphTypes ?? allSubgraphTypes,
+          subgraphDetailsById,
           subgraphList: subgraphs,
           subgraphListStatus: 'ready',
         });
@@ -135,11 +161,24 @@ export function createSubgraphListSlice(
       }
     },
 
+    mergeSubgraphDetails: (subgraphs: SubgraphResponseDto[]) => {
+      const subgraphDetailsById = {
+        ..._get().subgraphDetailsById,
+        ...toSubgraphDetailsById(subgraphs),
+      };
+
+      setSlice({
+        subgraphDetailsById,
+        subgraphList: toSubgraphList(subgraphDetailsById),
+      });
+    },
+
     selectedSubgraphTypes: [],
 
     setSelectedSubgraphTypes: (types: string[]) => {
-      subgraphFilterCache.set(projectId, types);
-      setSlice({selectedSubgraphTypes: types});
+      const validTypes = types.filter(isSubgraphType);
+      subgraphFilterCache.set(projectId, validTypes);
+      setSlice({selectedSubgraphTypes: validTypes});
     },
 
     setSubgraphListSearchQuery: (query: string) => {
@@ -150,10 +189,30 @@ export function createSubgraphListSlice(
       setSlice({subgraphListSearchQuery: query});
     },
 
+    subgraphDetailsById: {},
+
     subgraphList: [],
 
     subgraphListSearchQuery: '',
 
     subgraphListStatus: 'uninitialized',
+
+    updateCachedSubgraphName: (subgraphSystemId: string, name: string) => {
+      const current = _get().subgraphDetailsById;
+      const existing = current[subgraphSystemId];
+      if (!existing) {
+        return;
+      }
+
+      const subgraphDetailsById = {
+        ...current,
+        [subgraphSystemId]: {...existing, name},
+      };
+
+      setSlice({
+        subgraphDetailsById,
+        subgraphList: toSubgraphList(subgraphDetailsById),
+      });
+    },
   };
 }

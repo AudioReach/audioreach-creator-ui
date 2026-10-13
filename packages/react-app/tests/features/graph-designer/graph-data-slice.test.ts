@@ -30,6 +30,7 @@ import {
 } from '~entities/usecases/api/usecases-api';
 import {getContainersBySystemIds} from '~entities/containers';
 import {patchSpfModule} from '~entities/spf-modules';
+import type {SubgraphResponseDto} from '~entities/subgraph-definitions';
 import {
   createEditSessionSlice,
   type EditSessionSlice,
@@ -45,10 +46,12 @@ import {
   type ModuleDefinition,
   type ModuleListSlice,
 } from '~features/graph-designer/model/module-list-slice';
+import type {SubgraphDefinition} from '~features/graph-designer/model/subgraph-list-slice';
 import {
   createSubsystemSlice,
   type SubsystemSlice,
 } from '~shared/store/tab-store-slices/subsystem-slice';
+import type {SliceStatus} from '~shared/store/global-store.types';
 
 import {
   makeDataLinkDto,
@@ -62,6 +65,7 @@ const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
 const mockPatchSpfModule = jest.mocked(patchSpfModule);
 
 beforeEach(() => {
+  jest.clearAllMocks();
   mockGetContainersBySystemIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -77,7 +81,13 @@ beforeEach(() => {
 type TestStore = GraphDataSlice &
   ModuleListSlice &
   EditSessionSlice &
-  SubsystemSlice;
+  SubsystemSlice & {
+    mergeSubgraphDetails: (subgraphs: SubgraphResponseDto[]) => void;
+    subgraphDetailsById: Record<string, SubgraphResponseDto>;
+    subgraphList: SubgraphDefinition[];
+    subgraphListStatus: SliceStatus;
+    updateCachedSubgraphName: (subgraphSystemId: string, name: string) => void;
+  };
 
 /**
  * Composes the production slices needed to verify the actual SGKV lifecycle.
@@ -89,6 +99,53 @@ function makeStore(moduleList: ModuleDefinition[] = []) {
     ...createModuleListSlice(set, get, 'proj-1'),
     ...createEditSessionSlice(set, get, 'proj-1'),
     ...createSubsystemSlice(set, get),
+    mergeSubgraphDetails: (subgraphs) => {
+      set((state) => {
+        const subgraphDetailsById = {
+          ...state.subgraphDetailsById,
+          ...Object.fromEntries(
+            subgraphs.map((subgraph) => [subgraph.systemId, subgraph]),
+          ),
+        };
+        return {
+          subgraphDetailsById,
+          subgraphList: Object.values(subgraphDetailsById).map((subgraph) => ({
+            category: '',
+            description: '',
+            naturalId: subgraph.naturalId,
+            subgraphName: subgraph.name ?? '',
+            subgraphType: subgraph.subGraphSharedType,
+            systemId: subgraph.systemId,
+          })),
+        };
+      });
+    },
+    subgraphDetailsById: {},
+    subgraphList: [],
+    subgraphListStatus: 'uninitialized',
+    updateCachedSubgraphName: (subgraphSystemId, name) => {
+      set((state) => {
+        const current = state.subgraphDetailsById[subgraphSystemId];
+        if (!current) {
+          return {};
+        }
+        const subgraphDetailsById = {
+          ...state.subgraphDetailsById,
+          [subgraphSystemId]: {...current, name},
+        };
+        return {
+          subgraphDetailsById,
+          subgraphList: Object.values(subgraphDetailsById).map((subgraph) => ({
+            category: '',
+            description: '',
+            naturalId: subgraph.naturalId,
+            subgraphName: subgraph.name ?? '',
+            subgraphType: subgraph.subGraphSharedType,
+            systemId: subgraph.systemId,
+          })),
+        };
+      });
+    },
   }));
   if (moduleList.length > 0) {
     store.setState({moduleList});
@@ -350,6 +407,92 @@ describe('createGraphDataSlice — recursive component responses', () => {
 });
 
 describe('createGraphDataSlice — subgraph name enrichment', () => {
+  it('hydrates SGKV details from the cached subgraph list response', async () => {
+    const store = makeStore([]);
+    store.setState({
+      subgraphDetailsById: {
+        'sys-sg-1': {
+          name: 'PaletteSubgraphName',
+          naturalId: 7,
+          relatedEndPointLinks: [],
+          SGKV: [{keyValuePairs: [], systemId: 'sgkv-1'}],
+          subGraphSharedType: 'AUDIO_RECORD',
+          systemId: 'sys-sg-1',
+        },
+      },
+      subgraphListStatus: 'ready',
+    });
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(mockGetSubgraphsByIds).not.toHaveBeenCalled();
+    const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
+    expect(subgraph?.naturalId).toBe(7);
+    expect(subgraph?.kvVectors).toHaveLength(1);
+    expect(subgraph?.subgraphName).toBe('PaletteSubgraphName');
+    expect(subgraph?.subgraphType).toBe('AUDIO_RECORD');
+  });
+
+  it('queries only graph subgraphs missing from the cached list response', async () => {
+    const store = makeStore([]);
+    store.setState({
+      subgraphDetailsById: {
+        'sys-sg-1': {
+          name: 'PaletteSubgraphName',
+          naturalId: 7,
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: 'AUDIO_RECORD',
+          systemId: 'sys-sg-1',
+        },
+      },
+      subgraphListStatus: 'ready',
+    });
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        ...minimalDto,
+        spfModules: [
+          minimalDto.spfModules[0],
+          makeSpfModuleDto({
+            containerSystemId: '11',
+            subgraphSystemId: 'sys-sg-2',
+            systemId: 'sys-mod-2',
+          }),
+        ],
+      } as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetSubgraphsByIds.mockResolvedValueOnce({
+      data: [
+        {
+          name: 'FetchedSubgraphName',
+          naturalId: 8,
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: 'AUDIO_PLAYBACK',
+          systemId: 'sys-sg-2',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(mockGetSubgraphsByIds).toHaveBeenCalledWith('proj-1', ['sys-sg-2']);
+    const subgraphs = store.getState().graphData?.subgraphs;
+    expect(subgraphs?.['sys-sg-1'].subgraphName).toBe('PaletteSubgraphName');
+    expect(subgraphs?.['sys-sg-2'].subgraphName).toBe('FetchedSubgraphName');
+    expect(store.getState().subgraphDetailsById['sys-sg-2']?.name).toBe(
+      'FetchedSubgraphName',
+    );
+  });
+
   it('reconciles Graph Data vectors into Edit Session only in Edit mode', async () => {
     const store = makeStore([]);
     store.setState({
@@ -1754,12 +1897,26 @@ describe('createGraphDataSlice - store-only property updates', () => {
 
   it('updates subgraph name locally', () => {
     const store = makeStoreWithGraphData();
+    store.setState({
+      subgraphDetailsById: {
+        'sg-1': {
+          name: 'Subgraph 1',
+          naturalId: 1,
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: '',
+          systemId: 'sg-1',
+        },
+      },
+      subgraphListStatus: 'ready',
+    });
 
     store.getState().updateSubgraphNameLocal('sg-1', 'Main');
 
     expect(store.getState().graphData?.subgraphs['sg-1'].subgraphName).toBe(
       'Main',
     );
+    expect(store.getState().subgraphDetailsById['sg-1']?.name).toBe('Main');
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
   });

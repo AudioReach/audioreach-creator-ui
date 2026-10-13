@@ -5,6 +5,10 @@
 
 jest.mock('~shared/lib/logger');
 
+jest.mock('~entities/subgraph-definitions', () => ({
+  getAllSubgraphs: jest.fn(),
+}));
+
 jest.mock('@qualcomm-ui/react/button', () => {
   const React = jest.requireActual('react');
   return {
@@ -105,6 +109,7 @@ jest.mock('@qualcomm-ui/react/tooltip', () => {
 
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 
+import {getAllSubgraphs} from '~entities/subgraph-definitions';
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import {GraphDesignerStoreContext} from '~features/graph-designer/model/graph-designer-store-context';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
@@ -119,6 +124,11 @@ import {
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
 
 const PROJECT_ID = 'proj-1';
+const mockGetAllSubgraphs = jest.mocked(getAllSubgraphs);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 function makeGraphDataWithSubgraph(subgraphId: string): UsecaseGraphData {
   return {
@@ -187,11 +197,132 @@ function renderSubgraphList(options: {
 }
 
 describe('SubgraphList drag source', () => {
+  it('stores full subgraph details and derives list rows', async () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+    mockGetAllSubgraphs.mockResolvedValueOnce({
+      data: [
+        {
+          name: 'Voice Capture',
+          naturalId: 7,
+          relatedEndPointLinks: [],
+          SGKV: [{keyValuePairs: [], systemId: 'sgkv-1'}],
+          subGraphSharedType: 'AUDIO_RECORD',
+          systemId: 'sg-1',
+        },
+      ],
+      message: undefined,
+      success: true,
+    });
+
+    await graphDesignerStore.getState().loadSubgraphList();
+
+    expect(
+      graphDesignerStore.getState().subgraphDetailsById['sg-1']?.SGKV,
+    ).toHaveLength(1);
+    expect(graphDesignerStore.getState().subgraphList).toEqual([
+      expect.objectContaining({
+        naturalId: 7,
+        subgraphName: 'Voice Capture',
+        subgraphType: 'AUDIO_RECORD',
+        systemId: 'sg-1',
+      }),
+    ]);
+  });
+
+  it('merges full subgraph details into derived list rows', () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+
+    graphDesignerStore.getState().mergeSubgraphDetails([
+      {
+        name: 'Fetched Subgraph',
+        naturalId: 8,
+        relatedEndPointLinks: [],
+        SGKV: [],
+        subGraphSharedType: 'AUDIO_PLAYBACK',
+        systemId: 'sg-2',
+      },
+    ]);
+
+    expect(graphDesignerStore.getState().subgraphDetailsById['sg-2']?.name).toBe(
+      'Fetched Subgraph',
+    );
+    expect(graphDesignerStore.getState().subgraphList).toContainEqual(
+      expect.objectContaining({
+        subgraphName: 'Fetched Subgraph',
+        systemId: 'sg-2',
+      }),
+    );
+  });
+
+  it('updates cached subgraph names in derived list rows', () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+    graphDesignerStore.getState().mergeSubgraphDetails([
+      {
+        name: 'Old',
+        naturalId: 9,
+        relatedEndPointLinks: [],
+        SGKV: [],
+        subGraphSharedType: 'AUDIO_RECORD',
+        systemId: 'sg-3',
+      },
+    ]);
+
+    graphDesignerStore.getState().updateCachedSubgraphName('sg-3', 'New');
+
+    expect(graphDesignerStore.getState().subgraphDetailsById['sg-3']?.name).toBe(
+      'New',
+    );
+    expect(graphDesignerStore.getState().subgraphList).toContainEqual(
+      expect.objectContaining({subgraphName: 'New', systemId: 'sg-3'}),
+    );
+  });
+
   it('marks an available subgraph as draggable in edit mode', () => {
     renderSubgraphList({editModeState: 'edit'});
 
     const row = screen.getByText('Stream Subgraph').closest('li');
     expect(row).toHaveAttribute('draggable', 'true');
+  });
+
+  it('ignores subgraphs with missing types when building filters', () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+    const projectStore = createProjectStore(PROJECT_ID);
+    projectStore.setState({editModeState: 'edit'});
+    graphDesignerStore.setState({
+      graphData: null,
+      graphDataStatus: 'uninitialized',
+      selectedSubgraphTypes: ['stream'],
+      subgraphList: [
+        {
+          category: '',
+          description: 'Subgraph description',
+          naturalId: 1,
+          subgraphName: 'Stream Subgraph',
+          subgraphType: 'stream',
+          systemId: 'subgraph-system-1',
+        },
+        {
+          category: '',
+          description: 'Missing type description',
+          naturalId: 2,
+          subgraphName: 'Missing Type Subgraph',
+          subgraphType: undefined as unknown as string,
+          systemId: 'subgraph-system-2',
+        },
+      ],
+      subgraphListStatus: 'ready',
+    });
+
+    render(
+      <ProjectStoreContext.Provider value={projectStore}>
+        <GraphDesignerStoreContext.Provider value={graphDesignerStore}>
+          <SubgraphList />
+        </GraphDesignerStoreContext.Provider>
+      </ProjectStoreContext.Provider>,
+    );
+
+    expect(screen.getAllByText('STREAM').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Missing Type Subgraph')).not.toBeInTheDocument();
   });
 
   it('writes the subgraph payload and MIME sentinel on drag start', () => {

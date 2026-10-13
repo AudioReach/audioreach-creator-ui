@@ -53,6 +53,7 @@ import {endSession, startSession} from '~entities/edit-session';
 import {getAllKeyDefinitions} from '~entities/key-definitions/api/key-definition-api';
 import {getProjectById} from '~entities/project/api/projects-api';
 import {deleteSpfModule} from '~entities/spf-modules';
+import type {SubgraphResponseDto} from '~entities/subgraph-definitions';
 import {
   getSubgraphContents,
   getSubgraphPairs,
@@ -76,7 +77,9 @@ import {
   createModuleListSlice,
   type ModuleListSlice,
 } from '~features/graph-designer/model/module-list-slice';
+import type {SubgraphDefinition} from '~features/graph-designer/model/subgraph-list-slice';
 import {showToast} from '~shared/controls/global-toaster';
+import type {SliceStatus} from '~shared/store/global-store.types';
 
 import {
   makeDataLinkDto,
@@ -136,7 +139,14 @@ beforeEach(() => {
   mockGetProjectById.mockReset();
 });
 
-type TestStore = GraphDataSlice & ModuleListSlice & EditSessionSlice;
+type TestStore = GraphDataSlice &
+  ModuleListSlice &
+  EditSessionSlice & {
+    subgraphDetailsById: Record<string, SubgraphResponseDto>;
+    subgraphList: SubgraphDefinition[];
+    subgraphListStatus: SliceStatus;
+    updateCachedSubgraphName: (subgraphSystemId: string, name: string) => void;
+  };
 
 const EMPTY_GRAPH_DATA: TestStore['graphData'] = {
   connections: [],
@@ -152,6 +162,32 @@ function makeTestStore(projectId = 'proj-sg-ops-1') {
     ...createGraphDataSlice(set, get, projectId),
     ...createModuleListSlice(set, get, projectId),
     ...createEditSessionSlice(set, get, projectId),
+    subgraphDetailsById: {},
+    subgraphList: [],
+    subgraphListStatus: 'uninitialized',
+    updateCachedSubgraphName: (subgraphSystemId, name) => {
+      set((state) => {
+        const current = state.subgraphDetailsById[subgraphSystemId];
+        if (!current) {
+          return {};
+        }
+        const subgraphDetailsById = {
+          ...state.subgraphDetailsById,
+          [subgraphSystemId]: {...current, name},
+        };
+        return {
+          subgraphDetailsById,
+          subgraphList: Object.values(subgraphDetailsById).map((subgraph) => ({
+            category: '',
+            description: '',
+            naturalId: subgraph.naturalId,
+            subgraphName: subgraph.name ?? '',
+            subgraphType: subgraph.subGraphSharedType,
+            systemId: subgraph.systemId,
+          })),
+        };
+      });
+    },
   }));
   store.setState({graphData: EMPTY_GRAPH_DATA});
 
@@ -1152,6 +1188,17 @@ describe('createSubgraphOperations — renameSubgraph', () => {
           },
         },
       },
+      subgraphDetailsById: {
+        'sg-1': {
+          name: 'Old',
+          naturalId: 1,
+          relatedEndPointLinks: [],
+          SGKV: [],
+          subGraphSharedType: 'A',
+          systemId: 'sg-1',
+        },
+      },
+      subgraphListStatus: 'ready',
     });
     mockRenameSubgraphApi.mockResolvedValueOnce({
       data: {
@@ -1170,6 +1217,8 @@ describe('createSubgraphOperations — renameSubgraph', () => {
 
     const subgraph = store.getState().graphData!.subgraphs['sg-1'];
     expect(subgraph.subgraphName).toBe('New');
+    expect(store.getState().subgraphDetailsById['sg-1']?.name).toBe('New');
+    expect(store.getState().subgraphList[0].subgraphName).toBe('New');
     expect(subgraph.subgraphType).toBe('A');
     expect(subgraph.containers).toEqual(['cnt-1']);
     expect(store.getState().isDirty).toBe(true);
