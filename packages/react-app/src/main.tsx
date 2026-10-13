@@ -6,12 +6,28 @@
 import {Button} from '@qualcomm-ui/react/button';
 import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 import {lazy, Suspense, useCallback, useEffect, useState} from 'react';
+import {useEffect} from 'react';
+
 import {createRoot} from 'react-dom/client';
 
-import {ensureRegistered} from '~shared/api';
-import {logger} from '~shared/lib/logger';
+import {ThemeProvider} from '~shared/providers/theme-provider';
+import {EditorShell} from '~widgets/editor-shell';
+
 
 import './index.css';
+
+
+const App = () => {
+  useEffect(() => {
+    ensureRegistered()
+      .then((success) => {
+        void window.connectApi?.reportRegistrationResult(success);
+      })
+      .catch((error) => {
+        logger.error(`Failed to register client: ${error}`);
+        void window.connectApi?.reportRegistrationResult(false);
+      });
+  }, []);
 
 type BootstrapState = 'ready' | 'registering' | 'unavailable';
 
