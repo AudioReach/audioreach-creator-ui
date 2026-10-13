@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {useCallback} from 'react';
+
 import type {LevelView} from '~entities/graph';
 import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
+import {withMutationLock} from '~features/graph-designer/model/edit-session-slice';
 import {PropertiesPanel} from '~widgets/properties-panel';
 
 interface PropertiesPanelHostProps {
@@ -24,6 +27,7 @@ export function PropertiesPanelHost({
     effectiveLevelView: state.effectiveLevelView,
     graphData: state.graphData,
     isEditing: state.mode === 'edit',
+    isMutating: state.isMutating,
     requestNodeFocus: state.requestNodeFocus,
     selectedEdges: state.selectedEdges,
     selectedNodes: state.selectedNodes,
@@ -35,6 +39,11 @@ export function PropertiesPanelHost({
     updateSubsystemNameLocal: state.updateSubsystemNameLocal,
   }));
   const effectiveGraph = graph ?? props.effectiveLevelView;
+  const runMutation = useCallback(
+    <T,>(action: () => Promise<T>): Promise<T> =>
+      withMutationLock(store.getState, action),
+    [store],
+  );
 
   if (!props.graphData) {
     return null;
@@ -44,6 +53,7 @@ export function PropertiesPanelHost({
     <PropertiesPanel
       graphData={props.graphData}
       isEditing={props.isEditing}
+      isMutating={props.isMutating}
       onContainerIdChange={props.updateContainerIdLocal}
       onModuleAliasChange={props.updateModuleAliasLocal}
       onModuleContainerChange={props.updateModuleContainerLocal}
@@ -58,6 +68,7 @@ export function PropertiesPanelHost({
         store.getState().excludeLink(store.getState, connectionId)
       }
       projectId={projectId}
+      runMutation={runMutation}
       selectedEdges={props.selectedEdges}
       selectedNodes={props.selectedNodes}
       virtualControlLinks={effectiveGraph?.proxyControlLinks ?? []}

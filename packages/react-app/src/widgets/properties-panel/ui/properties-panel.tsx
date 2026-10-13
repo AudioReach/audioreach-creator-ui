@@ -6,6 +6,7 @@
 import {useMemo, useState} from 'react';
 
 import type {ProxyControlLink, ProxyDataLink} from '~entities/graph';
+import type {SpfModuleDto} from '~entities/usecases';
 import type {
   SelectedEdgeRef,
   SelectedNodeRef,
@@ -36,6 +37,7 @@ export type ModulePortCountField =
 export interface PropertiesPanelProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
+  isMutating?: boolean;
   onContainerIdChange: (
     subgraphSystemId: string,
     containerSystemId: string,
@@ -48,6 +50,7 @@ export interface PropertiesPanelProps {
     moduleId: string,
     field: ModulePortCountField,
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
   onSubgraphNameChange: (id: string, name: string) => void;
@@ -55,6 +58,7 @@ export interface PropertiesPanelProps {
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
   onVirtualDataLinkRowDelete: (realDataLinkId: string) => void;
   projectId: string;
+  runMutation?: <T>(action: () => Promise<T>) => Promise<T>;
   selectedEdges: SelectedEdgeRef[];
   selectedNodes: SelectedNodeRef[];
   virtualControlLinks?: ProxyControlLink[];
@@ -64,6 +68,7 @@ export interface PropertiesPanelProps {
 export function PropertiesPanel({
   graphData,
   isEditing,
+  isMutating,
   onContainerIdChange,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -74,6 +79,7 @@ export function PropertiesPanel({
   onVirtualControlLinkRowDelete,
   onVirtualDataLinkRowDelete,
   projectId,
+  runMutation,
   selectedEdges,
   selectedNodes,
   virtualControlLinks = [],
@@ -140,6 +146,7 @@ export function PropertiesPanel({
                 },
                 graphData,
                 isEditing,
+                isMutating,
                 item,
                 onContainerIdChange,
                 onModuleAliasChange,
@@ -151,6 +158,7 @@ export function PropertiesPanel({
                 onVirtualControlLinkRowDelete,
                 onVirtualDataLinkRowDelete,
                 projectId,
+                runMutation,
                 type: group.type,
               });
             })}
@@ -179,6 +187,7 @@ function renderPropertyCard({
   collapseProps,
   graphData,
   isEditing,
+  isMutating,
   item,
   onContainerIdChange,
   onModuleAliasChange,
@@ -190,11 +199,13 @@ function renderPropertyCard({
   onVirtualControlLinkRowDelete,
   onVirtualDataLinkRowDelete,
   projectId,
+  runMutation,
   type,
 }: {
   collapseProps: EntityCollapseProps;
   graphData: UsecaseGraphData;
   isEditing: boolean;
+  isMutating?: boolean;
   item: PropertyGroupItem;
   onContainerIdChange: (
     subgraphSystemId: string,
@@ -208,6 +219,7 @@ function renderPropertyCard({
     moduleId: string,
     field: ModulePortCountField,
     value: number,
+    module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
   onSubgraphNameChange: (id: string, name: string) => void;
@@ -215,6 +227,7 @@ function renderPropertyCard({
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
   onVirtualDataLinkRowDelete: (realDataLinkId: string) => void;
   projectId: string;
+  runMutation?: <T>(action: () => Promise<T>) => Promise<T>;
   type: PropertyGroupType;
 }) {
   switch (type) {
@@ -250,11 +263,13 @@ function renderPropertyCard({
           {...collapseProps}
           graphData={graphData}
           isEditing={isEditing}
+          isMutating={isMutating}
           moduleId={item.systemId}
           onModuleAliasChange={onModuleAliasChange}
           onModuleContainerChange={onModuleContainerChange}
           onModulePortCountChange={onModulePortCountChange}
           projectId={projectId}
+          runMutation={runMutation}
         />
       );
     case 'subsystems':

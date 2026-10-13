@@ -22,6 +22,7 @@ export interface UseStaticFieldSaveResult<T> {
   isSaving: boolean;
   saveImmediate: (nextValue: T) => Promise<void>;
   saveText: (nextValue: T) => void;
+  setValue: (nextValue: T) => void;
   value: T;
 }
 
@@ -85,5 +86,12 @@ export function useStaticFieldSave<T>({
     [clearPending, delayMs, saveImmediate],
   );
 
-  return {error, isSaving, saveImmediate, saveText, value: draftValue};
+  return {
+    error,
+    isSaving,
+    saveImmediate,
+    saveText,
+    setValue: setDraftValue,
+    value: draftValue,
+  };
 }
