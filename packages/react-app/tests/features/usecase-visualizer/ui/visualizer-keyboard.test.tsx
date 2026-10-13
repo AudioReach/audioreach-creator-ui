@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 
 import {
   type ControlLink,
@@ -163,6 +163,38 @@ describe('keyboard: Escape', () => {
 });
 
 describe('keyboard: Delete', () => {
+  it('clears only confirmed deleted nodes from selection', async () => {
+    const onNodesDeleted = jest.fn().mockResolvedValue({
+      deletedEdgeIds: [],
+      deletedNodeIds: ['sys-n1'],
+    });
+    const onSelectionChange = jest.fn();
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onNodesDeleted, onSelectionChange}}
+        graph={makeGraph()}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+
+    selectNodes(['n1', 'n2']);
+    onSelectionChange.mockClear();
+    fireEvent.keyDown(getContainer(), {key: 'Delete'});
+
+    await waitFor(() => expect(onSelectionChange).toHaveBeenCalledTimes(1));
+    expect(onNodesDeleted).toHaveBeenCalledWith({nodeIds: ['sys-n1']});
+    expect(onSelectionChange).toHaveBeenCalledWith({
+      delta: {
+        addedEdges: [],
+        addedNodes: [],
+        removedEdges: [],
+        removedNodes: [{id: 'n1', nodeKind: 'module', systemId: 'sys-n1'}],
+      },
+      selectedEdges: [],
+      selectedNodes: [{id: 'n2', nodeKind: 'module', systemId: 'sys-n2'}],
+    });
+  });
+
   it('fires onNodesDeleted for non-locked selected nodes in edit mode', () => {
     const onNodesDeleted = jest.fn();
     render(

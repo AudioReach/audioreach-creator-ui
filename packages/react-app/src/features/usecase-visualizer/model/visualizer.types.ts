@@ -29,9 +29,17 @@ import type {
   SubgraphProxyNode,
   SubsystemNode,
 } from '~entities/graph';
-import type {SelectedEdgeRef, SelectedNodeRef} from '~shared/types';
+import type {
+  DeleteSelectionResult,
+  SelectedEdgeRef,
+  SelectedNodeRef,
+} from '~shared/types';
 
-export type {SelectedEdgeRef, SelectedNodeRef} from '~shared/types';
+export type {
+  DeleteSelectionResult,
+  SelectedEdgeRef,
+  SelectedNodeRef,
+} from '~shared/types';
 
 export const VISUALIZER_MODE = {
   EDIT: 'edit',
@@ -202,9 +210,13 @@ export interface VisualizerEventHandlers {
   onViewportChange?: (viewport: ViewportState) => void;
   // group: authoring — only active when mode === VISUALIZER_MODE.EDIT
   onEdgeConnected?: (payload: EdgeConnectPayload) => void;
-  onEdgesDeleted?: (payload: {edgeIds: string[]}) => void;
+  onEdgesDeleted?: (
+    payload: {edgeIds: string[]},
+  ) => Promise<DeleteSelectionResult | void> | void;
   onNodeDropped?: (payload: NodeDropPayload) => void;
-  onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
+  onNodesDeleted?: (
+    payload: {nodeIds: string[]},
+  ) => Promise<DeleteSelectionResult | void> | void;
 }
 
 // ── Top-level component props ─────────────────────────────────────────────────

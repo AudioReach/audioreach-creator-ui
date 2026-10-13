@@ -211,7 +211,11 @@ describe('deleteSelection', () => {
       deleteContainerInner: jest.fn().mockResolvedValue(true),
       deleteLinkInner: jest.fn().mockResolvedValue(false),
     });
-    await deleteSelection(() => store, ['cnt-1'], ['link-independent']);
+    const result = await deleteSelection(
+      () => store,
+      ['cnt-1'],
+      ['link-independent'],
+    );
     expect(store.deleteContainerInner).toHaveBeenCalledWith(
       expect.any(Function),
       'cnt-1',
@@ -228,5 +232,22 @@ describe('deleteSelection', () => {
       '1 of 2 deletions succeeded',
       'warning',
     );
+    expect(result).toEqual({
+      deletedEdgeIds: [],
+      deletedNodeIds: ['cnt-1'],
+    });
+  });
+
+  it('reports selected descendants covered by a successful cascade delete', async () => {
+    const store = makeStore();
+
+    const result = await deleteSelection(() => store, ['cnt-1', 'mod-1'], []);
+
+    expect(result).toEqual({
+      deletedEdgeIds: [],
+      deletedNodeIds: ['cnt-1', 'mod-1'],
+    });
+    expect(store.deleteContainerInner).toHaveBeenCalledTimes(1);
+    expect(store.deleteModuleInstanceInner).not.toHaveBeenCalled();
   });
 });

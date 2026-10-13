@@ -12,6 +12,11 @@ export interface SelectedNodeRef {
   systemId: string;
 }
 
+export interface DeleteSelectionResult {
+  deletedEdgeIds: string[];
+  deletedNodeIds: string[];
+}
+
 interface SelectedBackendEdgeRef {
   edgeKind: Extract<EdgeKind, 'control' | 'data'>;
   id: string;

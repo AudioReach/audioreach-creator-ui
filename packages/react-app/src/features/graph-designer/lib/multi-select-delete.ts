@@ -6,6 +6,7 @@
 import {NODE_KIND, type AnyNode} from '~entities/graph';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
+import type {DeleteSelectionResult} from '~shared/types';
 
 import {withMutationLock} from '../model/edit-session-slice';
 import type {UsecaseGraphData} from '../model/graph-data-slice';
@@ -112,10 +113,10 @@ export async function deleteSelection(
   get: () => GraphDesignerStore,
   selectedNodeIds: string[],
   selectedEdgeIds: string[],
-): Promise<void> {
+): Promise<DeleteSelectionResult> {
   const state = get();
   if (state.mode !== 'edit' || !state.graphData) {
-    return;
+    return {deletedEdgeIds: [], deletedNodeIds: []};
   }
 
   const graphData = state.graphData;
@@ -127,36 +128,52 @@ export async function deleteSelection(
   );
   const total = survivingRoots.length + survivingEdges.length;
   if (total === 0) {
-    return;
+    return {deletedEdgeIds: [], deletedNodeIds: []};
   }
 
   const results = await withMutationLock(get, () =>
     Promise.allSettled([
-      ...survivingRoots.map((nodeId) =>
-        DELETE_HANDLERS_INNER[resolveNodeKind(graphData, nodeId)](get, nodeId, {
-          suppressToast: true,
-        }),
-      ),
-      ...survivingEdges.map((connectionId) => {
+      ...survivingRoots.map(async (nodeId) => ({
+        id: nodeId,
+        kind: 'node' as const,
+        succeeded: await DELETE_HANDLERS_INNER[
+          resolveNodeKind(graphData, nodeId)
+        ](get, nodeId, {suppressToast: true}),
+      })),
+      ...survivingEdges.map(async (connectionId) => {
         const connection = graphData.connections.find(
           (candidate) => candidate.systemId === connectionId,
         );
         if (!connection) {
-          return Promise.resolve(false);
+          return {id: connectionId, kind: 'edge' as const, succeeded: false};
         }
-        return get().deleteLinkInner(
-          get,
-          connectionId,
-          connection.linkKind,
-          {suppressToast: true},
-        );
+        return {
+          id: connectionId,
+          kind: 'edge' as const,
+          succeeded: await get().deleteLinkInner(
+            get,
+            connectionId,
+            connection.linkKind,
+            {suppressToast: true},
+          ),
+        };
       }),
     ]),
   );
 
-  const succeeded = results.filter(
-    (result) => result.status === 'fulfilled' && result.value,
-  ).length;
+  const successfulRoots = results.flatMap((result) =>
+    result.status === 'fulfilled' && result.value.succeeded &&
+    result.value.kind === 'node'
+      ? [result.value.id]
+      : [],
+  );
+  const successfulEdges = results.flatMap((result) =>
+    result.status === 'fulfilled' && result.value.succeeded &&
+    result.value.kind === 'edge'
+      ? [result.value.id]
+      : [],
+  );
+  const succeeded = successfulRoots.length + successfulEdges.length;
   const failed = total - succeeded;
   if (failed > 0) {
     logger.warn('multiSelectDelete: one or more deletes failed', {
@@ -172,4 +189,23 @@ export async function deleteSelection(
   } else {
     showToast(`${succeeded} of ${total} deletions succeeded`, 'warning');
   }
+
+  return {
+    deletedEdgeIds: selectedEdgeIds.filter((edgeId) => {
+      if (successfulEdges.includes(edgeId)) {
+        return true;
+      }
+      const edge = graphData.connections.find(
+        (connection) => connection.systemId === edgeId,
+      );
+      return (
+        edge !== undefined &&
+        (endpointCovered(graphData, successfulRoots, edge.sourceSystemId) ||
+          endpointCovered(graphData, successfulRoots, edge.destinationSystemId))
+      );
+    }),
+    deletedNodeIds: selectedNodeIds.filter((nodeId) =>
+      endpointCovered(graphData, successfulRoots, nodeId),
+    ),
+  };
 }
