@@ -365,6 +365,48 @@ function getSgKvVectorsBySubgraphId(
   );
 }
 
+function flattenComponentCollection(
+  collection: ComponentCollectionDto,
+): ComponentCollectionDto {
+  const controlLinks: ControlLinkDto[] = [...collection.controlLinks];
+  const dataLinks: DataLinkDto[] = [...collection.dataLinks];
+  const spfModules: SpfModuleDto[] = [...collection.spfModules];
+  const subsystems: SubsystemDto[] = [...(collection.subsystems ?? [])];
+  const pendingSubsystems = [...subsystems];
+
+  while (pendingSubsystems.length > 0) {
+    const subsystem = pendingSubsystems.pop();
+    if (!subsystem?.children) {
+      continue;
+    }
+
+    controlLinks.push(...subsystem.children.controlLinks);
+    dataLinks.push(...subsystem.children.dataLinks);
+    spfModules.push(
+      ...subsystem.children.spfModules.map((module) => ({
+        ...module,
+        parentSystemId: module.parentSystemId ?? subsystem.systemId,
+      })),
+    );
+
+    const childSubsystems = (subsystem.children.subsystems ?? []).map(
+      (childSubsystem) => ({
+        ...childSubsystem,
+        parentSystemId: childSubsystem.parentSystemId ?? subsystem.systemId,
+      }),
+    );
+    subsystems.push(...childSubsystems);
+    pendingSubsystems.push(...childSubsystems);
+  }
+
+  return {
+    controlLinks,
+    dataLinks,
+    spfModules,
+    subsystems,
+  };
+}
+
 /**
  * Maps one `SpfModuleDto` to a `ModuleInstance`, reused for incremental
  * reconciliation (design.md §6.3). Deliberately does not set
@@ -1035,7 +1077,7 @@ export function createGraphDataSlice<
           return;
         }
 
-        const dto = result.data;
+        const dto = flattenComponentCollection(result.data);
         const spfModules = dto.spfModules ?? [];
         const subsystemDtos = dto.subsystems ?? [];
 

@@ -276,6 +276,79 @@ describe('createGraphDataSlice — moduleType resolution', () => {
   });
 });
 
+describe('createGraphDataSlice — recursive component responses', () => {
+  it('loads modules and links nested under subsystem children', async () => {
+    const store = makeStore([]);
+
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        controlLinks: [],
+        dataLinks: [],
+        spfModules: [],
+        subsystems: [
+          makeSubsystemDto({
+            children: {
+              controlLinks: [],
+              dataLinks: [
+                makeDataLinkDto({
+                  destinationSystemId: 'rx-mod-2',
+                  sourceSystemId: 'rx-mod-1',
+                  systemId: 'rx-link-1',
+                }),
+              ],
+              spfModules: [
+                makeSpfModuleDto({
+                  containerSystemId: '55742300201',
+                  parentSystemId: undefined,
+                  subgraphSystemId: '26180845609',
+                  systemId: 'rx-mod-1',
+                }),
+                makeSpfModuleDto({
+                  containerSystemId: '55742300201',
+                  parentSystemId: undefined,
+                  subgraphSystemId: '26180845609',
+                  systemId: 'rx-mod-2',
+                }),
+              ],
+              subsystems: [],
+            },
+            name: 'Rx_Devices',
+            naturalId: 4027580468,
+            systemId: '100201922601',
+          }),
+        ],
+      },
+      message: undefined as never,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const graphData = store.getState().graphData!;
+    expect(Object.keys(graphData.moduleInstances).sort()).toEqual([
+      'rx-mod-1',
+      'rx-mod-2',
+    ]);
+    expect(graphData.subsystems['100201922601'].subgraphs).toEqual([
+      '26180845609',
+      '26180845609',
+    ]);
+    expect(graphData.containers['55742300201']).toMatchObject({
+      moduleInstances: ['rx-mod-1', 'rx-mod-2'],
+      subgraphSystemId: '26180845609',
+    });
+    expect(graphData.subgraphs['26180845609'].containers).toEqual([
+      '55742300201',
+    ]);
+    expect(graphData.connections).toHaveLength(1);
+    expect(graphData.connections[0]).toMatchObject({
+      destinationSystemId: 'rx-mod-2',
+      sourceSystemId: 'rx-mod-1',
+      systemId: 'rx-link-1',
+    });
+  });
+});
+
 describe('createGraphDataSlice — subgraph name enrichment', () => {
   it('reconciles Graph Data vectors into Edit Session only in Edit mode', async () => {
     const store = makeStore([]);

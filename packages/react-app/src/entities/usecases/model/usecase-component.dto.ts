@@ -92,6 +92,7 @@ export interface ValueInfoDto {
 }
 
 export interface SubsystemDto {
+  children?: ComponentCollectionDto;
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
   filteredKeys: KeyInfoDto[];
