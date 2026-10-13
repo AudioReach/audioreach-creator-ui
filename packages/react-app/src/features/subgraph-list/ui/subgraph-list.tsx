@@ -27,10 +27,7 @@ import {searchItems} from '~shared/utils/search-utils';
 
 const SUBGRAPH_DRAG_MIME = 'application/x-audioreach-node-type-subgraph';
 
-function handleDragStart(
-  subgraph: {systemId: string},
-  event: DragEvent,
-): void {
+function handleDragStart(subgraph: {systemId: string}, event: DragEvent): void {
   const draggedSubgraphInfo = {
     kind: 'subgraph',
     subgraphId: subgraph.systemId,
@@ -93,7 +90,9 @@ export function SubgraphList(): ReactElement {
   const uniqueSubgraphTypes = useMemo(() => {
     const types = new Set<string>();
     subgraphList.forEach((subgraph) => {
-      types.add(subgraph.subgraphType);
+      if (typeof subgraph.subgraphType === 'string') {
+        types.add(subgraph.subgraphType);
+      }
     });
     return Array.from(types).sort();
   }, [subgraphList]);
@@ -104,8 +103,10 @@ export function SubgraphList(): ReactElement {
       return [];
     }
 
-    let result = subgraphList.filter((subgraph) =>
-      selectedSubgraphTypes.includes(subgraph.subgraphType),
+    let result = subgraphList.filter(
+      (subgraph) =>
+        typeof subgraph.subgraphType === 'string' &&
+        selectedSubgraphTypes.includes(subgraph.subgraphType),
     );
 
     if (subgraphListSearchQuery) {

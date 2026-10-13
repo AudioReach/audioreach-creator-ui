@@ -10,6 +10,7 @@ import type {CkvDto, TagInfoDto} from '~entities/spf-module-data';
 import type {
   KvSelection,
   KvSelectionMetadata,
+  SubgraphResponseDto,
 } from '~entities/subgraph-definitions';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {
@@ -96,6 +97,12 @@ export interface Subgraph {
   subgraphName: string;
   subgraphType: string;
   systemId: string;
+}
+
+interface SubgraphMetadataSource {
+  mergeSubgraphDetails?: (subgraphs: SubgraphResponseDto[]) => void;
+  subgraphDetailsById?: Record<string, SubgraphResponseDto>;
+  updateCachedSubgraphName?: (subgraphSystemId: string, name: string) => void;
 }
 
 export interface Container {
@@ -317,22 +324,37 @@ async function hydrateContainerNaturalIds(
   }
 }
 
-/**
- * Fetches real subgraph details and overlays them onto the placeholder entries
- * `deriveContainersAndSubgraphs` produces. Failure is non-fatal so a detail
- * lookup failure does not block the graph from loading.
- */
-/** Enriches graph-derived subgraph placeholders with detail-only SGKV data. */
+function applySubgraphDetailDto(
+  subgraph: Subgraph,
+  dto: SubgraphResponseDto,
+): void {
+  subgraph.naturalId = dto.naturalId;
+  subgraph.kvVectors = mapSubgraphKvVectors(dto.SGKV);
+  subgraph.subgraphName = dto.name ?? '';
+  subgraph.subgraphType = dto.subGraphSharedType;
+}
+
+/** Hydrates from the cache and fetches only subgraph details not yet cached. */
 async function applySubgraphDetails(
   projectId: string,
   subgraphs: Record<string, Subgraph>,
+  metadataSource?: SubgraphMetadataSource,
 ): Promise<void> {
-  const subgraphIds = Object.keys(subgraphs);
-  if (subgraphIds.length === 0) {
+  const missingSubgraphIds: string[] = [];
+  for (const [subgraphId, subgraph] of Object.entries(subgraphs)) {
+    const detail = metadataSource?.subgraphDetailsById?.[subgraphId];
+    if (detail) {
+      applySubgraphDetailDto(subgraph, detail);
+    } else {
+      missingSubgraphIds.push(subgraphId);
+    }
+  }
+
+  if (missingSubgraphIds.length === 0) {
     return;
   }
 
-  const result = await getSubgraphsByIds(projectId, subgraphIds);
+  const result = await getSubgraphsByIds(projectId, missingSubgraphIds);
   if (hasBlockingIssues(result) || !result.data) {
     logger.error('graphDataSlice: applySubgraphDetails — API error', {
       action: 'loadGraphData',
@@ -342,13 +364,12 @@ async function applySubgraphDetails(
     return;
   }
 
+  metadataSource?.mergeSubgraphDetails?.(result.data);
+
   for (const dto of result.data) {
     const sg = subgraphs[dto.systemId];
     if (sg) {
-      sg.naturalId = dto.naturalId;
-      sg.kvVectors = mapSubgraphKvVectors(dto.SGKV);
-      sg.subgraphName = dto.name ?? '';
-      sg.subgraphType = dto.subGraphSharedType;
+      applySubgraphDetailDto(sg, dto);
     }
   }
 }
@@ -785,7 +806,8 @@ export function createGraphDataSlice<
   S extends GraphDataSlice &
     ModuleListSlice &
     EditSessionSlice &
-    SubsystemSlice,
+    SubsystemSlice &
+    SubgraphMetadataSource,
 >(
   set: StoreApi<S>['setState'],
   get: StoreApi<S>['getState'],
@@ -1133,7 +1155,7 @@ export function createGraphDataSlice<
         const {containers, newSubgraphs, subgraphs} =
           deriveContainersAndSubgraphs(moduleInstances);
         // The component response identifies subgraphs; detail data supplies SGKV.
-        await applySubgraphDetails(projectId, newSubgraphs);
+        await applySubgraphDetails(projectId, newSubgraphs, get());
         await hydrateContainerNaturalIds(projectId, containers);
 
         const subsystemIdToChildSubsystemIds = new Map<string, string[]>();
@@ -1282,7 +1304,7 @@ export function createGraphDataSlice<
       // A newly derived subgraph has only its placeholder fields and needs its
       // full details, the same way a full Graph Data load does.
       if (Object.keys(newSubgraphs).length > 0) {
-        await applySubgraphDetails(projectId, newSubgraphs);
+        await applySubgraphDetails(projectId, newSubgraphs, get());
       }
 
       await hydrateContainerNaturalIds(projectId, containers);
@@ -1472,11 +1494,13 @@ export function createGraphDataSlice<
     },
 
     updateSubgraphNameLocal: (subgraphSystemId: string, name: string): void => {
-      const {graphData} = get();
+      const {graphData, updateCachedSubgraphName} = get();
       const current = graphData?.subgraphs[subgraphSystemId];
+      updateCachedSubgraphName?.(subgraphSystemId, name);
       if (!graphData || !current) {
         return;
       }
+
       set({
         graphData: {
           ...graphData,

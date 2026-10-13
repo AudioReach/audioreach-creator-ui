@@ -158,9 +158,7 @@ export function createSubgraphOperations(
       [...removedConnections, ...removedExcludedLinks]
         .filter(
           (connection, index, self) =>
-            self.findIndex(
-              (c) => c.systemId === connection.systemId,
-            ) === index,
+            self.findIndex((c) => c.systemId === connection.systemId) === index,
         )
         .map(connectionToLinkEndpoints),
     );
@@ -306,7 +304,10 @@ export function createSubgraphOperations(
         }
 
         const defModuleTypeById = new Map(
-          get().moduleList.map((d) => [d.moduleDefinitionSystemId, d.moduleType]),
+          get().moduleList.map((d) => [
+            d.moduleDefinitionSystemId,
+            d.moduleType,
+          ]),
         );
 
         set((s) => {
@@ -355,9 +356,7 @@ export function createSubgraphOperations(
 
     reincludeLink: (get, connectionId) => {
       const {excludedLinks} = get();
-      const connection = excludedLinks.find(
-        (c) => c.systemId === connectionId,
-      );
+      const connection = excludedLinks.find((c) => c.systemId === connectionId);
       if (!connection) {
         return;
       }
@@ -392,7 +391,13 @@ export function createSubgraphOperations(
           );
           return;
         }
-        if (!get().graphData?.subgraphs[subgraphId]) {
+        const {graphData, subgraphList} = get();
+        const hasLocalSubgraph =
+          Boolean(graphData?.subgraphs[subgraphId]) ||
+          Boolean(
+            subgraphList?.some((subgraph) => subgraph.systemId === subgraphId),
+          );
+        if (!hasLocalSubgraph) {
           logger.warn(
             `subgraph-operations: renameSubgraph no local subgraph for ${subgraphId}, skipping state write`,
             {action: 'renameSubgraph', component: 'subgraphOperations'},
@@ -401,19 +406,7 @@ export function createSubgraphOperations(
         }
 
         const name = result.data.name ?? '';
-        set((s) => ({
-          graphData: s.graphData && {
-            ...s.graphData,
-            subgraphs: {
-              ...s.graphData.subgraphs,
-              [subgraphId]: {
-                ...s.graphData.subgraphs[subgraphId],
-                subgraphName: name,
-              },
-            },
-          },
-        }));
-        get().markDirty();
+        get().updateSubgraphNameLocal(subgraphId, name);
       });
     },
   };
