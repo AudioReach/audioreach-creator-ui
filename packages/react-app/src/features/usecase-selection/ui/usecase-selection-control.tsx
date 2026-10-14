@@ -101,6 +101,8 @@ export const UsecaseSelectionControl: React.FC<
   // ── Local UI/action state ───────────────────────────────────────────────────
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [draftSelectedUsecases, setDraftSelectedUsecases] =
+    useState(selectedUsecases);
   // Suggestion popup state
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -116,6 +118,12 @@ export const UsecaseSelectionControl: React.FC<
   useEffect(() => {
     setLocalUsecaseData(usecaseData);
   }, [usecaseData]);
+
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      setDraftSelectedUsecases(selectedUsecases);
+    }
+  }, [isDropdownOpen, selectedUsecases]);
 
   const localLeafItems = useMemo(
     () => localUsecaseData.flatMap(getAllLeafItems),
@@ -153,28 +161,32 @@ export const UsecaseSelectionControl: React.FC<
   }, [localUsecaseData, projectId, setExpandedCategories]);
 
   // ── Recently-selected cache update on close ────────────────────────────────
-  const previouslyOpenRef = useRef<boolean>(false);
+  const closeDropdown = useCallback(() => {
+    const selectedItems = localLeafItems.filter((item) =>
+      draftSelectedUsecases.includes(item.name),
+    );
 
-  useEffect(() => {
-    const wasOpen = previouslyOpenRef.current;
-
-    if (wasOpen && !isDropdownOpen && selectedUsecases.length > 0) {
-      const selectedItems = localLeafItems.filter((item) =>
-        selectedUsecases.includes(item.name),
-      );
-
-      if (selectedItems.length > 0) {
-        addToRecentlySelected(projectId, selectedItems);
-      }
+    if (selectedItems.length > 0) {
+      addToRecentlySelected(projectId, selectedItems);
     }
 
-    previouslyOpenRef.current = isDropdownOpen;
+    setIsDropdownOpen(false);
+
+    if (
+      draftSelectedUsecases.length !== selectedUsecases.length ||
+      draftSelectedUsecases.some(
+        (usecase, index) => usecase !== selectedUsecases[index],
+      )
+    ) {
+      onSelectedUsecasesChange(draftSelectedUsecases);
+    }
   }, [
-    isDropdownOpen,
-    selectedUsecases,
-    localLeafItems,
-    projectId,
     addToRecentlySelected,
+    draftSelectedUsecases,
+    localLeafItems,
+    onSelectedUsecasesChange,
+    projectId,
+    selectedUsecases,
   ]);
 
   // ── Click-outside / Escape handling ────────────────────────────────────────
@@ -248,12 +260,12 @@ export const UsecaseSelectionControl: React.FC<
         return;
       }
 
-      setIsDropdownOpen(false);
+      closeDropdown();
     };
 
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isDropdownOpen) {
-        setIsDropdownOpen(false);
+        closeDropdown();
       }
     };
 
@@ -266,7 +278,7 @@ export const UsecaseSelectionControl: React.FC<
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [isDropdownOpen, isDeleting]);
+  }, [isDropdownOpen, isDeleting, closeDropdown]);
 
   // ── Search routing: complex (backend) vs simple (frontend) ─────────────────
   const isComplex = useMemo(
@@ -344,12 +356,12 @@ export const UsecaseSelectionControl: React.FC<
   const handleSelectUsecase = useCallback(
     (itemName: string, isSelected: boolean) => {
       if (isSelected) {
-        if (!selectedUsecases.includes(itemName)) {
-          onSelectedUsecasesChange([...selectedUsecases, itemName]);
+        if (!draftSelectedUsecases.includes(itemName)) {
+          setDraftSelectedUsecases([...draftSelectedUsecases, itemName]);
         }
       } else {
-        onSelectedUsecasesChange(
-          selectedUsecases.filter((name) => name !== itemName),
+        setDraftSelectedUsecases(
+          draftSelectedUsecases.filter((name) => name !== itemName),
         );
       }
 
@@ -368,8 +380,7 @@ export const UsecaseSelectionControl: React.FC<
       }
     },
     [
-      selectedUsecases,
-      onSelectedUsecasesChange,
+      draftSelectedUsecases,
       panelLeafItemsByName,
       projectId,
     ],
@@ -379,20 +390,20 @@ export const UsecaseSelectionControl: React.FC<
     (itemNames: string[], isSelected: boolean) => {
       if (isSelected) {
         const newEntries = itemNames.filter(
-          (name) => !selectedUsecases.includes(name),
+          (name) => !draftSelectedUsecases.includes(name),
         );
 
         if (newEntries.length > 0) {
-          onSelectedUsecasesChange([...selectedUsecases, ...newEntries]);
+          setDraftSelectedUsecases([...draftSelectedUsecases, ...newEntries]);
         }
       } else {
         const toRemove = new Set(itemNames);
-        onSelectedUsecasesChange(
-          selectedUsecases.filter((name) => !toRemove.has(name)),
+        setDraftSelectedUsecases(
+          draftSelectedUsecases.filter((name) => !toRemove.has(name)),
         );
       }
     },
-    [selectedUsecases, onSelectedUsecasesChange],
+    [draftSelectedUsecases],
   );
 
   const handleExpandAll = () => {
@@ -413,16 +424,18 @@ export const UsecaseSelectionControl: React.FC<
 
     if (isSelected) {
       // Add all visible usecases; keep existing selections outside the filter.
-      const existing = selectedUsecases.filter(
+      const existing = draftSelectedUsecases.filter(
         (name) => !filteredUsecaseNames.has(name),
       );
-      onSelectedUsecasesChange([
+      setDraftSelectedUsecases([
         ...new Set([...existing, ...filteredUsecaseNames]),
       ]);
     } else {
       // Remove only visible usecases; keep selections outside the filter.
-      onSelectedUsecasesChange(
-        selectedUsecases.filter((name) => !filteredUsecaseNames.has(name)),
+      setDraftSelectedUsecases(
+        draftSelectedUsecases.filter(
+          (name) => !filteredUsecaseNames.has(name),
+        ),
       );
     }
   };
@@ -430,7 +443,7 @@ export const UsecaseSelectionControl: React.FC<
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
 
-    const selectedSet = new Set(selectedUsecases);
+    const selectedSet = new Set(draftSelectedUsecases);
 
     const systemIds = getSystemIdsFromFormattedUsecases(
       [...selectedSet],
@@ -461,6 +474,7 @@ export const UsecaseSelectionControl: React.FC<
     try {
       if (!hasBlockingIssues(await deleteUsecases(projectId, systemIds))) {
         setLocalUsecaseData(nextData);
+        setDraftSelectedUsecases([]);
         onSelectedUsecasesChange([]);
         removeFromRecentlySelected(projectId, [...selectedSet]);
         setIsDropdownOpen(false);
@@ -553,7 +567,7 @@ export const UsecaseSelectionControl: React.FC<
   // Generate placeholder text for the search box to reflect the categories of
   // the selected use cases.
   const {categoryText} = useMemo(() => {
-    const selectedNamesSet = new Set(selectedUsecases);
+    const selectedNamesSet = new Set(draftSelectedUsecases);
     const cats = localUsecaseData
       .filter((cat) =>
         getLeafItems(cat.items).some((item) => selectedNamesSet.has(item.name)),
@@ -566,12 +580,12 @@ export const UsecaseSelectionControl: React.FC<
           ? ` from categories: ${cats.join(', ')}`
           : '';
     return {categoryText: text};
-  }, [selectedUsecases, localUsecaseData]);
+  }, [draftSelectedUsecases, localUsecaseData]);
 
   const searchPlaceholder = isDropdownOpen
     ? 'Search for usecases...'
-    : selectedUsecases.length > 0
-      ? `${selectedUsecases.length} of ${totalUsecaseCount} usecase${totalUsecaseCount === 1 ? '' : 's'} selected${categoryText}`
+    : draftSelectedUsecases.length > 0
+      ? `${draftSelectedUsecases.length} of ${totalUsecaseCount} usecase${totalUsecaseCount === 1 ? '' : 's'} selected${categoryText}`
       : 'No usecases selected';
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -593,7 +607,7 @@ export const UsecaseSelectionControl: React.FC<
                   <ProgressRing />
                 </div>
                 <div className="text-neutral-primary mb-2 text-lg font-semibold">
-                  {`Deleting Usecase${selectedUsecases.length > 1 ? 's' : ''}...`}
+                  {`Deleting Usecase${draftSelectedUsecases.length > 1 ? 's' : ''}...`}
                 </div>
                 <div className="text-neutral-secondary text-sm">
                   Please wait...
@@ -730,11 +744,11 @@ export const UsecaseSelectionControl: React.FC<
             handleSelectCategory={handleSelectCategory}
             handleSelectUsecase={handleSelectUsecase}
             isSearching={isSearching}
-            onClose={() => setIsDropdownOpen(false)}
+            onClose={closeDropdown}
             onCollapseAll={handleCollapseAll}
             onDeleteSelected={() => void handleDeleteSelected()}
             onExpandAll={handleExpandAll}
-            selectedUsecases={selectedUsecases}
+            selectedUsecases={draftSelectedUsecases}
             toggleCategoryExpansion={toggleCategoryExpansion}
             usecaseData={panelUsecaseData}
           />

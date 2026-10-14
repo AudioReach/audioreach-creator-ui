@@ -288,6 +288,10 @@ async function openDropdown(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('search-input'));
 }
 
+function closeDropdown() {
+  fireEvent.keyDown(document, {key: 'Escape'});
+}
+
 /**
  * Opens the confirmation dialog then clicks the Delete button inside it.
  * Step 1: click trash icon (button with aria-label "Delete")
@@ -569,7 +573,7 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
 describe('UsecaseSelectionControl — usecase selection', () => {
   // ── Individual usecase toggle ─────────────────────────────────────────────
 
-  it('calls onSelectedUsecasesChange with usecase added when checked', async () => {
+  it('commits an individual usecase selection when the dropdown closes', async () => {
     const user = userEvent.setup();
     renderControl([]);
 
@@ -578,10 +582,13 @@ describe('UsecaseSelectionControl — usecase selection', () => {
       screen.getByRole('checkbox', {name: 'Select Speaker_Mic'}),
     );
 
+    expect(mockSetSelectedUsecases).not.toHaveBeenCalled();
+    closeDropdown();
+
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith(['Speaker_Mic']);
   });
 
-  it('calls onSelectedUsecasesChange with usecase removed when unchecked', async () => {
+  it('commits an individual deselection when the dropdown closes', async () => {
     const user = userEvent.setup();
     renderControl(['Speaker_Mic']);
 
@@ -589,6 +596,9 @@ describe('UsecaseSelectionControl — usecase selection', () => {
     await user.click(
       screen.getByRole('checkbox', {name: 'Select Speaker_Mic'}),
     );
+
+    expect(mockSetSelectedUsecases).not.toHaveBeenCalled();
+    closeDropdown();
 
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
   });
@@ -603,6 +613,8 @@ describe('UsecaseSelectionControl — usecase selection', () => {
     await user.click(
       screen.getByRole('checkbox', {name: 'Select all usecases'}),
     );
+
+    closeDropdown();
 
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([
       'Speaker_Mic',
@@ -619,6 +631,8 @@ describe('UsecaseSelectionControl — usecase selection', () => {
       screen.getByRole('checkbox', {name: 'Select all usecases'}),
     );
 
+    closeDropdown();
+
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
   });
 
@@ -632,6 +646,8 @@ describe('UsecaseSelectionControl — usecase selection', () => {
     await user.click(
       screen.getByRole('checkbox', {name: 'Select all usecases in Default'}),
     );
+
+    closeDropdown();
 
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([
       'Speaker_Mic',
@@ -647,6 +663,8 @@ describe('UsecaseSelectionControl — usecase selection', () => {
     await user.click(
       screen.getByRole('checkbox', {name: 'Select all usecases in Default'}),
     );
+
+    closeDropdown();
 
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([]);
   });
@@ -972,6 +990,8 @@ describe('UsecaseSelectionControl — grouped categories (subsystem)', () => {
       screen.getByRole('checkbox', {name: 'Select all in StreamPP_RX'}),
     );
 
+    closeDropdown();
+
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith([
       'Speaker_Mic',
       'HFP_Rx_Playback',
@@ -986,6 +1006,8 @@ describe('UsecaseSelectionControl — grouped categories (subsystem)', () => {
     await user.click(
       screen.getByRole('checkbox', {name: 'Select Speaker_Mic'}),
     );
+
+    closeDropdown();
 
     expect(mockSetSelectedUsecases).toHaveBeenCalledWith(['Speaker_Mic']);
   });
