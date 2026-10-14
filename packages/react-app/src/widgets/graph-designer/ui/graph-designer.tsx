@@ -1472,7 +1472,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
               usecaseData={resolvedData}
             />
           </div>
-          <ApplyDiscardControls projectId={projectId} />
+          <ApplyDiscardControls
+            projectId={projectId}
+            selectedUsecaseSystemIds={selectedUsecaseSystemIds}
+          />
         </div>
       </div>
 

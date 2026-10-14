@@ -142,9 +142,15 @@ function makeStore(): StoreApi<GraphDesignerStore> {
 function renderApplyDiscard(
   store: StoreApi<GraphDesignerStore>,
   routingTriggered = true,
+  selectedUsecaseSystemIds: string[] = [],
 ) {
   return renderHook(
-    () => useApplyDiscard({projectId: PROJECT_ID, routingTriggered}),
+    () =>
+      useApplyDiscard({
+        projectId: PROJECT_ID,
+        routingTriggered,
+        selectedUsecaseSystemIds,
+      }),
     {
       wrapper: ({children}) => (
         <GraphDesignerStoreContext.Provider value={store}>
@@ -191,6 +197,32 @@ describe('useApplyDiscard', () => {
   });
 
   describe('apply — reconcile outcomes', () => {
+    it('sends selected usecase system IDs instead of display labels', async () => {
+      const store = makeStore();
+      store.setState({selectedUsecases: ['Music • Playback']});
+      store.getState().markDirty();
+      mockRunApplyReconcile.mockResolvedValue({kind: 'finalizeDirectly'});
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+      const {result} = renderApplyDiscard(store, true, ['uc-123']);
+
+      await act(async () => {
+        await result.current.apply();
+      });
+
+      expect(mockRunApplyReconcile).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          request: expect.objectContaining({
+            selectedUsecaseSystemIds: ['uc-123'],
+          }),
+        }),
+      );
+    });
+
     it('finalizeDirectly proceeds to finalize with empty checkedChangeIds and keep nav', async () => {
       const store = makeStore();
       store.getState().markDirty();

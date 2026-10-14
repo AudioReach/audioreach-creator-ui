@@ -20,21 +20,31 @@ import {DiscardConfirmDialog} from './discard-confirm-dialog';
 
 export interface ApplyDiscardControlsProps {
   projectId: string;
+  selectedUsecaseSystemIds: string[];
 }
 
-export function ApplyDiscardControls({projectId}: ApplyDiscardControlsProps) {
+export function ApplyDiscardControls({
+  projectId,
+  selectedUsecaseSystemIds,
+}: ApplyDiscardControlsProps) {
   // TODO: The real routing signal is provided by the edit-mode feature.
   // Until that lands, treat every session as routing-triggered.
   const routingTriggered = true;
-  const {enterEditMode, isDirty, mode} = useGraphDesignerStoreShallow((s) => ({
-    enterEditMode: s.enterEditMode,
-    isDirty: s.isDirty,
-    mode: s.mode,
-  }));
+  const {enterEditMode, isDirty, isSgKvMetadataRefreshing, mode} =
+    useGraphDesignerStoreShallow((s) => ({
+      enterEditMode: s.enterEditMode,
+      isDirty: s.isDirty,
+      isSgKvMetadataRefreshing: s.isSgKvMetadataRefreshing,
+      mode: s.mode,
+    }));
   const activeExclusiveMode = useProjectStoreShallow(
     (s) => s.activeExclusiveMode,
   );
-  const applyDiscard = useApplyDiscard({projectId, routingTriggered});
+  const applyDiscard = useApplyDiscard({
+    projectId,
+    routingTriggered,
+    selectedUsecaseSystemIds,
+  });
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
 
   const handleEditClick = async (): Promise<void> => {
@@ -73,7 +83,9 @@ export function ApplyDiscardControls({projectId}: ApplyDiscardControlsProps) {
       {mode === 'edit' && (
         <>
           <Button
-            disabled={!isDirty || applyDiscard.isBusy}
+            disabled={
+              !isDirty || applyDiscard.isBusy || isSgKvMetadataRefreshing
+            }
             emphasis="primary"
             onClick={() => void applyDiscard.apply()}
             startIcon={Check}
