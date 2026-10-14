@@ -5,19 +5,22 @@
 
 import {renderHook, waitFor} from '@testing-library/react';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
-
+const mockGetAllUsecases = jest.fn();
 const mockGetUsecasesFilteredBySubsystem = jest.fn();
 const mockMapSubsystemResultsToCategories = jest.fn();
+const mockMapUsecaseDtoToCategories = jest.fn();
 
 jest.mock('~entities/usecases/api/usecases-api', () => ({
-  getUsecasesFilteredBySubsystem: (...args: any[]) =>
+  getAllUsecases: (...args: unknown[]) => mockGetAllUsecases(...args),
+  getUsecasesFilteredBySubsystem: (...args: unknown[]) =>
     mockGetUsecasesFilteredBySubsystem(...args),
 }));
 
 jest.mock('~entities/usecases/model/usecase.mapper', () => ({
-  mapSubsystemResultsToCategories: (...args: any[]) =>
+  mapSubsystemResultsToCategories: (...args: unknown[]) =>
     mockMapSubsystemResultsToCategories(...args),
+  mapUsecaseDtoToCategories: (...args: unknown[]) =>
+    mockMapUsecaseDtoToCategories(...args),
 }));
 
 jest.mock('~shared/lib/logger', () => ({
@@ -35,29 +38,27 @@ import type {
   WorkflowType,
 } from '~shared/config/user-preferences-types';
 
-// ── Test data ─────────────────────────────────────────────────────────────────
-
 const PROJECT_ID = 'project-1';
 
-const ITEM_SPEAKER: any = {
+const ITEM_SPEAKER = {
   expanded: false,
   keyValuePairs: [],
   name: 'Speaker_Mic',
   systemId: 'UC_001',
 };
 
-const ITEM_HFP: any = {
+const ITEM_HFP = {
   expanded: false,
   keyValuePairs: [],
   name: 'HFP_Rx_Playback',
   systemId: 'UC_002',
 };
 
-const BASE_DATA: any[] = [
+const BASE_DATA = [
   {expanded: true, items: [ITEM_SPEAKER, ITEM_HFP], name: 'Default'},
 ];
 
-const SUBSYSTEM_CATEGORIES: any[] = [
+const SUBSYSTEM_CATEGORIES = [
   {
     expanded: true,
     items: [
@@ -72,247 +73,104 @@ const SUBSYSTEM_CATEGORIES: any[] = [
   },
 ];
 
-// Raw API response for subsystem endpoint
+const BASE_API_RESPONSE = [{keyValuePairs: [], systemId: 'UC_001'}];
+
 const SUBSYSTEM_API_RESPONSE = [
   {
-    filteredKv: {keyValuePairs: []},
-    usecases: [{...ITEM_SPEAKER}], // UC_001 is in the subsystem
+    filteredKv: {
+      keyValuePairs: [],
+      subsystems: [{name: 'StreamPP_RX', subsystemNaturalId: 100}],
+    },
+    usecases: [{...ITEM_SPEAKER}],
   },
 ];
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
-
 beforeEach(() => {
-  mockMapSubsystemResultsToCategories.mockReturnValue(SUBSYSTEM_CATEGORIES);
+  mockGetAllUsecases.mockResolvedValue({
+    data: BASE_API_RESPONSE,
+    success: true,
+  });
   mockGetUsecasesFilteredBySubsystem.mockResolvedValue({
     data: SUBSYSTEM_API_RESPONSE,
     success: true,
   });
+  mockMapSubsystemResultsToCategories.mockReturnValue(SUBSYSTEM_CATEGORIES);
+  mockMapUsecaseDtoToCategories.mockReturnValue(BASE_DATA);
 });
 
 afterEach(() => {
   jest.clearAllMocks();
 });
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-describe('useWorkflowUsecaseData — Case 1: usecase-level', () => {
-  const workflowType: WorkflowType = 'usecase-workflow';
-  const workflowLevel: WorkflowLevel = 'usecase-level';
-
-  it('returns baseUsecaseData unchanged', () => {
+describe('useWorkflowUsecaseData', () => {
+  it('fetches and maps the base list for usecase-level workflow', async () => {
     const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
+      useWorkflowUsecaseData(PROJECT_ID, 'usecase-workflow', 'usecase-level'),
     );
 
-    expect(result.current.resolvedData).toBe(BASE_DATA);
-  });
-
-  it('does not call the subsystem API', () => {
-    renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    expect(mockGetUsecasesFilteredBySubsystem).not.toHaveBeenCalled();
-  });
-
-  it('isLoading is false', () => {
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    expect(result.current.isLoading).toBe(false);
-  });
-});
-
-describe('useWorkflowUsecaseData — Case 2: subsystem-level', () => {
-  const workflowType: WorkflowType = 'usecase-workflow';
-  const workflowLevel: WorkflowLevel = 'subsystem-level';
-
-  it('calls the subsystem API with the correct projectGroupId', async () => {
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(mockGetUsecasesFilteredBySubsystem).toHaveBeenCalledWith(PROJECT_ID);
-  });
-
-  it('removes usecases that appear in subsystem groups from base data', async () => {
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    // UC_001 (Speaker_Mic) is in the subsystem response, so it should be
-    // removed from the base "Default" category to avoid duplicates.
-    const defaultCat = result.current.resolvedData.find(
-      (c) => c.name === 'Default',
-    );
-    expect(defaultCat?.items).not.toContainEqual(
-      expect.objectContaining({systemId: 'UC_001'}),
-    );
-    // UC_002 (HFP_Rx_Playback) is NOT in the subsystem, so it stays.
-    expect(defaultCat?.items).toContainEqual(
-      expect.objectContaining({systemId: 'UC_002'}),
-    );
-  });
-
-  it('appends subsystem categories to the filtered base data', async () => {
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    const subsystemCat = result.current.resolvedData.find(
-      (c) => c.name === 'Subsystem Filtered Usecases',
-    );
-    expect(subsystemCat).toBeDefined();
-  });
-
-  it('drops base categories that become empty after deduplication', async () => {
-    // All items in base data are in the subsystem
-    const allInSubsystem: any[] = [
-      {expanded: true, items: [ITEM_SPEAKER], name: 'Default'},
-    ];
-
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        allInSubsystem,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    // "Default" category should be dropped (all items removed)
-    const defaultCat = result.current.resolvedData.find(
-      (c) => c.name === 'Default',
-    );
-    expect(defaultCat).toBeUndefined();
-  });
-
-  it('isLoading transitions from true to false', async () => {
-    let resolveApi!: (value: any) => void;
-    mockGetUsecasesFilteredBySubsystem.mockReturnValue(
-      new Promise((resolve) => {
-        resolveApi = resolve;
-      }),
-    );
-
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
-    );
-
-    // Should be loading while API is in flight
     expect(result.current.isLoading).toBe(true);
 
-    resolveApi({data: SUBSYSTEM_API_RESPONSE, success: true});
-
     await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockGetAllUsecases).toHaveBeenCalledWith(PROJECT_ID);
+    expect(mockMapUsecaseDtoToCategories).toHaveBeenCalledWith(
+      BASE_API_RESPONSE,
+    );
+    expect(mockGetUsecasesFilteredBySubsystem).not.toHaveBeenCalled();
+    expect(result.current.resolvedData).toEqual(BASE_DATA);
   });
-});
 
-describe('useWorkflowUsecaseData — Case 3: system-workflow', () => {
-  const workflowType: WorkflowType = 'system-workflow';
-  const workflowLevel: WorkflowLevel = 'usecase-level';
-
-  it('calls the subsystem API', async () => {
+  it('combines valid subsystem groups with the base list for system workflow', async () => {
     const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
+      useWorkflowUsecaseData(PROJECT_ID, 'system-workflow', 'usecase-level'),
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(mockGetUsecasesFilteredBySubsystem).toHaveBeenCalledWith(PROJECT_ID);
+    expect(result.current.resolvedData).toEqual([
+      ...BASE_DATA,
+      ...SUBSYSTEM_CATEGORIES,
+    ]);
   });
 
-  it('combines base data AND subsystem categories without deduplication', async () => {
+  it('keeps usecases from empty subsystem groups in Default', async () => {
+    const emptySubsystemResult = {
+      filteredKv: {
+        keyValuePairs: [],
+        subsystems: [],
+      },
+      usecases: [{...ITEM_HFP}],
+    };
+    mockGetUsecasesFilteredBySubsystem.mockResolvedValue({
+      data: [SUBSYSTEM_API_RESPONSE[0], emptySubsystemResult],
+      success: true,
+    });
+
     const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        workflowType,
-        workflowLevel,
-        BASE_DATA,
-      ),
+      useWorkflowUsecaseData(PROJECT_ID, 'usecase-workflow', 'subsystem-level'),
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // Both the original "Default" category AND the subsystem category are present
-    const names = result.current.resolvedData.map((c) => c.name);
-    expect(names).toContain('Default');
-    expect(names).toContain('Subsystem Filtered Usecases');
-
-    // UC_001 is NOT removed from base data in System Workflow
-    const defaultCat = result.current.resolvedData.find(
-      (c) => c.name === 'Default',
+    expect(mockMapSubsystemResultsToCategories).toHaveBeenCalledWith(
+      SUBSYSTEM_API_RESPONSE,
     );
-    expect(defaultCat?.items).toContainEqual(
-      expect.objectContaining({systemId: 'UC_001'}),
+    const defaultCategory = result.current.resolvedData.find(
+      (category) => category.name === 'Default',
     );
+    expect(defaultCategory?.items).toContainEqual(ITEM_HFP);
+    expect(defaultCategory?.items).not.toContainEqual(ITEM_SPEAKER);
   });
-});
 
-describe('useWorkflowUsecaseData — error handling', () => {
-  it('falls back to baseUsecaseData when API returns success=false', async () => {
+  it('falls back to the base list when the subsystem request fails', async () => {
     mockGetUsecasesFilteredBySubsystem.mockResolvedValue({
       message: 'Server error',
       success: false,
     });
 
     const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        'usecase-workflow',
-        'subsystem-level',
-        BASE_DATA,
-      ),
+      useWorkflowUsecaseData(PROJECT_ID, 'usecase-workflow', 'subsystem-level'),
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -320,48 +178,10 @@ describe('useWorkflowUsecaseData — error handling', () => {
     expect(result.current.resolvedData).toBe(BASE_DATA);
   });
 
-  it('falls back to baseUsecaseData when API throws', async () => {
-    mockGetUsecasesFilteredBySubsystem.mockRejectedValue(
-      new Error('Network error'),
-    );
-
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        'usecase-workflow',
-        'subsystem-level',
-        BASE_DATA,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(result.current.resolvedData).toBe(BASE_DATA);
-  });
-
-  it('isLoading is false after an API error', async () => {
-    mockGetUsecasesFilteredBySubsystem.mockRejectedValue(
-      new Error('Network error'),
-    );
-
-    const {result} = renderHook(() =>
-      useWorkflowUsecaseData(
-        PROJECT_ID,
-        'system-workflow',
-        'usecase-level',
-        BASE_DATA,
-      ),
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-  });
-});
-
-describe('useWorkflowUsecaseData — workflow changes', () => {
-  it('re-fetches when workflowLevel changes from usecase-level to subsystem-level', async () => {
+  it('recomputes without refetching the base list when workflow preferences change', async () => {
     const {rerender, result} = renderHook(
       ({level, type}: {level: WorkflowLevel; type: WorkflowType}) =>
-        useWorkflowUsecaseData(PROJECT_ID, type, level, BASE_DATA),
+        useWorkflowUsecaseData(PROJECT_ID, type, level),
       {
         initialProps: {
           level: 'usecase-level' as WorkflowLevel,
@@ -370,33 +190,66 @@ describe('useWorkflowUsecaseData — workflow changes', () => {
       },
     );
 
-    expect(mockGetUsecasesFilteredBySubsystem).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     rerender({level: 'subsystem-level', type: 'usecase-workflow'});
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    expect(mockGetAllUsecases).toHaveBeenCalledTimes(1);
     expect(mockGetUsecasesFilteredBySubsystem).toHaveBeenCalledTimes(1);
+
+    rerender({level: 'usecase-level', type: 'usecase-workflow'});
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockGetAllUsecases).toHaveBeenCalledTimes(1);
+    expect(mockGetUsecasesFilteredBySubsystem).toHaveBeenCalledTimes(1);
+    expect(result.current.resolvedData).toEqual(BASE_DATA);
+    expect(result.current.resolvedData).not.toBe(BASE_DATA);
   });
 
-  it('returns baseUsecaseData immediately when switching back to usecase-level', async () => {
+  it('publishes a fresh base result when switching back to usecase-level', async () => {
+    mockGetUsecasesFilteredBySubsystem.mockResolvedValue({
+      message: 'Server error',
+      success: false,
+    });
+
     const {rerender, result} = renderHook(
-      ({level, type}: {level: WorkflowLevel; type: WorkflowType}) =>
-        useWorkflowUsecaseData(PROJECT_ID, type, level, BASE_DATA),
+      ({level}: {level: WorkflowLevel}) =>
+        useWorkflowUsecaseData(PROJECT_ID, 'usecase-workflow', level),
       {
-        initialProps: {
-          level: 'subsystem-level' as WorkflowLevel,
-          type: 'usecase-workflow' as WorkflowType,
-        },
+        initialProps: {level: 'subsystem-level' as WorkflowLevel},
       },
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    rerender({level: 'usecase-level', type: 'usecase-workflow'});
+    const fallbackData = result.current.resolvedData;
+    expect(fallbackData).toBe(BASE_DATA);
 
-    // Immediately returns base data, no loading
-    expect(result.current.resolvedData).toBe(BASE_DATA);
-    expect(result.current.isLoading).toBe(false);
+    rerender({level: 'usecase-level'});
+
+    await waitFor(() => {
+      expect(result.current.resolvedData).not.toBe(fallbackData);
+    });
+
+    expect(result.current.resolvedData).toEqual(BASE_DATA);
+  });
+
+  it('returns an empty list when the base request fails', async () => {
+    mockGetAllUsecases.mockResolvedValue({
+      message: 'Server error',
+      success: false,
+    });
+
+    const {result} = renderHook(() =>
+      useWorkflowUsecaseData(PROJECT_ID, 'usecase-workflow', 'usecase-level'),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.resolvedData).toEqual([]);
+    expect(mockGetUsecasesFilteredBySubsystem).not.toHaveBeenCalled();
   });
 });

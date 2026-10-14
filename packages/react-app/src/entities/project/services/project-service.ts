@@ -10,8 +10,6 @@ import {
   openWorkspaceProject,
 } from '~entities/project/api/projects-api';
 import type ProjectInfo from '~entities/project/model/project-info.types';
-import {getAllUsecases} from '~entities/usecases/api/usecases-api';
-import {mapUsecaseDtoToCategories} from '~entities/usecases/model/usecase.mapper';
 import {electronApi, getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
@@ -19,49 +17,19 @@ export interface ProjectOpenResponse {
   message?: string;
   project?: ProjectInfo;
   success: boolean;
-  usecaseData?: any[];
 }
 
 /**
  * Service for managing project operations
  * Coordinates API calls, file operations, and project metadata
  */
-export class ProjectService {
-  private static async fetchUsecaseData(projectId: string): Promise<any[]> {
-    try {
-      const result = await getAllUsecases(projectId);
-      if (!hasBlockingIssues(result) && result.data) {
-        logger.info('Successfully fetched usecases for project', {
-          action: 'fetch_usecases',
-          component: 'ProjectService',
-          projectId,
-        });
-        return mapUsecaseDtoToCategories(result.data);
-      } else {
-        logger.error('Failed to fetch usecases', {
-          action: 'fetch_usecases',
-          component: 'ProjectService',
-          error: getIssueMessage(result, 'Failed to fetch usecases'),
-          projectId,
-        });
-        return [];
-      }
-    } catch (error) {
-      logger.error('Error fetching usecases', {
-        action: 'fetch_usecases',
-        component: 'ProjectService',
-        error: error instanceof Error ? error.message : String(error),
-        projectId,
-      });
-      return [];
-    }
-  }
+export const ProjectService = {
   /**
    * Opens a recent project by connecting to backend
    * @param project - The project to open
    * @returns Promise with project open result
    */
-  static async openRecentProject(
+  async openRecentProject(
     project: ProjectInfo,
   ): Promise<ProjectOpenResponse> {
     try {
@@ -79,12 +47,9 @@ export class ProjectService {
         };
       }
 
-      const usecaseData = await this.fetchUsecaseData(project.id);
-
       return {
         project,
         success: true,
-        usecaseData,
       };
     } catch (error) {
       logger.error('Error opening recent project', {
@@ -97,13 +62,13 @@ export class ProjectService {
         success: false,
       };
     }
-  }
+  },
 
   /**
    * Opens a workspace project using file picker
    * @returns Promise with project open result
    */
-  static async openWorkspaceProjectFromFile(): Promise<ProjectOpenResponse> {
+  async openWorkspaceProjectFromFile(): Promise<ProjectOpenResponse> {
     if (!electronApi) {
       logger.error('Electron API not available', {
         action: 'open_workspace_project',
@@ -192,12 +157,9 @@ export class ProjectService {
         name,
       };
 
-      const usecaseData = await this.fetchUsecaseData(project.id);
-
       return {
         project,
         success: true,
-        usecaseData,
       };
     } catch (error) {
       logger.error('Error opening workspace project', {
@@ -210,14 +172,14 @@ export class ProjectService {
         success: false,
       };
     }
-  }
+  },
 
   /**
    * Shows a project file in the system file explorer
    * @param filepath - The file path to show
    * @returns Promise that resolves when operation completes
    */
-  static async showInExplorer(filepath: string): Promise<void> {
+  async showInExplorer(filepath: string): Promise<void> {
     if (!electronApi) {
       logger.error('Electron API not available', {
         action: 'show_in_explorer',
@@ -239,5 +201,5 @@ export class ProjectService {
       });
       throw error;
     }
-  }
-}
+  },
+};

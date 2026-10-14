@@ -36,7 +36,6 @@ import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {
   formatUsecaseDisplay,
   getSystemIdsFromFormattedUsecases,
-  type UsecaseCategory,
   type UsecaseDto,
 } from '~entities/usecases';
 import {
@@ -120,7 +119,6 @@ interface GraphDesignerProps {
   projectId: string;
   screenshotRegistry: Map<string, () => Promise<string | null>>;
   tabId?: string;
-  usecaseData: UsecaseCategory[];
 }
 
 const EMPTY_SET: ReadonlySet<number> = new Set<number>();
@@ -155,7 +153,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectId,
   screenshotRegistry,
   tabId,
-  usecaseData: initialUsecaseData,
 }) => {
   // Get selected usecases from tab store
   const selectedUsecases = useGraphDesignerStoreShallow(
@@ -164,8 +161,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const setSelectedUsecases = useGraphDesignerStoreShallow(
     (state) => state.setSelectedUsecases,
   );
-
-  const usecaseData = initialUsecaseData;
   const isEditable = useProjectStoreShallow((s) => s.editModeState === 'edit');
 
   const {preferences, updatePreference} = useUserPreferences();
@@ -193,7 +188,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     projectId,
     workflowType,
     workflowLevel,
-    usecaseData,
+  );
+  const selectedUsecaseSystemIds = useMemo(
+    () => getSystemIdsFromFormattedUsecases(selectedUsecases, resolvedData),
+    [selectedUsecases, resolvedData],
   );
 
   // Derived flags for UsecaseSelectionControl
@@ -234,6 +232,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     (s) => s.moduleListStatus,
   );
   const loadModuleList = useGraphDesignerStoreShallow((s) => s.loadModuleList);
+  const subgraphListStatus = useGraphDesignerStoreShallow(
+    (s) => s.subgraphListStatus,
+  );
+  const loadSubgraphList = useGraphDesignerStoreShallow(
+    (s) => s.loadSubgraphList,
+  );
   const syncEnableOverlays = useGraphDesignerStoreShallow(
     (s) => s.syncEnableOverlays,
   );
@@ -257,7 +261,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     );
     return path.map((segment, index) => {
       const childSubsystemIds = segment.systemId
-        ? graphData.subsystems[segment.systemId]?.childSubsystemIds ?? []
+        ? (graphData.subsystems[segment.systemId]?.childSubsystemIds ?? [])
         : [];
       const childItems = segment.systemId
         ? [...new Set(childSubsystemIds)].flatMap((childSystemId) => {
@@ -353,11 +357,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     // Only a change in system IDs should reset the selected subsystem.
     const previousSelectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
       previousSelectedUsecasesRef.current,
-      usecaseData,
-    );
-    const selectedUsecaseSystemIds = getSystemIdsFromFormattedUsecases(
-      selectedUsecases,
-      usecaseData,
+      resolvedData,
     );
 
     if (
@@ -369,7 +369,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       clearActiveSubsystem();
     }
     previousSelectedUsecasesRef.current = selectedUsecases;
-  }, [clearActiveSubsystem, selectedUsecases, usecaseData]);
+  }, [
+    clearActiveSubsystem,
+    resolvedData,
+    selectedUsecases,
+    selectedUsecaseSystemIds,
+  ]);
 
   // Applies expandSubgraphs to the current level; overlay only on checkbox click.
   useEffect(() => {
@@ -650,6 +655,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     }
   }, [moduleListStatus, loadModuleList]);
 
+  useEffect(() => {
+    if (subgraphListStatus === 'uninitialized') {
+      void loadSubgraphList();
+    }
+  }, [subgraphListStatus, loadSubgraphList]);
+
   // Effect A — trigger load when selection changes
   useEffect(() => {
     resetSearch();
@@ -665,17 +676,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       initializeEmptyGraphData();
       return;
     }
-    const systemIds = getSystemIdsFromFormattedUsecases(
-      selectedUsecases,
-      resolvedData,
-    );
-    if (systemIds.length > 0) {
-      void loadGraphData(systemIds, {
+    if (selectedUsecaseSystemIds.length > 0) {
+      void loadGraphData(selectedUsecaseSystemIds, {
         filterBySubsystem: filterComponentsBySubsystem,
       });
     }
   }, [
     selectedUsecases,
+    selectedUsecaseSystemIds,
     resolvedData,
     clearLevelView,
     filterComponentsBySubsystem,
@@ -1401,7 +1409,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       {isExpandCollapsePending &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
+            className="fixed inset-0 z-9999 flex items-center justify-center backdrop-blur-sm"
             style={{
               backgroundColor:
                 'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
@@ -1423,7 +1431,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       {state.status === 'loading-links' &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
+            className="fixed inset-0 z-9999 flex items-center justify-center backdrop-blur-sm"
             style={{
               backgroundColor:
                 'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
@@ -1452,7 +1460,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         state={state}
       />
       {/* Usecase Selection Control at the top */}
-      <div className="bg-primary border-neutral-02 flex-shrink-0 border-b p-4">
+      <div className="bg-primary border-neutral-02 shrink-0 border-b p-4">
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <UsecaseSelectionControl
@@ -1481,7 +1489,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
         {/* Search overlay – floats above the graph canvas at top-right */}
         <div
-          className={`absolute top-[5px] right-3 z-10 w-[380px] max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${
+          className={`absolute top-1.25 right-3 z-10 w-95 max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${
             isSearchVisible
               ? 'pointer-events-auto translate-y-0 opacity-100'
               : 'pointer-events-none -translate-y-2 opacity-0'

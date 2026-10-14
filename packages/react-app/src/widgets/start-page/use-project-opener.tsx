@@ -79,10 +79,7 @@ export function useProjectOpener({
    * Common logic to handle successful project opening
    * Creates layout, loads GraphDesigner, and notifies callbacks
    */
-  const handleProjectOpenSuccess = async (
-    project: ProjectInfo,
-    usecaseData: any[],
-  ) => {
+  const handleProjectOpenSuccess = async (project: ProjectInfo) => {
     const layoutStore = useProjectLayoutStore.getState();
     const existingGroup = layoutStore.isProjectGroupAlreadyOpen(
       project.filepath,
@@ -163,7 +160,6 @@ export function useProjectOpener({
                   projectId={project.id}
                   screenshotRegistry={screenshotRegistry}
                   tabId={mainTab.id}
-                  usecaseData={usecaseData}
                 />
               </GraphDesignerStoreContext.Provider>
             </ProjectStoreContext.Provider>
@@ -287,10 +283,7 @@ export function useProjectOpener({
           isLoading: true,
           message: 'Loading project data...',
         });
-        await handleProjectOpenSuccess(
-          result.project,
-          result.usecaseData || [],
-        );
+        await handleProjectOpenSuccess(result.project);
       } else {
         showToast(result.message || 'Failed to open project', 'danger');
       }
@@ -344,10 +337,7 @@ export function useProjectOpener({
           message: 'Loading project data...',
         });
 
-        await handleProjectOpenSuccess(
-          result.project,
-          result.usecaseData || [],
-        );
+        await handleProjectOpenSuccess(result.project);
       } else {
         showToast(result.message || 'Failed to open project', 'danger');
       }
