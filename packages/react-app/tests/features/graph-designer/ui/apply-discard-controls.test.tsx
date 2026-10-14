@@ -145,7 +145,10 @@ function renderControls(
       <GraphDesignerStoreContext.Provider
         value={store as unknown as GraphDesignerStoreApi}
       >
-        <ApplyDiscardControls projectId={PROJECT_ID} />
+        <ApplyDiscardControls
+          projectId={PROJECT_ID}
+          selectedUsecaseSystemIds={[]}
+        />
       </GraphDesignerStoreContext.Provider>
     </ProjectStoreContext.Provider>,
   );
@@ -191,6 +194,15 @@ describe('ApplyDiscardControls', () => {
 
     expect(screen.getByText('Apply')).toBeDisabled();
     expect(screen.getByText('Discard')).toBeDisabled();
+  });
+
+  it('disables Apply while SGKV metadata is refreshing', () => {
+    const store = makeStore('edit', true);
+    store.setState({isSgKvMetadataRefreshing: true});
+    renderControls(store);
+
+    expect(screen.getByText('Apply')).toBeDisabled();
+    expect(screen.getByText('Discard')).not.toBeDisabled();
   });
 
   it('invokes applyDiscard.apply when Apply is clicked', () => {

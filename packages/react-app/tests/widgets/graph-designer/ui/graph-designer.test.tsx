@@ -95,7 +95,12 @@ jest.mock('@qualcomm-ui/react/dialog', () => {
 });
 
 jest.mock('~features/graph-designer/ui/apply-discard-controls', () => ({
-  ApplyDiscardControls: ({projectId}: {projectId: string}) => (
+  ApplyDiscardControls: ({
+    projectId,
+  }: {
+    projectId: string;
+    selectedUsecaseSystemIds: string[];
+  }) => (
     <div data-testid="apply-discard-controls">{projectId}</div>
   ),
 }));

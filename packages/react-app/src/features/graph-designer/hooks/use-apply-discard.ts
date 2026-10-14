@@ -38,6 +38,7 @@ import {
 export interface UseApplyDiscardArgs {
   projectId: string;
   routingTriggered: boolean;
+  selectedUsecaseSystemIds: string[];
 }
 
 type NavChoice = 'add' | 'keep' | 'switch';
@@ -323,7 +324,7 @@ async function performDiscard(
 export function useApplyDiscard(
   args: UseApplyDiscardArgs,
 ): UseApplyDiscardReturn {
-  const {projectId, routingTriggered} = args;
+  const {projectId, routingTriggered, selectedUsecaseSystemIds} = args;
   const store = useGraphDesignerStore();
   const {preferences} = useUserPreferences();
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
@@ -405,7 +406,7 @@ export function useApplyDiscard(
         const request = buildCreateUsecasesRequest({
           excludedLinks: state.excludedLinks,
           kvSelectionsById: state.kvSelectionsById,
-          selectedUsecaseSystemIds: state.selectedUsecases,
+          selectedUsecaseSystemIds,
         });
         const outcome = await runApplyReconcile(
           {
@@ -431,7 +432,13 @@ export function useApplyDiscard(
         setIsBusy(false);
       }
     }
-  }, [store, projectId, routingTriggered, handleReconcileOutcome]);
+  }, [
+    store,
+    projectId,
+    routingTriggered,
+    selectedUsecaseSystemIds,
+    handleReconcileOutcome,
+  ]);
 
   const submitReview = useCallback(
     async (checkedChangeIds: string[], navChoice: NavChoice) => {
