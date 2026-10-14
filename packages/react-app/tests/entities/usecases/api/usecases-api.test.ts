@@ -16,10 +16,12 @@ import {
   createControlLinkWithSubsystems,
   createDataLink,
   createDataLinkWithSubsystems,
+  getAllUsecases,
   getModulesBySystemIds,
   getSubgraphContents,
   getSubgraphPairs,
   getSubgraphsByIds,
+  getUsecasesFilteredBySubsystem,
   renameSubgraph,
 } from '~entities/usecases/api/usecases-api';
 import {httpClient} from '~shared/api/http-client';
@@ -31,6 +33,66 @@ const mockPost = jest.mocked(httpClient.post);
 describe('usecases-api — subgraph operations', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('getAllUsecases', () => {
+    it('GETs all usecases without a filter query when filter is absent', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getAllUsecases('proj-1');
+
+      expect(mockGet).toHaveBeenCalledWith('/projects/proj-1/usecases');
+    });
+
+    it('GETs all usecases without a filter query when filter is empty', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getAllUsecases('proj-1', '   ');
+
+      expect(mockGet).toHaveBeenCalledWith('/projects/proj-1/usecases');
+    });
+
+    it('GETs filtered usecases with an encoded filter query', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getAllUsecases('proj-1', 'sg:42 AND PCM');
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/usecases?filter=sg%3A42+AND+PCM',
+      );
+    });
+  });
+
+  describe('getUsecasesFilteredBySubsystem', () => {
+    it('GETs subsystem-filtered usecases without a filter query when filter is absent', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getUsecasesFilteredBySubsystem('proj-1');
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/usecases/filtered-by-subsystem',
+      );
+    });
+
+    it('GETs subsystem-filtered usecases without a filter query when filter is empty', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getUsecasesFilteredBySubsystem('proj-1', '   ');
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/usecases/filtered-by-subsystem',
+      );
+    });
+
+    it('GETs subsystem-filtered usecases with an encoded filter query', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getUsecasesFilteredBySubsystem('proj-1', 'ss:10 OR ss:11');
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/usecases/filtered-by-subsystem?filter=ss%3A10+OR+ss%3A11',
+      );
+    });
   });
 
   describe('getSubgraphContents', () => {

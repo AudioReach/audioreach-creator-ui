@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {getUsecasesWithFilter, type UsecaseDto} from '~entities/usecases';
+import {getAllUsecases, type UsecaseDto} from '~entities/usecases';
 import {hasBlockingIssues} from '~shared/api';
 
 /**
@@ -18,7 +18,7 @@ export async function loadSubgraphKvUsecaseSources(
     return null;
   }
 
-  const result = await getUsecasesWithFilter(
+  const result = await getAllUsecases(
     projectId,
     `subgraphNaturalId:${subgraphNaturalId}`,
   );

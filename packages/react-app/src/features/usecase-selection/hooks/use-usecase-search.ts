@@ -6,7 +6,7 @@
 import {useEffect, useState} from 'react';
 
 import {
-  getUsecasesWithFilter,
+  getAllUsecases,
   mapUsecaseDtoToCategories,
   type UsecaseCategory,
 } from '~entities/usecases';
@@ -72,7 +72,7 @@ export function useUsecaseSearch(
 
       setIsSearching(true);
 
-      getUsecasesWithFilter(projectGroupId, filter)
+      getAllUsecases(projectGroupId, filter)
         .then((result) => {
           if (cancelled) {
             return;

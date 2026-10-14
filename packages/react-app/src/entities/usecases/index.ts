@@ -16,7 +16,6 @@ export {
   getUsecaseComponents,
   getUsecaseComponentsFilteredBySubsystem,
   getUsecasesFilteredBySubsystem,
-  getUsecasesWithFilter,
   renameSubgraph,
 } from './api/usecases-api';
 export type {
@@ -29,6 +28,7 @@ export type {
   ControlLinkWithUsecasesDto,
   DataLinkWithUsecasesDto,
   LinkType,
+  SpfModuleDto,
 } from './model/usecase-component.dto';
 export {
   isInterUsecaseLink,
@@ -38,6 +38,7 @@ export type {
   KeyValueInfo,
   RelatedEndPointLink,
   SubsystemFilteredKv,
+  SubsystemFilterInfo,
   UsecaseDto,
   UsecaseIdentifier,
 } from './model/usecase.dto';
