@@ -382,6 +382,7 @@ function renderGraphDesigner(options?: {
     graphDataStatus: options?.graphData ? 'ready' : 'uninitialized',
     moduleListStatus: 'ready',
     selectedUsecases: options?.graphData ? ['uc-1'] : [],
+    subgraphListStatus: 'ready',
     subsystemData: options?.subsystemData ?? [],
     ...(options?.subgraphProvenanceById
       ? {subgraphProvenanceById: options.subgraphProvenanceById}
@@ -405,7 +406,6 @@ function renderGraphDesigner(options?: {
             projectId={PROJECT_ID}
             screenshotRegistry={new Map()}
             tabId="tab-1"
-            usecaseData={[]}
           />
           {options?.renderSubsystemBrowser && <SubsystemBrowser />}
         </GraphDesignerStoreContext.Provider>
@@ -419,6 +419,35 @@ function renderGraphDesigner(options?: {
 beforeEach(() => {
   keyConfiguratorStoreManager.clearAllStores();
   mockVisualizerProps = null;
+});
+
+describe('GraphDesigner - subgraph metadata initialization', () => {
+  it('loads the subgraph list on mount when it is uninitialized', async () => {
+    const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+    const loadSubgraphList = jest
+      .spyOn(graphDesignerStore.getState(), 'loadSubgraphList')
+      .mockResolvedValue(undefined);
+    graphDesignerStore.setState({moduleListStatus: 'ready'});
+    const projectStore = createProjectStore(PROJECT_ID);
+
+    render(
+      <SideNavProvider>
+        <ProjectStoreContext.Provider value={projectStore}>
+          <GraphDesignerStoreContext.Provider value={graphDesignerStore}>
+            <GraphDesigner
+              projectId={PROJECT_ID}
+              screenshotRegistry={new Map()}
+              tabId="tab-1"
+            />
+          </GraphDesignerStoreContext.Provider>
+        </ProjectStoreContext.Provider>
+      </SideNavProvider>,
+    );
+
+    await waitFor(() => {
+      expect(loadSubgraphList).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('GraphDesigner - active boundary navigation', () => {
@@ -510,9 +539,7 @@ describe('GraphDesigner - active boundary navigation', () => {
       graphDesignerStore.getState().navigateToSubsystem('ss-1');
     });
 
-    expect(
-      await screen.findByText('Boundary Subsystem'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Boundary Subsystem')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', {
         name: 'Show children of Boundary Subsystem',
@@ -762,6 +789,7 @@ describe('GraphDesigner - key configurator selection sync', () => {
 
 async function renderWithGraphReady() {
   const graphDesignerStore = createGraphDesignerStore('tab-1', PROJECT_ID);
+  graphDesignerStore.setState({subgraphListStatus: 'ready'});
   const projectStore = createProjectStore(PROJECT_ID);
   await act(async () => {
     render(
@@ -772,7 +800,6 @@ async function renderWithGraphReady() {
               projectId={PROJECT_ID}
               screenshotRegistry={new Map()}
               tabId="tab-1"
-              usecaseData={[]}
             />
           </GraphDesignerStoreContext.Provider>
         </ProjectStoreContext.Provider>
@@ -928,6 +955,7 @@ describe('GraphDesigner — module drops', () => {
     graphDesignerStore.setState({
       levelView: {levelId: 'uc-1'},
       selectedUsecases: ['uc-1'],
+      subgraphListStatus: 'ready',
     });
     const projectStore = createProjectStore(PROJECT_ID);
 
@@ -939,7 +967,6 @@ describe('GraphDesigner — module drops', () => {
               projectId={PROJECT_ID}
               screenshotRegistry={new Map()}
               tabId="tab-1"
-              usecaseData={[]}
             />
           </GraphDesignerStoreContext.Provider>
         </ProjectStoreContext.Provider>
@@ -1093,6 +1120,7 @@ describe('GraphDesigner — enable overlay sync', () => {
       graphDesignerStore.getState(),
       'syncEnableOverlays',
     );
+    graphDesignerStore.setState({subgraphListStatus: 'ready'});
 
     const projectStore = createProjectStore(PROJECT_ID);
     await act(async () => {
@@ -1104,7 +1132,6 @@ describe('GraphDesigner — enable overlay sync', () => {
                 projectId={PROJECT_ID}
                 screenshotRegistry={new Map()}
                 tabId="tab-1"
-                usecaseData={[]}
               />
             </GraphDesignerStoreContext.Provider>
           </ProjectStoreContext.Provider>
@@ -1138,6 +1165,7 @@ describe('GraphDesigner — enable overlay sync', () => {
       graphDesignerStore.getState(),
       'syncEnableOverlays',
     );
+    graphDesignerStore.setState({subgraphListStatus: 'ready'});
 
     const projectStore = createProjectStore(PROJECT_ID);
     await act(async () => {
@@ -1149,7 +1177,6 @@ describe('GraphDesigner — enable overlay sync', () => {
                 projectId={PROJECT_ID}
                 screenshotRegistry={new Map()}
                 tabId="tab-1"
-                usecaseData={[]}
               />
             </GraphDesignerStoreContext.Provider>
           </ProjectStoreContext.Provider>
