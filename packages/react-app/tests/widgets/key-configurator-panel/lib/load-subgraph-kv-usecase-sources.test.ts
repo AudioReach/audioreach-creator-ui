@@ -11,17 +11,17 @@
 jest.mock('~entities/usecases');
 
 import {
+  getAllUsecases,
   getUsecaseComponents,
-  getUsecasesWithFilter,
 } from '~entities/usecases';
 import {loadSubgraphKvUsecaseSources} from '~features/key-configurator/subgraph-configurator-view/lib/load-subgraph-kv-usecase-sources';
 
+const mockGetAllUsecases = jest.mocked(getAllUsecases);
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
-const mockGetUsecasesWithFilter = jest.mocked(getUsecasesWithFilter);
 
 describe('loadSubgraphKvUsecaseSources', () => {
   it('loads usecases filtered by the selected subgraph natural ID', async () => {
-    mockGetUsecasesWithFilter.mockResolvedValue({
+    mockGetAllUsecases.mockResolvedValue({
       data: [
         {
           keyValuePairs: [],
@@ -50,7 +50,7 @@ describe('loadSubgraphKvUsecaseSources', () => {
         usecaseType: 'EC',
       },
     ]);
-    expect(mockGetUsecasesWithFilter).toHaveBeenCalledWith(
+    expect(mockGetAllUsecases).toHaveBeenCalledWith(
       'project-1',
       'subgraphNaturalId:42',
     );
@@ -58,7 +58,7 @@ describe('loadSubgraphKvUsecaseSources', () => {
   });
 
   it('returns null when the selected-subgraph lookup has blocking issues', async () => {
-    mockGetUsecasesWithFilter.mockResolvedValue({
+    mockGetAllUsecases.mockResolvedValue({
       issues: [{code: 'FAILED', message: 'failed', severity: 'ERROR'}],
     });
 
