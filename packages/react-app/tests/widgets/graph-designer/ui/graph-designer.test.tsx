@@ -1221,7 +1221,14 @@ describe('GraphDesigner - visualizer wiring', () => {
     renderGraphDesigner({graphData: makeGraphData()});
     await screen.findByTestId('usecase-visualizer');
 
-    expect(buildContextMenuConfig).toHaveBeenCalledWith(expect.any(Function));
+    expect(buildContextMenuConfig).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        onAddToManualUsecase: expect.any(Function),
+        onRemoveFromManualUsecase: expect.any(Function),
+        subsystemScoped: expect.any(Boolean),
+      }),
+    );
     const baseConfig = jest.mocked(buildContextMenuConfig).mock.results[0]
       .value as VisualizerContextMenuConfig;
     const command = {command: 'complete'} as const;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {ChevronRight, Link, Trash2} from 'lucide-react';
+import {ChevronRight, Link, Minus, Plus, Trash2} from 'lucide-react';
 
 import {EDGE_KIND, PORT_IO_TYPE, type PortIoType} from '~entities/graph';
 import {
@@ -45,6 +45,27 @@ const COMPLETE_LINK_ACTIONS: ReadonlySet<string> = new Set([
   LINK_MENU_ACTIONS.endConnection,
 ]);
 
+export interface ContextMenuConfigOptions {
+  /** true for Subsystem level and System Workflow; shows the subsystem move actions. */
+  onAddToManualUsecase: (subgraphId: number) => void;
+  onRemoveFromManualUsecase: (subgraphId: number) => void;
+  subsystemScoped: boolean;
+}
+
+const MANUAL_USECASE_ACTIONS = {
+  add: 'add-to-manual-usecase',
+  remove: 'remove-from-manual-usecase',
+} as const;
+
+const MANUAL_USECASE_ITEMS = [
+  {icon: Plus, id: MANUAL_USECASE_ACTIONS.add, label: 'Add to Manual Usecase'},
+  {
+    icon: Minus,
+    id: MANUAL_USECASE_ACTIONS.remove,
+    label: 'Remove from Manual Usecase',
+  },
+];
+
 type EdgeTarget = Extract<
   ContextMenuTarget,
   | {kind: 'control-link'}
@@ -75,6 +96,21 @@ function hasAnySubsystemChildren(
     (subsystem?.subgraphs.length ?? 0) > 0 ||
     (subsystem?.childSubsystemIds.length ?? 0) > 0
   );
+}
+
+function buildSubsystemPlacementItems(
+  options: ContextMenuConfigOptions,
+  parentId?: string,
+): ContextMenuItem[] {
+  if (!options.subsystemScoped) {
+    return [];
+  }
+  return [
+    {id: 'move-to-subsystem', label: 'Move to Subsystem'},
+    ...(parentId
+      ? [{id: 'remove-from-subsystem', label: 'Remove from Subsystem'}]
+      : []),
+  ];
 }
 
 function isPairLink(store: GraphDesignerStore, connectionId: string): boolean {
@@ -153,6 +189,7 @@ function buildPortItems(
 
 export function buildContextMenuConfig(
   get: () => GraphDesignerStore,
+  options: ContextMenuConfigOptions,
 ): VisualizerContextMenuConfig {
   return {
     getItems: (target) => {
@@ -163,15 +200,17 @@ export function buildContextMenuConfig(
       switch (target.kind) {
         case 'module':
         case 'container':
-        case 'subgraph-proxy':
           return [{icon: Trash2, id: 'delete', label: 'Delete'}];
+        case 'subgraph-proxy':
+          return [
+            {icon: Trash2, id: 'delete', label: 'Delete'},
+            ...MANUAL_USECASE_ITEMS,
+          ];
         case 'subgraph':
           return [
             {icon: Trash2, id: 'delete', label: 'Delete'},
-            {id: 'move-to-subsystem', label: 'Move to Subsystem'},
-            ...(target.node.parentId
-              ? [{id: 'remove-from-subsystem', label: 'Remove from Subsystem'}]
-              : []),
+            ...MANUAL_USECASE_ITEMS,
+            ...buildSubsystemPlacementItems(options, target.node.parentId),
           ];
         case 'subsystem': {
           if (target.node.id === store.activeSubsystemId) {
@@ -188,10 +227,7 @@ export function buildContextMenuConfig(
                 ? 'Subsystem must be empty before it can be deleted'
                 : undefined,
             },
-            {id: 'move-to-subsystem', label: 'Move to Subsystem'},
-            ...(target.node.parentId
-              ? [{id: 'remove-from-subsystem', label: 'Remove from Subsystem'}]
-              : []),
+            ...buildSubsystemPlacementItems(options, target.node.parentId),
             {icon: ChevronRight, id: 'expand', label: 'Expand'},
           ];
         }
@@ -227,6 +263,18 @@ export function buildContextMenuConfig(
       }
       if ('node' in target) {
         const nodeId = resolveContextMenuNodeId(target);
+        if (
+          (target.kind === 'subgraph' || target.kind === 'subgraph-proxy') &&
+          (actionId === MANUAL_USECASE_ACTIONS.add ||
+            actionId === MANUAL_USECASE_ACTIONS.remove)
+        ) {
+          const handler =
+            actionId === MANUAL_USECASE_ACTIONS.add
+              ? options.onAddToManualUsecase
+              : options.onRemoveFromManualUsecase;
+          handler(target.node.subgraphId);
+          return;
+        }
         if (actionId === 'delete') {
           void DELETE_HANDLERS[target.node.nodeKind](get, nodeId);
           return;

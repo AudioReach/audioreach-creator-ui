@@ -43,7 +43,6 @@ export interface FakeReactFlowProps {
   }) => void;
   onDragOver?: (event: DragEvent) => void;
   onDrop?: (event: DragEvent) => void;
-  onEdgeContextMenu?: (event: unknown, edge: FakeEdge) => void;
   onMove?: (
     event: MouseEvent | TouchEvent | null,
     viewport: {x: number; y: number; zoom: number},
@@ -164,6 +163,13 @@ export function createXyflowMockFactory() {
   const ReactFlowProvider = ({children}: {children: ReactNode}) => (
     <>{children}</>
   );
+  // Renders toolbar children inline so tests can query the action buttons.
+  const NodeToolbar = ({children}: {children: ReactNode}) => (
+    <div data-testid="node-toolbar">{children}</div>
+  );
+  const EdgeToolbar = ({children}: {children: ReactNode}) => (
+    <div data-testid="edge-toolbar">{children}</div>
+  );
   const EdgeLabelRenderer = ({children}: {children: ReactNode}) => (
     <>{children}</>
   );
@@ -227,8 +233,10 @@ export function createXyflowMockFactory() {
     },
     BaseEdge,
     EdgeLabelRenderer,
+    EdgeToolbar,
     getBezierPath: () => ['M 0 0 L 100 100', 50, 50, 50, 50],
     Handle,
+    NodeToolbar,
     Position: {Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top'},
     ReactFlow: FakeReactFlow,
     ReactFlowProvider,

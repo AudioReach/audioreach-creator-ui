@@ -21,6 +21,7 @@ jest.mock('@xyflow/react', () => {
   return {
     ...actual,
     EdgeLabelRenderer: ({children}: {children: ReactNode}) => <>{children}</>,
+    EdgeToolbar: ({children}: {children: ReactNode}) => <>{children}</>,
   };
 });
 

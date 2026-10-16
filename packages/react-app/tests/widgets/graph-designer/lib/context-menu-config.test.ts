@@ -11,6 +11,7 @@ import {
   buildContextMenuConfig,
   resolveContextMenuNodeId,
   resolveEdgeLinkType,
+  type ContextMenuConfigOptions,
 } from '~widgets/graph-designer/lib/context-menu-config';
 
 function makeStore(
@@ -42,8 +43,19 @@ function makeStore(
   } as unknown as GraphDesignerStore;
 }
 
-function configFor(store: GraphDesignerStore) {
-  return buildContextMenuConfig(() => store);
+function makeOptions(
+  overrides: Partial<ContextMenuConfigOptions> = {},
+): ContextMenuConfigOptions {
+  return {
+    onAddToManualUsecase: jest.fn(),
+    onRemoveFromManualUsecase: jest.fn(),
+    subsystemScoped: false,
+    ...overrides,
+  };
+}
+
+function configFor(store: GraphDesignerStore, options = makeOptions()) {
+  return buildContextMenuConfig(() => store, options);
 }
 
 describe('context-menu-config', () => {
@@ -97,6 +109,7 @@ describe('context-menu-config', () => {
     ]);
   });
 
+  // Verifies that Add is dispatched with the domain subgraph ID for both node forms.
   it.each([
     ['normal', 'end-connection'],
     ['EC', 'complete-ec-link'],
@@ -128,11 +141,18 @@ describe('context-menu-config', () => {
     ]);
   });
 
+  // Verifies that Remove is dispatched with the domain subgraph ID for both node forms.
   it.each([
     ['start-connection', {command: 'start', edgeMode: 'normal'}],
     ['start-ec-link', {command: 'start', edgeMode: 'EC'}],
-    ['start-interUsecase-data-link', {command: 'start', edgeMode: 'interUsecase'}],
-    ['start-interUsecase-control-link', {command: 'start', edgeMode: 'interUsecase'}],
+    [
+      'start-interUsecase-data-link',
+      {command: 'start', edgeMode: 'interUsecase'},
+    ],
+    [
+      'start-interUsecase-control-link',
+      {command: 'start', edgeMode: 'interUsecase'},
+    ],
     ['end-connection', {command: 'complete'}],
     ['complete-ec-link', {command: 'complete'}],
     ['complete-interUsecase-data-link', {command: 'complete'}],
@@ -230,6 +250,160 @@ describe('context-menu-config', () => {
         .map((item) => item.id),
     ).toEqual(['delete']);
   });
+
+  // Verifies that subsystem placement actions are hidden outside scoped views.
+  it('hides subsystem move actions outside subsystem-scoped mode', () => {
+    const config = configFor(makeStore(), makeOptions());
+
+    for (const target of [
+      {kind: 'subgraph', node: {parentId: 'parent'} as never},
+      {kind: 'subsystem', node: {id: 'ss-2', parentId: 'parent'} as never},
+    ] as const) {
+      const itemIds = config.getItems(target).map((item) => item.id);
+      expect(itemIds).not.toContain('move-to-subsystem');
+      expect(itemIds).not.toContain('remove-from-subsystem');
+    }
+  });
+
+  // Verifies that scoped views expose the applicable subsystem placement actions.
+  it('shows subsystem move actions in subsystem-scoped mode', () => {
+    const config = configFor(makeStore(), makeOptions({subsystemScoped: true}));
+
+    expect(
+      config
+        .getItems({
+          kind: 'subgraph',
+          node: {parentId: undefined} as never,
+        })
+        .map((item) => item.id),
+    ).toEqual([
+      'delete',
+      'add-to-manual-usecase',
+      'remove-from-manual-usecase',
+      'move-to-subsystem',
+    ]);
+    expect(
+      config
+        .getItems({
+          kind: 'subsystem',
+          node: {id: 'ss-1', parentId: 'parent'} as never,
+        })
+        .map((item) => item.id),
+    ).toEqual([
+      'delete',
+      'move-to-subsystem',
+      'remove-from-subsystem',
+      'expand',
+    ]);
+  });
+
+  // Verifies that Manual Usecase actions appear only for subgraph targets.
+  it('shows manual-usecase actions for subgraphs and proxies only', () => {
+    const config = configFor(makeStore());
+    const manualActionIds = [
+      'add-to-manual-usecase',
+      'remove-from-manual-usecase',
+    ];
+
+    for (const target of [
+      {kind: 'subgraph', node: {} as never},
+      {kind: 'subgraph-proxy', node: {} as never},
+    ] as const) {
+      expect(config.getItems(target).map((item) => item.id)).toEqual(
+        expect.arrayContaining(manualActionIds),
+      );
+    }
+    for (const target of [
+      {kind: 'module', node: {} as never},
+      {kind: 'container', node: {} as never},
+    ] as const) {
+      expect(config.getItems(target).map((item) => item.id)).not.toEqual(
+        expect.arrayContaining(manualActionIds),
+      );
+    }
+  });
+
+  // Verifies that Expand uses the subsystem domain ID rather than the visual node ID.
+  it('expands a subsystem using its domain subsystem id', () => {
+    const store = makeStore({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {
+          'ss-domain': {
+            childSubsystemIds: [],
+            controlPorts: [],
+            dataPorts: [],
+            subgraphs: [],
+            subsystemId: 'ss-domain',
+            subsystemName: 'Subsystem',
+          },
+        },
+      },
+    });
+    const config = configFor(store);
+
+    config.onAction('expand', {
+      kind: 'subsystem',
+      node: {
+        id: 'visual-subsystem-id',
+        meta: {systemId: 'ss-domain'},
+        subsystemId: 'ss-domain',
+      } as never,
+    });
+
+    expect(store.expandSubsystem).toHaveBeenCalledWith(
+      expect.any(Function),
+      'ss-domain',
+    );
+  });
+
+  it.each([
+    ['subgraph', 42],
+    ['subgraph-proxy', 43],
+  ] as const)(
+    'calls the add manual-usecase handler for %s',
+    (kind, subgraphId) => {
+      const onAddToManualUsecase = jest.fn();
+      const config = configFor(
+        makeStore(),
+        makeOptions({onAddToManualUsecase}),
+      );
+
+      config.onAction('add-to-manual-usecase', {
+        kind,
+        node: {subgraphId} as never,
+      });
+
+      expect(onAddToManualUsecase).toHaveBeenCalledTimes(1);
+      expect(onAddToManualUsecase).toHaveBeenCalledWith(subgraphId);
+    },
+  );
+
+  it.each([
+    ['subgraph', 42],
+    ['subgraph-proxy', 43],
+  ] as const)(
+    'calls the remove manual-usecase handler for %s',
+    (kind, subgraphId) => {
+      const onRemoveFromManualUsecase = jest.fn();
+      const config = configFor(
+        makeStore(),
+        makeOptions({onRemoveFromManualUsecase}),
+      );
+
+      config.onAction('remove-from-manual-usecase', {
+        kind,
+        node: {subgraphId} as never,
+      });
+
+      expect(onRemoveFromManualUsecase).toHaveBeenCalledTimes(1);
+      expect(onRemoveFromManualUsecase).toHaveBeenCalledWith(subgraphId);
+    },
+  );
 
   it('resolves context-menu node ids from system metadata', () => {
     expect(

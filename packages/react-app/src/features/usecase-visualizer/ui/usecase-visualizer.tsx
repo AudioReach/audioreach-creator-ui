@@ -151,14 +151,6 @@ function removeDeletedSelection(
   });
 }
 
-function buildNodeTarget(data: AnyNode): ContextMenuTarget {
-  return {kind: data.nodeKind, node: data} as ContextMenuTarget;
-}
-
-function buildEdgeTarget(data: AnyEdge): ContextMenuTarget {
-  return {edge: data, kind: `${data.edgeKind}-link`} as ContextMenuTarget;
-}
-
 function stringMeta(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
@@ -821,43 +813,26 @@ function VisualizerCanvas({
         event.target instanceof Element
           ? event.target.closest('[data-port-id]')
           : null;
-      if (portEl) {
-        const portId = portEl.getAttribute('data-port-id');
-        const ports = 'ports' in data ? data.ports : undefined;
-        const port = ports?.find((p) => p.id === portId);
-        if (port) {
-          if (port.locked === true) {
-            return;
-          }
-          const connectionInProgress = store.getState().connectionInProgress;
-          openContextMenu(event, {
-            connectionInProgress: connectionInProgress
-              ? {edgeMode: connectionInProgress.edgeMode}
-              : null,
-            kind: 'port',
-            nodeId: node.id,
-            port,
-          });
-          return;
-        }
-      }
-      if (data.locked === true) {
+      if (!portEl) {
         return;
       }
-      openContextMenu(event, buildNodeTarget(data));
+      const portId = portEl.getAttribute('data-port-id');
+      const ports = 'ports' in data ? data.ports : undefined;
+      const port = ports?.find((p) => p.id === portId);
+      if (!port || port.locked === true) {
+        return;
+      }
+      const connectionInProgress = store.getState().connectionInProgress;
+      openContextMenu(event, {
+        connectionInProgress: connectionInProgress
+          ? {edgeMode: connectionInProgress.edgeMode}
+          : null,
+        kind: 'port',
+        nodeId: node.id,
+        port,
+      });
     },
     [openContextMenu, store],
-  );
-
-  const handleEdgeContextMenu = useCallback(
-    (event: ReactMouseEvent, edge: Edge) => {
-      const data = edge.data as unknown as AnyEdge;
-      if (data.locked === true) {
-        return;
-      }
-      openContextMenu(event, buildEdgeTarget(data));
-    },
-    [openContextMenu],
   );
 
   const handlePaneContextMenu = useCallback(
@@ -930,7 +905,6 @@ function VisualizerCanvas({
           activeMode === VISUALIZER_MODE.EDIT ? handleDragOver : undefined
         }
         onDrop={activeMode === VISUALIZER_MODE.EDIT ? handleDrop : undefined}
-        onEdgeContextMenu={handleEdgeContextMenu}
         onEdgesChange={onEdgesChange}
         onMove={handleMove}
         onMoveEnd={handleMoveEnd}

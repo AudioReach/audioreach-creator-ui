@@ -5,6 +5,11 @@
 
 jest.mock('~shared/lib/logger');
 
+jest.mock('~features/usecase-visualizer/ui/node-actions-toolbar', () => ({
+  NodeActionsToolbar: () => <div data-testid="node-toolbar" />,
+  TOOLBAR_NODE_KINDS: new Set(['module']),
+}));
+
 import type {ComponentType} from 'react';
 
 import {render, screen} from '@testing-library/react';
@@ -95,6 +100,28 @@ describe('withGhostFallback', () => {
     expect(screen.getByTestId('ghost-node')).toBeInTheDocument();
     expect(screen.queryByTestId('wrapped')).not.toBeInTheDocument();
     expect(Wrapped).not.toHaveBeenCalled();
+  });
+
+  // Verifies that low zoom renders GhostNode without mounting the node toolbar.
+  it('hides the node toolbar alongside GhostNode', () => {
+    const Wrapped = jest.fn(() => (
+      <div data-testid="wrapped">wrapped</div>
+    )) as unknown as WrappedComponent;
+    const Composed = withGhostFallback<ModuleNode>(Wrapped);
+    const store = createVisualizerStore();
+    store.getState().setLodZoom(0.2);
+    store.getState().setRenderingConfig({lodThreshold: 0.4});
+
+    render(
+      <ReactFlowProvider>
+        <VisualizerStoreProvider store={store}>
+          <Composed {...makeNodeProps(makeModule())} />
+        </VisualizerStoreProvider>
+      </ReactFlowProvider>,
+    );
+
+    expect(screen.queryByTestId('node-toolbar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ghost-node')).toBeInTheDocument();
   });
 
   it('renders the wrapped component when lodZoom equals lodThreshold (strict less-than)', () => {
