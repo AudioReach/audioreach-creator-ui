@@ -764,8 +764,20 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   const {close, open, state} = usePortConnectionsInfo(projectId);
 
+  // TODO: wire these to the manual-usecase store once it exists.
+  const handleAddToManualUsecase = useCallback((subgraphId: number) => {
+    void subgraphId;
+  }, []);
+  const handleRemoveFromManualUsecase = useCallback((subgraphId: number) => {
+    void subgraphId;
+  }, []);
+
   const contextMenu = useMemo<VisualizerContextMenuConfig>(() => {
-    const baseContextMenu = buildContextMenuConfig(store.getState);
+    const baseContextMenu = buildContextMenuConfig(store.getState, {
+      onAddToManualUsecase: handleAddToManualUsecase,
+      onRemoveFromManualUsecase: handleRemoveFromManualUsecase,
+      subsystemScoped: filterComponentsBySubsystem,
+    });
     return {
       getItems: (target: ContextMenuTarget) => {
         const baseItems = baseContextMenu.getItems(target);
@@ -790,7 +802,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         return baseContextMenu.onAction(actionId, target);
       },
     };
-  }, [open, store]);
+  }, [
+    filterComponentsBySubsystem,
+    handleAddToManualUsecase,
+    handleRemoveFromManualUsecase,
+    open,
+    store,
+  ]);
 
   const isPortConnectionsPopupOpen =
     state.status === 'loading-modules' ||

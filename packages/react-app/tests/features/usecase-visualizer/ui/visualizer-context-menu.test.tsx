@@ -8,9 +8,11 @@ import type {ReactNode} from 'react';
 import {act, fireEvent, render, screen} from '@testing-library/react';
 import {type LucideIcon, Settings} from 'lucide-react';
 
+import {NODE_KIND, type AnyNode} from '~entities/graph';
 import type {
   ContextMenuItem,
   ContextMenuTarget,
+  ContainerNode,
   LevelView,
   ModuleNode,
 } from '~features/usecase-visualizer/model/visualizer.types';
@@ -127,8 +129,47 @@ function makeModule(overrides: Partial<ModuleNode> = {}): ModuleNode {
   };
 }
 
+function makeContainer(overrides: Partial<ContainerNode> = {}): ContainerNode {
+  return {
+    containerId: 7,
+    height: 100,
+    id: 'c-1',
+    label: 'Container',
+    nodeKind: 'container',
+    width: 160,
+    x: 0,
+    y: 0,
+    ...overrides,
+  };
+}
+
 function makeGraph(modules: ModuleNode[]): LevelView {
   return {levelId: 'root', modules};
+}
+
+function portTarget(node: ModuleNode): ContextMenuTarget {
+  const port = node.ports[0];
+  if (!port) {
+    throw new Error('module test fixture requires a port');
+  }
+  return {
+    connectionInProgress: null,
+    kind: 'port',
+    nodeId: node.id,
+    port,
+  };
+}
+
+function rightClickPort(container: HTMLElement, node: ModuleNode) {
+  const port = container.querySelector(`[data-port-id="${node.ports[0]?.id}"]`);
+  latestReactFlowProps.current?.onNodeContextMenu?.(
+    fakeEvent(port as Element),
+    {
+      data: node,
+      id: node.id,
+      type: 'module',
+    },
+  );
 }
 
 function fakeEvent(target?: Element) {
@@ -156,10 +197,10 @@ afterEach(() => {
 });
 
 describe('context menu', () => {
-  it('calls getItems with {kind:"module", node} on node right-click', async () => {
+  it('calls getItems with the port target on port right-click', async () => {
     const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(() => []);
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{getItems, onAction: jest.fn()}}
         graph={makeGraph([node])}
@@ -167,14 +208,76 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      const port = container.querySelector('[data-port-id="p1"]');
+      latestReactFlowProps.current?.onNodeContextMenu?.(
+        fakeEvent(port as Element),
+        {data: node, id: node.id, type: 'module'},
+      );
     });
 
-    expect(getItems).toHaveBeenCalledWith({kind: 'module', node});
+    expect(getItems).toHaveBeenCalledWith(portTarget(node));
+  });
+
+  it('does not open a menu for nodes that use the node toolbar', async () => {
+    const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(() => [
+      {id: 'delete', label: 'Delete'},
+    ]);
+    render(
+      <UsecaseVisualizer
+        contextMenu={{getItems, onAction: jest.fn()}}
+        graph={makeGraph([makeModule()])}
+      />,
+    );
+
+    const nodes: AnyNode[] = [
+      makeContainer(),
+      makeModule(),
+      {
+        height: 100,
+        id: 'subgraph-1',
+        label: 'Subgraph',
+        nodeKind: NODE_KIND.SUBGRAPH,
+        subgraphId: 1,
+        width: 160,
+        x: 0,
+        y: 0,
+      },
+      {
+        height: 100,
+        id: 'subgraph-proxy-1',
+        label: 'Subgraph Proxy',
+        nodeKind: NODE_KIND.SUBGRAPH_PROXY,
+        ports: [],
+        subgraphId: 1,
+        width: 160,
+        x: 0,
+        y: 0,
+      },
+      {
+        height: 100,
+        id: 'subsystem-1',
+        label: 'Subsystem',
+        nodeKind: NODE_KIND.SUBSYSTEM,
+        ports: [],
+        subsystemId: 'subsystem-1',
+        width: 160,
+        x: 0,
+        y: 0,
+      },
+    ];
+
+    await act(async () => {
+      for (const node of nodes) {
+        latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
+          data: node,
+          id: node.id,
+          type: node.nodeKind,
+        });
+      }
+    });
+
+    expect(getItems).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('menu-root')).not.toBeInTheDocument();
   });
 
   it('calls getItems with port target when right-clicking a port handle', async () => {
@@ -509,7 +612,7 @@ describe('context menu', () => {
   it('renders returned items and fires onAction + closes on click', async () => {
     const onAction = jest.fn();
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -523,25 +626,18 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByText('Configure')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Configure'));
-    expect(onAction).toHaveBeenCalledWith('configure', {
-      kind: 'module',
-      node,
-    });
+    expect(onAction).toHaveBeenCalledWith('configure', portTarget(node));
     expect(screen.queryByTestId('menu-root')).not.toBeInTheDocument();
   });
 
   it('positions the menu at the right-click coordinates', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [{id: 'delete', label: 'Delete'}],
@@ -552,11 +648,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(mockMenuRootProps.current?.positioning?.getAnchorRect?.()).toEqual({
@@ -567,7 +659,7 @@ describe('context menu', () => {
 
   it('renders a separator before items with dividerBefore', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -581,11 +673,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByTestId('menu-separator')).toBeInTheDocument();
@@ -593,7 +681,7 @@ describe('context menu', () => {
 
   it('disables items flagged disabled', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [{disabled: true, id: 'a', label: 'A'}],
@@ -604,11 +692,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByText('A').closest('button')).toBeDisabled();
@@ -683,7 +767,7 @@ describe('context menu', () => {
     const getItems = jest.fn<ContextMenuItem[], [ContextMenuTarget]>(() => []);
     const a = makeModule({id: 'm-a'});
     const b = makeModule({id: 'm-b'});
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{getItems, onAction: jest.fn()}}
         graph={makeGraph([a, b])}
@@ -694,23 +778,19 @@ describe('context menu', () => {
       latestReactFlowProps.current?.onSelectionChange?.({
         edges: [],
         nodes: [
-          {data: a, id: 'm-a', type: 'module'},
-          {data: b, id: 'm-b', type: 'module'},
+          {data: a, id: 'm-a', type: 'container'},
+          {data: b, id: 'm-b', type: 'container'},
         ],
       });
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: b,
-        id: 'm-b',
-        type: 'module',
-      });
+      rightClickPort(container, b);
     });
 
-    expect(getItems).toHaveBeenCalledWith({kind: 'module', node: b});
+    expect(getItems).toHaveBeenCalledWith(portTarget(b));
   });
 
   it('renders an icon when item.icon is set', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [{icon: Settings, id: 'cfg', label: 'Configure'}],
@@ -721,11 +801,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByTestId('menu-item-icon')).toBeInTheDocument();
@@ -733,7 +809,7 @@ describe('context menu', () => {
 
   it('renders tooltip as title attribute on leaf items', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -746,11 +822,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByText('Configure').closest('button')).toHaveAttribute(
@@ -761,7 +833,7 @@ describe('context menu', () => {
 
   it('renders submenu parent as TriggerItem, not a button', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -778,11 +850,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(
@@ -794,7 +862,7 @@ describe('context menu', () => {
   it('fires onAction with child id when a nested leaf is clicked', async () => {
     const onAction = jest.fn();
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -811,21 +879,17 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     fireEvent.click(screen.getByText('Child Action'));
-    expect(onAction).toHaveBeenCalledWith('child', {kind: 'module', node});
+    expect(onAction).toHaveBeenCalledWith('child', portTarget(node));
     expect(screen.queryByTestId('menu-root')).not.toBeInTheDocument();
   });
 
   it('renders a separator before a submenu parent with dividerBefore', async () => {
     const node = makeModule();
-    render(
+    const {container} = render(
       <UsecaseVisualizer
         contextMenu={{
           getItems: () => [
@@ -844,11 +908,7 @@ describe('context menu', () => {
     );
 
     await act(async () => {
-      latestReactFlowProps.current?.onNodeContextMenu?.(fakeEvent(), {
-        data: node,
-        id: node.id,
-        type: 'module',
-      });
+      rightClickPort(container, node);
     });
 
     expect(screen.getByTestId('menu-separator')).toBeInTheDocument();

@@ -59,6 +59,7 @@ export function DataLinkEdge(props: DataLinkEdgeProps) {
   return (
     <EdgeBody
       arrowMarkerId={DATA_ARROW_MARKER_ID}
+      edge={data}
       edgeId={id}
       isEcLink={isEcLink}
       isInterUsecase={isInterUsecase}

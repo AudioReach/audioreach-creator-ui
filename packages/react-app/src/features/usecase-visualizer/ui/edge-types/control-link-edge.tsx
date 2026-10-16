@@ -44,6 +44,7 @@ export function ControlLinkEdge(props: ControlLinkEdgeProps) {
   return (
     <EdgeBody
       dashed
+      edge={data}
       edgeId={id}
       isInterUsecase={isInterUsecase}
       label={label}

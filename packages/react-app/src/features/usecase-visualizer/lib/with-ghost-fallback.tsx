@@ -10,6 +10,10 @@ import type {Node, NodeProps} from '@xyflow/react';
 import type {AnyNode} from '~entities/graph';
 
 import {useVisualizerStore} from '../model/visualizer-store-context';
+import {
+  NodeActionsToolbar,
+  TOOLBAR_NODE_KINDS,
+} from '../ui/node-actions-toolbar';
 
 import {GhostNode} from './ghost-node';
 
@@ -36,7 +40,14 @@ export function withGhostFallback<TNode extends AnyNode>(
     if (isGhost) {
       return <GhostNode node={props.data} selected={props.selected} />;
     }
-    return <Component {...props} />;
+    return (
+      <>
+        {TOOLBAR_NODE_KINDS.has(props.data.nodeKind) && (
+          <NodeActionsToolbar node={props.data} selected={props.selected} />
+        )}
+        <Component {...props} />
+      </>
+    );
   }
   GhostFallback.displayName = `withGhostFallback(${
     Component.displayName ?? Component.name ?? 'Component'

@@ -7,14 +7,18 @@ import type {ReactNode} from 'react';
 
 import {BaseEdge, EdgeLabelRenderer} from '@xyflow/react';
 
+import type {AnyEdge} from '~entities/graph';
+
 import {STROKE_DASHARRAY_DASHED} from '../../lib/edge-stroke';
 import {useVisualizerStore} from '../../model/visualizer-store-context';
+import {EdgeActionsToolbar} from '../edge-actions-toolbar';
 
 const LABEL_VERTICAL_OFFSET = 10;
 
 export interface EdgeBodyProps {
   arrowMarkerId?: string;
   dashed?: boolean;
+  edge?: AnyEdge;
   edgeId: string;
   isEcLink?: boolean;
   isInterUsecase?: boolean;
@@ -34,6 +38,7 @@ export interface EdgeBodyProps {
 export function EdgeBody({
   arrowMarkerId,
   dashed,
+  edge,
   edgeId,
   isEcLink,
   isInterUsecase,
@@ -70,6 +75,13 @@ export function EdgeBody({
           strokeDasharray: dashed ? STROKE_DASHARRAY_DASHED : undefined,
           strokeWidth,
         }}
+      />
+      <EdgeActionsToolbar
+        edge={edge}
+        edgeId={edgeId}
+        selected={selected}
+        x={labelX}
+        y={labelY}
       />
       {showLabel ? (
         <EdgeLabelRenderer>
