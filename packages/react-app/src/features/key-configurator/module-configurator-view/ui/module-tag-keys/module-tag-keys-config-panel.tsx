@@ -19,8 +19,17 @@ import {
 import {Button, IconButton} from '@qualcomm-ui/react/button';
 import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
+import {
+  selectConfiguredTkvs,
+  useGraphDesignerStoreShallow,
+} from '~features/graph-designer';
 import ArcSearchBar from '~shared/controls/arc-search-bar';
+import {showToast} from '~shared/controls/global-toaster';
+import type {KeyDisplayMode} from '~shared/lib/key-display-mode';
+import {logger} from '~shared/lib/logger';
 import type {
+  Key,
+  KeyValue,
   SortColumn,
   SortOrder,
 } from '~shared/types/key-configurator-config.types';
@@ -29,209 +38,340 @@ import {
   ConvertStringToNumber,
 } from '~shared/utils/converter-utils';
 
-import {useModuleTagKeysStore} from '../../../model/module-tag-keys-store';
+import {
+  KvVectorEditor,
+  type KvVectorEditorSuggestion,
+} from '../../../ui/kv-vector-editor';
+import {formatConfiguredTkvLabel} from '../../lib/tkv-display-format';
+import {
+  getTkvSearchSuggestions,
+  resolveTkvSearchInput,
+  type TkvSearchDiagnostic,
+  type TkvSearchSuggestion,
+} from '../../lib/tkv-search-resolver';
 
-import type {ConfiguredTkv, TkvParameter} from './module-tag-keys-config.types';
+import type {
+  ConfiguredTkv,
+  TagGroup,
+  TkvParameter,
+} from './module-tag-keys-config.types';
 import {TagGroupSummary} from './tag-group-summary';
+import {transformParamDefinitionsToTKVParameters} from './tag-info.mapper';
 import {TkvParametersSection} from './tkv-parameters-section';
 
 interface ModuleTagKeysConfigPanelProps {
-  instanceId: number;
+  instanceSystemId: string;
   isEditable: boolean;
   moduleId: number;
+  tkvDisplayMode: KeyDisplayMode;
+}
+
+type ActiveTkvOperation =
+  {type: 'idle'} | {type: 'adding'} | {index: number; type: 'editing'};
+
+function tagGroupMatchesSearch(
+  tagGroupName: string,
+  tagGroup: TagGroup,
+  searchTerm: string,
+  searchNumber: number | null,
+): boolean {
+  const tagGroupMatches =
+    tagGroupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (searchNumber !== null && tagGroup.id === searchNumber);
+  const hasMatchingContent = Object.entries(tagGroup.keys).some(
+    ([modKeyName, modKey]) => {
+      const keyMatches =
+        modKeyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (searchNumber !== null && modKey.id === searchNumber);
+      const valueMatches = modKey.values.some(
+        (v) =>
+          v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (searchNumber !== null && v.id === searchNumber),
+      );
+      return keyMatches || valueMatches;
+    },
+  );
+  return tagGroupMatches || hasMatchingContent;
+}
+
+function sortTagGroupNames(
+  names: string[],
+  moduleTagKeys: Record<string, TagGroup>,
+  sortColumn: SortColumn,
+  sortOrder: SortOrder,
+): string[] {
+  if (!sortColumn) {
+    return names;
+  }
+  return [...names].sort((a, b) => {
+    const comparison =
+      sortColumn === 'id'
+        ? moduleTagKeys[a].id - moduleTagKeys[b].id
+        : a.toLowerCase().localeCompare(b.toLowerCase());
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+}
+
+function partitionTagGroupsBySelection(
+  names: string[],
+  moduleTagKeys: Record<string, TagGroup>,
+  selectedValues: Record<number, Record<number, boolean>>,
+): string[] {
+  const hasSelection = (name: string) =>
+    Object.values(moduleTagKeys[name].keys).some((modKey) =>
+      modKey.values.some((v) => selectedValues[modKey.id]?.[v.id]),
+    );
+  const withSelected = names.filter((name) => hasSelection(name));
+  const withoutSelected = names.filter((name) => !hasSelection(name));
+  return [...withSelected, ...withoutSelected];
+}
+
+function resolveTagGroupIdForKey(
+  moduleTagKeys: Record<string, TagGroup>,
+  keyId: number,
+): number | null {
+  const tagGroup = Object.values(moduleTagKeys).find((candidate) =>
+    Object.values(candidate.keys).some((modKey) => modKey.id === keyId),
+  );
+  return tagGroup?.id ?? null;
+}
+
+function buildTkvId(
+  tagGroupId: number,
+  keyValuePairs: Array<{key: {id: number}; value: {id: number}}>,
+): string {
+  return `${tagGroupId}_${keyValuePairs
+    .map((pair) => `${pair.key.id}_${pair.value.id}`)
+    .sort()
+    .join('_')}`;
+}
+
+function buildTkvSignature(
+  tagGroupId: number,
+  keyValuePairs: Array<{key: {id: number}; value: {id: number}}>,
+): string {
+  return `${tagGroupId}|${keyValuePairs
+    .map((pair) => `${pair.key.id}:${pair.value.id}`)
+    .sort()
+    .join('|')}`;
+}
+
+function buildTkvSystemId(
+  keyValuePairs: Array<{key: Key; value: KeyValue}>,
+): string {
+  return keyValuePairs
+    .map((pair) => `${pair.key.systemId}:${pair.value.systemId}`)
+    .sort()
+    .join('|');
+}
+
+async function copyTkvEntry(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
+    logger.error('Module tag key entry copy failed', {
+      action: 'copy_tkv_entry',
+      component: 'ModuleTagKeysConfigPanel',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+function groupSelectedValuesByKey(
+  selectedValues: Record<number, Record<number, boolean>>,
+  tagGroup: TagGroup,
+): Array<{key: Key; values: KeyValue[]}> {
+  const selectedPerKey: Array<{key: Key; values: KeyValue[]}> = [];
+  Object.values(tagGroup.keys).forEach((modKey) => {
+    const values = modKey.values.filter(
+      (v) => selectedValues[modKey.id]?.[v.id],
+    );
+    if (values.length > 0) {
+      selectedPerKey.push({
+        key: {id: modKey.id, name: modKey.name, systemId: modKey.systemId},
+        values,
+      });
+    }
+  });
+  return selectedPerKey;
+}
+
+function generateCartesianProduct(
+  selectedPerKey: Array<{key: Key; values: KeyValue[]}>,
+): Array<Array<{key: Key; value: KeyValue}>> {
+  const combinations: Array<Array<{key: Key; value: KeyValue}>> = [];
+
+  function generate(
+    index: number,
+    currentCombo: Array<{key: Key; value: KeyValue}>,
+  ) {
+    if (index === selectedPerKey.length) {
+      combinations.push([...currentCombo]);
+      return;
+    }
+    const {key, values} = selectedPerKey[index];
+    values.forEach((value) => {
+      currentCombo.push({key, value});
+      generate(index + 1, currentCombo);
+      currentCombo.pop();
+    });
+  }
+
+  generate(0, []);
+  return combinations;
 }
 
 export function ModuleTagKeysConfigPanel({
-  instanceId,
+  instanceSystemId,
   isEditable,
-  moduleId,
+  moduleId: _moduleId,
+  tkvDisplayMode,
 }: ModuleTagKeysConfigPanelProps) {
-  // Store state
-  const availableModuleTags = useModuleTagKeysStore(
-    (state) => state.availableModuleTags,
+  const {
+    addConfiguredTkv,
+    graphData,
+    moduleDefinitionsBySystemId,
+    moduleTagKeys,
+    removeConfiguredTkv,
+    updateConfiguredTkvs,
+  } = useGraphDesignerStoreShallow((state) => ({
+    addConfiguredTkv: state.addConfiguredTkv,
+    graphData: state.graphData,
+    moduleDefinitionsBySystemId: state.moduleDefinitionsBySystemId,
+    moduleTagKeys: state.moduleTagKeys,
+    removeConfiguredTkv: state.removeConfiguredTkv,
+    updateConfiguredTkvs: state.updateConfiguredTkvs,
+  }));
+
+  // selectConfiguredTkvs re-derives a fresh array on every call, so it must
+  // be memoized here rather than invoked inside the
+  // useGraphDesignerStoreShallow selector itself — doing so there defeats
+  // useShallow's comparison (new array identity every render) and triggers
+  // React's "getSnapshot should be cached" infinite-loop warning.
+  const configuredTkvs = useMemo(
+    () => selectConfiguredTkvs({graphData, moduleTagKeys}, instanceSystemId),
+    [graphData, moduleTagKeys, instanceSystemId],
   );
 
-  const storeParameters = useModuleTagKeysStore(
-    (state) => state.moduleParameters[moduleId],
-  );
-  const configuredModuleTags = useModuleTagKeysStore(
-    (state) => state.configuredModuleTags,
-  );
-
-  // Store actions
-  const updateConfiguredTagKeyValues = useModuleTagKeysStore(
-    (state) => state.updateConfiguredTagKeyValues,
-  );
-  const addConfiguredTagKeyValue = useModuleTagKeysStore(
-    (state) => state.addConfiguredTagKeyValue,
-  );
-  const removeConfiguredTagKeyValue = useModuleTagKeysStore(
-    (state) => state.removeConfiguredTagKeyValue,
+  const moduleDefinitionSystemId =
+    graphData?.moduleInstances[instanceSystemId]?.moduleDefinitionSystemId;
+  const paramDefinitionsSummaryInfo = useMemo(
+    () =>
+      (moduleDefinitionSystemId !== undefined
+        ? moduleDefinitionsBySystemId[moduleDefinitionSystemId]
+            ?.paramDefinitionsSummaryInfo
+        : undefined) ?? [],
+    [moduleDefinitionSystemId, moduleDefinitionsBySystemId],
   );
 
-  const [parameters, setParameters] = useState<TkvParameter[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const baselineParameters = useMemo<TkvParameter[]>(
+    () => transformParamDefinitionsToTKVParameters(paramDefinitionsSummaryInfo),
+    [paramDefinitionsSummaryInfo],
+  );
+
+  const [parameters, setParameters] =
+    useState<TkvParameter[]>(baselineParameters);
+  const [activeOperation, setActiveOperation] = useState<ActiveTkvOperation>({
+    type: 'idle',
+  });
   const [configSearchTerm, setConfigSearchTerm] = useState('');
-  const [selectedValues, setSelectedValues] = useState<Record<number, boolean>>(
-    {},
-  );
+  const [availableSearchTerm, setAvailableSearchTerm] = useState('');
+  const [searchDiagnostic, setSearchDiagnostic] =
+    useState<TkvSearchDiagnostic | null>(null);
+  const [selectedValues, setSelectedValues] = useState<
+    Record<number, Record<number, boolean>>
+  >({});
+  const [selectedTagGroup, setSelectedTagGroup] = useState<number | null>(null);
+  const [initialEditSelections, setInitialEditSelections] = useState<
+    Record<number, Record<number, boolean>>
+  >({});
   const [expandedTagGroups, setExpandedTagGroups] = useState<number[]>([]);
   const [expandedModKeys, setExpandedModKeys] = useState<
     Record<number, boolean>
   >({});
-  const [selectedTagGroup, setSelectedTagGroup] = useState<number | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [showSearchAndList, setShowSearchAndList] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [initialEditSelections, setInitialEditSelections] = useState<
-    Record<number, boolean>
-  >({});
   const [isConfigSectionCollapsed, setIsConfigSectionCollapsed] =
     useState(false);
   const configSectionRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
 
-  // Sync parameters with store when store updates
+  const resetPickerState = useCallback(() => {
+    setSelectedValues({});
+    setSelectedTagGroup(null);
+    setInitialEditSelections({});
+    setExpandedTagGroups([]);
+    setExpandedModKeys({});
+    setAvailableSearchTerm('');
+    setSearchDiagnostic(null);
+  }, []);
+
   useEffect(() => {
-    if (storeParameters && storeParameters.length > 0) {
-      setParameters(storeParameters);
-    }
-  }, [storeParameters]);
+    setActiveOperation({type: 'idle'});
+    resetPickerState();
+    // Resetting the active picker on instance switch (not on every baseline
+    // recompute) mirrors CalibrationKeysConfigPanel's own instance-switch effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instanceSystemId]);
 
-  // Get configured keys for this module instance from store
-  const configuredTKVs = useMemo(() => {
-    const moduleInstances = configuredModuleTags[moduleId] || [];
-    const instance = moduleInstances.find(
-      (inst: {instanceId: number}) => inst.instanceId === instanceId,
-    );
-    return instance?.tagKeyValueList || [];
-  }, [configuredModuleTags, moduleId, instanceId]);
-
-  const availableModuleTagsInfo = useMemo(
-    () => availableModuleTags || {},
-    [availableModuleTags],
-  );
-
-  // Helper function to partition tag groups by selection
-  const partitionTagGroupsBySelection = useCallback(
-    (
-      tagGroups: string[],
-      selectedValues: Record<number, boolean>,
-    ): string[] => {
-      const groupsWithSelectedValues = tagGroups.filter((tagGroupName) => {
-        const tagGroup = availableModuleTagsInfo[tagGroupName];
-        return Object.keys(tagGroup.keys).some((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
-          return modKey.values.some((v: {id: number}) => selectedValues[v.id]);
-        });
-      });
-      const groupsWithoutSelectedValues = tagGroups.filter((tagGroupName) => {
-        const tagGroup = availableModuleTagsInfo[tagGroupName];
-        return !Object.keys(tagGroup.keys).some((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
-          return modKey.values.some((v: {id: number}) => selectedValues[v.id]);
-        });
-      });
-      return [...groupsWithSelectedValues, ...groupsWithoutSelectedValues];
-    },
-    [availableModuleTagsInfo],
-  );
-
-  // Filter and sort tag groups
-  const filteredAndSortedTagGroups = useMemo(() => {
-    let tagGroups = Object.keys(availableModuleTagsInfo);
-
-    // Filter by search term
-    if (searchTerm) {
-      const searchNumber = ConvertStringToNumber(searchTerm);
-      tagGroups = tagGroups.filter((tagGroupName) => {
-        const tagGroup = availableModuleTagsInfo[tagGroupName];
-
-        // Check if tag group name or ID matches
-        const tagGroupMatches =
-          tagGroupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (searchNumber !== null && tagGroup.id === searchNumber);
-
-        // Check if any module keys or values match
-        let hasMatchingContent = false;
-        Object.keys(tagGroup.keys).forEach((modKeyName) => {
-          const modKey = tagGroup.keys[modKeyName];
-          const keyMatches =
-            modKeyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (searchNumber !== null && modKey.id === searchNumber);
-          const valueMatches = modKey.values.some(
-            (v: {id: number; name: string}) =>
-              v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (searchNumber !== null && v.id === searchNumber),
-          );
-          if (keyMatches || valueMatches) {
-            hasMatchingContent = true;
-          }
-        });
-
-        return tagGroupMatches || hasMatchingContent;
-      });
-
-      // Auto-expand all filtered tag groups and their keys when searching
-      const tagGroupIds = tagGroups.map(
-        (name) => availableModuleTagsInfo[name].id,
-      );
-      setExpandedTagGroups(tagGroupIds);
-
-      // Also expand all module keys in the filtered tag groups
-      const allModKeys: Record<number, boolean> = {};
-      tagGroups.forEach((tagGroupName) => {
-        const tagGroup = availableModuleTagsInfo[tagGroupName];
-        Object.keys(tagGroup.keys).forEach((modKeyName) => {
-          const modKeyId = tagGroup.keys[modKeyName].id;
-          allModKeys[modKeyId] = true;
-        });
-      });
-      setExpandedModKeys(allModKeys);
-    } else {
-      // When search is cleared, collapse everything
+  // Auto-expand matching tag groups/keys while searching; collapse on clear.
+  useEffect(() => {
+    if (!availableSearchTerm) {
       setExpandedTagGroups([]);
       setExpandedModKeys({});
+      return;
     }
-
-    // Sort tag groups
-    if (sortColumn) {
-      tagGroups.sort((a, b) => {
-        if (sortColumn === 'id') {
-          const compareA = availableModuleTagsInfo[a].id;
-          const compareB = availableModuleTagsInfo[b].id;
-          const comparison = compareA - compareB;
-          return sortOrder === 'asc' ? comparison : -comparison;
-        } else {
-          const compareA = a.toLowerCase();
-          const compareB = b.toLowerCase();
-          const comparison = compareA.localeCompare(compareB);
-          return sortOrder === 'asc' ? comparison : -comparison;
-        }
+    const searchNumber = ConvertStringToNumber(availableSearchTerm);
+    const matchingNames = Object.keys(moduleTagKeys).filter((name) =>
+      tagGroupMatchesSearch(
+        name,
+        moduleTagKeys[name],
+        availableSearchTerm,
+        searchNumber,
+      ),
+    );
+    setExpandedTagGroups(matchingNames.map((name) => moduleTagKeys[name].id));
+    const allModKeys: Record<number, boolean> = {};
+    matchingNames.forEach((name) => {
+      Object.values(moduleTagKeys[name].keys).forEach((modKey) => {
+        allModKeys[modKey.id] = true;
       });
-    }
+    });
+    setExpandedModKeys(allModKeys);
+  }, [availableSearchTerm, moduleTagKeys]);
 
-    // When editing, move tag groups with INITIAL selected values to the top
+  const filteredAndSortedTagGroups = useMemo(() => {
+    let names = Object.keys(moduleTagKeys);
+    if (availableSearchTerm) {
+      const searchNumber = ConvertStringToNumber(availableSearchTerm);
+      names = names.filter((name) =>
+        tagGroupMatchesSearch(
+          name,
+          moduleTagKeys[name],
+          availableSearchTerm,
+          searchNumber,
+        ),
+      );
+    }
+    names = sortTagGroupNames(names, moduleTagKeys, sortColumn, sortOrder);
     if (
-      editingIndex !== null &&
+      activeOperation.type === 'editing' &&
       Object.keys(initialEditSelections).length > 0
     ) {
-      tagGroups = partitionTagGroupsBySelection(
-        tagGroups,
+      names = partitionTagGroupsBySelection(
+        names,
+        moduleTagKeys,
         initialEditSelections,
       );
     }
-
-    return tagGroups;
+    return names;
   }, [
-    availableModuleTagsInfo,
-    searchTerm,
+    moduleTagKeys,
+    availableSearchTerm,
     sortColumn,
-    editingIndex,
-    initialEditSelections,
     sortOrder,
-    partitionTagGroupsBySelection,
+    activeOperation,
+    initialEditSelections,
   ]);
 
   const handleSort = useCallback(
@@ -276,325 +416,421 @@ export function ModuleTagKeysConfigPanel({
   }, []);
 
   const toggleValueSelection = useCallback(
-    (valueId: number, tagGroupId: number, event?: React.MouseEvent) => {
-      // Only proceed if event is from checkbox or not provided
-      if (event && (event.target as HTMLElement).tagName !== 'INPUT') {
+    (modKeyId: number, valueId: number, tagGroupId: number) => {
+      if (selectedTagGroup !== null && selectedTagGroup !== tagGroupId) {
+        setSelectedValues({[modKeyId]: {[valueId]: true}});
+        setSelectedTagGroup(tagGroupId);
         return;
       }
 
-      // If selecting a value from a different tag group, clear previous selections
-      if (selectedTagGroup && selectedTagGroup !== tagGroupId) {
-        setSelectedValues({[valueId]: true});
+      const wasSelected = Boolean(selectedValues[modKeyId]?.[valueId]);
+      setSelectedValues((prev) => ({
+        ...prev,
+        [modKeyId]: {
+          ...prev[modKeyId],
+          [valueId]: !wasSelected,
+        },
+      }));
+
+      if (!wasSelected) {
         setSelectedTagGroup(tagGroupId);
-      } else {
-        setSelectedValues((prev) => ({
-          ...prev,
-          [valueId]: !prev[valueId],
-        }));
-        // Auto-select tag group when any value is selected
-        if (!selectedValues[valueId]) {
-          setSelectedTagGroup(tagGroupId);
-        } else {
-          // Check if any values are still selected in this tag group
-          const tagGroupName = Object.keys(availableModuleTagsInfo).find(
-            (name) => availableModuleTagsInfo[name].id === tagGroupId,
-          );
-          if (tagGroupName) {
-            const tagGroup = availableModuleTagsInfo[tagGroupName];
-            const hasAnySelected = Object.keys(tagGroup.keys).some(
-              (modKeyName) => {
-                const modKey = tagGroup.keys[modKeyName];
-                return modKey.values.some(
-                  (v: {id: number}) => v.id !== valueId && selectedValues[v.id],
-                );
-              },
-            );
-            if (!hasAnySelected) {
-              setSelectedTagGroup(null);
-            }
-          }
-        }
+        return;
+      }
+
+      const tagGroupName = Object.keys(moduleTagKeys).find(
+        (name) => moduleTagKeys[name].id === tagGroupId,
+      );
+      const stillHasSelection = tagGroupName
+        ? Object.values(moduleTagKeys[tagGroupName].keys).some((modKey) =>
+            modKey.values.some(
+              (v) =>
+                !(modKey.id === modKeyId && v.id === valueId) &&
+                selectedValues[modKey.id]?.[v.id],
+            ),
+          )
+        : false;
+      if (!stillHasSelection) {
+        setSelectedTagGroup(null);
       }
     },
-    [selectedTagGroup, selectedValues, availableModuleTagsInfo],
+    [selectedTagGroup, selectedValues, moduleTagKeys],
   );
 
   const toggleModKeySelection = useCallback(
     (tagGroupId: number, modKeyId: number) => {
-      const tagGroupName = Object.keys(availableModuleTagsInfo).find(
-        (name) => availableModuleTagsInfo[name].id === tagGroupId,
+      const tagGroupName = Object.keys(moduleTagKeys).find(
+        (name) => moduleTagKeys[name].id === tagGroupId,
       );
       if (!tagGroupName) {
         return;
       }
-
-      const modKeyName = Object.keys(
-        availableModuleTagsInfo[tagGroupName].keys,
-      ).find(
-        (name) =>
-          availableModuleTagsInfo[tagGroupName].keys[name].id === modKeyId,
+      const modKeyName = Object.keys(moduleTagKeys[tagGroupName].keys).find(
+        (name) => moduleTagKeys[tagGroupName].keys[name].id === modKeyId,
       );
       if (!modKeyName) {
         return;
       }
+      const modKey = moduleTagKeys[tagGroupName].keys[modKeyName];
 
-      // If selecting from a different tag group, clear previous selections
-      if (selectedTagGroup && selectedTagGroup !== tagGroupId) {
-        const modKey = availableModuleTagsInfo[tagGroupName].keys[modKeyName];
-        const newSelectedValues: Record<number, boolean> = {};
-        modKey.values.forEach((v: {id: number}) => {
-          newSelectedValues[v.id] = true;
+      if (selectedTagGroup !== null && selectedTagGroup !== tagGroupId) {
+        const nextKeySelections: Record<number, boolean> = {};
+        modKey.values.forEach((v) => {
+          nextKeySelections[v.id] = true;
         });
-        setSelectedValues(newSelectedValues);
+        setSelectedValues({[modKeyId]: nextKeySelections});
         setSelectedTagGroup(tagGroupId);
         return;
       }
 
-      const modKey = availableModuleTagsInfo[tagGroupName].keys[modKeyName];
       const allSelected = modKey.values.every(
-        (v: {id: number}) => selectedValues[v.id],
+        (v) => selectedValues[modKeyId]?.[v.id],
       );
-
-      const newSelectedValues = {...selectedValues};
-      modKey.values.forEach((v: {id: number}) => {
-        newSelectedValues[v.id] = !allSelected;
+      const nextKeySelections: Record<number, boolean> = {
+        ...selectedValues[modKeyId],
+      };
+      modKey.values.forEach((v) => {
+        nextKeySelections[v.id] = !allSelected;
       });
-      setSelectedValues(newSelectedValues);
+      setSelectedValues((prev) => ({
+        ...prev,
+        [modKeyId]: nextKeySelections,
+      }));
 
-      // Auto-select the tag group radio when selecting values
       if (!allSelected) {
         setSelectedTagGroup(tagGroupId);
-      } else {
-        // Check if any values are still selected in this tag group
-        const tagGroup = availableModuleTagsInfo[tagGroupName];
-        const hasAnySelected = Object.keys(tagGroup.keys).some((keyName) => {
-          if (keyName === modKeyName) {
-            return false;
-          }
-          const key = tagGroup.keys[keyName];
-          return key.values.some((v: {id: number}) => selectedValues[v.id]);
-        });
-        if (!hasAnySelected) {
-          setSelectedTagGroup(null);
+        return;
+      }
+
+      const hasAnySelected = Object.entries(
+        moduleTagKeys[tagGroupName].keys,
+      ).some(([keyName, key]) => {
+        if (keyName === modKeyName) {
+          return false;
         }
+        return key.values.some((v) => selectedValues[key.id]?.[v.id]);
+      });
+      if (!hasAnySelected) {
+        setSelectedTagGroup(null);
       }
     },
-    [selectedTagGroup, selectedValues, availableModuleTagsInfo],
+    [selectedTagGroup, selectedValues, moduleTagKeys],
   );
 
   const handleExpandAll = useCallback(() => {
-    const tagGroupIds = filteredAndSortedTagGroups.map(
-      (name) => availableModuleTagsInfo[name].id,
+    setExpandedTagGroups(
+      filteredAndSortedTagGroups.map((name) => moduleTagKeys[name].id),
     );
-    setExpandedTagGroups(tagGroupIds);
-    // Expand all mod keys in expanded tag groups
     const allModKeys: Record<number, boolean> = {};
-    filteredAndSortedTagGroups.forEach((tagGroupName) => {
-      const tagGroup = availableModuleTagsInfo[tagGroupName];
-      Object.keys(tagGroup.keys).forEach((modKeyName) => {
-        const modKeyId = tagGroup.keys[modKeyName].id;
-        allModKeys[modKeyId] = true;
+    filteredAndSortedTagGroups.forEach((name) => {
+      Object.values(moduleTagKeys[name].keys).forEach((modKey) => {
+        allModKeys[modKey.id] = true;
       });
     });
     setExpandedModKeys(allModKeys);
-  }, [filteredAndSortedTagGroups, availableModuleTagsInfo]);
+  }, [filteredAndSortedTagGroups, moduleTagKeys]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedTagGroups([]);
     setExpandedModKeys({});
   }, []);
 
+  const sortedValues = useCallback(
+    (modKey: {id: number; values: KeyValue[]}) => {
+      if (
+        activeOperation.type !== 'editing' ||
+        Object.keys(initialEditSelections).length === 0
+      ) {
+        return modKey.values;
+      }
+      const keySelections = initialEditSelections[modKey.id];
+      return [
+        ...modKey.values.filter((v) => keySelections?.[v.id]),
+        ...modKey.values.filter((v) => !keySelections?.[v.id]),
+      ];
+    },
+    [activeOperation, initialEditSelections],
+  );
+
+  const availableSuggestions = useMemo<
+    Array<KvVectorEditorSuggestion<TkvSearchSuggestion>>
+  >(
+    () =>
+      getTkvSearchSuggestions(
+        availableSearchTerm,
+        moduleTagKeys,
+        selectedTagGroup,
+        tkvDisplayMode,
+      ).map((suggestion) => ({
+        id: `${suggestion.key.id}:${suggestion.value.id}`,
+        primaryText: suggestion.value.name,
+        secondaryText: `Key: ${suggestion.key.name}`,
+        value: suggestion,
+      })),
+    [availableSearchTerm, moduleTagKeys, selectedTagGroup, tkvDisplayMode],
+  );
+
+  const handleSuggestionCommit = useCallback(
+    (suggestion: TkvSearchSuggestion) => {
+      const tagGroupId = resolveTagGroupIdForKey(
+        moduleTagKeys,
+        suggestion.key.id,
+      );
+      if (tagGroupId === null) {
+        return;
+      }
+      toggleValueSelection(suggestion.key.id, suggestion.value.id, tagGroupId);
+      // Reflect the committed suggestion's value name into the search box.
+      // availableSearchTerm also drives the table/suggestion filters, so this
+      // must stay a plain name the value matches against itself — a bracketed
+      // "[Key: Value]" string (key-value display mode) would filter both down
+      // to empty since no plain name contains that literal text.
+      setAvailableSearchTerm(suggestion.value.name);
+    },
+    [moduleTagKeys, toggleValueSelection],
+  );
+
+  const handleSearchTextChange = useCallback(
+    (text: string) => {
+      setAvailableSearchTerm(text);
+
+      if (!text.trim()) {
+        setSelectedValues({});
+        setSelectedTagGroup(null);
+        setSearchDiagnostic(null);
+        return;
+      }
+
+      const resolved = resolveTkvSearchInput(
+        text,
+        moduleTagKeys,
+        selectedTagGroup,
+        tkvDisplayMode,
+      );
+      if (resolved.kind !== 'selection' && resolved.kind !== 'ambiguous') {
+        setSearchDiagnostic(null);
+        return;
+      }
+
+      const nextSelectedValues: Record<number, Record<number, boolean>> = {
+        ...selectedValues,
+      };
+      let tagGroupId = selectedTagGroup;
+      resolved.pairs.forEach((pair) => {
+        nextSelectedValues[pair.key.id] = {
+          ...nextSelectedValues[pair.key.id],
+          [pair.value.id]: true,
+        };
+        if (tagGroupId === null) {
+          tagGroupId = resolveTagGroupIdForKey(moduleTagKeys, pair.key.id);
+        }
+      });
+      setSelectedValues(nextSelectedValues);
+      if (tagGroupId !== null) {
+        setSelectedTagGroup(tagGroupId);
+      }
+      setSearchDiagnostic(
+        resolved.kind === 'ambiguous' ? resolved.diagnostic : null,
+      );
+    },
+    [moduleTagKeys, selectedTagGroup, selectedValues, tkvDisplayMode],
+  );
+
   const handleAddClick = useCallback(() => {
-    setEditingIndex(null);
-    setSelectedValues({});
-    setSelectedTagGroup(null);
-    setInitialEditSelections({});
-    setShowSearchAndList(true);
-    setExpandedTagGroups([]);
-    setExpandedModKeys({});
-    setSearchTerm('');
+    setActiveOperation({type: 'adding'});
+    resetPickerState();
+    setParameters(baselineParameters);
 
-    // Reset parameters to unchecked state
-    setParameters((prev) => prev.map((p) => ({...p, checked: false})));
-
-    // Scroll to search bar
     setTimeout(() => {
       searchBarRef.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
     }, 100);
-  }, []);
+  }, [resetPickerState, baselineParameters]);
+
+  const handleEditItem = useCallback(
+    (id: string) => {
+      const index = configuredTkvs.findIndex(
+        (tkv) => buildTkvId(tkv.tagGroupId, tkv.keyValuePairs) === id,
+      );
+      if (index === -1) {
+        return;
+      }
+      const tkv = configuredTkvs[index];
+
+      setActiveOperation({index, type: 'editing'});
+
+      const nextSelectedValues: Record<number, Record<number, boolean>> = {};
+      const keysToExpand: number[] = [];
+      tkv.keyValuePairs.forEach((pair) => {
+        nextSelectedValues[pair.key.id] = {
+          ...nextSelectedValues[pair.key.id],
+          [pair.value.id]: true,
+        };
+        if (!keysToExpand.includes(pair.key.id)) {
+          keysToExpand.push(pair.key.id);
+        }
+      });
+
+      setSelectedValues(nextSelectedValues);
+      setInitialEditSelections(nextSelectedValues);
+      setSelectedTagGroup(tkv.tagGroupId);
+      setExpandedTagGroups([tkv.tagGroupId]);
+
+      const expandedKeysObj: Record<number, boolean> = {};
+      keysToExpand.forEach((keyId) => {
+        expandedKeysObj[keyId] = true;
+      });
+      setExpandedModKeys(expandedKeysObj);
+      setAvailableSearchTerm('');
+      setParameters(
+        baselineParameters.map((param) => ({
+          ...param,
+          checked: tkv.pidConfig.includes(param.pid),
+        })),
+      );
+
+      setTimeout(() => {
+        searchBarRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 100);
+    },
+    [configuredTkvs, baselineParameters],
+  );
+
+  const handleDeleteItem = useCallback(
+    (id: string) => {
+      const index = configuredTkvs.findIndex(
+        (tkv) => buildTkvId(tkv.tagGroupId, tkv.keyValuePairs) === id,
+      );
+      if (index === -1) {
+        return;
+      }
+      removeConfiguredTkv(instanceSystemId, index);
+
+      if (
+        activeOperation.type === 'editing' &&
+        activeOperation.index === index
+      ) {
+        setActiveOperation({type: 'idle'});
+        resetPickerState();
+        setParameters(baselineParameters);
+      }
+    },
+    [
+      configuredTkvs,
+      removeConfiguredTkv,
+      instanceSystemId,
+      activeOperation,
+      resetPickerState,
+      baselineParameters,
+    ],
+  );
+
+  const handleDeleteTagGroup = useCallback(
+    (tagGroupName: string) => {
+      if (activeOperation.type === 'editing') {
+        const editingTkv = configuredTkvs[activeOperation.index];
+        if (editingTkv && editingTkv.tagGroup === tagGroupName) {
+          setActiveOperation({type: 'idle'});
+          resetPickerState();
+          setParameters(baselineParameters);
+        }
+      }
+      updateConfiguredTkvs(
+        instanceSystemId,
+        configuredTkvs.filter((tkv) => tkv.tagGroup !== tagGroupName),
+      );
+    },
+    [
+      configuredTkvs,
+      activeOperation,
+      updateConfiguredTkvs,
+      instanceSystemId,
+      resetPickerState,
+      baselineParameters,
+    ],
+  );
+
+  const handleCancel = useCallback(() => {
+    setActiveOperation({type: 'idle'});
+    resetPickerState();
+    setParameters(baselineParameters);
+  }, [resetPickerState, baselineParameters]);
 
   const handleApply = useCallback(() => {
-    if (!selectedTagGroup) {
-      alert('Please select a tag group');
+    if (selectedTagGroup === null) {
+      showToast('Please select a tag group', 'warning');
       return;
     }
-
-    // Check if at least one PID is selected
-    const checkedPids = parameters.filter((p) => p.checked).map((p) => p.pid);
-    if (checkedPids.length === 0) {
-      alert('Please select at least one PID');
-      return;
-    }
-
-    // Find tag group name and ID from selected tag group ID
-    const tagGroupName = Object.keys(availableModuleTagsInfo).find(
-      (name) => availableModuleTagsInfo[name].id === selectedTagGroup,
+    const tagGroupName = Object.keys(moduleTagKeys).find(
+      (name) => moduleTagKeys[name].id === selectedTagGroup,
     );
     if (!tagGroupName) {
       return;
     }
+    const tagGroup = moduleTagKeys[tagGroupName];
 
-    const tagGroup = availableModuleTagsInfo[tagGroupName];
-    const tagGroupId = tagGroup.id;
-
-    // Group selected values by their keys (with full Key and KeyValue objects)
-    const selectedPerKey: Array<{
-      key: {id: number; name: string};
-      values: Array<{id: number; name: string}>;
-    }> = [];
-
-    Object.keys(selectedValues).forEach((valueIdStr) => {
-      const valueId = parseInt(valueIdStr, 10);
-      if (selectedValues[valueId]) {
-        // Find which key this value belongs to in the selected tag group
-        for (const modKeyName in tagGroup.keys) {
-          const modKey = tagGroup.keys[modKeyName];
-          const value = modKey.values.find(
-            (v: {id: number; name: string}) => v.id === valueId,
-          );
-          if (value) {
-            // Check if we already have this key
-            let keyEntry = selectedPerKey.find(
-              (entry) => entry.key.id === modKey.id,
-            );
-            if (!keyEntry) {
-              keyEntry = {
-                key: {id: modKey.id, name: modKey.name},
-                values: [],
-              };
-              selectedPerKey.push(keyEntry);
-            }
-            keyEntry.values.push({id: value.id, name: value.name});
-            break;
-          }
-        }
-      }
-    });
-
-    // Check if no values are selected
-    if (selectedPerKey.length === 0) {
-      // Check if the tag group has any keys available
-      const hasKeys = Object.keys(tagGroup.keys).length > 0;
-
-      if (hasKeys) {
-        // Tag has keys but none are selected - show alert
-        alert('Please select at least one value');
-        return;
-      }
-      // If tag has no keys, it's an empty tag - allow it to proceed
-    }
-
-    // Generate Cartesian product of all selected values across keys
-    const combinations: Array<
-      Array<{
-        key: {id: number; name: string};
-        value: {id: number; name: string};
-      }>
-    > = [];
-
-    function generateCombinations(
-      index: number,
-      currentCombo: Array<{
-        key: {id: number; name: string};
-        value: {id: number; name: string};
-      }>,
-    ) {
-      if (index === selectedPerKey.length) {
-        combinations.push([...currentCombo]);
-        return;
-      }
-
-      const {key, values} = selectedPerKey[index];
-      values.forEach((value) => {
-        currentCombo.push({key, value});
-        generateCombinations(index + 1, currentCombo);
-        currentCombo.pop();
-      });
-    }
-
-    generateCombinations(0, []);
-
-    // Create configurations for each combination
-    const newConfigs: ConfiguredTkv[] = combinations.map((keyValuePairs) => ({
-      keyValuePairs,
-      pidConfig: checkedPids,
-      tagGroup: tagGroupName,
-      tagGroupId,
-    }));
-
-    // Get existing configs (exclude the one being edited)
-    const existingConfigs =
-      editingIndex !== null
-        ? configuredTKVs.filter((_, i) => i !== editingIndex)
-        : configuredTKVs;
-
-    // Check for duplicates
-    const uniqueNewConfigs: ConfiguredTkv[] = [];
-
-    newConfigs.forEach((newConfig) => {
-      // Create a normalized string representation for comparison using IDs
-      const newConfigStr = `${newConfig.tagGroupId}|${newConfig.keyValuePairs
-        .map((p) => `${p.key.id}:${p.value.id}`)
-        .sort()
-        .join('|')}`;
-
-      // Check if this configuration already exists
-      const isDuplicate = existingConfigs.some((existingConfig) => {
-        const existingConfigStr = `${existingConfig.tagGroupId}|${existingConfig.keyValuePairs
-          .map((p) => `${p.key.id}:${p.value.id}`)
-          .sort()
-          .join('|')}`;
-        return existingConfigStr === newConfigStr;
-      });
-
-      if (!isDuplicate) {
-        uniqueNewConfigs.push(newConfig);
-      }
-    });
-
-    // If no unique configs to add, don't proceed
-    if (uniqueNewConfigs.length === 0) {
+    const checkedPids = parameters.filter((p) => p.checked).map((p) => p.pid);
+    if (checkedPids.length === 0) {
+      showToast('Please select at least one PID', 'warning');
       return;
     }
 
-    // Update store using dedicated methods
-    if (editingIndex !== null) {
-      // Edit mode: Remove old entry first
-      removeConfiguredTagKeyValue(moduleId, instanceId, editingIndex);
+    const selectedPerKey = groupSelectedValuesByKey(selectedValues, tagGroup);
+    if (selectedPerKey.length === 0 && Object.keys(tagGroup.keys).length > 0) {
+      showToast('Please select at least one value', 'warning');
+      return;
     }
 
-    // Add new configurations
-    uniqueNewConfigs.forEach((config) => {
-      addConfiguredTagKeyValue(moduleId, instanceId, config);
-    });
+    const combinations = generateCartesianProduct(selectedPerKey);
+    const newConfigs: ConfiguredTkv[] = (
+      combinations.length > 0 ? combinations : [[]]
+    ).map((keyValuePairs) => ({
+      keyValuePairs,
+      pidConfig: checkedPids,
+      systemId: buildTkvSystemId(keyValuePairs),
+      tagGroup: tagGroupName,
+      tagGroupId: tagGroup.id,
+    }));
 
-    // Reset state including parameters
-    setSelectedValues({});
-    setSelectedTagGroup(null);
-    setEditingIndex(null);
-    setInitialEditSelections({});
-    setShowSearchAndList(false);
-    setExpandedTagGroups([]);
-    setExpandedModKeys({});
-    setSearchTerm('');
+    if (activeOperation.type === 'editing') {
+      const editIndex = activeOperation.index;
+      const edited = newConfigs[0];
+      updateConfiguredTkvs(
+        instanceSystemId,
+        configuredTkvs.map((tkv, i) =>
+          i === editIndex ? {...edited, systemId: tkv.systemId} : tkv,
+        ),
+      );
+    } else {
+      const existingSignatures = new Set(
+        configuredTkvs.map((tkv) =>
+          buildTkvSignature(tkv.tagGroupId, tkv.keyValuePairs),
+        ),
+      );
+      const uniqueNewConfigs = newConfigs.filter((config) => {
+        const signature = buildTkvSignature(
+          config.tagGroupId,
+          config.keyValuePairs,
+        );
+        if (existingSignatures.has(signature)) {
+          return false;
+        }
+        existingSignatures.add(signature);
+        return true;
+      });
+      uniqueNewConfigs.forEach((config) =>
+        addConfiguredTkv(instanceSystemId, config),
+      );
+    }
 
-    // Reset parameters to unchecked state (don't use storeParameters as it may have stale data)
-    setParameters((prev) => prev.map((p) => ({...p, checked: false})));
+    setActiveOperation({type: 'idle'});
+    resetPickerState();
+    setParameters(baselineParameters);
 
-    // Scroll to configuration section
     setTimeout(() => {
       configSectionRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -603,217 +839,34 @@ export function ModuleTagKeysConfigPanel({
     }, 100);
   }, [
     selectedTagGroup,
+    moduleTagKeys,
     parameters,
-    availableModuleTagsInfo,
     selectedValues,
-    editingIndex,
-    configuredTKVs,
-    removeConfiguredTagKeyValue,
-    moduleId,
-    instanceId,
-    addConfiguredTagKeyValue,
+    activeOperation,
+    configuredTkvs,
+    updateConfiguredTkvs,
+    addConfiguredTkv,
+    instanceSystemId,
+    resetPickerState,
+    baselineParameters,
   ]);
 
-  const handleEditTKV = useCallback(
-    (id: string) => {
-      // Find TKV by its composite ID
-      const index = configuredTKVs.findIndex((tkv) => {
-        const tkvId = `${tkv.tagGroupId}_${tkv.keyValuePairs
-          .map((p) => `${p.key.id}_${p.value.id}`)
-          .sort()
-          .join('_')}`;
-        return tkvId === id;
-      });
-
-      if (index === -1) {
-        return;
-      }
-      const tkv = configuredTKVs[index];
-
-      setEditingIndex(index);
-
-      const newSelectedValues: Record<number, boolean> = {};
-      const keysToExpand: number[] = [];
-      const tagGroupId = tkv.tagGroupId;
-
-      // Use the Key and KeyValue objects directly
-      tkv.keyValuePairs.forEach((pair) => {
-        newSelectedValues[pair.value.id] = true;
-        // Add key to expansion list
-        if (!keysToExpand.includes(pair.key.id)) {
-          keysToExpand.push(pair.key.id);
-        }
-      });
-
-      // Update parameters based on the TKV's pidConfig
-      // Use storeParameters to ensure we have the latest data
-      if (tkv.pidConfig && storeParameters && storeParameters.length > 0) {
-        const pidConfigSet = new Set(tkv.pidConfig);
-        const updatedParameters = storeParameters.map((param) => ({
-          ...param,
-          checked: pidConfigSet.has(param.pid),
-        }));
-        setParameters(updatedParameters);
-      }
-
-      setSelectedValues(newSelectedValues);
-      setInitialEditSelections(newSelectedValues); // Store initial selections for sorting
-      setSelectedTagGroup(tagGroupId);
-
-      // Expand the tag group
-      if (tagGroupId !== null) {
-        setExpandedTagGroups([tagGroupId]);
-      }
-
-      // Expand keys with selected values
-      const expandedKeysObj: Record<number, boolean> = {};
-      keysToExpand.forEach((keyId) => {
-        expandedKeysObj[keyId] = true;
-      });
-      setExpandedModKeys(expandedKeysObj);
-
-      setShowSearchAndList(true);
-      setSearchTerm('');
-
-      // Scroll to search bar
-      setTimeout(() => {
-        searchBarRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 100);
-    },
-    [configuredTKVs, storeParameters],
-  );
-
-  const handleDeleteTKV = useCallback(
-    (id: string) => {
-      // Find TKV by its composite ID
-      const index = configuredTKVs.findIndex((tkv) => {
-        const tkvId = `${tkv.tagGroupId}_${tkv.keyValuePairs
-          .map((p) => `${p.key.id}_${p.value.id}`)
-          .sort()
-          .join('_')}`;
-        return tkvId === id;
-      });
-
-      if (index === -1) {
-        return;
-      }
-
-      // Use dedicated remove method
-      removeConfiguredTagKeyValue(moduleId, instanceId, index);
-
-      // Clear selections if in edit mode for this item
-      if (editingIndex === index && showSearchAndList) {
-        setSelectedValues({});
-        setSelectedTagGroup(null);
-        setInitialEditSelections({});
-        setExpandedTagGroups([]);
-        setExpandedModKeys({});
-        // Reset parameters to unchecked state
-        setParameters((prev) => prev.map((p) => ({...p, checked: false})));
-      }
-    },
-    [
-      configuredTKVs,
-      moduleId,
-      instanceId,
-      removeConfiguredTagKeyValue,
-      editingIndex,
-      showSearchAndList,
-    ],
-  );
-
-  const handleDeleteTagGroup = useCallback(
-    (tagGroupName: string) => {
-      // Check if we're editing a TKV from this tag group
-      if (editingIndex !== null && showSearchAndList) {
-        const editingTKV = configuredTKVs[editingIndex];
-        if (editingTKV && editingTKV.tagGroup === tagGroupName) {
-          // Clear all selections since we're deleting the tag group being edited
-          setSelectedValues({});
-          setSelectedTagGroup(null);
-          setInitialEditSelections({});
-          setExpandedTagGroups([]);
-          setExpandedModKeys({});
-          setParameters((prev) => prev.map((p) => ({...p, checked: false})));
-          setEditingIndex(null);
-          setShowSearchAndList(false);
-        }
-      }
-
-      const updatedConfigs = configuredTKVs.filter(
-        (t: ConfiguredTkv) => t.tagGroup !== tagGroupName,
-      );
-      updateConfiguredTagKeyValues(moduleId, instanceId, updatedConfigs);
-    },
-    [
-      configuredTKVs,
-      moduleId,
-      instanceId,
-      updateConfiguredTagKeyValues,
-      editingIndex,
-      showSearchAndList,
-    ],
-  );
-
-  const handleCancel = useCallback(() => {
-    const hasSelections = Object.values(selectedValues).some((v) => v);
-    const isConfirmed: boolean = true;
-    if (hasSelections) {
-      // if (
-      //   window.confirm(
-      //     "Are you sure you want to cancel? All selections will be lost.",
-      //   ) === false
-      // ) {
-      //   isConfirmed = false
-      // }
-    }
-
-    if (isConfirmed) {
-      setShowSearchAndList(false);
-      setEditingIndex(null);
-      setSearchTerm('');
-      setSelectedValues({});
-      setSelectedTagGroup(null);
-      setInitialEditSelections({});
-      setExpandedTagGroups([]);
-      setExpandedModKeys({});
-      // Scroll to configuration section
-      setTimeout(() => {
-        configSectionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 100);
-    }
-  }, [selectedValues]);
-
-  // Group configured TKVs by tag group
-  const groupedTKVs = useMemo(() => {
+  const groupedTkvs = useMemo(() => {
     const groups: Record<string, ConfiguredTkv[]> = {};
-    configuredTKVs.forEach((tkv: ConfiguredTkv) => {
-      if (!groups[tkv.tagGroup]) {
-        groups[tkv.tagGroup] = [];
-      }
-      groups[tkv.tagGroup].push(tkv);
+    configuredTkvs.forEach((tkv) => {
+      (groups[tkv.tagGroup] ??= []).push(tkv);
     });
     return groups;
-  }, [configuredTKVs]);
+  }, [configuredTkvs]);
 
-  // Filter configured TKVs based on search
-  const filteredGroupedTKVs = useMemo(() => {
+  const filteredGroupedTkvs = useMemo(() => {
     if (!configSearchTerm) {
-      return groupedTKVs;
+      return groupedTkvs;
     }
-
     const filtered: Record<string, ConfiguredTkv[]> = {};
-    Object.keys(groupedTKVs).forEach((tagGroupName) => {
-      const configs = groupedTKVs[tagGroupName].filter((config) => {
-        const label = config.keyValuePairs
-          .map((p) => `[${p.key.name}: ${p.value.name}]`)
-          .join(' ');
+    Object.keys(groupedTkvs).forEach((tagGroupName) => {
+      const configs = groupedTkvs[tagGroupName].filter((config) => {
+        const label = formatConfiguredTkvLabel(config, tkvDisplayMode);
         return (
           label.toLowerCase().includes(configSearchTerm.toLowerCase()) ||
           tagGroupName.toLowerCase().includes(configSearchTerm.toLowerCase())
@@ -824,80 +877,48 @@ export function ModuleTagKeysConfigPanel({
       }
     });
     return filtered;
-  }, [groupedTKVs, configSearchTerm]);
-
-  // Sort values based on INITIAL selections when editing
-  const sortedValues = useCallback(
-    (
-      tagGroupName: string,
-      modKey: {values: Array<{id: number; name: string}>},
-    ) => {
-      if (
-        editingIndex === null ||
-        Object.keys(initialEditSelections).length === 0
-      ) {
-        return modKey.values;
-      }
-
-      // Sort values based on INITIAL selections (not current selections)
-      return [
-        ...modKey.values.filter(
-          (v: {id: number}) => initialEditSelections[v.id],
-        ),
-        ...modKey.values.filter(
-          (v: {id: number}) => !initialEditSelections[v.id],
-        ),
-      ];
-    },
-    [editingIndex, initialEditSelections],
-  );
+  }, [groupedTkvs, configSearchTerm, tkvDisplayMode]);
 
   const handleDeleteFiltered = useCallback(() => {
-    // Collect all indices first to avoid issues with state updates during iteration
-    const filteredTKVIndices: number[] = [];
-    Object.keys(filteredGroupedTKVs).forEach((tagGroupName) => {
-      filteredGroupedTKVs[tagGroupName].forEach((config) => {
-        const tkvId = `${config.tagGroupId}_${config.keyValuePairs
-          .map((p) => `${p.key.id}_${p.value.id}`)
-          .sort()
-          .join('_')}`;
-
-        // Find the index of this TKV in the configuredTKVs array
-        const index = configuredTKVs.findIndex((tkv) => {
-          const id = `${tkv.tagGroupId}_${tkv.keyValuePairs
-            .map((p) => `${p.key.id}_${p.value.id}`)
-            .sort()
-            .join('_')}`;
-          return id === tkvId;
-        });
-
+    const indices: number[] = [];
+    Object.values(filteredGroupedTkvs).forEach((configs) => {
+      configs.forEach((config) => {
+        const id = buildTkvId(config.tagGroupId, config.keyValuePairs);
+        const index = configuredTkvs.findIndex(
+          (tkv) => buildTkvId(tkv.tagGroupId, tkv.keyValuePairs) === id,
+        );
         if (index !== -1) {
-          filteredTKVIndices.push(index);
+          indices.push(index);
         }
       });
     });
-
-    // Sort indices in descending order to delete from highest to lowest
-    // This prevents index shifting issues
-    filteredTKVIndices.sort((a, b) => b - a);
-
-    // Delete each filtered TKV by index
-    filteredTKVIndices.forEach((index) => {
-      removeConfiguredTagKeyValue(moduleId, instanceId, index);
-    });
-
-    // Clear search after deletion
-    // setConfigSearchTerm('');
+    indices.sort((a, b) => b - a);
+    indices.forEach((index) => removeConfiguredTkv(instanceSystemId, index));
   }, [
-    filteredGroupedTKVs,
-    configuredTKVs,
-    removeConfiguredTagKeyValue,
-    moduleId,
-    instanceId,
+    filteredGroupedTkvs,
+    configuredTkvs,
+    removeConfiguredTkv,
+    instanceSystemId,
   ]);
 
-  // Show empty state if no available module tags
-  if (!availableModuleTags) {
+  const copyEntry = useCallback(
+    (tkv: ConfiguredTkv) => {
+      void copyTkvEntry(formatConfiguredTkvLabel(tkv, tkvDisplayMode));
+    },
+    [tkvDisplayMode],
+  );
+
+  const editingTkv =
+    activeOperation.type === 'editing'
+      ? configuredTkvs[activeOperation.index]
+      : undefined;
+  const editingTkvId = editingTkv
+    ? buildTkvId(editingTkv.tagGroupId, editingTkv.keyValuePairs)
+    : undefined;
+
+  const showSearchAndList = activeOperation.type !== 'idle';
+
+  if (Object.keys(moduleTagKeys).length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-neutral-secondary">
@@ -907,176 +928,184 @@ export function ModuleTagKeysConfigPanel({
     );
   }
 
-  return (
-    <div className="flex flex-col p-4">
-      {/* Configured TKVs Summary with Tag Groups */}
-      <div
-        ref={configSectionRef}
-        className="bg-primary border-neutral-02 mb-2 overflow-hidden rounded-md border shadow-sm"
-      >
-        {/* Header */}
-        <div className="bg-secondary border-neutral-02 flex items-center justify-between gap-2 border-b px-1 py-1">
-          <div className="flex items-center gap-2">
-            <IconButton
-              aria-label="Toggle Configured TKVs section"
-              icon={
-                isConfigSectionCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )
-              }
-              onClick={() =>
-                setIsConfigSectionCollapsed(!isConfigSectionCollapsed)
-              }
-              variant="ghost"
+  const configuredTkvsSummary = (
+    <div
+      ref={configSectionRef}
+      className="bg-primary border-neutral-02 overflow-hidden rounded-md border shadow-sm"
+    >
+      <div className="bg-secondary border-neutral-02 flex items-center justify-between gap-2 border-b px-1 py-1">
+        <div className="flex items-center gap-2">
+          <IconButton
+            aria-label="Toggle Configured TKVs section"
+            icon={
+              isConfigSectionCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )
+            }
+            onClick={() =>
+              setIsConfigSectionCollapsed(!isConfigSectionCollapsed)
+            }
+            variant="ghost"
+          />
+          <h2 className="text-neutral-primary text-base font-semibold">
+            Configured TKVs
+          </h2>
+        </div>
+
+        {Object.keys(groupedTkvs).length > 0 && (
+          <div className="m-0.5 flex-1">
+            <ArcSearchBar
+              onSearchChange={setConfigSearchTerm}
+              placeholder="Search configured TKVs..."
+              searchTerm={configSearchTerm}
             />
-            <h2 className="text-neutral-primary text-base font-semibold">
-              Configured TKVs
-            </h2>
           </div>
+        )}
 
-          {/* Search Bar - Only visible when there are items */}
-          {Object.keys(groupedTKVs).length > 0 && (
-            <div className="m-0.5 flex-1">
-              <ArcSearchBar
-                onSearchChange={setConfigSearchTerm}
-                placeholder="Search configured TKVs..."
-                searchTerm={configSearchTerm}
-              />
-            </div>
-          )}
-
-          {/* Delete Filtered Button - Only visible when there are filtered results */}
-          {configSearchTerm &&
-            Object.keys(filteredGroupedTKVs).length > 0 &&
-            isEditable && (
-              <Button
-                className="flex items-center gap-1.5"
-                emphasis="danger"
-                onClick={handleDeleteFiltered}
-                startIcon={Trash2}
-                title={`Delete ${Object.values(filteredGroupedTKVs).flat().length} filtered TKV(s)`}
-                variant="ghost"
-              >
-                Delete ({Object.values(filteredGroupedTKVs).flat().length})
-              </Button>
-            )}
-
-          {isEditable && (
+        {configSearchTerm &&
+          Object.keys(filteredGroupedTkvs).length > 0 &&
+          isEditable && (
             <Button
-              className="m-2 inline-flex items-center"
-              emphasis="primary"
-              onClick={handleAddClick}
-              startIcon={Plus}
-              title="Add configuration"
-              variant="fill"
+              className="flex items-center gap-1.5"
+              emphasis="danger"
+              onClick={handleDeleteFiltered}
+              startIcon={Trash2}
+              title={`Delete ${Object.values(filteredGroupedTkvs).flat().length} filtered TKV(s)`}
+              variant="ghost"
             >
-              Add
+              Delete ({Object.values(filteredGroupedTkvs).flat().length})
             </Button>
           )}
-        </div>
 
-        {/* Tag Groups */}
-        <div
-          className={`transition-all duration-200 ease-in-out ${
-            isConfigSectionCollapsed
-              ? 'max-h-0 overflow-hidden'
-              : 'max-h-[60vh] overflow-auto'
-          }`}
-        >
-          <div className="p-4">
-            {Object.keys(filteredGroupedTKVs).length === 0 ? (
-              <div className="text-neutral-secondary text-center">
-                {configSearchTerm ? (
-                  <>
-                    <div className="mb-2 text-2xl">🔍</div>
-                    <p>No TKVs match your search</p>
-                  </>
-                ) : (
-                  <p>No tags configured</p>
-                )}
-              </div>
-            ) : (
-              Object.keys(filteredGroupedTKVs).map((tagGroupName) => {
-                const configs = filteredGroupedTKVs[tagGroupName];
-
-                return (
-                  <TagGroupSummary
-                    key={tagGroupName}
-                    configurations={configs}
-                    hasActiveSearch={!!configSearchTerm}
-                    isEditable={isEditable}
-                    onDeleteItem={handleDeleteTKV}
-                    onDeleteTagGroup={handleDeleteTagGroup}
-                    onEditItem={handleEditTKV}
-                    tagGroupName={tagGroupName}
-                  />
-                );
-              })
-            )}
-          </div>
-        </div>
+        {isEditable && (
+          <Button
+            className="mr-2 inline-flex items-center"
+            disabled={activeOperation.type !== 'idle'}
+            emphasis="primary"
+            onClick={handleAddClick}
+            startIcon={Plus}
+            title="Add configuration"
+            variant="fill"
+          >
+            Add
+          </Button>
+        )}
       </div>
 
-      {/* TKV Parameters Section */}
-      <TkvParametersSection
-        isEditable={isEditable}
-        onParametersChange={(params) => {
-          // Update local state immediately for UI responsiveness
-          setParameters(params);
-        }}
-        parameters={parameters}
-        visible={showSearchAndList}
-      />
+      <div
+        className={`transition-all duration-200 ease-in-out ${
+          isConfigSectionCollapsed
+            ? 'max-h-0 overflow-hidden'
+            : 'max-h-[200px] overflow-auto'
+        }`}
+      >
+        <div className="p-4">
+          {Object.keys(filteredGroupedTkvs).length === 0 ? (
+            <div className="text-neutral-secondary text-center">
+              {configSearchTerm ? (
+                <p>No TKVs match your search</p>
+              ) : (
+                <p>No tags configured</p>
+              )}
+            </div>
+          ) : (
+            Object.keys(filteredGroupedTkvs).map((tagGroupName) => {
+              const configs = filteredGroupedTkvs[tagGroupName];
+              const highlightedEntryIndexRaw =
+                editingTkvId !== undefined &&
+                tagGroupName === editingTkv?.tagGroup
+                  ? configs.findIndex(
+                      (config) =>
+                        buildTkvId(config.tagGroupId, config.keyValuePairs) ===
+                        editingTkvId,
+                    )
+                  : -1;
 
-      {/* Search and List Section - Hidden by default */}
+              return (
+                <TagGroupSummary
+                  key={tagGroupName}
+                  configurations={configs}
+                  displayMode={tkvDisplayMode}
+                  hasActiveSearch={!!configSearchTerm}
+                  highlightedEntryIndex={
+                    highlightedEntryIndexRaw === -1
+                      ? undefined
+                      : highlightedEntryIndexRaw
+                  }
+                  isActionsDisabled={showSearchAndList}
+                  isEditable={isEditable}
+                  onCopyEntry={copyEntry}
+                  onDeleteItem={handleDeleteItem}
+                  onDeleteTagGroup={handleDeleteTagGroup}
+                  onEditItem={handleEditItem}
+                  tagGroupName={tagGroupName}
+                />
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
       {showSearchAndList && (
         <>
-          {/* Search Bar with Expand/Collapse buttons */}
-          <div ref={searchBarRef} className="mt-4 flex items-center gap-2">
-            <div className="flex-1">
-              <ArcSearchBar
-                onSearchChange={setSearchTerm}
-                placeholder="Search module tag keys or values..."
-                searchTerm={searchTerm}
-              />
-            </div>
-            <div className="flex gap-1">
-              <IconButton
-                aria-label="Expand All"
-                icon={<ChevronDown className="h-5 w-5" />}
-                onClick={handleExpandAll}
-                title="Expand All"
-                variant="ghost"
-              />
-              <IconButton
-                aria-label="Collapse All"
-                icon={<ChevronUp className="h-5 w-5" />}
-                onClick={handleCollapseAll}
-                title="Collapse All"
-                variant="ghost"
-              />
-            </div>
+          <TkvParametersSection
+            isEditable={isEditable}
+            onParametersChange={setParameters}
+            parameters={parameters}
+            visible={showSearchAndList}
+          />
+
+          <div ref={searchBarRef}>
+            <KvVectorEditor
+              ariaLabel="Search module tag keys or values"
+              clearable
+              onSuggestionCommit={handleSuggestionCommit}
+              onTextChange={handleSearchTextChange}
+              placeholder="Search module tag keys or values..."
+              suggestions={availableSuggestions}
+              text={availableSearchTerm}
+              trailingControls={
+                <div className="flex gap-1">
+                  <IconButton
+                    aria-label="Expand All"
+                    icon={<ChevronDown className="h-5 w-5" />}
+                    onClick={handleExpandAll}
+                    title="Expand All"
+                    variant="ghost"
+                  />
+                  <IconButton
+                    aria-label="Collapse All"
+                    icon={<ChevronUp className="h-5 w-5" />}
+                    onClick={handleCollapseAll}
+                    title="Collapse All"
+                    variant="ghost"
+                  />
+                </div>
+              }
+            />
           </div>
 
-          {/* List Container */}
-          <div className="bg-primary border-neutral-02 mt-4 overflow-hidden rounded border shadow-sm">
-            {/* Header */}
+          {searchDiagnostic && (
+            <div className="text-support-danger text-sm" role="alert">
+              {searchDiagnostic.valueName} is ambiguous between{' '}
+              {searchDiagnostic.candidateKeyNames.join(', ')}; resolved to the
+              lowest-ID key.
+            </div>
+          )}
+
+          <div className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm">
             <div className="bg-secondary border-neutral-02 text-neutral-primary sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold">
               <span className="w-3.5"></span>
-              <Checkbox
-                aria-label="Select all tag groups"
-                checked={false}
-                className="ml-3"
-                disabled={!isEditable}
-                onChange={() => {}}
-                size="sm"
-                style={{visibility: 'hidden'}}
-              />
               <button
                 className="hover:text-brand-primary text-neutral-primary ml-3 flex w-32 cursor-pointer items-center gap-1 select-none"
                 onClick={() => handleSort('id')}
+                type="button"
               >
                 <span>Tag ID</span>
                 {getSortIcon('id')}
@@ -1084,22 +1113,21 @@ export function ModuleTagKeysConfigPanel({
               <button
                 className="hover:text-brand-primary text-neutral-primary ml-3 flex flex-1 cursor-pointer items-center gap-1 text-left select-none"
                 onClick={() => handleSort('name')}
+                type="button"
               >
                 <span>Tag</span>
                 {getSortIcon('name')}
               </button>
             </div>
 
-            {/* Tag Groups List */}
-            <div className="max-h-[50vh] overflow-y-auto">
+            <div className="max-h-[35vh] overflow-y-auto">
               {filteredAndSortedTagGroups.length === 0 ? (
                 <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
-                  <div className="mb-3 text-4xl">🔍</div>
                   <p>No module tag keys or values match your search</p>
                 </div>
               ) : (
                 filteredAndSortedTagGroups.map((tagGroupName) => {
-                  const tagGroup = availableModuleTagsInfo[tagGroupName];
+                  const tagGroup = moduleTagKeys[tagGroupName];
                   const isExpanded = expandedTagGroups.includes(tagGroup.id);
                   const isSelected = selectedTagGroup === tagGroup.id;
 
@@ -1108,12 +1136,11 @@ export function ModuleTagKeysConfigPanel({
                       key={tagGroupName}
                       className="border-neutral-02 border-b last:border-b-0"
                     >
-                      {/* Tag Group Header */}
                       <div
                         className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
                           isSelected
                             ? 'bg-support-info-subtle'
-                            : 'bg-transparent hover:bg-neutral-03'
+                            : 'hover:bg-neutral-03 bg-transparent'
                         }`}
                         onClick={() => toggleTagGroupExpansion(tagGroup.id)}
                       >
@@ -1141,22 +1168,20 @@ export function ModuleTagKeysConfigPanel({
                         </div>
                       </div>
 
-                      {/* Module Keys Container */}
                       {isExpanded && (
                         <div className="bg-primary">
                           {Object.keys(tagGroup.keys).map((modKeyName) => {
                             const modKey = tagGroup.keys[modKeyName];
                             const isModKeyExpanded = expandedModKeys[modKey.id];
                             const allValuesSelected = modKey.values.every(
-                              (v: {id: number}) => selectedValues[v.id],
+                              (v) => selectedValues[modKey.id]?.[v.id],
                             );
                             const someValuesSelected = modKey.values.some(
-                              (v: {id: number}) => selectedValues[v.id],
+                              (v) => selectedValues[modKey.id]?.[v.id],
                             );
 
                             return (
                               <div key={modKeyName}>
-                                {/* Module Key Header */}
                                 <div
                                   className={`border-neutral-02 flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors ${
                                     allValuesSelected
@@ -1204,45 +1229,43 @@ export function ModuleTagKeysConfigPanel({
                                   </span>
                                 </div>
 
-                                {/* Values */}
                                 {isModKeyExpanded && (
                                   <div>
-                                    {sortedValues(tagGroupName, modKey).map(
-                                      (value: {id: number; name: string}) => (
-                                        <div
-                                          key={value.id}
-                                          className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors ${
-                                            selectedValues[value.id]
-                                              ? 'bg-support-info-subtle'
-                                              : 'bg-transparent'
-                                          }`}
-                                        >
-                                          <Checkbox
-                                            aria-label="Value Checkbox"
-                                            checked={
-                                              selectedValues[value.id] || false
-                                            }
-                                            disabled={!isEditable}
-                                            onChange={(e) =>
-                                              toggleValueSelection(
-                                                value.id,
-                                                tagGroup.id,
-                                                e as any,
-                                              )
-                                            }
-                                            size="sm"
-                                          />
-                                          <div className="text-neutral-secondary w-32 font-mono text-sm">
-                                            {ConvertNumberToHexString(
+                                    {sortedValues(modKey).map((value) => (
+                                      <div
+                                        key={value.id}
+                                        className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors ${
+                                          selectedValues[modKey.id]?.[value.id]
+                                            ? 'bg-support-info-subtle'
+                                            : 'bg-transparent'
+                                        }`}
+                                      >
+                                        <Checkbox
+                                          aria-label={`Select ${value.name}`}
+                                          checked={
+                                            selectedValues[modKey.id]?.[
+                                              value.id
+                                            ] || false
+                                          }
+                                          disabled={!isEditable}
+                                          onCheckedChange={() =>
+                                            toggleValueSelection(
+                                              modKey.id,
                                               value.id,
-                                            ) || value.id}
-                                          </div>
-                                          <div className="text-neutral-primary flex-1 text-sm">
-                                            {value.name}
-                                          </div>
+                                              tagGroup.id,
+                                            )
+                                          }
+                                          size="sm"
+                                        />
+                                        <div className="text-neutral-secondary w-32 font-mono text-sm">
+                                          {ConvertNumberToHexString(value.id) ||
+                                            value.id}
                                         </div>
-                                      ),
-                                    )}
+                                        <div className="text-neutral-primary flex-1 text-sm">
+                                          {value.name}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -1257,11 +1280,10 @@ export function ModuleTagKeysConfigPanel({
             </div>
           </div>
 
-          {/* Footer Buttons */}
           {isEditable && (
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="flex justify-end gap-2">
               <Button
-                emphasis="primary"
+                emphasis="neutral"
                 onClick={handleCancel}
                 size="sm"
                 variant="fill"
@@ -1280,6 +1302,8 @@ export function ModuleTagKeysConfigPanel({
           )}
         </>
       )}
+
+      {configuredTkvsSummary}
     </div>
   );
 }

@@ -57,6 +57,10 @@ import {
 } from '../lib/subsystem-operations';
 
 import {
+  createCalibrationKeyConfigSlice,
+  type CalibrationKeyConfigSlice,
+} from './calibration-key-config-slice';
+import {
   createEditSessionSlice,
   type EditSessionSlice,
 } from './edit-session-slice';
@@ -68,6 +72,10 @@ import {
 import {createKeyConfigSlice, type KeyConfigSlice} from './key-config-slice';
 import {createModuleDataSlice, type ModuleDataSlice} from './module-data-slice';
 import {createModuleListSlice, type ModuleListSlice} from './module-list-slice';
+import {
+  createModuleTagKeyConfigSlice,
+  type ModuleTagKeyConfigSlice,
+} from './module-tag-key-config-slice';
 import {
   createSubgraphHeaderSelectionSlice,
   type SubgraphHeaderSelectionSlice,
@@ -86,6 +94,8 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   SubsystemSlice &
   SubsystemOperations &
   KeyConfigSlice &
+  ModuleTagKeyConfigSlice &
+  CalibrationKeyConfigSlice &
   ValidationResultSlice &
   ModuleListSlice &
   ModuleDataSlice &
@@ -118,9 +128,9 @@ export function createGraphDesignerStore(
       get,
     ),
     ...createSubsystemOperations(set, projectId),
-    ...createKeyConfigSlice((partial) =>
-      set(partial as Partial<GraphDesignerStore>),
-    ),
+    ...createKeyConfigSlice(set, get),
+    ...createModuleTagKeyConfigSlice(set, get),
+    ...createCalibrationKeyConfigSlice(set, get),
     ...createValidationResultSlice(set, get),
     ...createModuleListSlice(
       (partial) => set(partial as Partial<GraphDesignerStore>),

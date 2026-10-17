@@ -65,12 +65,28 @@ describe('CKVParametersSection', () => {
     jest.clearAllMocks();
   });
 
+  it('renders nothing when visible is false', () => {
+    render(
+      <CkvParametersSection
+        isEditable
+        onParametersChange={mockOnParametersChange}
+        parameters={mockParameters}
+        visible={false}
+      />,
+    );
+
+    expect(
+      screen.queryByText('Configure PIDs for CKVs'),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders with parameters', () => {
     render(
       <CkvParametersSection
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mockParameters}
+        visible
       />,
     );
 
@@ -86,6 +102,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mockParameters}
+        visible
       />,
     );
 
@@ -102,6 +119,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mockParameters}
+        visible
       />,
     );
 
@@ -129,6 +147,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mixedParameters}
+        visible
       />,
     );
 
@@ -154,6 +173,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={allSelectedParameters}
+        visible
       />,
     );
 
@@ -178,6 +198,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={allSelectedParameters}
+        visible
       />,
     );
 
@@ -196,6 +217,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mixedParameters}
+        visible
       />,
     );
 
@@ -211,6 +233,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mockParameters}
+        visible
       />,
     );
 
@@ -236,6 +259,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={[]}
+        visible
       />,
     );
 
@@ -252,6 +276,7 @@ describe('CKVParametersSection', () => {
         isEditable
         onParametersChange={mockOnParametersChange}
         parameters={mockParameters}
+        visible
       />,
     );
 
@@ -276,6 +301,7 @@ describe('CKVParametersSection', () => {
           isEditable={false}
           onParametersChange={mockOnParametersChange}
           parameters={mockParameters}
+          visible
         />,
       );
 
@@ -293,6 +319,7 @@ describe('CKVParametersSection', () => {
           isEditable={false}
           onParametersChange={mockOnParametersChange}
           parameters={mockParameters}
+          visible
         />,
       );
 
@@ -314,6 +341,7 @@ describe('CKVParametersSection', () => {
           isEditable={false}
           onParametersChange={mockOnParametersChange}
           parameters={mockParameters}
+          visible
         />,
       );
 
@@ -335,6 +363,7 @@ describe('CKVParametersSection', () => {
           isEditable={false}
           onParametersChange={mockOnParametersChange}
           parameters={mockParameters}
+          visible
         />,
       );
 

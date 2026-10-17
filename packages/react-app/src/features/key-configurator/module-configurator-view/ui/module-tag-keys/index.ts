@@ -4,6 +4,5 @@ export {TagGroupSummary} from './tag-group-summary';
 export type * from './module-tag-keys-config.types';
 export {
   transformModuleDefinitionToTKVParameters,
-  transformTagDefinitionsToTagGroups,
-  transformTuningConfigToConfiguredTKVs,
+  transformParamDefinitionsToTKVParameters,
 } from './tag-info.mapper';

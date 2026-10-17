@@ -3,567 +3,620 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * Exercises the real GraphDesignerStore wiring (CalibrationKeyConfigSlice +
+ * selectConfiguredCkvs), not a mocked store — mirrors the pattern in
+ * tests/widgets/key-configurator-panel/ui/key-configurator-panel.test.tsx, so
+ * Zero-Config PID Default derivation and store read/write round-trip for
+ * real against fixture graphData.
+ */
+jest.mock('~shared/lib/logger');
+jest.mock('~shared/controls/global-toaster', () => ({
+  showToast: jest.fn(),
+}));
+
 import {fireEvent, render, screen} from '@testing-library/react';
+import {createStore, type StoreApi} from 'zustand';
 
-import {useCalibrationKeysStore} from '~features/key-configurator/model/calibration-keys-store';
+import type {ParamDefinitionsSummaryInfo} from '~entities/module-definitions/model/module-definition.dto';
+import {
+  GraphDesignerStoreContext,
+  type GraphDesignerStore,
+} from '~features/graph-designer';
 import {CalibrationKeysConfigPanel} from '~features/key-configurator/module-configurator-view/ui/calibration-keys/calibration-keys-config-panel';
+import {showToast} from '~shared/controls/global-toaster';
+import type {
+  ConfiguredCkv,
+  GraphKey,
+} from '~shared/types/key-configurator-config.types';
 
-// Mock the store
-jest.mock('~features/key-configurator/model/calibration-keys-store');
-
-// Mock ArcSearchBar
-jest.mock('~shared/controls/arc-search-bar', () => ({
-  __esModule: true,
-  default: ({onSearchChange, placeholder, searchTerm}: any) => (
-    <input
-      data-testid="search-bar"
-      onChange={(e) => onSearchChange(e.target.value)}
-      placeholder={placeholder}
-      value={searchTerm}
-    />
-  ),
-}));
-
-// Mock ConfigSummaryView
-jest.mock('~features/key-configurator/config-summary-view', () => ({
-  ConfigSummaryView: ({
-    items,
-    onAddClick,
-    onDeleteItem,
-    onEditItem,
-    title,
-  }: any) => (
-    <div data-testid="config-summary">
-      <h2>{title}</h2>
-      <button onClick={onAddClick}>Add</button>
-      {items.map((item: any) => (
-        <div key={item.id}>
-          <span>{item.label}</span>
-          <button onClick={() => onEditItem(item.id)}>Edit {item.id}</button>
-          <button onClick={() => onDeleteItem(item.id)}>
-            Delete {item.id}
-          </button>
-        </div>
-      ))}
-    </div>
-  ),
-}));
-
-// Mock CKVParametersSection
-jest.mock(
-  '~features/key-configurator/module-configurator-view/ui/calibration-keys/ckv-parameters-section',
-  () => ({
-    CkvParametersSection: ({onParametersChange, parameters}: any) => (
-      <div data-testid="ckv-parameters">
-        <h3>CKV Parameters</h3>
-        {parameters.map((param: any) => (
-          <div key={param.pid}>
-            <input
-              aria-label={`Parameter ${param.name}`}
-              checked={param.checked}
-              onChange={(e) => {
-                const updated = parameters.map((p: any) =>
-                  p.pid === param.pid ? {...p, checked: e.target.checked} : p,
-                );
-                onParametersChange(updated);
-              }}
-              type="checkbox"
-            />
-            <span>{param.name}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  }),
-);
-
-// Mock @qualcomm-ui/react components
+// The global mock in tests/test-setup.ts only wires the legacy `onChange`
+// prop, not QUI's real `onCheckedChange` — override locally so clicks on
+// the real Checkbox consumers in this panel actually fire, mirroring the
+// precedent in add-kv-vector-selection-panel.test.tsx.
 jest.mock('@qualcomm-ui/react/checkbox', () => ({
   Checkbox: ({
     'aria-label': ariaLabel,
     checked,
-    className,
+    disabled,
     indeterminate,
     onCheckedChange,
-    onClick,
-    size,
-  }: any) => (
+  }: {
+    'aria-label': string;
+    checked: boolean;
+    disabled?: boolean;
+    indeterminate?: boolean;
+    onCheckedChange: (checked: boolean) => void;
+  }) => (
     <input
-      aria-label={ariaLabel}
-      checked={checked}
-      className={className}
-      data-indeterminate={indeterminate}
-      data-size={size}
-      onChange={(e) => {
-        onCheckedChange(e.target.checked);
-      }}
-      onClick={(e) => {
-        if (onClick) {
-          const event = {
-            ...e,
-            stopPropagation: () => {},
-          };
-          onClick(event);
+      ref={(input) => {
+        if (input) {
+          input.indeterminate = indeterminate ?? false;
         }
       }}
+      aria-label={ariaLabel}
+      checked={checked}
+      disabled={disabled}
+      onChange={(event) => onCheckedChange(event.target.checked)}
       type="checkbox"
     />
   ),
 }));
 
-jest.mock('@qualcomm-ui/react/button', () => ({
-  Button: ({children, disabled, emphasis, onClick, size, variant}: any) => (
-    <button
-      data-emphasis={emphasis}
-      data-size={size}
-      data-variant={variant}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-  IconButton: ({
-    'aria-label': ariaLabel,
-    icon,
-    onClick,
-    title,
-    variant,
-  }: any) => (
-    <button
-      aria-label={ariaLabel}
-      data-variant={variant}
-      onClick={onClick}
-      title={title}
-    >
-      {icon}
-    </button>
+// The global mock in tests/test-setup.ts stubs TextArea without wiring
+// onValueChange/inputProps, which KvVectorEditor depends on entirely —
+// override locally so typing in the search box actually fires, mirroring
+// module-tag-keys-config-panel.test.tsx.
+jest.mock('@qualcomm-ui/react/text-area', () => ({
+  TextArea: ({
+    inputProps,
+    onValueChange,
+    placeholder,
+    value,
+  }: {
+    inputProps: Record<string, unknown>;
+    onValueChange: (value: string) => void;
+    placeholder: string;
+    value: string;
+  }) => (
+    <textarea
+      {...inputProps}
+      onChange={(event) => onValueChange(event.target.value)}
+      placeholder={placeholder}
+      value={value}
+    />
   ),
 }));
 
-// Mock converter utils
-jest.mock('~shared/utils/converter-utils', () => ({
-  ConvertNumberToHexString: (num: number) =>
-    `0x${num.toString(16).toUpperCase()}`,
-  ConvertStringToNumber: (str: string) => {
-    const num = parseInt(str, 16);
-    return isNaN(num) ? null : num;
+const KEY_VOLUME: GraphKey = {
+  id: 0xa4000000,
+  name: 'Volume',
+  systemId: 'KEY_SYS_VOLUME',
+  values: [
+    {id: 0, name: 'Level_0', systemId: 'VAL_SYS_LEVEL_0'},
+    {id: 1, name: 'Level_1', systemId: 'VAL_SYS_LEVEL_1'},
+    {id: 2, name: 'Level_2', systemId: 'VAL_SYS_LEVEL_2'},
+  ],
+};
+
+const KEY_INSTANCE: GraphKey = {
+  id: 0xab000000,
+  name: 'Instance',
+  systemId: 'KEY_SYS_INSTANCE',
+  values: [
+    {id: 1, name: 'Instance_1', systemId: 'VAL_SYS_INSTANCE_1'},
+    {id: 2, name: 'Instance_2', systemId: 'VAL_SYS_INSTANCE_2'},
+  ],
+};
+
+const availableCalibrationKeys: Record<string, GraphKey> = {
+  Instance: KEY_INSTANCE,
+  Volume: KEY_VOLUME,
+};
+
+const PARAM_DEFINITIONS: ParamDefinitionsSummaryInfo[] = [
+  {
+    deprecated: false,
+    description: '',
+    isHidden: false,
+    isReadOnly: false,
+    name: 'PARAM_ID_HW_MF_CFG',
+    naturalId: 134221847,
+    pidType: 'static',
+    systemId: 'PARAM_SYS_HW_MF_CFG',
+    toolPolicy: 'rw',
   },
-}));
+  {
+    deprecated: false,
+    description: '',
+    isHidden: false,
+    isReadOnly: false,
+    name: 'PARAM_ID_HW_EP_FRAME_SIZE',
+    naturalId: 134221848,
+    pidType: 'static',
+    systemId: 'PARAM_SYS_HW_EP_FRAME_SIZE',
+    toolPolicy: 'rw',
+  },
+];
 
-describe('CalibrationKeysConfigPanel', () => {
-  const mockAvailableKeys = {
-    Instance: {
-      id: 0xab000000,
-      name: 'Instance',
-      values: [
-        {id: 1, name: 'Instance_1'},
-        {id: 2, name: 'Instance_2'},
-      ],
-    },
-    StreamRX: {
-      id: 0xa1000000,
-      name: 'StreamRX',
-      values: [
-        {id: 0xa1000001, name: 'PCM_Deep_Buffer'},
-        {id: 0xa1000013, name: 'Incall_Music'},
-      ],
-    },
-    Volume: {
-      id: 0xa4000000,
-      name: 'Volume',
-      values: [
-        {id: 0, name: 'Level_0'},
-        {id: 1, name: 'Level_1'},
-        {id: 2, name: 'Level_2'},
-      ],
-    },
+const CONFIGURED_CKV: ConfiguredCkv = {
+  keyValuePairs: [
+    {key: KEY_VOLUME, value: KEY_VOLUME.values[1]},
+    {key: KEY_INSTANCE, value: KEY_INSTANCE.values[0]},
+  ],
+  pidConfig: [134221847],
+  systemId:
+    'KEY_SYS_VOLUME:VAL_SYS_LEVEL_1|KEY_SYS_INSTANCE:VAL_SYS_INSTANCE_1',
+};
+
+const MODULE_DEFINITION_SYSTEM_ID = 'MODULE_DEF_SYS_1';
+const INSTANCE_SYSTEM_ID = 'instance-1';
+const MODULE_ID = 1;
+
+interface MakeStoreOptions {
+  configuredCkvs?: ConfiguredCkv[];
+  hasCkvsOnInstance?: boolean;
+}
+
+function makeGraphDesignerStore({
+  configuredCkvs = [],
+  hasCkvsOnInstance = configuredCkvs.length > 0,
+}: MakeStoreOptions = {}): StoreApi<GraphDesignerStore> {
+  const keyDefinitionsByNaturalId: Record<number, GraphKey> = {
+    [KEY_INSTANCE.id]: KEY_INSTANCE,
+    [KEY_VOLUME.id]: KEY_VOLUME,
   };
 
-  const mockParameters = [
-    {checked: true, name: 'PARAM_ID_HW_MF_CFG', pid: 134221847},
-    {checked: false, name: 'PARAM_ID_HW_EP_FRAME_SIZE', pid: 134221848},
-  ];
-
-  const mockConfiguredCKVs = [
-    {
-      keyValuePairs: [
-        {
-          key: {id: 0xa4000000, name: 'Volume'},
-          value: {id: 1, name: 'Level_1'},
-        },
-        {
-          key: {id: 0xab000000, name: 'Instance'},
-          value: {id: 1, name: 'Instance_1'},
-        },
-      ],
-    },
-  ];
-
-  const mockStoreState = {
-    addConfiguredKey: jest.fn(),
-    availableKeys: mockAvailableKeys,
-    configuredKeyValuesMap: {
-      1: [{instanceId: 1, keyValueList: mockConfiguredCKVs}],
-    },
-    error: null,
-    fetchCalibrationConfig: jest.fn(),
-    isLoading: false,
-    moduleParameters: {
-      1: mockParameters,
-    },
-    removeConfiguredKey: jest.fn(),
-    updateConfiguredKeyValues: jest.fn(),
-    updateParameter: jest.fn(),
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    window.alert = jest.fn();
-    (useCalibrationKeysStore as unknown as jest.Mock).mockImplementation(
-      (selector) => selector(mockStoreState),
-    );
+  const toCkvDto = (ckv: ConfiguredCkv) => ({
+    keyValuePairs: ckv.keyValuePairs.map((pair) => ({
+      key: {
+        name: pair.key.name,
+        naturalId: pair.key.id,
+        systemId: pair.key.systemId,
+      },
+      value: {
+        name: pair.value.name,
+        naturalId: pair.value.id,
+        systemId: pair.value.systemId,
+      },
+    })),
+    supportedParameters: ckv.pidConfig.map((pid) => {
+      const paramDef = PARAM_DEFINITIONS.find((p) => p.naturalId === pid);
+      return {
+        description: paramDef?.description ?? '',
+        name: paramDef?.name ?? '',
+        naturalId: pid,
+        systemId: paramDef?.systemId ?? '',
+      };
+    }),
+    systemId: ckv.systemId,
   });
 
-  it('renders with configured CKVs', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
+  const store = createStore<GraphDesignerStore>(
+    () =>
+      ({
+        availableCalibrationKeys,
+        graphData: {
+          connections: [],
+          containers: {},
+          moduleInstances: {
+            [INSTANCE_SYSTEM_ID]: {
+              containerSystemId: 'container-1',
+              ...(hasCkvsOnInstance
+                ? {ckvs: configuredCkvs.map(toCkvDto)}
+                : {}),
+              displayName: 'Module 1',
+              inputPorts: [],
+              moduleDefinitionSystemId: MODULE_DEFINITION_SYSTEM_ID,
+              moduleName: 'Module 1',
+              moduleType: 'module',
+              naturalId: 1,
+              outputPorts: [],
+              position: {x: 0, y: 0},
+              subgraphSystemId: 'subgraph-1',
+              systemId: INSTANCE_SYSTEM_ID,
+            },
+          },
+          selectedUsecases: [],
+          subgraphs: {},
+          subsystems: {},
+        },
+        moduleDefinitionsBySystemId: {
+          [MODULE_DEFINITION_SYSTEM_ID]: {
+            builtIn: true,
+            description: '',
+            displayName: 'Module 1',
+            isCustomModule: false,
+            isLoadedAtBootup: false,
+            modSearchKeys: '',
+            moduleInfo: {
+              containerTypeInfo: [],
+              dynamicIntents: [],
+              inputDataPortInfo: {maxPorts: 0, ports: [], systemId: ''},
+              outputDataPortInfo: {maxPorts: 0, ports: [], systemId: ''},
+              pidFramework: 0,
+              staticCtrlPorts: [],
+            },
+            name: 'Module 1',
+            naturalId: 1,
+            paramDefinitionsSummaryInfo: PARAM_DEFINITIONS,
+            processorInfo: {name: '', naturalId: 0, systemId: ''},
+            systemId: MODULE_DEFINITION_SYSTEM_ID,
+          },
+        },
+        removeConfiguredCkv: jest.fn(
+          (_instanceSystemId: string, index: number) => {
+            const current = store
+              .getState()
+              .graphData!.moduleInstances[INSTANCE_SYSTEM_ID].ckvs!.slice();
+            current.splice(index, 1);
+            store.setState((state) => ({
+              graphData: {
+                ...state.graphData!,
+                moduleInstances: {
+                  ...state.graphData!.moduleInstances,
+                  [INSTANCE_SYSTEM_ID]: {
+                    ...state.graphData!.moduleInstances[INSTANCE_SYSTEM_ID],
+                    ckvs: current,
+                  },
+                },
+              },
+            }));
+          },
+        ),
+        updateConfiguredCkvs: jest.fn(
+          (_instanceSystemId: string, nextCkvs: ConfiguredCkv[]) => {
+            store.setState((state) => ({
+              graphData: {
+                ...state.graphData!,
+                moduleInstances: {
+                  ...state.graphData!.moduleInstances,
+                  [INSTANCE_SYSTEM_ID]: {
+                    ...state.graphData!.moduleInstances[INSTANCE_SYSTEM_ID],
+                    ckvs: nextCkvs.map(toCkvDto),
+                  },
+                },
+              },
+            }));
+          },
+        ),
+      }) as unknown as GraphDesignerStore,
+  );
 
-    expect(screen.getByTestId('config-summary')).toBeInTheDocument();
-    expect(screen.getByText('Configured CKVs')).toBeInTheDocument();
-    // The label format uses key.name and value.name from the keyValuePairs
+  // Silence unused-var lint on the lookup table used only conceptually above.
+  void keyDefinitionsByNaturalId;
+
+  return store;
+}
+
+function renderPanel(
+  store: StoreApi<GraphDesignerStore>,
+  overrideProps: Partial<{
+    ckvDisplayMode: 'key-value' | 'value-only';
+    isEditable: boolean;
+  }> = {},
+) {
+  return render(
+    <GraphDesignerStoreContext.Provider value={store}>
+      <CalibrationKeysConfigPanel
+        ckvDisplayMode={overrideProps.ckvDisplayMode ?? 'key-value'}
+        instanceSystemId={INSTANCE_SYSTEM_ID}
+        isEditable={overrideProps.isEditable ?? true}
+        moduleId={MODULE_ID}
+      />
+    </GraphDesignerStoreContext.Provider>,
+  );
+}
+
+describe('CalibrationKeysConfigPanel', () => {
+  beforeEach(() => {
+    Object.assign(navigator, {
+      clipboard: {writeText: jest.fn().mockResolvedValue(undefined)},
+    });
+  });
+
+  it('renders existing configured CKVs using formatCkvEntry in key-value mode', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store, {ckvDisplayMode: 'key-value'});
+
     expect(
       screen.getByText('[Volume: Level_1] [Instance: Instance_1]'),
     ).toBeInTheDocument();
   });
 
-  it('renders CKV parameters section', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
+  it('renders existing configured CKVs using formatCkvEntry in value-only mode', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    expect(screen.getByTestId('ckv-parameters')).toBeInTheDocument();
-    expect(screen.getByText('PARAM_ID_HW_MF_CFG')).toBeInTheDocument();
-    expect(screen.getByText('PARAM_ID_HW_EP_FRAME_SIZE')).toBeInTheDocument();
+    renderPanel(store, {ckvDisplayMode: 'value-only'});
+
+    expect(screen.getByText('Level_1+Instance_1')).toBeInTheDocument();
   });
 
-  it('shows keys list when Add button is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
+  it('adds a new CKV entry via a single updateConfiguredCkvs call with the full array', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
+    renderPanel(store);
 
-    fireEvent.click(screen.getByText('Add'));
-
-    expect(screen.getByTestId('search-bar')).toBeInTheDocument();
-    expect(screen.getByText('Instance')).toBeInTheDocument();
-    expect(screen.getByText('Volume')).toBeInTheDocument();
-    expect(screen.getByText('StreamRX')).toBeInTheDocument();
-  });
-
-  it('filters keys based on key name search', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    const searchBar = screen.getByTestId('search-bar');
-    fireEvent.change(searchBar, {target: {value: 'Volume'}});
-
-    expect(screen.getByText('Volume')).toBeInTheDocument();
-    expect(screen.queryByText('Instance')).not.toBeInTheDocument();
-    expect(screen.queryByText('StreamRX')).not.toBeInTheDocument();
-  });
-
-  it('filters keys based on key ID search (hex)', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    const searchBar = screen.getByTestId('search-bar');
-    fireEvent.change(searchBar, {target: {value: 'A1000000'}});
-
-    expect(screen.getByText('StreamRX')).toBeInTheDocument();
-    expect(screen.queryByText('Volume')).not.toBeInTheDocument();
-    expect(screen.queryByText('Instance')).not.toBeInTheDocument();
-  });
-
-  it('expands and collapses keys', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    expect(screen.queryByText('Instance_1')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Instance'));
-
-    expect(screen.getByText('Instance_1')).toBeInTheDocument();
-    expect(screen.getByText('Instance_2')).toBeInTheDocument();
-  });
-
-  it('selects and deselects individual values', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    // Expand Instance key first
-    const instanceKey = screen.getByText('Instance');
-    fireEvent.click(instanceKey);
-
-    const checkbox = screen.getByLabelText('Select Instance_1');
-    expect(checkbox).not.toBeChecked();
-
-    // Trigger change event directly on the checkbox
-    fireEvent.change(checkbox, {target: {checked: true}});
-    expect(checkbox).toBeChecked();
-
-    fireEvent.change(checkbox, {target: {checked: false}});
-    expect(checkbox).not.toBeChecked();
-  });
-
-  it('selects all values for a key when key checkbox is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-    fireEvent.click(screen.getByText('Instance'));
-
-    const keyCheckbox = screen.getByLabelText('Select Instance');
-    fireEvent.click(keyCheckbox);
-
-    expect(screen.getByLabelText('Select Instance_1')).toBeChecked();
-    expect(screen.getByLabelText('Select Instance_2')).toBeChecked();
-  });
-
-  it('selects all keys when select all checkbox is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    const selectAllCheckbox = screen.getByLabelText('Select all keys');
-    fireEvent.click(selectAllCheckbox);
-
-    expect(screen.getByLabelText('Select Instance')).toBeChecked();
-    expect(screen.getByLabelText('Select Volume')).toBeChecked();
-    expect(screen.getByLabelText('Select StreamRX')).toBeChecked();
-  });
-
-  it('expands all keys when Expand All button is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-    fireEvent.click(screen.getByTitle('Expand All'));
-
-    expect(screen.getByText('Instance_1')).toBeInTheDocument();
-    expect(screen.getByText('Level_0')).toBeInTheDocument();
-    expect(screen.getByText('PCM_Deep_Buffer')).toBeInTheDocument();
-  });
-
-  it('collapses all keys when Collapse All button is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-    fireEvent.click(screen.getByTitle('Expand All'));
-    expect(screen.getByText('Instance_1')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTitle('Collapse All'));
-    expect(screen.queryByText('Instance_1')).not.toBeInTheDocument();
-  });
-
-  it('sorts keys by ID in ascending order when Key ID header is clicked', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    // Click Key ID header to sort by ID ascending
-    fireEvent.click(screen.getByText('Key ID'));
-
-    const keyElements = screen.getAllByText(/^(Instance|Volume|StreamRX)$/);
-    const keyNames = keyElements.map((el) => el.textContent);
-    expect(keyNames).toEqual(['StreamRX', 'Volume', 'Instance']);
-  });
-
-  it('sorts keys by ID in descending order when Key ID header is clicked twice', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    // Click Key ID header twice to sort descending
-    fireEvent.click(screen.getByText('Key ID'));
-    fireEvent.click(screen.getByText('Key ID'));
-
-    const keyElements = screen.getAllByText(/^(Instance|Volume|StreamRX)$/);
-    const keyNames = keyElements.map((el) => el.textContent);
-    expect(keyNames).toEqual(['Instance', 'Volume', 'StreamRX']);
-  });
-
-  it('sorts keys by name', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-    fireEvent.click(screen.getByText('Key Name'));
-
-    const keyElements = screen.getAllByText(/^(Instance|Volume|StreamRX)$/);
-    const keyNames = keyElements.map((el) => el.textContent);
-    expect(keyNames).toEqual(['Instance', 'StreamRX', 'Volume']);
-  });
-
-  it('allows selecting multiple values for cartesian product', () => {
-    // Use empty state so we can test adding new configs
-    const emptyState = {
-      ...mockStoreState,
-      configuredKeyValuesMap: {
-        1: [{instanceId: 1, keyValueList: []}],
-      },
-    };
-
-    (useCalibrationKeysStore as unknown as jest.Mock).mockImplementation(
-      (selector) => selector(emptyState),
-    );
-
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    // Expand and select Volume: Level_0, Level_1
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
     fireEvent.click(screen.getByText('Volume'));
-    const level0 = screen.getByLabelText('Select Level_0');
-    const level1 = screen.getByLabelText('Select Level_1');
-    fireEvent.change(level0, {target: {checked: true}});
-    fireEvent.change(level1, {target: {checked: true}});
+    fireEvent.click(screen.getByLabelText('Select Level_2'));
 
-    // Verify both are checked
-    expect(level0).toBeChecked();
-    expect(level1).toBeChecked();
+    fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
 
-    // Expand and select Instance: Instance_1
-    fireEvent.click(screen.getByText('Instance'));
-    const instance1 = screen.getByLabelText('Select Instance_1');
-    fireEvent.change(instance1, {target: {checked: true}});
-
-    // Verify instance is checked
-    expect(instance1).toBeChecked();
-
-    // Apply button should be enabled when values are selected
-    const applyButton = screen.getByText('Apply');
-    expect(applyButton).not.toBeDisabled();
+    const updateConfiguredCkvs = store.getState().updateConfiguredCkvs;
+    expect(updateConfiguredCkvs).toHaveBeenCalledTimes(1);
+    const [instanceSystemIdArg, ckvsArg] = (updateConfiguredCkvs as jest.Mock)
+      .mock.calls[0];
+    expect(instanceSystemIdArg).toBe(INSTANCE_SYSTEM_ID);
+    expect(ckvsArg).toHaveLength(2);
+    expect(ckvsArg[0]).toEqual(CONFIGURED_CKV);
+    expect(ckvsArg[1].keyValuePairs).toEqual([
+      {key: KEY_VOLUME, value: KEY_VOLUME.values[2]},
+    ]);
   });
 
-  it('edits existing CKV configuration', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
+  it('shows a toast and skips updateConfiguredCkvs when Apply is clicked with nothing selected', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
+
+    expect(showToast).toHaveBeenCalledWith(
+      'Please select key value(s) first',
+      'warning',
     );
+    expect(store.getState().updateConfiguredCkvs).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByText('Edit 0'));
+  it('enters edit mode for a row, disabling (not hiding) Add while active', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+    renderPanel(store);
 
-    // Keys should be expanded and values should be checked
-    // Need to expand to see the values
+    fireEvent.click(screen.getByLabelText('Edit'));
+
     expect(screen.getByLabelText('Select Volume')).toBeInTheDocument();
-    expect(screen.getByLabelText('Select Instance')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select Level_1')).toBeChecked();
+    expect(screen.getByRole('button', {name: 'Add'})).toBeDisabled();
   });
 
-  it('deletes CKV configuration', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
+  it('applies an edit by replacing only the edited entry via one updateConfiguredCkvs call', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    fireEvent.click(screen.getByText('Delete 0'));
+    renderPanel(store);
 
-    expect(mockStoreState.removeConfiguredKey).toHaveBeenCalledWith(1, 1, 0);
+    fireEvent.click(screen.getByLabelText('Edit'));
+    fireEvent.click(screen.getByLabelText('Select Level_1'));
+    fireEvent.click(screen.getByLabelText('Select Level_0'));
+
+    fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
+
+    const updateConfiguredCkvs = store.getState().updateConfiguredCkvs;
+    expect(updateConfiguredCkvs).toHaveBeenCalledTimes(1);
+    const [, ckvsArg] = (updateConfiguredCkvs as jest.Mock).mock.calls[0];
+    expect(ckvsArg).toHaveLength(1);
+    expect(ckvsArg[0].systemId).toBe(CONFIGURED_CKV.systemId);
+    expect(ckvsArg[0].keyValuePairs).toEqual([
+      {key: KEY_VOLUME, value: KEY_VOLUME.values[0]},
+      {key: KEY_INSTANCE, value: KEY_INSTANCE.values[0]},
+    ]);
   });
 
-  it('cancels with confirmation when selections exist', () => {
-    window.confirm = jest.fn(() => true);
+  it('deletes a configured CKV by calling removeConfiguredCkv with its index', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
+    renderPanel(store);
+
+    fireEvent.click(screen.getByLabelText('Delete'));
+
+    expect(store.getState().removeConfiguredCkv).toHaveBeenCalledWith(
+      INSTANCE_SYSTEM_ID,
+      0,
     );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    // Select a key (not just expand)
-    const instanceCheckbox = screen.getByLabelText('Select Instance');
-    fireEvent.click(instanceCheckbox);
-
-    fireEvent.click(screen.getByText('Cancel'));
-
-    // window.confirm is currently commented out in the implementation
-    // expect(window.confirm).toHaveBeenCalled()
-    expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
   });
 
-  it('cancels without confirmation when no selections exist', () => {
-    window.confirm = jest.fn();
+  it('disables Add/Edit/Delete but still renders the list when isEditable is false', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
 
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-    fireEvent.click(screen.getByText('Cancel'));
-
-    expect(window.confirm).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
-  });
-
-  it('shows empty search results message', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
-    );
-
-    fireEvent.click(screen.getByText('Add'));
-
-    const searchBar = screen.getByTestId('search-bar');
-    fireEvent.change(searchBar, {target: {value: 'NonExistent'}});
+    renderPanel(store, {isEditable: false});
 
     expect(
-      screen.getByText('No calibration keys or values match your search'),
+      screen.getByText('[Volume: Level_1] [Instance: Instance_1]'),
     ).toBeInTheDocument();
-    expect(screen.getByText('🔍')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Add'})).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Edit')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
   });
 
-  it('prevents duplicate configurations', () => {
-    render(
-      <CalibrationKeysConfigPanel instanceId={1} isEditable moduleId={1} />,
+  it('copies the row formatted entry text to the clipboard', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store, {ckvDisplayMode: 'key-value'});
+
+    fireEvent.click(screen.getByLabelText(/Copy/));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      '[Volume: Level_1] [Instance: Instance_1]',
+    );
+  });
+
+  it('resolves a bare value token typed in the search box and highlights the matching row', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    const searchInput = screen.getByPlaceholderText(
+      'Search configured keys...',
+    );
+    fireEvent.change(searchInput, {target: {value: 'Level_1'}});
+
+    const highlightedRow = screen
+      .getByText('[Volume: Level_1] [Instance: Instance_1]')
+      .closest('[data-testid="config-summary-row"]');
+    expect(highlightedRow).not.toBeNull();
+  });
+
+  it('shows a diagnostic message for an ambiguous or unknown search token', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+
+    const searchInput = screen.getByPlaceholderText(
+      'Search calibration keys or values...',
+    );
+    fireEvent.change(searchInput, {target: {value: 'nonexistent-token'}});
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Value "nonexistent-token" was not found for any key.',
+    );
+  });
+
+  it('shows suggestions matching a value-name prefix', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    fireEvent.change(
+      screen.getByPlaceholderText('Search calibration keys or values...'),
+      {target: {value: 'Level'}},
     );
 
-    fireEvent.click(screen.getByText('Add'));
+    const options = screen.getAllByRole('option');
+    const optionTexts = options.map((option) => option.textContent);
+    expect(optionTexts.some((text) => text?.includes('Level_0'))).toBe(true);
+    expect(optionTexts.some((text) => text?.includes('Level_1'))).toBe(true);
+    expect(optionTexts.some((text) => text?.includes('Level_2'))).toBe(true);
+  });
 
-    // Try to create the same configuration that already exists
-    fireEvent.click(screen.getByText('Volume'));
-    fireEvent.click(screen.getByLabelText('Select Level_1'));
-    fireEvent.click(screen.getByText('Instance'));
-    fireEvent.click(screen.getByLabelText('Select Instance_1'));
+  it('selects a value by clicking a suggestion option', () => {
+    const store = makeGraphDesignerStore();
 
-    fireEvent.click(screen.getByText('Apply'));
+    renderPanel(store);
 
-    // Should not add duplicate - existing config should remain unchanged
-    expect(mockStoreState.updateConfiguredKeyValues).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    fireEvent.change(
+      screen.getByPlaceholderText('Search calibration keys or values...'),
+      {target: {value: 'Level'}},
+    );
+
+    const option = screen
+      .getAllByRole('option')
+      .find((element) => element.textContent?.includes('Level_2'));
+    fireEvent.click(option!);
+
+    expect(
+      screen.getByPlaceholderText('Search calibration keys or values...'),
+    ).toHaveValue('[Volume: Level_2]');
+  });
+
+  it('shows no suggestion list for a non-matching search token', () => {
+    const store = makeGraphDesignerStore();
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    fireEvent.change(
+      screen.getByPlaceholderText('Search calibration keys or values...'),
+      {target: {value: 'zzzzz'}},
+    );
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps suggesting the second token after a "+" once the first value-only token resolves', () => {
+    const store = makeGraphDesignerStore();
+
+    renderPanel(store, {ckvDisplayMode: 'value-only'});
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    const searchInput = screen.getByPlaceholderText(
+      'Search calibration keys or values...',
+    );
+    fireEvent.change(searchInput, {target: {value: 'Level_0'}});
+    fireEvent.change(searchInput, {target: {value: 'Level_0+'}});
+    fireEvent.change(searchInput, {target: {value: 'Level_0+Ins'}});
+
+    const options = screen.getAllByRole('option');
+    const optionTexts = options.map((option) => option.textContent);
+    expect(optionTexts.some((text) => text?.includes('Instance_1'))).toBe(true);
+  });
+
+  it('keeps showing all calibration keys in the table right after typing "+"', () => {
+    const store = makeGraphDesignerStore();
+
+    renderPanel(store, {ckvDisplayMode: 'value-only'});
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+    const searchInput = screen.getByPlaceholderText(
+      'Search calibration keys or values...',
+    );
+    fireEvent.change(searchInput, {target: {value: 'Level_0'}});
+    fireEvent.change(searchInput, {target: {value: 'Level_0+'}});
+
+    expect(
+      screen.queryByText('No calibration keys or values match your search'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Instance')).toBeInTheDocument();
+    expect(screen.getByText('Volume')).toBeInTheDocument();
+  });
+
+  it('hides the Configure PIDs section until Add or Edit is clicked', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    expect(
+      screen.queryByLabelText('Select parameter PARAM_ID_HW_MF_CFG'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('defaults every PID to checked when Add is clicked, regardless of other ckvs', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+
+    expect(
+      screen.getByLabelText('Select parameter PARAM_ID_HW_MF_CFG'),
+    ).toBeChecked();
+    expect(
+      screen.getByLabelText('Select parameter PARAM_ID_HW_EP_FRAME_SIZE'),
+    ).toBeChecked();
+  });
+
+  it('derives PID checked state from the edited ckv supportedParameters when Edit is clicked', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByLabelText('Edit'));
+
+    expect(
+      screen.getByLabelText('Select parameter PARAM_ID_HW_MF_CFG'),
+    ).toBeChecked();
+    expect(
+      screen.getByLabelText('Select parameter PARAM_ID_HW_EP_FRAME_SIZE'),
+    ).not.toBeChecked();
+  });
+
+  it('highlights the row being edited', () => {
+    const store = makeGraphDesignerStore({configuredCkvs: [CONFIGURED_CKV]});
+
+    renderPanel(store);
+
+    fireEvent.click(screen.getByLabelText('Edit'));
+
+    const editedRow = screen
+      .getAllByText('[Volume: Level_1] [Instance: Instance_1]')
+      .map((element) => element.closest('[data-testid="config-summary-row"]'))
+      .find((row) => row !== null);
+    expect(editedRow).toHaveClass('bg-[var(--color-background-neutral-02)]');
   });
 });

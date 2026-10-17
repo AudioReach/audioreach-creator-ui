@@ -31,28 +31,6 @@ jest.mock('~shared/store', () => ({
   },
 }));
 
-jest.mock('~features/key-configurator/model/calibration-keys-store', () => ({
-  useCalibrationKeysStore: {
-    getState: jest.fn(() => ({
-      initialize: jest.fn(),
-      projectId: null,
-      reset: jest.fn(),
-      saveToBackend: jest.fn(),
-    })),
-  },
-}));
-
-jest.mock('~features/key-configurator/model/module-tag-keys-store', () => ({
-  useModuleTagKeysStore: {
-    getState: jest.fn(() => ({
-      initialize: jest.fn(),
-      projectId: null,
-      reset: jest.fn(),
-      saveToBackend: jest.fn(),
-    })),
-  },
-}));
-
 jest.mock('~features/key-configurator/model/subsystem-config-store', () => ({
   useSubsystemConfigStore: {
     getState: jest.fn(() => ({
@@ -63,15 +41,6 @@ jest.mock('~features/key-configurator/model/subsystem-config-store', () => ({
     })),
   },
 }));
-
-jest.mock(
-  '~features/key-configurator/model/module-instance-coordinator',
-  () => ({
-    moduleInstanceCoordinator: {
-      fetchAndDistributeModuleInstanceData: jest.fn(),
-    },
-  }),
-);
 
 describe('KeyConfiguratorStoreManager', () => {
   beforeEach(() => {

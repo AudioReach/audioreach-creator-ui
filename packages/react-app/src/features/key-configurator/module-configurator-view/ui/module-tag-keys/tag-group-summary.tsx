@@ -3,20 +3,26 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 
-import {ChevronDown, ChevronRight, Tag, Trash2} from 'lucide-react';
+import {ChevronDown, ChevronRight, Copy, Tag, Trash2} from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
 
+import type {KeyDisplayMode} from '~shared/lib/key-display-mode';
 import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
+import {formatConfiguredTkvLabel} from '../../lib/tkv-display-format';
 import type {ConfiguredTkv} from './module-tag-keys-config.types';
 
 interface TagGroupSummaryProps {
   configurations: ConfiguredTkv[];
+  displayMode?: KeyDisplayMode;
   hasActiveSearch?: boolean;
+  highlightedEntryIndex?: number;
+  isActionsDisabled?: boolean;
   isEditable: boolean;
+  onCopyEntry?: (tkv: ConfiguredTkv) => void;
   onDeleteItem: (id: string) => void;
   onDeleteTagGroup: (tagGroupName: string) => void;
   onEditItem: (id: string) => void;
@@ -25,14 +31,19 @@ interface TagGroupSummaryProps {
 
 export function TagGroupSummary({
   configurations,
+  displayMode,
   hasActiveSearch = false,
+  highlightedEntryIndex,
+  isActionsDisabled = false,
   isEditable,
+  onCopyEntry,
   onDeleteItem,
   onDeleteTagGroup,
   onEditItem,
   tagGroupName,
 }: TagGroupSummaryProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Auto-expand when there's an active search
   useEffect(() => {
@@ -40,6 +51,15 @@ export function TagGroupSummary({
       setIsCollapsed(false);
     }
   }, [hasActiveSearch]);
+
+  // Bring the just-expanded list into view — the Configured TKVs section has
+  // a capped height, so a group further down the list can expand entirely
+  // out of the visible area otherwise.
+  useEffect(() => {
+    if (!isCollapsed) {
+      listRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+  }, [isCollapsed]);
 
   const handleDeleteTagGroup = () => {
     // TODO: Notify and confirm from user
@@ -56,10 +76,12 @@ export function TagGroupSummary({
 
   // Convert configurations to display format using ID-based identification
   const items = configurations.map((config) => ({
+    config,
     id: generateTKVId(config),
     keyValuePairs: config.keyValuePairs,
-    label:
-      config.keyValuePairs.length === 0
+    label: displayMode
+      ? formatConfiguredTkvLabel(config, displayMode)
+      : config.keyValuePairs.length === 0
         ? `[${tagGroupName}]`
         : config.keyValuePairs
             .map((p) => `[${p.key.name}: ${p.value.name}]`)
@@ -104,6 +126,7 @@ export function TagGroupSummary({
         {isEditable && (
           <IconButton
             aria-label="Delete tag group"
+            disabled={isActionsDisabled}
             emphasis="danger"
             icon={<Trash2 className="h-3.5 w-3.5" />}
             onClick={(e) => {
@@ -118,19 +141,27 @@ export function TagGroupSummary({
 
       {/* Nested configurations */}
       {!isCollapsed && (
-        <div className="mt-1 pl-8">
+        <div ref={listRef} className="mt-1 pl-8">
           {items.length === 0 ? (
             <div className="text-neutral-secondary py-2 text-center">
               <p className="text-sm">No configurations in this tag group</p>
             </div>
           ) : (
             <ul className="space-y-2 py-2">
-              {items.map((item) => (
-                <li key={item.id} className="flex items-center gap-2">
-                  {/* Edit Icon */}
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={`flex items-center gap-2 ${
+                    highlightedEntryIndex != null &&
+                    index === highlightedEntryIndex
+                      ? 'bg-[var(--color-background-neutral-02)]'
+                      : ''
+                  }`}
+                >
                   {isEditable && (
                     <IconButton
                       aria-label="Edit"
+                      disabled={isActionsDisabled}
                       emphasis="primary"
                       icon={
                         <svg
@@ -157,6 +188,7 @@ export function TagGroupSummary({
                   {isEditable && (
                     <IconButton
                       aria-label="Delete"
+                      disabled={isActionsDisabled}
                       emphasis="danger"
                       icon={<Trash2 className="h-3.5 w-3.5" />}
                       onClick={() => {
@@ -170,7 +202,7 @@ export function TagGroupSummary({
 
                   {/* Item Label */}
                   <span
-                    className="text-support-success inline-block rounded-full px-3 py-1 text-sm font-medium"
+                    className="text-support-success inline-block flex-1 truncate rounded-full px-3 py-1 text-sm font-medium"
                     title={
                       item.keyValuePairs && item.keyValuePairs.length > 0
                         ? item.keyValuePairs
@@ -184,6 +216,18 @@ export function TagGroupSummary({
                   >
                     {item.label}
                   </span>
+
+                  {/* Copy Icon */}
+                  {onCopyEntry && (
+                    <IconButton
+                      aria-label={`Copy ${item.label}`}
+                      className="mr-4"
+                      icon={<Copy className="h-3.5 w-3.5" />}
+                      onClick={() => onCopyEntry(item.config)}
+                      title="Copy"
+                      variant="ghost"
+                    />
+                  )}
                 </li>
               ))}
             </ul>

@@ -20,6 +20,7 @@ import {
 import {SubsystemConfigPanel} from '~features/key-configurator/subsystem-configurator-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
 import {useUserPreferences} from '~shared/config/hooks';
+import {resolveKeyDisplayMode} from '~shared/lib/key-display-mode';
 import {logger} from '~shared/lib/logger';
 import {useProjectStoreShallow} from '~shared/store';
 import {
@@ -54,6 +55,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
     deleteSgKvVector,
     graphData,
     graphDataStatus,
+    initializeConfiguration: initializeGraphDesignerConfiguration,
     isSgKvMetadataRefreshing,
     kvSelectionsById,
     setSgKvVectorSelected,
@@ -63,6 +65,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
     deleteSgKvVector: state.deleteSgKvVector,
     graphData: state.graphData,
     graphDataStatus: state.graphDataStatus,
+    initializeConfiguration: state.initializeConfiguration,
     isSgKvMetadataRefreshing: state.isSgKvMetadataRefreshing,
     kvSelectionsById: state.kvSelectionsById,
     setSgKvVectorSelected: state.setSgKvVectorSelected,
@@ -78,23 +81,40 @@ export const KeyConfiguratorPanel: React.FC = () => {
     }
 
     selectedItems.forEach((item) => {
-      const context = mapItemToConfigurationContext(item);
-      if (!context) {
-        return;
+      const graphDesignerContext = mapItemToGraphDesignerConfigurationContext(
+        item,
+        projectId,
+      );
+      if (graphDesignerContext) {
+        void initializeGraphDesignerConfiguration(graphDesignerContext);
+      } else {
+        const context = mapItemToConfigurationContext(item);
+        if (!context) {
+          return;
+        }
+        void initializeConfiguration(context);
       }
 
-      void initializeConfiguration(context);
       logger.debug('Configuration initialized for item', {
         action: 'initialize_configuration',
         component: 'KeyConfiguratorPanel',
       });
     });
-  }, [graphDataStatus, selectedItems, projectId, initializeConfiguration]);
+  }, [
+    graphDataStatus,
+    selectedItems,
+    projectId,
+    initializeConfiguration,
+    initializeGraphDesignerConfiguration,
+  ]);
 
   const displayMode =
     preferences.usecases.namePreference === 'keyvalues'
       ? 'key-value'
       : 'value-only';
+  const moduleDisplayMode = resolveKeyDisplayMode(
+    preferences.usecases.namePreference,
+  );
 
   const renderKeyConfigView = (
     item: ConfigurationItem,
@@ -150,14 +170,16 @@ export const KeyConfiguratorPanel: React.FC = () => {
         );
       }
 
-      case ConfigurationItemType.MODULE:
+      case ConfigurationItemType.MODULE: {
         return (
           <ModuleConfigurationPanel
-            instanceId={item.id}
+            displayMode={moduleDisplayMode}
+            instanceSystemId={item.systemId}
             isEditable={isEditableParam}
             moduleId={item.id}
           />
         );
+      }
     }
   };
 
@@ -217,6 +239,16 @@ function mapItemToConfigurationContext(
     case ConfigurationItemType.SUBGRAPH:
       return null;
   }
+}
+
+function mapItemToGraphDesignerConfigurationContext(
+  item: ConfigurationItem,
+  projectId: string,
+): {itemId: string; itemType: 'module'; projectId: string} | null {
+  if (item.type !== ConfigurationItemType.MODULE) {
+    return null;
+  }
+  return {itemId: item.systemId, itemType: 'module', projectId};
 }
 
 export {ConfiguratorUtils};
