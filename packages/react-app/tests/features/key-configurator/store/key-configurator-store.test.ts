@@ -9,14 +9,11 @@
  * Graph Data/Edit Session while this store continues to initialize CKV/TKV.
  */
 import {ConfigurationItemType} from '~features/key-configurator/model';
-import {useCalibrationKeysStore} from '~features/key-configurator/model/calibration-keys-store';
 import {
   createKeyConfiguratorStore,
   type ModuleConfigurationContext,
   type SubsystemConfigurationContext,
 } from '~features/key-configurator/model/key-configurator-store';
-import {moduleInstanceCoordinator} from '~features/key-configurator/model/module-instance-coordinator';
-import {useModuleTagKeysStore} from '~features/key-configurator/model/module-tag-keys-store';
 import {useSubsystemConfigStore} from '~features/key-configurator/model/subsystem-config-store';
 import {logger} from '~shared/lib/logger';
 
@@ -30,52 +27,17 @@ jest.mock('~shared/lib/logger', () => ({
   },
 }));
 
-jest.mock('~features/key-configurator/model/calibration-keys-store', () => ({
-  useCalibrationKeysStore: {
-    getState: jest.fn(),
-  },
-}));
-
-jest.mock('~features/key-configurator/model/module-tag-keys-store', () => ({
-  useModuleTagKeysStore: {
-    getState: jest.fn(),
-  },
-}));
-
 jest.mock('~features/key-configurator/model/subsystem-config-store', () => ({
   useSubsystemConfigStore: {
     getState: jest.fn(),
   },
 }));
 
-jest.mock(
-  '~features/key-configurator/model/module-instance-coordinator',
-  () => ({
-    moduleInstanceCoordinator: {
-      fetchAndDistributeModuleInstanceData: jest.fn(),
-    },
-  }),
-);
-
 describe('KeyConfiguratorStore', () => {
   let store: ReturnType<typeof createKeyConfiguratorStore>;
   const projectId = 'test-project-id';
 
   // Mock store states
-  const mockCalibrationKeysStore = {
-    initialize: jest.fn(),
-    projectId: null as string | null,
-    reset: jest.fn(),
-    saveToBackend: jest.fn(),
-  };
-
-  const mockModuleTagKeysStore = {
-    initialize: jest.fn(),
-    projectId: null as string | null,
-    reset: jest.fn(),
-    saveToBackend: jest.fn(),
-  };
-
   const mockSubsystemConfigStore = {
     initialize: jest.fn(),
     projectId: null as string | null,
@@ -88,26 +50,12 @@ describe('KeyConfiguratorStore', () => {
     jest.clearAllMocks();
 
     // Setup mock implementations
-    (useCalibrationKeysStore.getState as jest.Mock).mockReturnValue(
-      mockCalibrationKeysStore,
-    );
-    (useModuleTagKeysStore.getState as jest.Mock).mockReturnValue(
-      mockModuleTagKeysStore,
-    );
     (useSubsystemConfigStore.getState as jest.Mock).mockReturnValue(
       mockSubsystemConfigStore,
     );
 
     // Reset mock store states
-    mockCalibrationKeysStore.projectId = null;
-    mockModuleTagKeysStore.projectId = null;
     mockSubsystemConfigStore.projectId = null;
-
-    mockCalibrationKeysStore.initialize.mockResolvedValue(true);
-    mockModuleTagKeysStore.initialize.mockResolvedValue(true);
-    (
-      moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData as jest.Mock
-    ).mockResolvedValue({success: true});
 
     // Create a fresh store instance
     store = createKeyConfiguratorStore(projectId);
@@ -254,121 +202,12 @@ describe('KeyConfiguratorStore', () => {
       systemId: 'system-1',
     };
 
-    it('should initialize module configuration successfully', async () => {
-      await store.getState().initializeConfiguration(moduleContext);
+    it('does not handle MODULE items (moved to GraphDesignerStore)', async () => {
+      const result = await store
+        .getState()
+        .initializeConfiguration(moduleContext);
 
-      expect(mockCalibrationKeysStore.initialize).toHaveBeenCalledWith(
-        projectId,
-      );
-      expect(mockModuleTagKeysStore.initialize).toHaveBeenCalledWith(projectId);
-      expect(
-        moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData,
-      ).toHaveBeenCalledWith(
-        projectId,
-        moduleContext.entityId,
-        moduleContext.moduleDefinitionSystemId,
-        moduleContext.systemId,
-      );
-      expect(logger.info).toHaveBeenCalledWith(
-        'Key configurator initialized successfully',
-        {
-          action: 'initialize_configuration',
-          component: 'KeyConfiguratorStore',
-          projectId,
-        },
-      );
-    });
-
-    it('should skip CKV initialization if already initialized', async () => {
-      mockCalibrationKeysStore.projectId = projectId;
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(mockCalibrationKeysStore.initialize).not.toHaveBeenCalled();
-      expect(mockModuleTagKeysStore.initialize).toHaveBeenCalled();
-    });
-
-    it('should skip TKV initialization if already initialized', async () => {
-      mockModuleTagKeysStore.projectId = projectId;
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(mockCalibrationKeysStore.initialize).toHaveBeenCalled();
-      expect(mockModuleTagKeysStore.initialize).not.toHaveBeenCalled();
-    });
-
-    it('should handle CKV initialization failure', async () => {
-      mockCalibrationKeysStore.initialize.mockResolvedValue(false);
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Failed to initialize calibration keys store',
-        {
-          action: 'initialize_configuration',
-          component: 'KeyConfiguratorStore',
-          projectId,
-        },
-      );
-      expect(
-        moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should handle TKV initialization failure', async () => {
-      mockModuleTagKeysStore.initialize.mockResolvedValue(false);
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Failed to initialize module tag keys store',
-        {
-          action: 'initialize_configuration',
-          component: 'KeyConfiguratorStore',
-          projectId,
-        },
-      );
-      expect(
-        moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should handle coordinator fetch failure', async () => {
-      (
-        moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData as jest.Mock
-      ).mockResolvedValue({
-        error: 'Fetch failed',
-        success: false,
-      });
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Failed to fetch module instance data via coordinator',
-        {
-          action: 'initialize_configuration',
-          component: 'KeyConfiguratorStore',
-          error: 'Fetch failed',
-          projectId,
-        },
-      );
-    });
-
-    it('should handle exceptions during module initialization', async () => {
-      const error = new Error('Unexpected error');
-      mockCalibrationKeysStore.initialize.mockRejectedValue(error);
-
-      await store.getState().initializeConfiguration(moduleContext);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Failed to initialize key configurator',
-        {
-          action: 'initialize_configuration',
-          component: 'KeyConfiguratorStore',
-          error: 'Unexpected error',
-          projectId,
-        },
-      );
+      expect(result).toBe(false);
     });
   });
 
@@ -406,15 +245,11 @@ describe('KeyConfiguratorStore', () => {
 
   describe('Save Configuration', () => {
     it('should save all configurations successfully', async () => {
-      mockCalibrationKeysStore.saveToBackend.mockResolvedValue(true);
-      mockModuleTagKeysStore.saveToBackend.mockResolvedValue(true);
       mockSubsystemConfigStore.saveToBackend.mockResolvedValue(true);
 
       const result = await store.getState().saveConfiguration();
 
       expect(result).toBe(true);
-      expect(mockCalibrationKeysStore.saveToBackend).toHaveBeenCalled();
-      expect(mockModuleTagKeysStore.saveToBackend).toHaveBeenCalled();
       expect(mockSubsystemConfigStore.saveToBackend).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(
         'All configurations saved successfully',
@@ -427,9 +262,7 @@ describe('KeyConfiguratorStore', () => {
     });
 
     it('should return false if any save fails', async () => {
-      mockCalibrationKeysStore.saveToBackend.mockResolvedValue(true);
-      mockModuleTagKeysStore.saveToBackend.mockResolvedValue(false);
-      mockSubsystemConfigStore.saveToBackend.mockResolvedValue(true);
+      mockSubsystemConfigStore.saveToBackend.mockResolvedValue(false);
 
       const result = await store.getState().saveConfiguration();
 
@@ -446,7 +279,7 @@ describe('KeyConfiguratorStore', () => {
 
     it('should handle save exceptions', async () => {
       const error = new Error('Save failed');
-      mockCalibrationKeysStore.saveToBackend.mockRejectedValue(error);
+      mockSubsystemConfigStore.saveToBackend.mockRejectedValue(error);
 
       const result = await store.getState().saveConfiguration();
 
@@ -460,7 +293,7 @@ describe('KeyConfiguratorStore', () => {
     });
 
     it('should handle non-Error exceptions during save', async () => {
-      mockCalibrationKeysStore.saveToBackend.mockRejectedValue('String error');
+      mockSubsystemConfigStore.saveToBackend.mockRejectedValue('String error');
 
       const result = await store.getState().saveConfiguration();
 
@@ -485,8 +318,6 @@ describe('KeyConfiguratorStore', () => {
       const state = store.getState();
       expect(state.selectedItems).toEqual([]);
       expect(state.projectId).toBe('');
-      expect(mockCalibrationKeysStore.reset).toHaveBeenCalled();
-      expect(mockModuleTagKeysStore.reset).toHaveBeenCalled();
       expect(mockSubsystemConfigStore.reset).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith('Resetting all configurations', {
         action: 'reset_configuration',

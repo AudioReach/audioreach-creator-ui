@@ -5,7 +5,14 @@
 
 import {useMemo, useState} from 'react';
 
-import {ChevronDown, ChevronRight, Edit, Plus, Trash2} from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Edit,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 
 import {Button, IconButton} from '@qualcomm-ui/react/button';
 
@@ -25,9 +32,12 @@ interface ConfigSummaryItem {
 }
 
 interface ConfigSummaryViewProps {
+  highlightedEntryIndex?: number | null;
+  isActionsDisabled?: boolean;
   isEditable: boolean;
   items: ConfigSummaryItem[];
   onAddClick?: () => void;
+  onCopyEntry?: (entryIndex: number) => void;
   onDeleteItem?: (id: number) => void;
   onEditItem?: (id: number) => void;
   showEditIcon?: boolean;
@@ -35,9 +45,12 @@ interface ConfigSummaryViewProps {
 }
 
 export function ConfigSummaryView({
+  highlightedEntryIndex,
+  isActionsDisabled = false,
   isEditable,
   items,
   onAddClick,
+  onCopyEntry,
   onDeleteItem,
   onEditItem,
   showEditIcon = false,
@@ -142,6 +155,7 @@ export function ConfigSummaryView({
         {onAddClick && isEditable && (
           <Button
             className="mr-2 inline-flex items-center"
+            disabled={isActionsDisabled}
             emphasis="primary"
             onClick={handleAddClick}
             startIcon={Plus}
@@ -156,7 +170,7 @@ export function ConfigSummaryView({
       {/* Content */}
       <div
         className={`transition-all duration-200 ease-in-out ${
-          isCollapsed ? 'max-h-0 overflow-hidden' : 'max-h-[60vh] overflow-auto'
+          isCollapsed ? 'max-h-0 overflow-hidden' : 'max-h-[30vh] overflow-auto'
         }`}
       >
         <div className="p-4">
@@ -171,12 +185,22 @@ export function ConfigSummaryView({
             </div>
           ) : (
             <ul className="space-y-2">
-              {filteredItems.map((item) => (
-                <li key={item.id} className="flex items-center gap-2">
+              {filteredItems.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={`flex items-center gap-2 ${
+                    highlightedEntryIndex != null &&
+                    index === highlightedEntryIndex
+                      ? 'bg-[var(--color-background-neutral-02)]'
+                      : ''
+                  }`}
+                  data-testid="config-summary-row"
+                >
                   {/* Edit Icon - Hidden by default */}
                   {showEditIcon && onEditItem && isEditable && (
                     <IconButton
                       aria-label="Edit"
+                      disabled={isActionsDisabled}
                       emphasis="primary"
                       icon={<Edit className="h-3.5 w-3.5" />}
                       onClick={() => onEditItem(item.id)}
@@ -189,6 +213,7 @@ export function ConfigSummaryView({
                   {onDeleteItem && isEditable && (
                     <IconButton
                       aria-label="Delete"
+                      disabled={isActionsDisabled}
                       emphasis="danger"
                       icon={<Trash2 className="h-3.5 w-3.5" />}
                       onClick={() =>
@@ -201,7 +226,7 @@ export function ConfigSummaryView({
 
                   {/* Item Label */}
                   <span
-                    className="text-neutral-primary inline-block cursor-default rounded-full px-3 py-1 text-sm font-medium"
+                    className="text-neutral-primary inline-block flex-1 cursor-default truncate rounded-full px-3 py-1 text-sm font-medium"
                     title={
                       item.keyValuePairs && item.keyValuePairs.length > 0
                         ? item.keyValuePairs
@@ -215,6 +240,17 @@ export function ConfigSummaryView({
                   >
                     {item.label}
                   </span>
+
+                  {/* Copy Icon */}
+                  {onCopyEntry && (
+                    <IconButton
+                      aria-label={`Copy ${item.label}`}
+                      icon={<Copy className="h-3.5 w-3.5" />}
+                      onClick={() => onCopyEntry(index)}
+                      title="Copy"
+                      variant="ghost"
+                    />
+                  )}
                 </li>
               ))}
             </ul>

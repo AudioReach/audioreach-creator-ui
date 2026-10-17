@@ -11,6 +11,8 @@ import {IconButton} from '@qualcomm-ui/react/button';
 
 import type {ConfigurationItem} from '~features/key-configurator';
 
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
+
 /**
  * Provides the common accordion host for all Graph Designer configuration items.
  * Callers map graph selection into items and supply the View/Edit body per type.
@@ -134,7 +136,7 @@ const ConfigurationSection: React.FC<{
   return (
     <div className="border-neutral-02 overflow-hidden rounded-lg border">
       {/* Header */}
-      <div className="bg-secondary border-neutral-02 flex items-center justify-between border-b px-4 py-3">
+      <div className="bg-secondary border-neutral-02 flex items-center justify-between border-b">
         <div className="flex items-center space-x-2">
           <IconButton
             aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
@@ -149,11 +151,8 @@ const ConfigurationSection: React.FC<{
             variant="ghost"
           />
           <div className="flex items-center space-x-2">
-            {/* <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
-              {item.type.toUpperCase()}:
-            </span> */}
             <h3 className="text-m text-neutral-primary">
-              {item.type}: {item.name}
+              {item.type}: {item.name} ({ConvertNumberToHexString(item.id)})
             </h3>
           </div>
         </div>

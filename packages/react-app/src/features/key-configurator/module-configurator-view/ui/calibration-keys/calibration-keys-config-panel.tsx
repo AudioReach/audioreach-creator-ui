@@ -17,8 +17,24 @@ import {
 import {Button, IconButton} from '@qualcomm-ui/react/button';
 import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
-import ArcSearchBar from '~shared/controls/arc-search-bar';
+import type {ParamDefinitionsSummaryInfo} from '~entities/module-definitions/model/module-definition.dto';
+import {
+  type CkvSearchDiagnostic,
+  type CkvSearchSuggestion,
+  formatCkvEntry,
+  getCkvSearchSuggestions,
+  type GraphDesignerStore,
+  resolveCkvSearchInput,
+  selectConfiguredCkvs,
+  useGraphDesignerStoreShallow,
+} from '~features/graph-designer';
+import {showToast} from '~shared/controls/global-toaster';
+import type {KeyDisplayMode} from '~shared/lib/key-display-mode';
+import {logger} from '~shared/lib/logger';
 import type {
+  ConfiguredCkv,
+  GraphKey as CalibrationKey,
+  KeyValue,
   SortColumn,
   SortOrder,
 } from '~shared/types/key-configurator-config.types';
@@ -28,22 +44,23 @@ import {
 } from '~shared/utils/converter-utils';
 
 import {ConfigSummaryView} from '../../../config-summary-view';
-import {useCalibrationKeysStore} from '../../../model/calibration-keys-store';
+import {
+  KvVectorEditor,
+  type KvVectorEditorSuggestion,
+} from '../../../ui/kv-vector-editor';
 
-import type {
-  CalibrationKey,
-  CkvParameter,
-  ConfiguredCkv,
-} from './calibration-keys-config.types';
+import type {CkvParameter} from './calibration-keys-config.types';
+import {transformParamDefinitionsToCKVParameters} from './ckv.mapper';
 import {CkvParametersSection} from './ckv-parameters-section';
 
 interface CalibrationKeysConfigPanelProps {
-  instanceId: number;
+  ckvDisplayMode: KeyDisplayMode;
+  instanceSystemId: string;
   isEditable: boolean;
   moduleId: number;
 }
 
-// Helper functions
+type ActiveCkvOperation = {type: 'add'} | {index: number; type: 'edit'} | null;
 
 /**
  * Determines whether a calibration key or any of its values match the given search term.
@@ -72,6 +89,20 @@ const matchesSearchTerm = (
       (searchNumber !== null && v.id === searchNumber),
   );
   return keyMatches || valueMatches;
+};
+
+/**
+ * Isolates the token currently being typed out of a filter/search string that
+ * may contain already-resolved tokens joined by `separator` (e.g. `+voi` once
+ * a prior value-only token has resolved) — mirrors SGKV's caret-based active
+ * token isolation (`getValueOnlyReplacementRange`) without needing caret
+ * tracking, since this editor only supports appending at the end.
+ */
+const getActiveSearchToken = (text: string, separator: string): string => {
+  const separatorIndex = text.lastIndexOf(separator);
+  return separatorIndex < 0
+    ? text.trim()
+    : text.slice(separatorIndex + 1).trim();
 };
 
 /**
@@ -113,7 +144,7 @@ const sortKeys = (
  *
  * Keys that have one or more values currently selected are moved to the front of the list,
  * while keys with no selected values follow. The relative order within each group is
- * preserved. This is used when entering edit mode to surface the relevant keys immediately.
+ * preserved.
  *
  * @param keys - Array of calibration key names to partition.
  * @param calibrationKeyData - Map from key name to its {@link CalibrationKey} data.
@@ -143,8 +174,6 @@ const partitionKeysBySelection = (
  *
  * Each element of the returned array is one unique combination of key-value pairs — one
  * pair per calibration key — covering every possible permutation of the selected values.
- * For example, given Key A with values [A1, A2] and Key B with values [B1], the result
- * will be [[{A, A1}, {B, B1}], [{A, A2}, {B, B1}]].
  *
  * @param selectedPerKey - Array where each entry contains a calibration key and the list
  *   of values selected for that key.
@@ -222,7 +251,6 @@ const groupSelectedValuesByKey = (
   Object.entries(selectedKeyValues).forEach(([keyIdStr, valueSelections]) => {
     const keyId = parseInt(keyIdStr, 10);
 
-    // Find the key name from the key ID
     const keyName = Object.keys(calibrationKeyData).find(
       (name) => calibrationKeyData[name].id === keyId,
     );
@@ -256,133 +284,174 @@ const groupSelectedValuesByKey = (
   return selectedPerKey;
 };
 
-export function CalibrationKeysConfigPanel({
-  instanceId,
-  isEditable,
-  moduleId,
-}: CalibrationKeysConfigPanelProps) {
-  // Store state
-  const availableKeys = useCalibrationKeysStore((state) => state.availableKeys);
-  if (!availableKeys) {
-    // TODO: Required to show popup??
+/**
+ * Re-resolves a narrow `{id, name}` key/value pair produced by the Cartesian-product
+ * helpers above into the full {@link CalibrationKey}/{@link KeyValue} shape required by
+ * `ConfiguredCkv`, by matching on `id` against `availableCalibrationKeys` — the helpers
+ * above intentionally stay widening-free, so this is the one place that re-attaches
+ * `systemId` metadata.
+ */
+function resolveGraphKeyAndValue(
+  availableCalibrationKeys: Record<string, CalibrationKey>,
+  keyId: number,
+  valueId: number,
+): {key: CalibrationKey; value: KeyValue} | null {
+  const key = Object.values(availableCalibrationKeys).find(
+    (candidate) => candidate.id === keyId,
+  );
+  if (!key) {
+    return null;
   }
+  const value = key.values.find((candidate) => candidate.id === valueId);
+  if (!value) {
+    return null;
+  }
+  return {key, value};
+}
 
-  const storeParameters = useCalibrationKeysStore(
-    (state) => state.moduleParameters[moduleId],
+function buildCkvSystemId(
+  keyValuePairs: Array<{key: CalibrationKey; value: KeyValue}>,
+): string {
+  return keyValuePairs
+    .map((pair) => `${pair.key.systemId}:${pair.value.systemId}`)
+    .sort()
+    .join('|');
+}
+
+async function copyCkvEntry(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
+    logger.error('Calibration key entry copy failed', {
+      action: 'copy_ckv_entry',
+      component: 'CalibrationKeysConfigPanel',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+function renderDiagnostic(diagnostic: CkvSearchDiagnostic, key: number) {
+  if (diagnostic.code === 'unknown-token') {
+    return (
+      <div key={key}>
+        Value &quot;{diagnostic.token}&quot; was not found for any key.
+      </div>
+    );
+  }
+  if (diagnostic.code === 'value-auto-resolved-by-key-id') {
+    return (
+      <div key={key}>
+        {diagnostic.valueName} is ambiguous between{' '}
+        {diagnostic.candidateKeyNames.join(', ')}; resolved to the lowest-ID
+        key.
+      </div>
+    );
+  }
+  return (
+    <div key={key}>
+      Cannot assign distinct keys to tokens: {diagnostic.tokens.join(', ')}
+    </div>
   );
-  const configuredKeyValuesMap = useCalibrationKeysStore(
-    (state) => state.configuredKeyValuesMap,
+}
+
+export function CalibrationKeysConfigPanel({
+  ckvDisplayMode,
+  instanceSystemId,
+  isEditable,
+  moduleId: _moduleId,
+}: CalibrationKeysConfigPanelProps) {
+  const {
+    availableCalibrationKeys,
+    graphData,
+    moduleDefinitionsBySystemId,
+    removeConfiguredCkv,
+    updateConfiguredCkvs,
+  } = useGraphDesignerStoreShallow((state) => ({
+    availableCalibrationKeys: state.availableCalibrationKeys,
+    graphData: state.graphData,
+    moduleDefinitionsBySystemId: state.moduleDefinitionsBySystemId,
+    removeConfiguredCkv: state.removeConfiguredCkv,
+    updateConfiguredCkvs: state.updateConfiguredCkvs,
+  }));
+
+  // selectConfiguredCkvs re-derives fresh CalibrationKey/KeyValue objects on every
+  // call, so it must be memoized here rather than invoked inside the
+  // useGraphDesignerStoreShallow selector itself — doing so there defeats
+  // useShallow's comparison (new array/object identities every render) and
+  // triggers React's "getSnapshot should be cached" infinite-loop warning.
+  const configuredCkvs = useMemo(
+    () =>
+      selectConfiguredCkvs(
+        {availableCalibrationKeys, graphData} as GraphDesignerStore,
+        instanceSystemId,
+      ),
+    [availableCalibrationKeys, graphData, instanceSystemId],
   );
 
-  // Store actions
-  const updateConfiguredKeyValues = useCalibrationKeysStore(
-    (state) => state.updateConfiguredKeyValues,
-  );
-  const addConfiguredKey = useCalibrationKeysStore(
-    (state) => state.addConfiguredKey,
-  );
-  const removeConfiguredKey = useCalibrationKeysStore(
-    (state) => state.removeConfiguredKey,
-  );
-  const updateModuleParameters = useCalibrationKeysStore(
-    (state) => state.updateModuleParameters,
+  const moduleDefinitionSystemId =
+    graphData?.moduleInstances[instanceSystemId]?.moduleDefinitionSystemId;
+  const paramDefinitionsSummaryInfo: ParamDefinitionsSummaryInfo[] = useMemo(
+    () =>
+      (moduleDefinitionSystemId !== undefined
+        ? moduleDefinitionsBySystemId[moduleDefinitionSystemId]
+            ?.paramDefinitionsSummaryInfo
+        : undefined) ?? [],
+    [moduleDefinitionSystemId, moduleDefinitionsBySystemId],
   );
 
-  // Local state for parameters
-  const [parameters, setParameters] = useState<CkvParameter[]>([]);
-
-  const [initialPidConfig, setInitialPidConfig] = useState<number[]>([]);
-
-  // Sync parameters with store when store updates
-  useEffect(() => {
-    if (storeParameters && storeParameters.length > 0) {
-      setParameters(storeParameters);
-
-      // Capture initial checked PIDs
-      const checkedPids = storeParameters
-        .filter((p) => p.checked)
-        .map((p) => p.pid);
-      setInitialPidConfig(checkedPids);
+  const baselineParameters = useMemo<CkvParameter[]>(() => {
+    const baseline = transformParamDefinitionsToCKVParameters(
+      paramDefinitionsSummaryInfo,
+    );
+    if (configuredCkvs.length === 0) {
+      return baseline.map((param) => ({...param, checked: true}));
     }
-  }, [storeParameters]);
+    return baseline.map((param) => ({
+      ...param,
+      checked: configuredCkvs.some((ckv) => ckv.pidConfig.includes(param.pid)),
+    }));
+  }, [paramDefinitionsSummaryInfo, configuredCkvs]);
 
-  // Local UI state
-  const [searchTerm, setSearchTerm] = useState('');
+  const [parameters, setParameters] =
+    useState<CkvParameter[]>(baselineParameters);
+  const [activeOperation, setActiveOperation] =
+    useState<ActiveCkvOperation>(null);
   const [selectedKeyValues, setSelectedKeyValues] = useState<
     Record<number, Record<number, boolean>>
   >({});
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [showSearchAndList, setShowSearchAndList] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [initialEditSelections, setInitialEditSelections] = useState<
-    Record<number, Record<number, boolean>>
-  >({});
-  const configSectionRef = useRef<HTMLDivElement>(null);
-  const searchBarRef = useRef<HTMLDivElement>(null);
+  const [pickerBoxText, setPickerBoxText] = useState('');
+  const [diagnostics, setDiagnostics] = useState<CkvSearchDiagnostic[]>([]);
+  const availableKeysTableRef = useRef<HTMLDivElement | null>(null);
 
-  // Get configured keys for this module instance from store
-  const configuredCKVs = useMemo(() => {
-    const moduleInstances = configuredKeyValuesMap[moduleId] || [];
-    const instance = moduleInstances.find(
-      (inst) => inst.instanceId === instanceId,
-    );
-    return instance?.keyValueList || [];
-  }, [configuredKeyValuesMap, moduleId, instanceId]);
-
-  // Filter and sort keys
-  const filteredAndSortedKeys = useMemo(() => {
-    if (!availableKeys) {
-      return [];
+  useEffect(() => {
+    if (activeOperation === null) {
+      setParameters(baselineParameters);
     }
+    // Resetting the active edit on instance switch (not on every baseline
+    // recompute) is intentional — see brief requirement (e).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instanceSystemId]);
 
-    let keys = Object.keys(availableKeys);
+  const resetPickerState = useCallback(() => {
+    setSelectedKeyValues({});
+    setExpandedKeys([]);
+    setPickerBoxText('');
+    setDiagnostics([]);
+  }, []);
 
-    // Filter by search term
-    if (searchTerm) {
-      const searchNumber = ConvertStringToNumber(searchTerm);
-      keys = keys.filter((keyName) =>
-        matchesSearchTerm(
-          keyName,
-          availableKeys[keyName],
-          searchTerm,
-          searchNumber,
-        ),
-      );
-
-      // Auto-expand all filtered keys when searching
-      const keyIds = keys.map((name) => availableKeys[name].id);
-      setExpandedKeys(keyIds);
-    } else {
-      // When search is cleared, collapse everything
-      setExpandedKeys([]);
+  // Add/Edit opens a picker further down the panel — bring it into view so
+  // the user isn't left looking at an unchanged scroll position.
+  useEffect(() => {
+    if (activeOperation !== null) {
+      availableKeysTableRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
     }
-
-    // Sort keys
-    keys = sortKeys(keys, availableKeys, sortColumn, sortOrder);
-
-    // When editing, move keys with INITIAL selected values to the top
-    if (
-      editingIndex !== null &&
-      Object.keys(initialEditSelections).length > 0
-    ) {
-      keys = partitionKeysBySelection(
-        keys,
-        availableKeys,
-        initialEditSelections,
-      );
-    }
-
-    return keys;
-  }, [
-    availableKeys,
-    searchTerm,
-    sortColumn,
-    sortOrder,
-    editingIndex,
-    initialEditSelections,
-  ]);
+  }, [activeOperation]);
 
   const handleSort = useCallback(
     (column: SortColumn) => {
@@ -399,12 +468,12 @@ export function CalibrationKeysConfigPanel({
   const getSortIcon = useCallback(
     (column: SortColumn) => {
       if (sortColumn !== column) {
-        return <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />;
+        return <ArrowUpDown className="h-3.5 w-3.5" />;
       }
       return sortOrder === 'asc' ? (
-        <ArrowUp className="text-brand-primary h-3.5 w-3.5" />
+        <ArrowUp className="h-3.5 w-3.5" />
       ) : (
-        <ArrowDown className="text-brand-primary h-3.5 w-3.5" />
+        <ArrowDown className="h-3.5 w-3.5" />
       );
     },
     [sortColumn, sortOrder],
@@ -412,7 +481,9 @@ export function CalibrationKeysConfigPanel({
 
   const toggleKeyExpansion = useCallback((keyId: number) => {
     setExpandedKeys((prev) =>
-      prev.includes(keyId) ? prev.filter((k) => k !== keyId) : [...prev, keyId],
+      prev.includes(keyId)
+        ? prev.filter((id) => id !== keyId)
+        : [...prev, keyId],
     );
   }, []);
 
@@ -429,470 +500,520 @@ export function CalibrationKeysConfigPanel({
     });
   }, []);
 
-  const toggleKeySelection = useCallback(
-    (keyId: number) => {
-      if (!availableKeys) {
-        return;
-      }
-
-      const keyName = Object.keys(availableKeys).find(
-        (name) => availableKeys[name].id === keyId,
-      );
-      if (!keyName) {
-        return;
-      }
-
-      const key = availableKeys[keyName];
-      const keySelections = selectedKeyValues[keyId] || {};
+  const toggleKeySelection = useCallback((key: CalibrationKey) => {
+    setSelectedKeyValues((prev) => {
+      const keySelections = prev[key.id] || {};
       const allSelected = key.values.every((v) => keySelections[v.id]);
+      const nextSelections: Record<number, boolean> = {};
+      key.values.forEach((v) => {
+        nextSelections[v.id] = !allSelected;
+      });
+      return {...prev, [key.id]: nextSelections};
+    });
+  }, []);
 
-      setSelectedKeyValues((prev) => {
-        const newKeySelections: Record<number, boolean> = {};
-        key.values.forEach((v) => {
-          newKeySelections[v.id] = !allSelected;
-        });
-        return {
-          ...prev,
-          [keyId]: newKeySelections,
+  const resolvedPickerSelection = useMemo(() => {
+    return Object.entries(selectedKeyValues).flatMap(
+      ([keyIdStr, valueSelections]) => {
+        const keyId = parseInt(keyIdStr, 10);
+        return Object.entries(valueSelections)
+          .filter(([, isSelected]) => isSelected)
+          .map(([valueIdStr]) =>
+            resolveGraphKeyAndValue(
+              availableCalibrationKeys,
+              keyId,
+              parseInt(valueIdStr, 10),
+            ),
+          )
+          .filter(
+            (pair): pair is {key: CalibrationKey; value: KeyValue} =>
+              pair !== null,
+          );
+      },
+    );
+  }, [selectedKeyValues, availableCalibrationKeys]);
+
+  const confirmedSelectionText = useMemo(
+    () => formatCkvEntry(resolvedPickerSelection, ckvDisplayMode),
+    [resolvedPickerSelection, ckvDisplayMode],
+  );
+
+  // Selection → box: reflect the confirmed selection into the search field
+  // whenever a checkbox toggle changes it (requirement 30).
+  useEffect(() => {
+    setPickerBoxText(confirmedSelectionText);
+  }, [confirmedSelectionText]);
+
+  const applySelectionFromTokens = useCallback(
+    (pairs: Array<{key: CalibrationKey; value: KeyValue}>) => {
+      const next: Record<number, Record<number, boolean>> = {};
+      pairs.forEach((pair) => {
+        next[pair.key.id] = {
+          ...(next[pair.key.id] ?? {}),
+          [pair.value.id]: true,
         };
       });
+      setSelectedKeyValues(next);
+      setExpandedKeys(pairs.map((pair) => pair.key.id));
     },
-    [availableKeys, selectedKeyValues],
+    [],
   );
 
-  const handleSelectAll = useCallback(
-    (checked: boolean) => {
-      if (!availableKeys) {
+  // Box → selection: a keystroke either extends the confirmed-selection
+  // prefix (treated as a live filter over the key/value tree) or replaces it
+  // entirely (resolved against the full available key set, requirement 30 /
+  // requirement 8 — no single-key lock, unlike SGKV's bracket editor).
+  const handlePickerBoxChange = useCallback(
+    (value: string) => {
+      setPickerBoxText(value);
+
+      const isExtension =
+        Boolean(confirmedSelectionText) &&
+        value.startsWith(confirmedSelectionText);
+      if (isExtension) {
+        setDiagnostics([]);
         return;
       }
 
-      const newSelectedKeyValues: Record<number, Record<number, boolean>> = {};
-      filteredAndSortedKeys.forEach((keyName) => {
-        const key = availableKeys[keyName];
-        const keySelections: Record<number, boolean> = {};
-        key.values.forEach((v) => {
-          keySelections[v.id] = checked;
-        });
-        newSelectedKeyValues[key.id] = keySelections;
-      });
-      setSelectedKeyValues(newSelectedKeyValues);
+      if (!value.trim()) {
+        setSelectedKeyValues({});
+        setDiagnostics([]);
+        return;
+      }
+
+      const separator = ckvDisplayMode === 'value-only' ? '+' : ' ';
+      const tokens = value
+        .split(separator)
+        .map((token) => token.trim())
+        .filter(Boolean);
+      const {diagnostics: resolvedDiagnostics, resolved} =
+        resolveCkvSearchInput(availableCalibrationKeys, tokens);
+      applySelectionFromTokens(resolved);
+      setDiagnostics(resolvedDiagnostics);
     },
-    [filteredAndSortedKeys, availableKeys],
+    [
+      availableCalibrationKeys,
+      applySelectionFromTokens,
+      confirmedSelectionText,
+      ckvDisplayMode,
+    ],
   );
 
-  const allFilteredKeysSelected = useMemo(() => {
-    if (!availableKeys) {
-      return false;
+  // The table filter only activates once a prior token is confirmed, and
+  // then filters by the token currently being typed — not the raw extension
+  // text, which would still contain the leading separator (e.g. `+`) right
+  // after it's typed and could never match a key/value name.
+  const pickerFilterText = useMemo(() => {
+    if (
+      confirmedSelectionText &&
+      pickerBoxText.startsWith(confirmedSelectionText)
+    ) {
+      const separator = ckvDisplayMode === 'value-only' ? '+' : ' ';
+      const extension = pickerBoxText
+        .slice(confirmedSelectionText.length)
+        .trim();
+      return getActiveSearchToken(extension, separator);
     }
+    return '';
+  }, [pickerBoxText, confirmedSelectionText, ckvDisplayMode]);
 
-    return (
-      filteredAndSortedKeys.length > 0 &&
-      filteredAndSortedKeys.every((keyName) => {
-        const key = availableKeys[keyName];
-        const keySelections = selectedKeyValues[key.id];
-        return keySelections && key.values.every((v) => keySelections[v.id]);
-      })
+  // Suggestions rank against the token currently being typed: the active
+  // separator-delimited segment of the extension past a confirmed prefix, or
+  // of the full box text when nothing is confirmed yet or the text was fully
+  // replaced — so a resolved first token (e.g. `Level_0+`) doesn't swallow
+  // the still-being-typed second token into one unmatchable query string
+  // (parity with SGKV's caret-based active-token isolation).
+  const pickerSuggestionQueryText = useMemo(() => {
+    if (
+      confirmedSelectionText &&
+      pickerBoxText.startsWith(confirmedSelectionText)
+    ) {
+      return pickerFilterText;
+    }
+    const separator = ckvDisplayMode === 'value-only' ? '+' : ' ';
+    return getActiveSearchToken(pickerBoxText, separator);
+  }, [pickerBoxText, confirmedSelectionText, pickerFilterText, ckvDisplayMode]);
+
+  const availableSuggestions = useMemo<
+    Array<KvVectorEditorSuggestion<CkvSearchSuggestion>>
+  >(
+    () =>
+      pickerSuggestionQueryText
+        ? getCkvSearchSuggestions(
+            availableCalibrationKeys,
+            pickerSuggestionQueryText,
+          ).map((suggestion) => ({
+            id: `${suggestion.key.id}:${suggestion.value.id}:${suggestion.kind}`,
+            primaryText: suggestion.value.name,
+            secondaryText: `Key: ${suggestion.key.name}`,
+            value: suggestion,
+          }))
+        : [],
+    [availableCalibrationKeys, pickerSuggestionQueryText],
+  );
+
+  const handleSuggestionCommit = useCallback(
+    (suggestion: CkvSearchSuggestion) => {
+      toggleValueSelection(suggestion.key.id, suggestion.value.id);
+    },
+    [toggleValueSelection],
+  );
+
+  const filteredKeyNames = useMemo(() => {
+    const searchNumber = ConvertStringToNumber(pickerFilterText);
+    const keys =
+      pickerFilterText === ''
+        ? Object.keys(availableCalibrationKeys)
+        : Object.keys(availableCalibrationKeys).filter((keyName) =>
+            matchesSearchTerm(
+              keyName,
+              availableCalibrationKeys[keyName],
+              pickerFilterText,
+              searchNumber,
+            ),
+          );
+    const sorted = sortKeys(
+      keys,
+      availableCalibrationKeys,
+      sortColumn,
+      sortOrder,
     );
-  }, [filteredAndSortedKeys, availableKeys, selectedKeyValues]);
-
-  const someFilteredKeysSelected = useMemo(() => {
-    if (!availableKeys) {
-      return false;
-    }
-
-    return (
-      filteredAndSortedKeys.some((keyName) => {
-        const key = availableKeys[keyName];
-        const keySelections = selectedKeyValues[key.id];
-        return keySelections && key.values.some((v) => keySelections[v.id]);
-      }) && !allFilteredKeysSelected
+    return partitionKeysBySelection(
+      sorted,
+      availableCalibrationKeys,
+      selectedKeyValues,
     );
   }, [
-    filteredAndSortedKeys,
-    availableKeys,
+    availableCalibrationKeys,
+    pickerFilterText,
+    sortColumn,
+    sortOrder,
     selectedKeyValues,
-    allFilteredKeysSelected,
   ]);
 
   const handleExpandAll = useCallback(() => {
-    if (!availableKeys) {
-      return;
-    }
-    const keyIds = filteredAndSortedKeys.map((name) => availableKeys[name].id);
-    setExpandedKeys(keyIds);
-  }, [filteredAndSortedKeys, availableKeys]);
+    setExpandedKeys(
+      filteredKeyNames.map((name) => availableCalibrationKeys[name].id),
+    );
+  }, [filteredKeyNames, availableCalibrationKeys]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedKeys([]);
   }, []);
 
   const handleAddClick = useCallback(() => {
-    setEditingIndex(null);
-    setSelectedKeyValues({});
-    setInitialEditSelections({});
-    setShowSearchAndList(true);
-    setExpandedKeys([]);
-    setSearchTerm('');
+    setActiveOperation({type: 'add'});
+    resetPickerState();
+    setParameters(
+      baselineParameters.map((param) => ({...param, checked: true})),
+    );
+  }, [resetPickerState, baselineParameters]);
 
-    setTimeout(() => {
-      searchBarRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+  const handleEditCKV = useCallback(
+    (index: number) => {
+      const ckv = configuredCkvs[index];
+      if (!ckv) {
+        return;
+      }
+      setActiveOperation({index, type: 'edit'});
+      const nextSelections: Record<number, Record<number, boolean>> = {};
+      ckv.keyValuePairs.forEach((pair) => {
+        nextSelections[pair.key.id] = {
+          ...(nextSelections[pair.key.id] ?? {}),
+          [pair.value.id]: true,
+        };
       });
-    }, 100);
-  }, []);
+      setSelectedKeyValues(nextSelections);
+      setExpandedKeys(ckv.keyValuePairs.map((pair) => pair.key.id));
+      setDiagnostics([]);
+      setParameters(
+        baselineParameters.map((param) => ({
+          ...param,
+          checked: ckv.pidConfig.includes(param.pid),
+        })),
+      );
+    },
+    [configuredCkvs, baselineParameters],
+  );
+
+  const handleDeleteCKV = useCallback(
+    (index: number) => {
+      removeConfiguredCkv(instanceSystemId, index);
+    },
+    [removeConfiguredCkv, instanceSystemId],
+  );
+
+  const handleCancel = useCallback(() => {
+    setActiveOperation(null);
+    resetPickerState();
+    setParameters(baselineParameters);
+  }, [resetPickerState, baselineParameters]);
 
   const handleApply = useCallback(() => {
-    // Get checked parameter PIDs
-    const checkedPids = parameters.filter((p) => p.checked).map((p) => p.pid);
-    if (checkedPids.length === 0) {
-      alert('Please select at least one PID');
+    if (activeOperation === null) {
       return;
     }
 
-    // Check if PIDs were modified
-    const currentCheckedPids = [...checkedPids].sort();
-    const initialPids = [...initialPidConfig].sort();
-    const pidsModified =
-      currentCheckedPids.length !== initialPids.length ||
-      currentCheckedPids.some((pid, index) => pid !== initialPids[index]);
-
-    // Search and List is NOT shown - only update PIDs if modified
-    if (!showSearchAndList) {
-      if (pidsModified && configuredCKVs.length > 0) {
-        const updatedConfigs = configuredCKVs.map((config) => ({
-          ...config,
-          pidConfig: checkedPids,
-        }));
-        updateConfiguredKeyValues(moduleId, instanceId, updatedConfigs);
-        // Update module parameters in store
-        updateModuleParameters(moduleId, parameters);
-        // Update initial PID config to reflect the new state
-        setInitialPidConfig(checkedPids);
-      }
-      return;
-    }
-
-    // Search and List IS shown - follow current implementation
-    if (!availableKeys) {
-      return;
-    }
+    const chosenPids = parameters.filter((p) => p.checked).map((p) => p.pid);
 
     const selectedPerKey = groupSelectedValuesByKey(
       selectedKeyValues,
-      availableKeys,
+      availableCalibrationKeys,
     );
 
     if (selectedPerKey.length === 0) {
-      alert('Please select at least one value');
+      showToast('Please select key value(s) first', 'warning');
       return;
     }
 
     const combinations = generateCartesianProduct(selectedPerKey);
 
-    const newConfigs: ConfiguredCkv[] = combinations.map((keyValuePairs) => ({
-      keyValuePairs,
-      pidConfig: checkedPids,
-    }));
+    if (activeOperation.type === 'add') {
+      const existingSignatures = new Set(
+        configuredCkvs.map((ckv) =>
+          ckv.keyValuePairs
+            .map((pair) => `${pair.key.id}:${pair.value.id}`)
+            .sort()
+            .join('|'),
+        ),
+      );
 
-    // Get existing configs (exclude the one being edited)
-    const existingConfigs =
-      editingIndex !== null
-        ? configuredCKVs.filter((_, i) => i !== editingIndex)
-        : configuredCKVs;
-
-    // Check for duplicates using IDs
-    const uniqueNewConfigs: ConfiguredCkv[] = [];
-    newConfigs.forEach((newConfig) => {
-      const newConfigStr = newConfig.keyValuePairs
-        .map((p) => `${p.key.id}:${p.value.id}`)
-        .sort()
-        .join('|');
-
-      const isDuplicate = existingConfigs.some((existingConfig) => {
-        const existingConfigStr = existingConfig.keyValuePairs
-          .map((p) => `${p.key.id}:${p.value.id}`)
+      const newEntries: ConfiguredCkv[] = [];
+      combinations.forEach((combo) => {
+        const signature = combo
+          .map((pair) => `${pair.key.id}:${pair.value.id}`)
           .sort()
           .join('|');
-        return existingConfigStr === newConfigStr;
+        if (existingSignatures.has(signature)) {
+          return;
+        }
+        existingSignatures.add(signature);
+
+        const resolvedPairs = combo
+          .map((pair) =>
+            resolveGraphKeyAndValue(
+              availableCalibrationKeys,
+              pair.key.id,
+              pair.value.id,
+            ),
+          )
+          .filter(
+            (pair): pair is {key: CalibrationKey; value: KeyValue} =>
+              pair !== null,
+          );
+
+        if (resolvedPairs.length === 0) {
+          return;
+        }
+
+        newEntries.push({
+          keyValuePairs: resolvedPairs,
+          pidConfig: chosenPids,
+          systemId: buildCkvSystemId(resolvedPairs),
+        });
       });
 
-      if (!isDuplicate) {
-        uniqueNewConfigs.push(newConfig);
+      if (newEntries.length > 0) {
+        updateConfiguredCkvs(instanceSystemId, [
+          ...configuredCkvs,
+          ...newEntries,
+        ]);
       }
-    });
+    } else {
+      const editIndex = activeOperation.index;
+      const originalCkv = configuredCkvs[editIndex];
+      const otherCkvs = configuredCkvs.filter((_, i) => i !== editIndex);
 
-    if (uniqueNewConfigs.length === 0) {
-      return;
-    }
+      const existingSignatures = new Set(
+        otherCkvs.map((ckv) =>
+          ckv.keyValuePairs
+            .map((pair) => `${pair.key.id}:${pair.value.id}`)
+            .sort()
+            .join('|'),
+        ),
+      );
 
-    // Update store using dedicated methods
-    if (editingIndex !== null) {
-      // Edit mode: Remove old entry first
-      removeConfiguredKey(moduleId, instanceId, editingIndex);
-    }
+      const editedEntries: ConfiguredCkv[] = [];
+      combinations.forEach((combo) => {
+        const signature = combo
+          .map((pair) => `${pair.key.id}:${pair.value.id}`)
+          .sort()
+          .join('|');
+        if (existingSignatures.has(signature)) {
+          return;
+        }
+        existingSignatures.add(signature);
 
-    // If PIDs were modified, update all existing configs with new pidConfig
-    if (pidsModified && existingConfigs.length > 0) {
-      const updatedExistingConfigs = existingConfigs.map((config) => ({
-        ...config,
-        pidConfig: checkedPids,
-      }));
-      updateConfiguredKeyValues(moduleId, instanceId, updatedExistingConfigs);
-    }
+        const resolvedPairs = combo
+          .map((pair) =>
+            resolveGraphKeyAndValue(
+              availableCalibrationKeys,
+              pair.key.id,
+              pair.value.id,
+            ),
+          )
+          .filter(
+            (pair): pair is {key: CalibrationKey; value: KeyValue} =>
+              pair !== null,
+          );
 
-    // Add new configurations
-    uniqueNewConfigs.forEach((config) => {
-      addConfiguredKey(moduleId, instanceId, config);
-    });
+        if (resolvedPairs.length === 0) {
+          return;
+        }
 
-    // Update module parameters in store if PIDs were modified
-    if (pidsModified) {
-      updateModuleParameters(moduleId, parameters);
-    }
-
-    // Reset UI state
-    setSelectedKeyValues({});
-    setEditingIndex(null);
-    setInitialEditSelections({});
-    setShowSearchAndList(false);
-    setExpandedKeys([]);
-    setSearchTerm('');
-    // Update initial PID config to reflect the new state
-    setInitialPidConfig(checkedPids);
-
-    setTimeout(() => {
-      configSectionRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+        editedEntries.push({
+          keyValuePairs: resolvedPairs,
+          pidConfig: chosenPids,
+          systemId:
+            editedEntries.length === 0
+              ? originalCkv.systemId
+              : buildCkvSystemId(resolvedPairs),
+        });
       });
-    }, 100);
+
+      const replacementEntries =
+        editedEntries.length > 0
+          ? editedEntries
+          : [{...originalCkv, pidConfig: chosenPids}];
+
+      updateConfiguredCkvs(instanceSystemId, [
+        ...configuredCkvs.slice(0, editIndex),
+        ...replacementEntries,
+        ...configuredCkvs.slice(editIndex + 1),
+      ]);
+    }
+
+    setActiveOperation(null);
+    resetPickerState();
   }, [
+    activeOperation,
     parameters,
-    initialPidConfig,
-    showSearchAndList,
-    availableKeys,
+    configuredCkvs,
     selectedKeyValues,
-    editingIndex,
-    configuredCKVs,
-    updateConfiguredKeyValues,
-    moduleId,
-    instanceId,
-    removeConfiguredKey,
-    addConfiguredKey,
-    updateModuleParameters,
+    availableCalibrationKeys,
+    updateConfiguredCkvs,
+    instanceSystemId,
+    resetPickerState,
   ]);
 
-  const handleEditCKV = useCallback(
-    (id: number) => {
-      if (!availableKeys) {
-        return;
-      }
-
-      const ckv = configuredCKVs[id];
-      if (!ckv) {
-        return;
-      }
-
-      setEditingIndex(id);
-
-      const newSelectedValues: Record<number, Record<number, boolean>> = {};
-      const keysToExpand: number[] = [];
-
-      // Use the Key and KeyValue objects directly
-      ckv.keyValuePairs.forEach((pair) => {
-        if (!newSelectedValues[pair.key.id]) {
-          newSelectedValues[pair.key.id] = {};
-        }
-        newSelectedValues[pair.key.id][pair.value.id] = true;
-        if (!keysToExpand.includes(pair.key.id)) {
-          keysToExpand.push(pair.key.id);
-        }
-      });
-
-      // Update parameters based on the CKV's pidConfig
-      if (ckv.pidConfig) {
-        const pidConfigSet = new Set(ckv.pidConfig);
-        const updatedParameters = parameters.map((param) => ({
-          ...param,
-          checked: pidConfigSet.has(param.pid),
-        }));
-        setParameters(updatedParameters);
-      }
-
-      setSelectedKeyValues(newSelectedValues);
-      setInitialEditSelections(newSelectedValues);
-      setExpandedKeys(keysToExpand);
-      setShowSearchAndList(true);
-      setSearchTerm('');
-
-      setTimeout(() => {
-        searchBarRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 100);
-    },
-    [configuredCKVs, availableKeys, parameters],
-  );
-
-  const handleDeleteCKV = useCallback(
-    (id: number) => {
-      // Use dedicated remove method
-      removeConfiguredKey(moduleId, instanceId, id);
-
-      if (editingIndex === id && showSearchAndList) {
-        setSelectedKeyValues({});
-        setInitialEditSelections({});
-        setExpandedKeys([]);
-      }
-    },
-    [
-      moduleId,
-      instanceId,
-      removeConfiguredKey,
-      editingIndex,
-      showSearchAndList,
-    ],
-  );
-
-  const handleCancel = useCallback(() => {
-    const hasSelections = Object.values(selectedKeyValues).some((v) => v);
-    const isConfirmed: boolean = true;
-    if (hasSelections) {
-      // TODO: Notify and confirm from user
-    }
-
-    if (isConfirmed) {
-      setShowSearchAndList(false);
-      setEditingIndex(null);
-      setSearchTerm('');
-      setSelectedKeyValues({});
-      setInitialEditSelections({});
-      setExpandedKeys([]);
-      setTimeout(() => {
-        configSectionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 100);
-    }
-  }, [selectedKeyValues]);
-
-  const configuredItems = useMemo(
-    () =>
-      configuredCKVs.map((ckv, index) => ({
-        id: index,
-        keyValuePairs: ckv.keyValuePairs,
-        label: ckv.keyValuePairs
-          .map((p) => `[${p.key.name}: ${p.value.name}]`)
-          .join(' '),
-      })),
-    [configuredCKVs],
-  );
-
-  const sortedValues = useCallback(
+  const sortedValuesForKey = useCallback(
     (key: CalibrationKey) => {
-      if (
-        editingIndex === null ||
-        Object.keys(initialEditSelections).length === 0
-      ) {
-        return key.values;
-      }
-
-      const keySelections = initialEditSelections[key.id];
+      const keySelections = selectedKeyValues[key.id];
       if (!keySelections) {
         return key.values;
       }
-
       return [
         ...key.values.filter((v) => keySelections[v.id]),
         ...key.values.filter((v) => !keySelections[v.id]),
       ];
     },
-    [editingIndex, initialEditSelections],
+    [selectedKeyValues],
   );
 
-  // Show empty state if no available keys
-  if (!availableKeys) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-neutral-secondary">
-          No calibration keys available
-        </div>
-      </div>
-    );
-  }
+  const configuredItems = useMemo(
+    () =>
+      configuredCkvs.map((ckv, index) => ({
+        id: index,
+        keyValuePairs: ckv.keyValuePairs.map((pair) => ({
+          key: {id: pair.key.id, name: pair.key.name},
+          value: {id: pair.value.id, name: pair.value.name},
+        })),
+        label: formatCkvEntry(ckv.keyValuePairs, ckvDisplayMode),
+      })),
+    [configuredCkvs, ckvDisplayMode],
+  );
+
+  const showPicker = activeOperation !== null;
+  const highlightedEntryIndex =
+    activeOperation?.type === 'edit' ? activeOperation.index : undefined;
+  const onAddClick = isEditable ? handleAddClick : undefined;
+  const onEditItem = isEditable ? handleEditCKV : undefined;
+  const onDeleteItem = isEditable ? handleDeleteCKV : undefined;
+  const onCopyEntry = useCallback(
+    (entryIndex: number) => {
+      void copyCkvEntry(
+        formatCkvEntry(
+          configuredCkvs[entryIndex].keyValuePairs,
+          ckvDisplayMode,
+        ),
+      );
+    },
+    [configuredCkvs, ckvDisplayMode],
+  );
+
+  const configSummary = (
+    <ConfigSummaryView
+      highlightedEntryIndex={highlightedEntryIndex}
+      isActionsDisabled={showPicker}
+      isEditable={isEditable}
+      items={configuredItems}
+      onAddClick={onAddClick}
+      onCopyEntry={onCopyEntry}
+      onDeleteItem={onDeleteItem}
+      onEditItem={onEditItem}
+      showEditIcon
+      title="Configured CKVs"
+    />
+  );
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Configured CKVs Summary */}
-      <div ref={configSectionRef}>
-        <ConfigSummaryView
-          isEditable={isEditable}
-          items={configuredItems}
-          onAddClick={handleAddClick}
-          onDeleteItem={handleDeleteCKV}
-          onEditItem={handleEditCKV}
-          showEditIcon
-          title="Configured CKVs"
-        />
-      </div>
+      {!showPicker && configSummary}
 
-      {/* CKV Parameters Section */}
-      <CkvParametersSection
-        isEditable={isEditable}
-        onParametersChange={(params) => {
-          // Update local state immediately for UI responsiveness
-          setParameters(params);
-        }}
-        parameters={parameters}
-      />
-
-      {/* Search and List Section */}
-      {showSearchAndList && (
+      {showPicker && (
         <>
-          <div ref={searchBarRef} className="flex items-center gap-2">
-            <div className="flex-1">
-              <ArcSearchBar
-                onSearchChange={setSearchTerm}
-                placeholder="Search calibration keys or values..."
-                searchTerm={searchTerm}
-              />
-            </div>
-            <div className="flex gap-1">
-              <IconButton
-                aria-label="Expand All"
-                icon={<ChevronDown className="h-5 w-5" />}
-                onClick={handleExpandAll}
-                title="Expand All"
-                variant="ghost"
-              />
-              <IconButton
-                aria-label="Collapse All"
-                icon={<ChevronUp className="h-5 w-5" />}
-                onClick={handleCollapseAll}
-                title="Collapse All"
-                variant="ghost"
-              />
-            </div>
-          </div>
+          <CkvParametersSection
+            isEditable={isEditable}
+            onParametersChange={setParameters}
+            parameters={parameters}
+            visible={showPicker}
+          />
 
-          <div className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm">
-            {/* Header */}
+          <KvVectorEditor
+            ariaLabel="Search calibration keys or values"
+            clearable
+            onSuggestionCommit={handleSuggestionCommit}
+            onTextChange={handlePickerBoxChange}
+            placeholder="Search calibration keys or values..."
+            suggestions={availableSuggestions}
+            text={pickerBoxText}
+            trailingControls={
+              <div className="flex gap-1">
+                <IconButton
+                  aria-label="Expand All"
+                  icon={<ChevronDown className="h-5 w-5" />}
+                  onClick={handleExpandAll}
+                  title="Expand All"
+                  variant="ghost"
+                />
+                <IconButton
+                  aria-label="Collapse All"
+                  icon={<ChevronUp className="h-5 w-5" />}
+                  onClick={handleCollapseAll}
+                  title="Collapse All"
+                  variant="ghost"
+                />
+              </div>
+            }
+          />
+
+          {diagnostics.length > 0 && (
+            <div className="text-support-danger text-sm" role="alert">
+              {diagnostics.map((diagnostic, index) =>
+                renderDiagnostic(diagnostic, index),
+              )}
+            </div>
+          )}
+
+          <div
+            ref={availableKeysTableRef}
+            className="bg-primary border-neutral-02 overflow-hidden rounded border shadow-sm"
+          >
             <div className="bg-secondary border-neutral-02 text-neutral-primary sticky top-0 z-10 flex items-center border-b-2 px-3 py-2 text-sm font-semibold">
-              <span className="w-3.5"></span>
-              <Checkbox
-                aria-label="Select all keys"
-                checked={allFilteredKeysSelected}
-                className="ml-3"
-                indeterminate={someFilteredKeysSelected}
-                onCheckedChange={(checked) => handleSelectAll(checked)}
-                size="sm"
-              />
               <button
                 className="hover:text-brand-primary text-neutral-primary ml-3 flex w-32 cursor-pointer items-center gap-1 select-none"
                 onClick={() => handleSort('id')}
+                type="button"
               >
                 <span>Key ID</span>
                 {getSortIcon('id')}
@@ -900,22 +1021,21 @@ export function CalibrationKeysConfigPanel({
               <button
                 className="hover:text-brand-primary text-neutral-primary ml-3 flex flex-1 cursor-pointer items-center gap-1 text-left select-none"
                 onClick={() => handleSort('name')}
+                type="button"
               >
                 <span>Key Name</span>
                 {getSortIcon('name')}
               </button>
             </div>
 
-            {/* Keys List */}
-            <div className="max-h-[50vh] overflow-y-auto">
-              {filteredAndSortedKeys.length === 0 ? (
+            <div className="max-h-[35vh] overflow-y-auto">
+              {filteredKeyNames.length === 0 ? (
                 <div className="text-neutral-secondary flex flex-col items-center justify-center py-12">
-                  <div className="mb-3 text-4xl">🔍</div>
                   <p>No calibration keys or values match your search</p>
                 </div>
               ) : (
-                filteredAndSortedKeys.map((keyName) => {
-                  const key = availableKeys[keyName];
+                filteredKeyNames.map((keyName) => {
+                  const key = availableCalibrationKeys[keyName];
                   const isExpanded = expandedKeys.includes(key.id);
                   const keySelections = selectedKeyValues[key.id] || {};
                   const allValuesSelected = key.values.every(
@@ -930,80 +1050,77 @@ export function CalibrationKeysConfigPanel({
                       key={keyName}
                       className="border-neutral-02 border-b last:border-b-0"
                     >
-                      {/* Key Header */}
                       <div
-                        className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
+                        className={`flex items-center px-3 py-2.5 transition-colors ${
                           allValuesSelected
                             ? 'bg-support-info-subtle'
-                            : 'bg-transparent hover:bg-neutral-03'
+                            : 'bg-transparent'
                         }`}
-                        onClick={() => toggleKeyExpansion(key.id)}
                       >
-                        <span className="text-neutral-secondary w-3.5">
-                          {isExpanded ? (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          )}
-                        </span>
-                        <input
-                          ref={(input) => {
-                            if (input) {
-                              input.indeterminate =
-                                !allValuesSelected && someValuesSelected;
-                            }
-                          }}
+                        <IconButton
+                          aria-label={
+                            isExpanded
+                              ? `Collapse ${keyName}`
+                              : `Expand ${keyName}`
+                          }
+                          icon={
+                            isExpanded ? (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            )
+                          }
+                          onClick={() => toggleKeyExpansion(key.id)}
+                          variant="ghost"
+                        />
+                        <Checkbox
                           aria-label={`Select ${keyName}`}
                           checked={allValuesSelected}
-                          className="ml-3 h-4 w-4 cursor-pointer"
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            toggleKeySelection(key.id);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          type="checkbox"
+                          className="ml-3"
+                          indeterminate={
+                            someValuesSelected && !allValuesSelected
+                          }
+                          onCheckedChange={() => toggleKeySelection(key)}
+                          size="sm"
                         />
                         <div className="text-neutral-secondary ml-3 w-32 font-mono text-sm">
                           {ConvertNumberToHexString(key.id) || key.id}
                         </div>
-                        <div className="text-neutral-primary ml-3 flex-1 text-sm font-medium">
+                        <div
+                          className="text-neutral-primary ml-3 flex-1 cursor-pointer text-sm font-medium"
+                          onClick={() => toggleKeyExpansion(key.id)}
+                        >
                           {keyName}
                         </div>
                       </div>
 
-                      {/* Values Container */}
                       {isExpanded && (
                         <div className="bg-primary">
-                          {sortedValues(key).map((value) => {
-                            const keySelections =
-                              selectedKeyValues[key.id] || {};
-                            return (
-                              <div
-                                key={value.id}
-                                className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors ${
-                                  keySelections[value.id]
-                                    ? 'bg-support-info-subtle'
-                                    : 'bg-transparent'
-                                }`}
-                              >
-                                <Checkbox
-                                  aria-label={`Select ${value.name}`}
-                                  checked={keySelections[value.id] || false}
-                                  onCheckedChange={() =>
-                                    toggleValueSelection(key.id, value.id)
-                                  }
-                                  size="sm"
-                                />
-                                <div className="text-neutral-secondary w-32 font-mono text-sm">
-                                  {ConvertNumberToHexString(value.id) ||
-                                    value.id}
-                                </div>
-                                <div className="text-neutral-primary flex-1 text-sm">
-                                  {value.name}
-                                </div>
+                          {sortedValuesForKey(key).map((value) => (
+                            <div
+                              key={value.id}
+                              className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-16 transition-colors ${
+                                keySelections[value.id]
+                                  ? 'bg-support-info-subtle'
+                                  : 'bg-transparent'
+                              }`}
+                            >
+                              <Checkbox
+                                aria-label={`Select ${value.name}`}
+                                checked={Boolean(keySelections[value.id])}
+                                onCheckedChange={() =>
+                                  toggleValueSelection(key.id, value.id)
+                                }
+                                size="sm"
+                              />
+                              <div className="text-neutral-secondary w-32 font-mono text-sm">
+                                {ConvertNumberToHexString(value.id) || value.id}
                               </div>
-                            );
-                          })}
+                              <div className="text-neutral-primary flex-1 text-sm">
+                                {value.name}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -1012,30 +1129,29 @@ export function CalibrationKeysConfigPanel({
               )}
             </div>
           </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              emphasis="neutral"
+              onClick={handleCancel}
+              size="sm"
+              variant="fill"
+            >
+              Cancel
+            </Button>
+            <Button
+              emphasis="primary"
+              onClick={handleApply}
+              size="sm"
+              variant="fill"
+            >
+              Apply
+            </Button>
+          </div>
         </>
       )}
 
-      {/* Apply/Cancel Buttons - Show if there are existing configs OR search/list is shown */}
-      {(configuredCKVs.length > 0 || showSearchAndList) && isEditable && (
-        <div className="flex justify-end gap-2">
-          <Button
-            emphasis="primary"
-            onClick={handleCancel}
-            size="sm"
-            variant="fill"
-          >
-            Cancel
-          </Button>
-          <Button
-            emphasis="primary"
-            onClick={handleApply}
-            size="sm"
-            variant="fill"
-          >
-            Apply
-          </Button>
-        </div>
-      )}
+      {showPicker && configSummary}
     </div>
   );
 }

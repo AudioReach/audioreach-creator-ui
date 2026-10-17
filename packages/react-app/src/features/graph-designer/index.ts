@@ -39,11 +39,15 @@ tabStoreRegistry.registerFactory(
 
 export {useApplyDiscard} from './hooks/use-apply-discard';
 export {useGraphDesigner} from './hooks/use-graph-designer';
-export {useKeyConfigurator} from './hooks/use-key-configurator';
 export {useModuleList} from './hooks/use-module-list';
 export {useSubgraphList} from './hooks/use-subgraph-list';
 export {useSubsystemBrowser} from './hooks/use-subsystem-browser';
 export {useValidationResults} from './hooks/use-validation-results';
+export {formatCkvEntry} from './lib/ckv-display-format';
+export {
+  getCkvSearchSuggestions,
+  resolveCkvSearchInput,
+} from './lib/ckv-search-resolver';
 export {
   DELETE_HANDLERS,
   DELETE_HANDLERS_INNER,
@@ -62,6 +66,8 @@ export {
   parseModuleDropPayload,
   resolveModuleDropTarget,
 } from './lib/module-operations';
+export {selectConfiguredCkvs} from './lib/select-configured-ckvs';
+export {selectConfiguredTkvs} from './lib/select-configured-tkvs';
 export {
   CAN_CONNECT_TO_PROXY_NODE,
   parseSubgraphDropPayload,
@@ -73,6 +79,11 @@ export {
   useGraphDesignerStoreShallow,
 } from './model/graph-designer-store-context';
 export type {UseApplyDiscardReturn} from './hooks/use-apply-discard';
+export type {
+  CkvSearchDiagnostic,
+  CkvSearchSuggestion,
+  ResolvedCkvSearchInput,
+} from './lib/ckv-search-resolver';
 export type {ContainerOperations} from './lib/container-operations';
 export type {LinkOperations} from './lib/link-operations';
 export type {
