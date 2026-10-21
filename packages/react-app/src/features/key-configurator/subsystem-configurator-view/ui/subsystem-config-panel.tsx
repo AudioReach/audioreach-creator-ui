@@ -28,11 +28,13 @@ import {AVAILABLE_KEYS, SAMPLE_CONFIGURED_KEYS} from './subsystem-config.types';
 export interface SubsystemConfigPanelProps {
   isEditable: boolean;
   subsystemId: number;
+  subsystemSystemId: string;
 }
 
 export function SubsystemConfigPanel({
   isEditable,
   subsystemId,
+  subsystemSystemId,
 }: SubsystemConfigPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showKeysList, setShowKeysList] = useState(false);
@@ -61,6 +63,9 @@ export function SubsystemConfigPanel({
   );
   const removeConfiguredKey = useSubsystemConfigStore(
     (state) => state.removeConfiguredKey,
+  );
+  const saveFilteredKeys = useSubsystemConfigStore(
+    (state) => state.saveFilteredKeys,
   );
 
   // Get configured keys for current subsystem
@@ -131,6 +136,7 @@ export function SubsystemConfigPanel({
 
   const handleDeleteConfiguredKey = (id: number) => {
     removeConfiguredKey(subsystemId, id);
+    void saveFilteredKeys(subsystemId, subsystemSystemId);
   };
 
   const handleKeySelection = (id: number, checked: boolean) => {
@@ -174,6 +180,7 @@ export function SubsystemConfigPanel({
       keysToAdd.forEach((key) => {
         addConfiguredKey(subsystemId, key);
       });
+      void saveFilteredKeys(subsystemId, subsystemSystemId);
     }
 
     setSelectedKeys([]);

@@ -5,6 +5,8 @@
 
 import {create} from 'zustand';
 
+import {setSubsystemFilteredKeys} from '~entities/subsystems';
+import {hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import type {SubsystemKey} from '../subsystem-configurator-view';
@@ -28,6 +30,10 @@ interface SubsystemConfigStore {
   projectId: string; // Current project ID (set during initialization)
   removeConfiguredKey: (subsystemId: number, keyId: number) => void;
   reset: () => void;
+  saveFilteredKeys: (
+    subsystemId: number,
+    subsystemSystemId: string,
+  ) => Promise<boolean>;
   saveToBackend: () => Promise<boolean>;
   updateConfiguredKeys: (subsystemId: number, keys: SubsystemKey[]) => void;
 }
@@ -164,6 +170,40 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
 
     reset: () => {
       set(initialState);
+    },
+
+    saveFilteredKeys: async (
+      subsystemId: number,
+      subsystemSystemId: string,
+    ): Promise<boolean> => {
+      const {configuredKeys, projectId} = get();
+      const keys =
+        configuredKeys.find((c) => c.subsystemId === subsystemId)?.keys ?? [];
+
+      try {
+        const result = await setSubsystemFilteredKeys(
+          projectId,
+          subsystemSystemId,
+          {
+            keySystemIds: keys
+              .map((key) => key.systemId)
+              .filter((id): id is string => !!id),
+          },
+        );
+
+        if (hasBlockingIssues(result)) {
+          logger.error('Failed to save filtered keys', {
+            action: 'save_filtered_keys',
+            component: 'SubsystemConfigStore',
+            projectId,
+          });
+          return false;
+        }
+
+        return true;
+      } catch {
+        return false;
+      }
     },
 
     saveToBackend: (): Promise<boolean> => {

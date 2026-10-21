@@ -23,6 +23,7 @@ import type {
   ComponentCollectionDto,
   ControlLinkDto,
   DataLinkDto,
+  KeyInfoDto,
   LinkType,
   SpfModuleDto,
   SubsystemDto,
@@ -155,6 +156,7 @@ export interface Subsystem {
   childSubsystemIds: string[];
   controlPorts: SubsystemPort[];
   dataPorts: SubsystemPort[];
+  filteredKeys?: KeyInfoDto[];
   parentSubsystemId?: string;
   subgraphs: string[];
   /** Always a stringified integer from the backend (e.g. `'42'`). */
@@ -641,6 +643,7 @@ function toSubsystem(
       portType: 'control' as const,
     })),
     dataPorts: (ss.dataPorts ?? []).map(toSubsystemDataPort),
+    filteredKeys: ss.filteredKeys ?? [],
     parentSubsystemId: ss.parentSystemId,
     subgraphs: existing?.subgraphs ?? [],
     subsystemId: ss.systemId,
@@ -1239,6 +1242,7 @@ export function createGraphDataSlice<
               portType: 'control' as const,
             })),
             dataPorts: (ss.dataPorts ?? []).map(toSubsystemDataPort),
+            filteredKeys: ss.filteredKeys ?? [],
             parentSubsystemId: ss.parentSystemId,
             subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,

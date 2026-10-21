@@ -111,8 +111,18 @@ describe('SubsystemConfigPanel', () => {
     fetchSubsystemConfig: jest.fn(),
     isLoading: false,
     removeConfiguredKey: jest.fn(),
+    saveFilteredKeys: jest.fn(),
     updateConfiguredKeys: jest.fn(),
   };
+
+  const renderPanel = () =>
+    render(
+      <SubsystemConfigPanel
+        isEditable
+        subsystemId={1}
+        subsystemSystemId="ss-1"
+      />,
+    );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -122,7 +132,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('renders ConfigSummaryView with configured keys', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     expect(screen.getByTestId('config-summary')).toBeInTheDocument();
     expect(screen.getByText('Configured Keys')).toBeInTheDocument();
@@ -130,13 +140,13 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('fetches subsystem config on mount', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     expect(mockStoreState.fetchSubsystemConfig).toHaveBeenCalledWith(1);
   });
 
   it('shows keys list when Add button is clicked', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Initially, keys list should not be visible
     expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
@@ -153,7 +163,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('filters keys based on key name search', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -167,7 +177,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('filters keys based on key ID search (hex)', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -182,7 +192,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('filters keys with partial name match', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -197,7 +207,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('search is case-insensitive', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -212,7 +222,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('selects and deselects keys', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -235,7 +245,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('selects all keys when select all checkbox is clicked', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -254,7 +264,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('applies selected keys when Apply button is clicked', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -267,18 +277,19 @@ describe('SubsystemConfigPanel', () => {
     const applyButton = screen.getByText('Apply');
     fireEvent.click(applyButton);
 
-    // Should call addConfiguredKey for StreamTx
     expect(mockStoreState.addConfiguredKey).toHaveBeenCalledWith(1, {
       id: 0xb1000000,
       name: 'StreamTx',
     });
+    // Verify that the updated keys are saved for the backend subsystem.
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1');
 
     // Keys list should be hidden
     expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
   });
 
   it('does not add duplicate keys', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -291,15 +302,12 @@ describe('SubsystemConfigPanel', () => {
     const applyButton = screen.getByText('Apply');
     fireEvent.click(applyButton);
 
-    // Should not call addConfiguredKey for StreamRx since it's already configured
-    expect(mockStoreState.addConfiguredKey).not.toHaveBeenCalledWith(1, {
-      id: 0xa1000000,
-      name: 'StreamRx',
-    });
+    // Verify that no save occurs when the selected key is already configured.
+    expect(mockStoreState.saveFilteredKeys).not.toHaveBeenCalled();
   });
 
   it('cancels key selection when Cancel button is clicked', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -323,7 +331,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('sorts keys by ID in ascending order', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -339,7 +347,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('sorts keys by ID in descending order', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -357,7 +365,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('sorts keys by name', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -374,7 +382,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('removes configured key when delete is clicked', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click delete button for StreamRx
     const deleteButton = screen.getByText(`Delete ${0xa1000000}`);
@@ -384,10 +392,12 @@ describe('SubsystemConfigPanel', () => {
       1,
       0xa1000000,
     );
+    // Verify that the updated keys are saved after deletion.
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1');
   });
 
   it('disables Apply button when no keys are selected', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -397,7 +407,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('enables Apply button when keys are selected', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));
@@ -411,7 +421,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('shows "No keys match your search" when search has no results', () => {
-    render(<SubsystemConfigPanel isEditable subsystemId={1} />);
+    renderPanel();
 
     // Click Add to show keys list
     fireEvent.click(screen.getByText('Add'));

@@ -108,6 +108,15 @@ export interface PatchSubsystemRequestDto {
   outputDataPortCount?: number;
 }
 
+export interface SetSubsystemFilteredKeysRequestDto {
+  keySystemIds: string[];
+}
+
+export interface UpdateSubsystemFilteredKeysResponseDto {
+  filteredKeys: KeyInfoDto[];
+  systemId: string;
+}
+
 export interface UpdateSubsystemResponseDto {
   controlPorts: ControlPortDto[];
   dataPorts: DataPortDto[];
