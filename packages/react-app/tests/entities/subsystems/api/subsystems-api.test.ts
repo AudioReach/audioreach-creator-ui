@@ -8,20 +8,24 @@ jest.mock('~shared/api/http-client', () => ({
     delete: jest.fn(),
     patch: jest.fn(),
     post: jest.fn(),
+    put: jest.fn(),
   },
 }));
+jest.mock('~shared/lib/logger');
 
 import {
   createSubsystem,
   deleteSubsystem,
   moveSubsystemComponents,
   patchSubsystem,
+  setSubsystemFilteredKeys,
 } from '~entities/subsystems/api/subsystems-api';
 import {httpClient} from '~shared/api/http-client';
 
 const mockDelete = jest.mocked(httpClient.delete);
 const mockPatch = jest.mocked(httpClient.patch);
 const mockPost = jest.mocked(httpClient.post);
+const mockPut = jest.mocked(httpClient.put);
 
 describe('subsystems-api', () => {
   beforeEach(() => {
@@ -137,6 +141,24 @@ describe('subsystems-api', () => {
         '/projects/proj-1/subsystems/ss-1',
         {name: 'New Name'},
       );
+    });
+  });
+
+  describe('setSubsystemFilteredKeys', () => {
+    it('PUTs the full key set to the filtered-keys endpoint', async () => {
+      mockPut.mockResolvedValue({
+        data: {filteredKeys: [], systemId: 'ss-1'},
+      });
+
+      const result = await setSubsystemFilteredKeys('p-1', 'ss-1', {
+        keySystemIds: ['k-1', 'k-2'],
+      });
+
+      expect(mockPut).toHaveBeenCalledWith(
+        '/projects/p-1/subsystems/ss-1/filtered-keys',
+        {keySystemIds: ['k-1', 'k-2']},
+      );
+      expect(result.data?.systemId).toBe('ss-1');
     });
   });
 });

@@ -8,6 +8,7 @@ export {
   deleteSubsystem,
   moveSubsystemComponents,
   patchSubsystem,
+  setSubsystemFilteredKeys,
 } from './api/subsystems-api';
 export type {
   CreateSubsystemRequestDto,
@@ -23,5 +24,7 @@ export type {
   NormalizedMoveSubsystemComponentsResponseDto,
   NormalizedMoveSubsystemPortChangeDto,
   PatchSubsystemRequestDto,
+  SetSubsystemFilteredKeysRequestDto,
+  UpdateSubsystemFilteredKeysResponseDto,
   UpdateSubsystemResponseDto,
 } from './model/subsystem-crud.dto';

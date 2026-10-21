@@ -13,6 +13,8 @@ import type {
   MoveSubsystemComponentsResponseDto,
   NormalizedMoveSubsystemComponentsResponseDto,
   PatchSubsystemRequestDto,
+  SetSubsystemFilteredKeysRequestDto,
+  UpdateSubsystemFilteredKeysResponseDto,
   UpdateSubsystemResponseDto,
 } from '../model/subsystem-crud.dto';
 
@@ -106,6 +108,25 @@ export async function patchSubsystem(
 ): Promise<ApiResult<UpdateSubsystemResponseDto>> {
   return httpClient.patch<UpdateSubsystemResponseDto>(
     `/projects/${projectId}/subsystems/${subsystemSystemId}`,
+    request,
+  );
+}
+
+/**
+ * Replace the full set of filtered keys assigned to a subsystem.
+ * @param projectId - The unique identifier of the project
+ * @param subsystemSystemId - The subsystem's systemId
+ * @param request - New full set of key systemIds; empty array clears all
+ */
+export async function setSubsystemFilteredKeys(
+  projectId: string,
+  subsystemSystemId: string,
+  request: SetSubsystemFilteredKeysRequestDto,
+): Promise<ApiResult<UpdateSubsystemFilteredKeysResponseDto>> {
+  const endpoint = `/projects/${projectId}/subsystems/${subsystemSystemId}/filtered-keys`;
+
+  return httpClient.put<UpdateSubsystemFilteredKeysResponseDto>(
+    endpoint,
     request,
   );
 }

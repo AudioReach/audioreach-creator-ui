@@ -6,6 +6,7 @@
 export interface Key {
   id: number;
   name: string;
+  systemId?: string;
 }
 
 export interface GraphKey extends Key {
