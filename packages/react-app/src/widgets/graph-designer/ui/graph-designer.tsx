@@ -1481,6 +1481,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           <div className="flex-1">
             <UsecaseSelectionControl
               disabled={isSystemWorkflow}
+              lockSelected={isEditable}
               onSelectedUsecasesChange={setSelectedUsecases}
               projectId={projectId}
               selectAll={isSystemWorkflow && !isWorkflowLoading}
