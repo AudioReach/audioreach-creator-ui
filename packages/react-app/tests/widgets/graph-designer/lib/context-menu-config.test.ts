@@ -9,6 +9,7 @@ import {NODE_KIND} from '~entities/graph';
 import type {GraphDesignerStore} from '~features/graph-designer';
 import {
   buildContextMenuConfig,
+  containingSubsystemIdOf,
   resolveContextMenuNodeId,
   resolveEdgeLinkType,
   type ContextMenuConfigOptions,
@@ -49,6 +50,7 @@ function makeOptions(
   return {
     onAddToManualUsecase: jest.fn(),
     onRemoveFromManualUsecase: jest.fn(),
+    onRequestMoveToSubsystem: jest.fn(),
     subsystemScoped: false,
     ...overrides,
   };
@@ -426,7 +428,8 @@ describe('context-menu-config', () => {
 
   it('moves a node to the top level', () => {
     const store = makeStore();
-    const config = configFor(store);
+    const onRequestMoveToSubsystem = jest.fn();
+    const config = configFor(store, makeOptions({onRequestMoveToSubsystem}));
 
     config.onAction('move-to-subsystem', {
       kind: 'subgraph',
@@ -443,11 +446,32 @@ describe('context-menu-config', () => {
       },
     });
 
-    expect(store.moveToSubsystem).toHaveBeenCalledWith(
-      expect.any(Function),
-      'sg-1',
-      null,
-    );
+    expect(onRequestMoveToSubsystem).toHaveBeenCalledWith('sg-1');
+    expect(store.moveToSubsystem).not.toHaveBeenCalled();
+  });
+
+  it('resolves the subsystem a subgraph currently sits in', () => {
+    const store = makeStore({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {},
+        subsystems: {
+          'ss-1': {
+            childSubsystemIds: [],
+            controlPorts: [],
+            dataPorts: [],
+            subgraphs: ['sg-1'],
+            subsystemId: 'ss-1',
+            subsystemName: 'Subsystem',
+          },
+        },
+      },
+    });
+
+    expect(containingSubsystemIdOf(store.graphData, 'sg-1')).toBe('ss-1');
   });
 
   it.each([

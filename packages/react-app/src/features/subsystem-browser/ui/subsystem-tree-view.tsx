@@ -17,9 +17,13 @@ import SearchBox from './search-box';
 import SubsystemTreeNode from './subsystem-tree-node';
 
 interface SubsystemTreeViewProps {
+  /** Marks the row where the item currently lives (picker mode only). */
+  currentSystemId?: string;
   data: SubsystemBrowserTreeNode[];
   defaultExpandedIds?: number[];
   onClick: (systemId: string) => void;
+  /** Adds hover and selection colours for use as a destination picker. */
+  pickerMode?: boolean;
   selectedSystemId: string;
 }
 
@@ -70,9 +74,11 @@ function collectAncestorIdsForMatches(
 }
 
 const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
+  currentSystemId,
   data,
   defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
   onClick,
+  pickerMode = false,
   selectedSystemId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -193,8 +199,10 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
       {data.map((treeNode) => (
         <SubsystemTreeNode
           key={treeNode.id}
+          currentSystemId={currentSystemId}
           isExpanded={isExpanded}
           onClick={onClick}
+          pickerMode={pickerMode}
           rootNode
           searchTerm={debouncedSearchTerm} // Using the debounced term for visibility to keep it in sync with expansion
           selectedSystemId={selectedSystemId}
