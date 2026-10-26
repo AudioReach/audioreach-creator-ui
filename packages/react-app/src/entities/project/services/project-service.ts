@@ -40,7 +40,7 @@ export const ProjectService = {
 
       const result = await openProject(project.id);
 
-      if (hasBlockingIssues(result)) {
+      if (hasBlockingIssues(result) || !result.data) {
         return {
           message: getIssueMessage(result, 'Failed to open project'),
           success: false,
@@ -48,7 +48,12 @@ export const ProjectService = {
       }
 
       return {
-        project,
+        project: {
+          ...project,
+          description: result.data.description,
+          name: result.data.name,
+          sessionMode: result.data.sessionMode,
+        },
         success: true,
       };
     } catch (error) {
@@ -155,6 +160,7 @@ export const ProjectService = {
         id: result.data.projectId,
         lastModifiedDate: new Date(),
         name,
+        sessionMode: result.data.sessionMode,
       };
 
       return {

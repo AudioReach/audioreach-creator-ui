@@ -847,6 +847,58 @@ describe('EditSessionSlice', () => {
       expect(projectStore.getState().activeExclusiveMode).toBe('none');
       expect(projectStore.getState().editModeState).toBe('view');
     });
+
+    it('resumes local edit state without starting a backend session when resume is true', async () => {
+      const {projectStore, store} = createTestStoreWithGraphData(
+        makeGraphData(['sg1', 'sg2']),
+      );
+      mockGetAllKeyDefinitions.mockResolvedValue({
+        data: [
+          {
+            isCalibrationKey: false,
+            isGraphKey: true,
+            name: 'k1',
+            systemId: 'key-1',
+          },
+        ],
+        message: 'ok',
+        success: true,
+      });
+
+      expect(await store.getState().enterEditMode({resume: true})).toBe(true);
+
+      expect(mockStartSession).not.toHaveBeenCalled();
+      expect(mockEndSession).not.toHaveBeenCalled();
+      expect(store.getState().mode).toBe('edit');
+      expect(projectStore.getState().editModeState).toBe('edit');
+      expect(projectStore.getState().activeExclusiveMode).toBe('usecase-edit');
+      expect(store.getState().subgraphProvenanceById).toEqual({
+        sg1: 'pre-loaded',
+        sg2: 'pre-loaded',
+      });
+      expect(store.getState().availableGraphKeys).toEqual([
+        {
+          isCalibrationKey: false,
+          isGraphKey: true,
+          name: 'k1',
+          systemId: 'key-1',
+        },
+      ]);
+      expect(store.getState().kvSelectionsById).toEqual({sg1: [], sg2: []});
+    });
+
+    it('returns false and leaves view state when resuming and the edit lock is unavailable', async () => {
+      const {projectStore, store} = createTestStoreWithGraphData(
+        makeGraphData(['sg1']),
+      );
+      projectStore.getState().setActiveExclusiveMode('diff-merge');
+
+      expect(await store.getState().enterEditMode({resume: true})).toBe(false);
+
+      expect(store.getState().mode).toBe('view');
+      expect(projectStore.getState().editModeState).toBe('view');
+      expect(projectStore.getState().activeExclusiveMode).toBe('diff-merge');
+    });
   });
 
   describe('exitEditMode', () => {

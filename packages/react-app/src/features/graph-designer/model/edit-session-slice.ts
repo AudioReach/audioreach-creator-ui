@@ -45,8 +45,12 @@ export interface EditSessionSlice {
   /** Deletes a locally added vector; persisted vectors are deliberately retained. */
   deleteSgKvVector: (subgraphSystemId: string, vectorSystemId: string) => void;
   endMutation: () => void;
-  /** Starts the backend edit session and seeds editable SGKV state. */
-  enterEditMode: () => Promise<boolean>;
+  /**
+   * Starts the backend edit session and seeds editable SGKV state. Pass
+   * `{resume: true}` when the backend is already running a Designer
+   * session — this seeds local Edit state without an end/start round trip.
+   */
+  enterEditMode: (options?: {resume?: boolean}) => Promise<boolean>;
   excludedLinks: Connection[];
   exitEditMode: () => Promise<boolean>;
   isMutating: boolean;
@@ -238,7 +242,8 @@ export function createEditSessionSlice<
       setSlice({isMutating: false});
     },
 
-    enterEditMode: async () => {
+    enterEditMode: async (options?: {resume?: boolean}) => {
+      const resume = options?.resume ?? false;
       const projectStore = projectStoreRegistry.get(projectId);
       if (!projectStore) {
         logSession(
@@ -267,33 +272,38 @@ export function createEditSessionSlice<
         subgraphProvenanceById[subgraphId] = 'pre-loaded';
       }
 
-      // Normalize the backend session before requesting the Designer session.
-      const endResult = await endSession(projectId);
-      if (hasBlockingIssues(endResult) || !endResult.data) {
-        const projectResult = await getProjectById(projectId);
-        const alreadyEnded =
-          projectResult !== undefined &&
-          !hasBlockingIssues(projectResult) &&
-          projectResult.data?.sessionMode === SessionMode.Readonly;
+      // A resumed session is already running in Designer mode on the
+      // backend — skip the end/start round trip that would otherwise
+      // normalize and re-request it.
+      if (!resume) {
+        // Normalize the backend session before requesting the Designer session.
+        const endResult = await endSession(projectId);
+        if (hasBlockingIssues(endResult) || !endResult.data) {
+          const projectResult = await getProjectById(projectId);
+          const alreadyEnded =
+            projectResult !== undefined &&
+            !hasBlockingIssues(projectResult) &&
+            projectResult.data?.sessionMode === SessionMode.Readonly;
 
-        if (!alreadyEnded) {
+          if (!alreadyEnded) {
+            logSession(
+              'enterEditMode rejected — endSession did not take effect',
+              'enterEditMode',
+            );
+            projectStore.getState().releaseExclusiveMode(LOCK_OWNER);
+            return false;
+          }
+        }
+
+        const startResult = await startSession(projectId, SessionMode.Designer);
+        if (hasBlockingIssues(startResult) || !startResult.data) {
           logSession(
-            'enterEditMode rejected — endSession did not take effect',
+            'enterEditMode rejected — startSession failed',
             'enterEditMode',
           );
           projectStore.getState().releaseExclusiveMode(LOCK_OWNER);
           return false;
         }
-      }
-
-      const startResult = await startSession(projectId, SessionMode.Designer);
-      if (hasBlockingIssues(startResult) || !startResult.data) {
-        logSession(
-          'enterEditMode rejected — startSession failed',
-          'enterEditMode',
-        );
-        projectStore.getState().releaseExclusiveMode(LOCK_OWNER);
-        return false;
       }
 
       // Missing definitions disable Add controls but must not block Edit mode.
