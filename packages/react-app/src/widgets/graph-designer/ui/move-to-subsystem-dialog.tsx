@@ -44,7 +44,6 @@ function MoveToSubsystemDialogContent({
         <Dialog.Heading>Move to Subsystem</Dialog.Heading>
         <div className="border-neutral-02 max-h-[50vh] overflow-y-auto rounded-md border p-2">
           <SubsystemTreeView
-            currentSystemId={currentId}
             data={tree}
             defaultExpandedIds={DEFAULT_EXPANDED_IDS}
             onClick={setSelectedId}

@@ -7,11 +7,12 @@ import type {FC, KeyboardEvent} from 'react';
 
 import {ChevronDown, ChevronRight, Dot} from 'lucide-react';
 
+import {Checkbox} from '@qualcomm-ui/react/checkbox';
+
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
 interface SubsystemTreeNodeProps {
-  currentSystemId?: string;
   isExpanded: (id: number) => boolean;
   onClick: (systemId: string) => void;
   pickerMode?: boolean;
@@ -23,7 +24,6 @@ interface SubsystemTreeNodeProps {
 }
 
 const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
-  currentSystemId,
   isExpanded,
   onClick,
   pickerMode = false,
@@ -73,18 +73,10 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
   // It decides the subsystem node visibility
   const isVisible = hasMatchInSubtree(treeNode, searchTerm);
   const isSelected = treeNode.systemId === selectedSystemId;
-  const isCurrent =
-    pickerMode &&
-    treeNode.systemId === currentSystemId;
-
   let rowClassName: string | undefined;
   if (pickerMode) {
-    const stateClassName = isSelected
-      ? 'bg-brand-primary text-white'
-      : isCurrent
-        ? 'bg-neutral-02 text-neutral-primary hover:bg-neutral-03'
-        : 'text-neutral-primary hover:bg-neutral-02';
-    rowClassName = `rounded px-2 py-0.5 transition-colors ${stateClassName}`;
+    rowClassName =
+      'text-neutral-primary hover:bg-neutral-02 rounded px-2 py-0.5 transition-colors';
   } else if (isSelected) {
     rowClassName = 'bg-neutral-02 text-neutral-primary rounded';
   }
@@ -121,6 +113,15 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             </span>
           )}
 
+          {pickerMode && (
+            <Checkbox
+              aria-label={`Select ${treeNode.name}`}
+              checked={isSelected}
+              onCheckedChange={() => onClick(treeNode.systemId)}
+              size="sm"
+            />
+          )}
+
           <span
             aria-current={isSelected ? 'page' : undefined}
             aria-label={`Navigate to ${treeNode.name}`}
@@ -141,7 +142,6 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
         treeNode.children.map((childNode) => (
           <SubsystemTreeNode
             key={childNode.id}
-            currentSystemId={currentSystemId}
             isExpanded={isExpanded}
             onClick={onClick}
             pickerMode={pickerMode}
