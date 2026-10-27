@@ -21,6 +21,7 @@ export interface GenericTreeViewProps {
     onCommit: (dirtyItems: TreeViewItem[]) => void;
   };
   className?: string;
+  compact?: boolean;
   data: TreeViewData;
   defaultPolicyFilter?: ('ADVANCED' | 'BASIC')[];
   defaultViewMode?: 'legacy' | 'modern';

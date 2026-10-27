@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useMemo} from 'react';
+import {useMemo, useState} from 'react';
 
 import {createTreeCollection} from '@qualcomm-ui/core/tree';
 import {Tree} from '@qualcomm-ui/react/tree';
@@ -18,6 +18,7 @@ import {StatusStrip} from './status-strip';
 interface LegacyViewProps {
   arrayCounts: Map<string, number>;
   committedValues: Map<string, string>;
+  compact?: boolean;
   dirtyPaths: Set<string>;
   elementValues: Map<string, string>;
   expandAll?: boolean;
@@ -45,6 +46,7 @@ interface LegacyNode {
 export function LegacyView({
   arrayCounts,
   committedValues,
+  compact = false,
   dirtyPaths,
   elementValues,
   expandAll,
@@ -62,28 +64,26 @@ export function LegacyView({
   setPaths,
   showRanges,
 }: LegacyViewProps) {
+  const [selectedValue, setSelectedValue] = useState<string[]>([]);
+
   const filteredItems = matchSets
     ? items.filter((p) => matchSets.paramIds.has(p.id))
     : items;
 
-  const rootNode: LegacyNode = useMemo(
-    () => ({
-      children: [
-        {
-          children: filteredItems.map((p) => ({
-            children: [],
-            id: p.id,
-            name: p.name,
-          })),
-          id: '__module__',
-          name: moduleName,
-        },
-      ],
+  const rootNode: LegacyNode = useMemo(() => {
+    const itemNodes = filteredItems.map((p) => ({
+      children: [],
+      id: p.id,
+      name: p.name,
+    }));
+    return {
+      children: compact
+        ? itemNodes
+        : [{children: itemNodes, id: '__module__', name: moduleName}],
       id: '__legacy_root__',
       name: '',
-    }),
-    [filteredItems, moduleName],
-  );
+    };
+  }, [compact, filteredItems, moduleName]);
 
   const collection = useMemo(
     () =>
@@ -100,9 +100,68 @@ export function LegacyView({
     () =>
       expandedKeys.length > 0
         ? expandedKeys
-        : ['__module__', ...filteredItems.map((p) => p.id)],
-    [expandedKeys, filteredItems],
+        : [
+            ...(compact ? [] : ['__module__']),
+            ...filteredItems.map((p) => p.id),
+          ],
+    [compact, expandedKeys, filteredItems],
   );
+
+  const renderElementTree = (item: TreeViewItem, reduceLeafIndent = false) => (
+    <ElementTree
+      arrayCounts={arrayCounts}
+      committedValues={committedValues}
+      dirtyPaths={dirtyPaths}
+      elementValues={elementValues}
+      expandAll={expandAll}
+      invalidPaths={invalidPaths}
+      item={item}
+      matchSets={matchSets}
+      onAutoCommit={onAutoCommit}
+      onSelectedValueChange={compact ? setSelectedValue : undefined}
+      onValueChange={onValueChange}
+      paramReadOnly={readOnly || (item.isReadOnly ?? false)}
+      policyFilter={policyFilter}
+      portalTooltip={compact}
+      reduceLeafIndent={reduceLeafIndent}
+      resetKey={resetKey}
+      selectedValue={compact ? selectedValue : undefined}
+      setPaths={setPaths}
+      showRanges={showRanges}
+    />
+  );
+
+  const renderItem = (
+    item: TreeViewItem,
+    indexPath: number[],
+    parent: LegacyNode,
+  ) => {
+    if (compact && item.elements.length === 1) {
+      return (
+        <div key={item.id} className="-ml-4 py-1">
+          {renderElementTree(item, true)}
+        </div>
+      );
+    }
+    return (
+      <Tree.NodeProvider
+        key={item.id}
+        indexPath={indexPath}
+        node={parent.children[indexPath[indexPath.length - 1]]}
+      >
+        <Tree.Branch>
+          <Tree.BranchNode>
+            <Tree.NodeIndicator />
+            <Tree.BranchTrigger />
+            <Tree.NodeText>{item.name}</Tree.NodeText>
+          </Tree.BranchNode>
+          <Tree.BranchContent>
+            <div className="py-2 pl-4">{renderElementTree(item)}</div>
+          </Tree.BranchContent>
+        </Tree.Branch>
+      </Tree.NodeProvider>
+    );
+  };
 
   const dirtyCount = itemIdsFromPaths(dirtyPaths).size;
   const setCount = itemIdsFromPaths(setPaths).size;
@@ -123,57 +182,32 @@ export function LegacyView({
             onExpandedValueChange={(details) =>
               onExpandedChange(details.expandedValue)
             }
+            onSelectedValueChange={
+              compact
+                ? (details) => setSelectedValue(details.selectedValue)
+                : undefined
+            }
+            selectedValue={compact ? selectedValue : undefined}
           >
-            <Tree.NodeProvider indexPath={[0]} node={rootNode.children[0]}>
-              <Tree.Branch>
-                <Tree.BranchNode>
-                  <Tree.NodeIndicator />
-                  <Tree.BranchTrigger />
-                  <Tree.NodeText>{moduleName}</Tree.NodeText>
-                </Tree.BranchNode>
-                <Tree.BranchContent>
-                  <Tree.BranchIndentGuide />
-                  {filteredItems.map((item, i) => (
-                    <Tree.NodeProvider
-                      key={item.id}
-                      indexPath={[0, i]}
-                      node={rootNode.children[0].children[i]}
-                    >
-                      <Tree.Branch>
-                        <Tree.BranchNode>
-                          <Tree.NodeIndicator />
-                          <Tree.BranchTrigger />
-                          <Tree.NodeText>{item.name}</Tree.NodeText>
-                        </Tree.BranchNode>
-                        <Tree.BranchContent>
-                          <div className="py-2 pl-4">
-                            <ElementTree
-                              arrayCounts={arrayCounts}
-                              committedValues={committedValues}
-                              dirtyPaths={dirtyPaths}
-                              elementValues={elementValues}
-                              expandAll={expandAll}
-                              invalidPaths={invalidPaths}
-                              item={item}
-                              matchSets={matchSets}
-                              onAutoCommit={onAutoCommit}
-                              onValueChange={onValueChange}
-                              paramReadOnly={
-                                readOnly || (item.isReadOnly ?? false)
-                              }
-                              policyFilter={policyFilter}
-                              resetKey={resetKey}
-                              setPaths={setPaths}
-                              showRanges={showRanges}
-                            />
-                          </div>
-                        </Tree.BranchContent>
-                      </Tree.Branch>
-                    </Tree.NodeProvider>
-                  ))}
-                </Tree.BranchContent>
-              </Tree.Branch>
-            </Tree.NodeProvider>
+            {compact ? (
+              filteredItems.map((item, i) => renderItem(item, [i], rootNode))
+            ) : (
+              <Tree.NodeProvider indexPath={[0]} node={rootNode.children[0]}>
+                <Tree.Branch>
+                  <Tree.BranchNode>
+                    <Tree.NodeIndicator />
+                    <Tree.BranchTrigger />
+                    <Tree.NodeText>{moduleName}</Tree.NodeText>
+                  </Tree.BranchNode>
+                  <Tree.BranchContent>
+                    <Tree.BranchIndentGuide />
+                    {filteredItems.map((item, i) =>
+                      renderItem(item, [0, i], rootNode.children[0]),
+                    )}
+                  </Tree.BranchContent>
+                </Tree.Branch>
+              </Tree.NodeProvider>
+            )}
           </Tree.Root>
         )}
       </div>

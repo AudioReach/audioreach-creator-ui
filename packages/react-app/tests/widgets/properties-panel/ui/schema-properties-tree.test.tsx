@@ -94,6 +94,7 @@ describe('SchemaPropertiesTree', () => {
     expect(genericTreeViewMock).toHaveBeenCalledWith(
       expect.objectContaining({
         autoCommit: {onCommit},
+        compact: true,
         data,
         defaultPolicyFilter: ['BASIC', 'ADVANCED'],
         defaultViewMode: 'legacy',
