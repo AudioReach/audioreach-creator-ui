@@ -191,6 +191,21 @@ describe('renderElement renderLeaf controls', () => {
     expect(screen.getByTestId('q-switch')).toBeInTheDocument();
   });
 
+  it('checks a boolean switch when decimal data matches its hex option', () => {
+    const avs: NameValueDto[] = [
+      {name: 'Disable', value: '0x0'},
+      {name: 'Enable', value: '0x1'},
+    ];
+    const elem = makeConfig({allowedValues: avs, name: 'sw', value: '1'});
+    const ctx = makeCtx({elementValues: new Map([['pid1/sw', '1']])});
+    render(<>{renderElement(elem, ctx, [0])}</>);
+
+    const checkbox = screen
+      .getByTestId('q-switch')
+      .querySelector('input[type="checkbox"]');
+    expect(checkbox).toBeChecked();
+  });
+
   it('Q_FORMATTED_VALUE renders two TextInputs (hex + dec)', () => {
     const elem = makeConfig({
       displayType: 'Q_FORMATTED_VALUE',

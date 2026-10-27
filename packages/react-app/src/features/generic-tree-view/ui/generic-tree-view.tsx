@@ -16,6 +16,7 @@ import {
 } from 'react';
 
 import {logger} from '~shared/lib/logger';
+import {areNumericStringsEqual} from '~shared/lib/numeric-string';
 
 import {buildDirtyItems as buildDirtyItemsFrom} from '../lib/build-dirty-items';
 import {buildLengthFormulaMap} from '../lib/build-length-formula-map';
@@ -171,7 +172,18 @@ function GenericTreeViewInner(
       for (const path of preSetDirtyPaths) {
         const sentValue = sentValues.get(path);
         const mergedValue = mergedValues.get(path);
-        if (mergedValue !== undefined && mergedValue === sentValue) {
+        const itemId = path.split('/')[0];
+        const item = data.items.find((candidate) => candidate.id === itemId);
+        const element = item
+          ? findElementByKey(item.elements, itemId, [], path)
+          : undefined;
+        const valuesMatch =
+          mergedValue !== undefined &&
+          sentValue !== undefined &&
+          (mergedValue === sentValue ||
+            (element?.dataType !== 'RawData' &&
+              areNumericStringsEqual(mergedValue, sentValue)));
+        if (valuesMatch) {
           nextDirtyPaths.delete(path);
           nextSetPaths.add(path);
           nextElementValues.set(path, mergedValue);
