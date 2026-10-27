@@ -106,6 +106,7 @@ export const KeyConfiguratorPanel: React.FC = () => {
           <SubsystemConfigPanel
             isEditable={isEditableParam}
             subsystemId={item.id}
+            subsystemSystemId={item.systemId}
           />
         );
 
