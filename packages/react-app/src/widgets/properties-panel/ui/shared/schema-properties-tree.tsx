@@ -70,6 +70,7 @@ export function SchemaPropertiesTree({
       ) : null}
       <GenericTreeView
         autoCommit={{onCommit}}
+        compact
         data={data}
         defaultPolicyFilter={['BASIC', 'ADVANCED']}
         defaultViewMode="legacy"

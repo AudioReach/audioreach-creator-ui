@@ -30,10 +30,14 @@ interface ElementTreeProps {
   item: TreeViewItem;
   matchSets?: {elementIds: Set<string>; paramIds: Set<string>} | null;
   onAutoCommit?: () => void;
+  onSelectedValueChange?: (selectedValue: string[]) => void;
   onValueChange: (key: string, value: string) => void;
   paramReadOnly: boolean;
   policyFilter: Set<'BASIC' | 'ADVANCED'>;
+  portalTooltip?: boolean;
+  reduceLeafIndent?: boolean;
   resetKey: number;
+  selectedValue?: string[];
   setPaths: Set<string>;
   showRanges: boolean;
 }
@@ -106,10 +110,14 @@ export function ElementTree({
   item,
   matchSets,
   onAutoCommit,
+  onSelectedValueChange,
   onValueChange,
   paramReadOnly,
   policyFilter,
+  portalTooltip,
+  reduceLeafIndent,
   resetKey,
+  selectedValue,
   setPaths,
   showRanges,
 }: ElementTreeProps) {
@@ -157,6 +165,8 @@ export function ElementTree({
     paramReadOnly,
     pathPrefix: [],
     policyFilter,
+    portalTooltip,
+    reduceLeafIndent,
     setPaths,
     showRanges,
   };
@@ -167,6 +177,12 @@ export function ElementTree({
         key={`${item.id}-${resetKey}-${expandAll ? 'expand' : 'default'}`}
         collection={collection}
         defaultExpandedValue={expandAll ? allBranchKeys : undefined}
+        onSelectedValueChange={
+          onSelectedValueChange
+            ? (details) => onSelectedValueChange(details.selectedValue)
+            : undefined
+        }
+        selectedValue={selectedValue}
       >
         {item.elements.map((elem, i) => renderElement(elem, ctx, [i]))}
       </Tree.Root>

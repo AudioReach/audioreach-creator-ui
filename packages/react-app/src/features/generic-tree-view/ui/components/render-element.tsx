@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {Portal} from '@qualcomm-ui/react-core/portal';
 import {TextArea} from '@qualcomm-ui/react/text-area';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import {Tree} from '@qualcomm-ui/react/tree';
@@ -46,6 +47,8 @@ export interface RenderElementContext {
   paramReadOnly: boolean;
   pathPrefix: Array<string | undefined>;
   policyFilter: Set<'BASIC' | 'ADVANCED'>;
+  portalTooltip?: boolean;
+  reduceLeafIndent?: boolean;
   setPaths: Set<string>;
   showRanges: boolean;
 }
@@ -73,6 +76,7 @@ function renderStruct(
   const childCtx: RenderElementContext = {
     ...ctx,
     pathPrefix: [...ctx.pathPrefix, elem.name],
+    reduceLeafIndent: false,
   };
   const childNodes = getStructValueElements(elem).map((child, i) =>
     renderElement(child, childCtx, [...indexPath, i]),
@@ -187,6 +191,7 @@ function renderArray(
     const childCtx: RenderElementContext = {
       ...ctx,
       pathPrefix: [...ctx.pathPrefix, instName],
+      reduceLeafIndent: false,
     };
     return renderElement(inst, childCtx, [...indexPath, i]);
   });
@@ -265,20 +270,28 @@ function renderLeaf(
     </Tree.NodeText>
   );
 
+  const tooltipPositioner = (
+    <Tooltip.Positioner style={ctx.portalTooltip ? undefined : {zIndex: 50}}>
+      <Tooltip.Content>
+        <Tooltip.Arrow>
+          <Tooltip.ArrowTip />
+        </Tooltip.Arrow>
+        <div className="text-xs whitespace-pre-line">
+          {tooltipLines.join('\n')}
+        </div>
+      </Tooltip.Content>
+    </Tooltip.Positioner>
+  );
+
   const labelWithTooltip =
     tooltipLines.length > 0 ? (
       <Tooltip.Root positioning={{placement: 'top'}}>
         <Tooltip.Trigger>{labelEl}</Tooltip.Trigger>
-        <Tooltip.Positioner style={{zIndex: 50}}>
-          <Tooltip.Content>
-            <Tooltip.Arrow>
-              <Tooltip.ArrowTip />
-            </Tooltip.Arrow>
-            <div className="text-xs whitespace-pre-line">
-              {tooltipLines.join('\n')}
-            </div>
-          </Tooltip.Content>
-        </Tooltip.Positioner>
+        {ctx.portalTooltip ? (
+          <Portal>{tooltipPositioner}</Portal>
+        ) : (
+          tooltipPositioner
+        )}
       </Tooltip.Root>
     ) : (
       labelEl
@@ -338,6 +351,7 @@ function renderLeaf(
     ctx.showRanges && hasRange
       ? `Range: ${toHexString(elem.min!)} – ${toHexString(elem.max!)}`
       : null;
+  const leafStyle = ctx.reduceLeafIndent ? {paddingLeft: 4} : undefined;
 
   if (isFile) {
     return (
@@ -346,7 +360,7 @@ function renderLeaf(
         indexPath={indexPath}
         node={{id: key, name: elem.name}}
       >
-        <Tree.LeafNode className="h-auto min-h-0 items-start">
+        <Tree.LeafNode className="h-auto min-h-0 items-start" style={leafStyle}>
           <Tree.NodeIndicator />
           {dirtyBar}
           <div className="flex w-full min-w-0 flex-col gap-1 py-1">
@@ -370,6 +384,7 @@ function renderLeaf(
             ? 'h-auto min-h-0 items-start py-1'
             : undefined
         }
+        style={leafStyle}
       >
         <Tree.NodeIndicator />
         {dirtyBar}
