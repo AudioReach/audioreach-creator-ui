@@ -214,6 +214,7 @@ export interface GraphDataSlice {
     newContainerNaturalId: number,
   ) => void;
   updateModuleAliasLocal: (moduleSystemId: string, alias: string) => void;
+  updateModuleCkvsLocal: (moduleSystemId: string, ckvs: CkvDto[]) => void;
   updateModuleContainerLocal: (
     moduleSystemId: string,
     newContainerSystemId: string,
@@ -224,6 +225,7 @@ export interface GraphDataSlice {
     value: number,
     module?: SpfModuleDto,
   ) => void;
+  updateModuleTagsLocal: (moduleSystemId: string, tags: TagInfoDto[]) => void;
   /** Replaces derived View-mode selected/EC flags without changing vectors. */
   updateSgKvMetadata: (
     metadataBySubgraphId: Record<string, Record<string, KvSelectionMetadata>>,
@@ -1405,6 +1407,24 @@ export function createGraphDataSlice<
       get().markDirty();
     },
 
+    updateModuleCkvsLocal: (moduleSystemId: string, ckvs: CkvDto[]): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleSystemId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleSystemId]: {...current, ckvs},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
     updateModuleContainerLocal: (
       moduleSystemId: string,
       newContainerSystemId: string,
@@ -1463,6 +1483,27 @@ export function createGraphDataSlice<
         graphData: {
           ...graphData,
           moduleInstances,
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateModuleTagsLocal: (
+      moduleSystemId: string,
+      tags: TagInfoDto[],
+    ): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleSystemId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleSystemId]: {...current, tags},
+          },
         },
       } as unknown as Partial<S>);
       get().markDirty();

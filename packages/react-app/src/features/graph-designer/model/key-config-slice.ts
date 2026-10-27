@@ -5,31 +5,15 @@
 
 import type {StoreApi} from 'zustand';
 
-import {
-  getAllKeyDefinitions,
-  getAllTagDefinitions,
-} from '~entities/key-definitions/api/key-definition-api';
-import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import type {SliceStatus} from '~shared/store/global-store.types';
+
+import type {CalibrationKeyConfigSlice} from './calibration-key-config-slice';
+import type {ModuleTagKeyConfigSlice} from './module-tag-key-config-slice';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export interface CalibrationKey {
-  defaultValue: unknown;
-  keyId: string;
-  keyName: string;
-  keyType: string;
-  value: unknown;
-}
-
-export interface ModuleTagKey {
-  tagKeyId: string;
-  tagKeyName: string;
-  value: string;
-}
 
 export interface SubgraphConfig {
   config: Record<string, unknown>;
@@ -48,19 +32,15 @@ export interface ConfigurationContext {
 }
 
 export interface KeyConfigSlice {
-  calibrationKeys: CalibrationKey[];
   initializeConfiguration: (context: ConfigurationContext) => Promise<boolean>;
   isEditable: boolean;
   keyConfigStatus: SliceStatus;
-  moduleTagKeys: ModuleTagKey[];
   resetConfiguration: () => void;
   saveConfiguration: () => Promise<boolean>;
   setIsEditable: (editable: boolean) => void;
   subgraphConfig: SubgraphConfig | null;
   subsystemConfig: SubsystemConfig | null;
 }
-
-type SetState<T> = StoreApi<T>['setState'];
 
 // ---------------------------------------------------------------------------
 // Slice creator
@@ -70,17 +50,23 @@ type SetState<T> = StoreApi<T>['setState'];
  * Creates the key-config slice for composing into a tab store.
  * Used in GraphDesignerStore (always) and DiffMergeStore (lazy).
  *
+ * @remarks The store type `S` must also compose `CalibrationKeyConfigSlice`
+ * and `ModuleTagKeyConfigSlice` — `initializeConfiguration`/
+ * `resetConfiguration` fan out to
+ * `initializeCalibrationKeyConfiguration`/`resetCalibrationKeyConfiguration`
+ * and `initializeModuleTagKeyConfiguration`/`resetModuleTagKeyConfiguration`.
  * @param set - Zustand set function bound to the parent store state.
  * @param get - Zustand get function bound to the parent store state.
  * @returns The initial state and actions for the key-config slice.
  */
-export function createKeyConfigSlice(
-  set: SetState<KeyConfigSlice>,
-): KeyConfigSlice {
+export function createKeyConfigSlice<
+  S extends KeyConfigSlice &
+    CalibrationKeyConfigSlice &
+    ModuleTagKeyConfigSlice,
+>(set: StoreApi<S>['setState'], get: StoreApi<S>['getState']): KeyConfigSlice {
   const setSlice = set;
   let configContext: ConfigurationContext | null = null;
   return {
-    calibrationKeys: [],
     initializeConfiguration: async (
       context: ConfigurationContext,
     ): Promise<boolean> => {
@@ -89,63 +75,29 @@ export function createKeyConfigSlice(
         component: 'keyConfigSlice',
       });
 
-      // Clear existing keys before loading
       setSlice({
-        calibrationKeys: [],
         keyConfigStatus: 'loading',
-        moduleTagKeys: [],
         subgraphConfig: null,
         subsystemConfig: null,
-      });
+      } as unknown as Partial<S>);
 
       try {
-        const [keysResult, tagsResult] = await Promise.all([
-          getAllKeyDefinitions(context.projectId),
-          getAllTagDefinitions(context.projectId),
+        const [calibrationOk, tagOk] = await Promise.all([
+          get().initializeCalibrationKeyConfiguration(context.projectId),
+          get().initializeModuleTagKeyConfiguration(context.projectId),
         ]);
 
-        if (
-          hasBlockingIssues(keysResult) ||
-          hasBlockingIssues(tagsResult) ||
-          !keysResult.data ||
-          !tagsResult.data
-        ) {
+        if (!calibrationOk || !tagOk) {
           logger.error('keyConfigSlice: initializeConfiguration — API error', {
             action: 'initializeConfiguration',
             component: 'keyConfigSlice',
-            error: hasBlockingIssues(keysResult)
-              ? getIssueMessage(keysResult, 'Failed to load key definitions')
-              : getIssueMessage(tagsResult, 'Failed to load tag definitions'),
           });
-          setSlice({keyConfigStatus: 'error'});
+          setSlice({keyConfigStatus: 'error'} as unknown as Partial<S>);
           return false;
         }
 
-        const calibrationKeys: CalibrationKey[] = (keysResult.data ?? [])
-          .filter((k) => k.isCalibrationKey)
-          .map((k) => ({
-            defaultValue: null,
-            keyId: k.systemId,
-            keyName: k.name,
-            keyType: k.specialKey ?? '',
-            value: null,
-          }));
-
-        const moduleTagKeys: ModuleTagKey[] = (tagsResult.data ?? []).flatMap(
-          (tag) =>
-            (tag.keyDefinitions ?? []).map((kd) => ({
-              tagKeyId: kd.systemId,
-              tagKeyName: kd.name,
-              value: '',
-            })),
-        );
-
         configContext = context;
-        setSlice({
-          calibrationKeys,
-          keyConfigStatus: 'ready',
-          moduleTagKeys,
-        });
+        setSlice({keyConfigStatus: 'ready'} as unknown as Partial<S>);
 
         logger.debug('keyConfigSlice: initializeConfiguration — done', {
           action: 'initializeConfiguration',
@@ -162,13 +114,12 @@ export function createKeyConfigSlice(
           error: message,
         });
 
-        setSlice({keyConfigStatus: 'error'});
+        setSlice({keyConfigStatus: 'error'} as unknown as Partial<S>);
         return false;
       }
     },
     isEditable: false,
     keyConfigStatus: 'uninitialized',
-    moduleTagKeys: [],
     resetConfiguration: () => {
       logger.debug('keyConfigSlice: resetConfiguration', {
         action: 'resetConfiguration',
@@ -176,14 +127,14 @@ export function createKeyConfigSlice(
       });
 
       configContext = null;
+      get().resetCalibrationKeyConfiguration();
+      get().resetModuleTagKeyConfiguration();
       setSlice({
-        calibrationKeys: [],
         isEditable: false,
         keyConfigStatus: 'uninitialized',
-        moduleTagKeys: [],
         subgraphConfig: null,
         subsystemConfig: null,
-      });
+      } as unknown as Partial<S>);
     },
 
     saveConfiguration: async (): Promise<boolean> => {
@@ -208,8 +159,6 @@ export function createKeyConfigSlice(
 
       // TODO: Replace with actual backend API call:
       //   await api.saveConfiguration(context.projectId, context.itemId, {
-      //     calibrationKeys: get().calibrationKeys,
-      //     moduleTagKeys: get().moduleTagKeys,
       //     subgraphConfig: get().subgraphConfig,
       //     subsystemConfig: get().subsystemConfig,
       //   });
@@ -228,7 +177,7 @@ export function createKeyConfigSlice(
         action: 'setIsEditable',
         component: 'keyConfigSlice',
       });
-      setSlice({isEditable: editable});
+      setSlice({isEditable: editable} as unknown as Partial<S>);
     },
 
     subgraphConfig: null,

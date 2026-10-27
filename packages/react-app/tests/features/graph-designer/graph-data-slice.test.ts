@@ -1895,6 +1895,61 @@ describe('createGraphDataSlice - store-only property updates', () => {
     expect(store.getState().isDirty).toBe(true);
   });
 
+  it('updates module ckvs locally without calling module patch', () => {
+    const store = makeStoreWithGraphData();
+    const ckvs = [
+      {keyValuePairs: [], supportedParameters: [], systemId: 'ckv-1'},
+    ];
+
+    store.getState().updateModuleCkvsLocal('mod-1', ckvs);
+
+    expect(store.getState().graphData?.moduleInstances['mod-1'].ckvs).toEqual(
+      ckvs,
+    );
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('is a no-op when the target module instance does not exist', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateModuleCkvsLocal('missing', []);
+
+    expect(store.getState().graphData?.moduleInstances.missing).toBeUndefined();
+    expect(store.getState().isDirty).toBe(false);
+  });
+
+  it('updates module tags locally without calling module patch', () => {
+    const store = makeStoreWithGraphData();
+    const tags = [{naturalId: 1, systemId: 'tag-1', tagName: 'tag', tkvs: []}];
+
+    store.getState().updateModuleTagsLocal('mod-1', tags);
+
+    expect(store.getState().graphData?.moduleInstances['mod-1'].tags).toEqual(
+      tags,
+    );
+    expect(mockPatchSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('is a no-op (updateModuleTagsLocal) when the target module instance does not exist', () => {
+    const store = makeStoreWithGraphData();
+
+    store.getState().updateModuleTagsLocal('missing', []);
+
+    expect(store.getState().graphData?.moduleInstances.missing).toBeUndefined();
+    expect(store.getState().isDirty).toBe(false);
+  });
+
+  it('is a no-op (updateModuleTagsLocal) when graphData is null', () => {
+    const store = makeStore();
+
+    store.getState().updateModuleTagsLocal('mod-1', []);
+
+    expect(store.getState().graphData).toBeNull();
+    expect(store.getState().isDirty).toBe(false);
+  });
+
   it('updates subgraph name locally', () => {
     const store = makeStoreWithGraphData();
     store.setState({

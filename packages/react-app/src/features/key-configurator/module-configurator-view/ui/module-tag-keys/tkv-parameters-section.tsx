@@ -80,9 +80,9 @@ export function TkvParametersSection({
           <table className="bg-primary w-4/5 border-collapse">
             <thead>
               <tr>
-                <th className="bg-secondary border-neutral-02 text-neutral-primary w-32 border px-3 py-2 text-center font-semibold">
+                <th className="bg-secondary border-neutral-02 text-neutral-primary w-40 border px-3 py-2 text-center font-semibold">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Support TKV</span>
+                    <span className="whitespace-nowrap">Support TKV</span>
                     <Checkbox
                       aria-label="Select/Deselect All"
                       checked={allChecked}

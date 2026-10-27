@@ -8,13 +8,10 @@ import {subscribeWithSelector} from 'zustand/middleware';
 
 import {logger} from '~shared/lib/logger';
 
-import {useCalibrationKeysStore} from './calibration-keys-store';
 import {
   type ConfigurationItem,
   ConfigurationItemType,
 } from './configurator-item.types';
-import {moduleInstanceCoordinator} from './module-instance-coordinator';
-import {useModuleTagKeysStore} from './module-tag-keys-store';
 import {useSubsystemConfigStore} from './subsystem-config-store';
 
 /**
@@ -84,7 +81,7 @@ export function createKeyConfiguratorStore(projectId: string) {
           projectId: get().projectId,
         });
       },
-      initializeConfiguration: async (context: ConfigurationContext) => {
+      initializeConfiguration: (context: ConfigurationContext) => {
         const state = get();
 
         if (!state.projectId) {
@@ -92,76 +89,30 @@ export function createKeyConfiguratorStore(projectId: string) {
             action: 'initialize_configuration',
             component: 'KeyConfiguratorStore',
           });
-          return false;
+          return Promise.resolve(false);
         }
 
         try {
           // Fetch data based on entity type
           switch (context.entityType) {
-            case ConfigurationItemType.MODULE: {
-              const ckvStore = useCalibrationKeysStore.getState();
-              const tkvStore = useModuleTagKeysStore.getState();
-
-              // Initialize CKV store if not already initialized
-              if (!ckvStore.projectId) {
-                const ckvInitSuccess = await ckvStore.initialize(
-                  state.projectId,
-                );
-                if (!ckvInitSuccess) {
-                  logger.error('Failed to initialize calibration keys store', {
-                    action: 'initialize_configuration',
-                    component: 'KeyConfiguratorStore',
-                    projectId: state.projectId,
-                  });
-                  return false;
-                }
-              }
-
-              // Initialize TKV store if not already initialized
-              if (!tkvStore.projectId) {
-                const tkvInitSuccess = await tkvStore.initialize(
-                  state.projectId,
-                );
-                if (!tkvInitSuccess) {
-                  logger.error('Failed to initialize module tag keys store', {
-                    action: 'initialize_configuration',
-                    component: 'KeyConfiguratorStore',
-                    projectId: state.projectId,
-                  });
-                  return false;
-                }
-              }
-
-              // Use coordinator to fetch and distribute data to both stores
-              const result =
-                await moduleInstanceCoordinator.fetchAndDistributeModuleInstanceData(
-                  state.projectId,
-                  context.entityId,
-                  context.moduleDefinitionSystemId,
-                  context.systemId,
-                );
-
-              if (!result.success) {
-                logger.error(
-                  'Failed to fetch module instance data via coordinator',
-                  {
-                    action: 'initialize_configuration',
-                    component: 'KeyConfiguratorStore',
-                    error: result.error,
-                    projectId: state.projectId,
-                  },
-                );
-                return false;
-              }
-              break;
-            }
-
             case ConfigurationItemType.SUBSYSTEM: {
               const store = useSubsystemConfigStore.getState();
               if (!store.projectId) {
                 store.initialize(state.projectId);
               }
               break;
+            }
+
+            default: {
+              logger.error(
+                `Unhandled entity type in key configurator: ${context.entityType}`,
+                {
+                  action: 'initialize_configuration',
+                  component: 'KeyConfiguratorStore',
+                  projectId: state.projectId,
+                },
+              );
+              return Promise.resolve(false);
             }
           }
 
@@ -170,7 +121,7 @@ export function createKeyConfiguratorStore(projectId: string) {
             component: 'KeyConfiguratorStore',
             projectId: state.projectId,
           });
-          return true;
+          return Promise.resolve(true);
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error';
@@ -180,7 +131,7 @@ export function createKeyConfiguratorStore(projectId: string) {
             error: errorMessage,
             projectId: state.projectId,
           });
-          return false;
+          return Promise.resolve(false);
         }
       },
       isEditable: false, // Default to non-editable mode
@@ -194,8 +145,6 @@ export function createKeyConfiguratorStore(projectId: string) {
         });
 
         // Reset all individual stores
-        useCalibrationKeysStore.getState().reset();
-        useModuleTagKeysStore.getState().reset();
         useSubsystemConfigStore.getState().reset();
 
         // Reset main store
@@ -226,8 +175,6 @@ export function createKeyConfiguratorStore(projectId: string) {
         try {
           // Save all stores in parallel
           const results = await Promise.all([
-            useCalibrationKeysStore.getState().saveToBackend(),
-            useModuleTagKeysStore.getState().saveToBackend(),
             useSubsystemConfigStore.getState().saveToBackend(),
           ]);
 
