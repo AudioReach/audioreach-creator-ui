@@ -7,6 +7,8 @@ import {useEffect, useState} from 'react';
 
 import {Switch} from '@qualcomm-ui/react/switch';
 
+import {areNumericStringsEqual} from '~shared/lib/numeric-string';
+
 export interface SwitchControlProps {
   currentValue: string;
   disabled: boolean;
@@ -26,9 +28,13 @@ export function SwitchControl({
   onValue,
   onValueChange,
 }: SwitchControlProps) {
-  const [checked, setChecked] = useState(currentValue === onValue);
+  const [checked, setChecked] = useState(
+    currentValue === onValue || areNumericStringsEqual(currentValue, onValue),
+  );
   useEffect(() => {
-    setChecked(currentValue === onValue);
+    setChecked(
+      currentValue === onValue || areNumericStringsEqual(currentValue, onValue),
+    );
   }, [currentValue, onValue]);
   return (
     <div onClick={(e) => e.stopPropagation()}>

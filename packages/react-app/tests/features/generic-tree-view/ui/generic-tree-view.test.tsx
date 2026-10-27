@@ -515,6 +515,46 @@ describe('reconcile dirty/set state on Set success', () => {
     );
   });
 
+  it('moves a path to setPaths when the backend returns an equivalent decimal value for sent hex', () => {
+    const onUiStateChange = jest.fn();
+    const data1 = makeData([makeItemWithGain('100', '0')]);
+    const {rerender} = render(
+      <GenericTreeView
+        data={data1}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain', '0x1');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    onUiStateChange.mockClear();
+
+    const setSnapshot: TreeViewData = {
+      items: [makeItemWithGain('100', '1')],
+      source: 'set',
+      systemId: data1.systemId,
+    };
+    act(() => {
+      rerender(
+        <GenericTreeView
+          data={setSnapshot}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+    });
+
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dirtyPaths: [],
+        setPaths: ['100/gain'],
+      }),
+    );
+  });
+
   it('Get success still fully re-seeds — reconciliation must not apply on the Get path', () => {
     const onUiStateChange = jest.fn();
     const data1 = makeData([makeItemWithGain('100', '10')]);
