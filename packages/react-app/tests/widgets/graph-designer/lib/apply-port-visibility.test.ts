@@ -228,4 +228,51 @@ describe('applyPortVisibility', () => {
     expect(m5?.ports).toEqual([]);
     expect(m6?.ports.map((p) => p.id)).toEqual(['5']);
   });
+
+  it('keeps subsystem ports referenced only through proxy links', () => {
+    const level: LevelView = {
+      levelId: 'top',
+      proxyDataLinks: [
+        {
+          edgeKind: 'proxy-data',
+          id: 'subsystem-proxy',
+          sourceNodeId: 'subsystem-1',
+          sourcePortId: 'virtual:ss:subsystem-1:data:out',
+          targetNodeId: 'module-1',
+          targetPortId: 'in-1',
+        },
+      ],
+      subsystems: [
+        {
+          height: 120,
+          id: 'subsystem-1',
+          label: 'Subsystem',
+          nodeKind: 'subsystem',
+          ports: [
+            {
+              id: 'virtual:ss:subsystem-1:data:out',
+              locked: true,
+              portIoType: 'output',
+            },
+            {id: 'unused', portIoType: 'input'},
+          ],
+          subsystemId: 'subsystem-1',
+          width: 240,
+          x: 0,
+          y: 0,
+        },
+      ],
+    };
+
+    const result = applyPortVisibility(level, 'active');
+
+    expect(result.subsystems?.[0]?.ports).toEqual([
+      {
+        id: 'virtual:ss:subsystem-1:data:out',
+        locked: true,
+        portIoType: 'output',
+      },
+      {id: 'unused', portIoType: 'input'},
+    ]);
+  });
 });

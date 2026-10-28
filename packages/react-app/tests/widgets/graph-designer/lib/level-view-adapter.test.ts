@@ -944,3 +944,78 @@ describe('buildLevelViewFromGraphData — interUsecase link passthrough', () => 
     },
   );
 });
+
+describe('buildLevelViewFromGraphData - subsystem simplification', () => {
+  const graphData: UsecaseGraphData = {
+    ...baseData,
+    connections: [
+      {
+        destinationPortSystemId: 'ss-input',
+        destinationSystemId: 'sys-ss-20',
+        linkKind: 'data',
+        linkType: 'NORMAL',
+        sourcePortSystemId: 'module-output',
+        sourceSystemId: 'sys-mod-1',
+        systemId: 'subsystem-data-link',
+      },
+    ],
+    subsystems: {
+      'sys-ss-20': {
+        ...baseData.subsystems['sys-ss-20'],
+        subgraphs: [],
+      },
+    },
+  };
+
+  it('keeps raw subsystem links when simplifySubsystems is omitted', () => {
+    const level = buildLevelViewFromGraphData(graphData, 'top');
+
+    expect(level.dataLinks).toEqual([
+      expect.objectContaining({id: 'subsystem-data-link'}),
+    ]);
+    expect(level.proxyDataLinks).toBeUndefined();
+  });
+
+  it('projects subsystem links when simplifySubsystems is true', () => {
+    const level = buildLevelViewFromGraphData(graphData, 'top', {
+      simplifySubsystems: true,
+    });
+
+    expect(level.dataLinks).toEqual([]);
+    expect(level.proxyDataLinks).toEqual([
+      expect.objectContaining({
+        kind: 'subsystem',
+        realConnectionIds: ['subsystem-data-link'],
+      }),
+    ]);
+    expect(level.subsystems?.[0]?.ports).toContainEqual(
+      expect.objectContaining({locked: true}),
+    );
+  });
+
+  it('projects the boundary subsystem in a drilled view', () => {
+    const level = buildSubsystemLevelViewFromGraphData(
+      {
+        ...graphData,
+        subsystems: {
+          'sys-ss-20': {
+            ...graphData.subsystems['sys-ss-20'],
+            subgraphs: ['5'],
+          },
+        },
+      },
+      'sys-ss-20',
+      'subsystem:sys-ss-20',
+      {simplifySubsystems: true},
+    );
+
+    // sys-ss-20 is the link's target, but the boundary role is pre-inverted
+    // (matching SubsystemBoundaryPortHandles) so it renders as 'output', not
+    // the naive target->'input' every non-boundary subsystem gets.
+    expect(level?.boundarySubsystem?.ports).toContainEqual({
+      id: 'virtual:ss:sys-ss-20:data:out',
+      locked: true,
+      portIoType: 'output',
+    });
+  });
+});
