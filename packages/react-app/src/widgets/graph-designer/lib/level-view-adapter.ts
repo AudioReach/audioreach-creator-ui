@@ -28,7 +28,13 @@ import type {
 import {NODE_DIMENSIONS} from '~features/usecase-visualizer';
 import {logger} from '~shared/lib/logger';
 
+import {applySubsystemSimplification} from './apply-subsystem-simplification';
 import {containerNodeId, subgraphNodeId} from './node-id';
+
+interface BuildLevelViewOptions {
+  boundarySubsystem?: Subsystem;
+  simplifySubsystems?: boolean;
+}
 
 function resolveModuleShape(name: string): ModuleShape | undefined {
   const t = name.toLowerCase();
@@ -110,7 +116,7 @@ function buildSubsystemNode(ss: Subsystem): SubsystemNode {
 export function buildLevelViewFromGraphData(
   data: UsecaseGraphData,
   levelId: string,
-  options?: {boundarySubsystem?: Subsystem},
+  options?: BuildLevelViewOptions,
 ): LevelView {
   const allSubsystems = Object.values(data.subsystems);
   const childSubsystemIds = new Set(
@@ -299,7 +305,9 @@ export function buildLevelViewFromGraphData(
       : {}),
   };
 
-  return levelView;
+  return options?.simplifySubsystems
+    ? applySubsystemSimplification(levelView)
+    : levelView;
 }
 
 function collectDescendantSubsystemIds(
@@ -341,6 +349,7 @@ export function buildSubsystemLevelViewFromGraphData(
   data: UsecaseGraphData,
   subsystemId: string,
   levelId: string,
+  options?: Pick<BuildLevelViewOptions, 'simplifySubsystems'>,
 ): LevelView | null {
   const subsystem = data.subsystems[subsystemId];
   if (!subsystem) {
@@ -409,6 +418,9 @@ export function buildSubsystemLevelViewFromGraphData(
       subsystems,
     },
     levelId,
-    {boundarySubsystem: subsystem},
+    {
+      boundarySubsystem: subsystem,
+      simplifySubsystems: options?.simplifySubsystems,
+    },
   );
 }

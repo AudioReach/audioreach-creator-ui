@@ -26,7 +26,7 @@ export function applyLinkVisibility(
     (isInterUsecase ? showInterUsecaseLinks : true) &&
     (isControl ? showControlLinks : true);
 
-  return {
+  const filtered: LevelView = {
     ...level,
     controlLinks: (level.controlLinks ?? []).filter((l) =>
       isVisible(l.isInterUsecase, true),
@@ -35,4 +35,15 @@ export function applyLinkVisibility(
       isVisible(l.isInterUsecase, false),
     ),
   };
+  if (level.proxyControlLinks) {
+    filtered.proxyControlLinks = level.proxyControlLinks.filter((l) =>
+      isVisible(l.isInterUsecase, true),
+    );
+  }
+  if (level.proxyDataLinks) {
+    filtered.proxyDataLinks = level.proxyDataLinks.filter((l) =>
+      isVisible(l.isInterUsecase, false),
+    );
+  }
+  return filtered;
 }

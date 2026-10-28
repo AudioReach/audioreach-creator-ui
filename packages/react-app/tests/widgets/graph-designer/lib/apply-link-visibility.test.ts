@@ -52,21 +52,41 @@ function baseLevel(): LevelView {
     proxyControlLinks: [
       {
         edgeKind: 'proxy-control',
-        id: 'proxy-c-1',
+        id: 'proxy-control-normal',
+        isInterUsecase: false,
         sourceNodeId: 'module-3',
         sourcePortId: 'p-ctrl',
         targetNodeId: 'subgraph-proxy-1',
         targetPortId: 'proxy-target',
       },
+      {
+        edgeKind: 'proxy-control',
+        id: 'proxy-control-interUsecase',
+        isInterUsecase: true,
+        sourceNodeId: 'module-3',
+        sourcePortId: 'p-ctrl-2',
+        targetNodeId: 'subgraph-proxy-1',
+        targetPortId: 'proxy-target-2',
+      },
     ],
     proxyDataLinks: [
       {
         edgeKind: 'proxy-data',
-        id: 'proxy-d-1',
+        id: 'proxy-data-normal',
+        isInterUsecase: false,
         sourceNodeId: 'module-3',
         sourcePortId: 'p-data',
         targetNodeId: 'subgraph-proxy-1',
         targetPortId: 'proxy-target',
+      },
+      {
+        edgeKind: 'proxy-data',
+        id: 'proxy-data-interUsecase',
+        isInterUsecase: true,
+        sourceNodeId: 'module-3',
+        sourcePortId: 'p-data-2',
+        targetNodeId: 'subgraph-proxy-1',
+        targetPortId: 'proxy-target-2',
       },
     ],
   };
@@ -118,12 +138,24 @@ describe('applyLinkVisibility', () => {
     });
   });
 
-  // Proxy links are never touched by this filter — they're synthesized downstream
-  it('leaves proxyDataLinks and proxyControlLinks unchanged', () => {
-    const level = baseLevel();
-    const out = applyLinkVisibility(level, false, false);
+  it('removes proxy control links when showControlLinks is false', () => {
+    const out = applyLinkVisibility(baseLevel(), false, true);
 
-    expect(out.proxyDataLinks).toBe(level.proxyDataLinks);
-    expect(out.proxyControlLinks).toBe(level.proxyControlLinks);
+    expect(out.proxyControlLinks).toEqual([]);
+    expect(out.proxyDataLinks?.map((l) => l.id).sort()).toEqual([
+      'proxy-data-interUsecase',
+      'proxy-data-normal',
+    ]);
+  });
+
+  it('removes interUsecase proxy links when showInterUsecaseLinks is false', () => {
+    const out = applyLinkVisibility(baseLevel(), true, false);
+
+    expect(out.proxyControlLinks?.map((l) => l.id)).toEqual([
+      'proxy-control-normal',
+    ]);
+    expect(out.proxyDataLinks?.map((l) => l.id)).toEqual([
+      'proxy-data-normal',
+    ]);
   });
 });

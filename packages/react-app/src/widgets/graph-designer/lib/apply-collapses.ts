@@ -32,6 +32,13 @@ interface CollapseContext {
   insideNodeToSubgraph: Map<string, number>;
 }
 
+interface RemappedEndpoints {
+  sourceNodeId: string;
+  sourcePortId: string;
+  targetNodeId: string;
+  targetPortId: string;
+}
+
 /** Resolve, per collapsed subgraph, the set of descendant node ids. */
 function buildCollapseContext(
   level: LevelView,
@@ -118,27 +125,22 @@ export function applyCollapses(
 
   const keptDataLinks: DataLink[] = [];
   const keptControlLinks: ControlLink[] = [];
-  // Spread existing proxy links so that a future re-collapse (e.g. collapsing
-  // a different subgraph on the same level) accumulates correctly. The call
-  // site always passes the raw store levelView, not a previously-collapsed
-  // output, so there is no accumulation hazard in practice.
-  const proxyDataLinks: ProxyDataLink[] = [...(level.proxyDataLinks ?? [])];
-  const proxyControlLinks: ProxyControlLink[] = [
-    ...(level.proxyControlLinks ?? []),
-  ];
+  const proxyDataLinks: ProxyDataLink[] = [];
+  const proxyControlLinks: ProxyControlLink[] = [];
 
   // direction: for the inside endpoint, an edge ENTERING the subgraph (inside is
   // the target) exposes an 'input' proxy port; an edge LEAVING (inside is the
   // source) exposes an 'output' proxy port. Control links expose 'control'.
-  const remapDataLink = (e: AnyDataLink): void => {
+  const remapDataEndpoints = (
+    e: AnyDataLink,
+  ): RemappedEndpoints | null | undefined => {
     const srcSg = insideNodeToSubgraph.get(e.sourceNodeId);
     const dstSg = insideNodeToSubgraph.get(e.targetNodeId);
     if (srcSg === undefined && dstSg === undefined) {
-      keptDataLinks.push(e as DataLink);
-      return;
+      return undefined;
     }
     if (srcSg !== undefined && dstSg !== undefined && srcSg === dstSg) {
-      return; // wholly internal — drop
+      return null;
     }
     let sourceNodeId = e.sourceNodeId;
     let sourcePortId = e.sourcePortId;
@@ -164,6 +166,18 @@ export function applyCollapses(
       );
       targetNodeId = subgraphProxyNodeId(dstSg);
     }
+    return {sourceNodeId, sourcePortId, targetNodeId, targetPortId};
+  };
+
+  const remapDataLink = (e: DataLink): void => {
+    const remapped = remapDataEndpoints(e);
+    if (remapped === undefined) {
+      keptDataLinks.push(e);
+      return;
+    }
+    if (remapped === null) {
+      return;
+    }
     proxyDataLinks.push({
       edgeKind: 'proxy-data',
       id: `proxy-${e.id}`,
@@ -174,22 +188,32 @@ export function applyCollapses(
       locked: true,
       meta: e.meta,
       realConnectionIds: [e.id],
-      sourceNodeId,
-      sourcePortId,
-      targetNodeId,
-      targetPortId,
+      ...remapped,
     });
   };
 
-  const remapControlLink = (e: AnyControlLink): void => {
+  const remapProxyDataLink = (e: ProxyDataLink): void => {
+    const remapped = remapDataEndpoints(e);
+    if (remapped === undefined) {
+      proxyDataLinks.push(e);
+      return;
+    }
+    if (remapped === null) {
+      return;
+    }
+    proxyDataLinks.push({...e, ...remapped});
+  };
+
+  const remapControlEndpoints = (
+    e: AnyControlLink,
+  ): RemappedEndpoints | null | undefined => {
     const srcSg = insideNodeToSubgraph.get(e.sourceNodeId);
     const dstSg = insideNodeToSubgraph.get(e.targetNodeId);
     if (srcSg === undefined && dstSg === undefined) {
-      keptControlLinks.push(e as ControlLink);
-      return;
+      return undefined;
     }
     if (srcSg !== undefined && dstSg !== undefined && srcSg === dstSg) {
-      return;
+      return null;
     }
     let sourceNodeId = e.sourceNodeId;
     let sourcePortId = e.sourcePortId;
@@ -215,6 +239,18 @@ export function applyCollapses(
       );
       targetNodeId = subgraphProxyNodeId(dstSg);
     }
+    return {sourceNodeId, sourcePortId, targetNodeId, targetPortId};
+  };
+
+  const remapControlLink = (e: ControlLink): void => {
+    const remapped = remapControlEndpoints(e);
+    if (remapped === undefined) {
+      keptControlLinks.push(e);
+      return;
+    }
+    if (remapped === null) {
+      return;
+    }
     proxyControlLinks.push({
       edgeKind: 'proxy-control',
       id: `proxy-${e.id}`,
@@ -223,15 +259,26 @@ export function applyCollapses(
       locked: true,
       meta: e.meta,
       realConnectionIds: [e.id],
-      sourceNodeId,
-      sourcePortId,
-      targetNodeId,
-      targetPortId,
+      ...remapped,
     });
+  };
+
+  const remapProxyControlLink = (e: ProxyControlLink): void => {
+    const remapped = remapControlEndpoints(e);
+    if (remapped === undefined) {
+      proxyControlLinks.push(e);
+      return;
+    }
+    if (remapped === null) {
+      return;
+    }
+    proxyControlLinks.push({...e, ...remapped});
   };
 
   (level.dataLinks ?? []).forEach(remapDataLink);
   (level.controlLinks ?? []).forEach(remapControlLink);
+  (level.proxyDataLinks ?? []).forEach(remapProxyDataLink);
+  (level.proxyControlLinks ?? []).forEach(remapProxyControlLink);
 
   // Build proxy nodes from collapsed subgraphs, inheriting their position.
   const collapsedSubgraphs = (level.subgraphs ?? []).filter((sg) =>
