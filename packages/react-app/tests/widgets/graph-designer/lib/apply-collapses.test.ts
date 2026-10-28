@@ -8,6 +8,8 @@ import type {
   DataLink,
   LevelView,
   ModuleNode,
+  ProxyControlLink,
+  ProxyDataLink,
   SubgraphNode,
 } from '~entities/graph';
 import {applyCollapses} from '~widgets/graph-designer/lib/apply-collapses';
@@ -159,6 +161,93 @@ describe('applyCollapses', () => {
         portIoType: 'output',
       }),
     );
+  });
+
+  it('remaps an existing proxy data link that crosses a collapsed subgraph', () => {
+    const proxyLink: ProxyDataLink = {
+      edgeKind: 'proxy-data',
+      id: 'subsystem-proxy-data',
+      kind: 'subsystem',
+      locked: true,
+      realConnectionIds: ['d-subsystem'],
+      sourceNodeId: 'module-2',
+      sourcePortId: 'out',
+      targetNodeId: 'module-3',
+      targetPortId: 'in',
+    };
+    const level: LevelView = {
+      ...baseLevel(),
+      dataLinks: [],
+      proxyDataLinks: [proxyLink],
+    };
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.proxyDataLinks).toEqual([
+      expect.objectContaining({
+        id: 'subsystem-proxy-data',
+        kind: 'subsystem',
+        realConnectionIds: ['d-subsystem'],
+        sourceNodeId: 'subgraph-proxy-1',
+        sourcePortId: 'proxy:1:module-2:out',
+        targetNodeId: 'module-3',
+        targetPortId: 'in',
+      }),
+    ]);
+  });
+
+  it('remaps an existing proxy control link that crosses a collapsed subgraph', () => {
+    const proxyLink: ProxyControlLink = {
+      edgeKind: 'proxy-control',
+      id: 'subsystem-proxy-control',
+      locked: true,
+      realConnectionIds: ['ctrl-subsystem'],
+      sourceNodeId: 'module-3',
+      sourcePortId: 'in',
+      targetNodeId: 'module-2',
+      targetPortId: 'in',
+    };
+    const level: LevelView = {
+      ...baseLevel(),
+      dataLinks: [],
+      proxyControlLinks: [proxyLink],
+    };
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.proxyControlLinks).toEqual([
+      expect.objectContaining({
+        id: 'subsystem-proxy-control',
+        realConnectionIds: ['ctrl-subsystem'],
+        sourceNodeId: 'module-3',
+        sourcePortId: 'in',
+        targetNodeId: 'subgraph-proxy-1',
+        targetPortId: 'proxy:1:module-2:in',
+      }),
+    ]);
+  });
+
+  it('drops existing proxy links wholly inside a collapsed subgraph', () => {
+    const proxyLink: ProxyDataLink = {
+      edgeKind: 'proxy-data',
+      id: 'internal-subsystem-proxy-data',
+      kind: 'subsystem',
+      locked: true,
+      realConnectionIds: ['d-internal-subsystem'],
+      sourceNodeId: 'module-1',
+      sourcePortId: 'out',
+      targetNodeId: 'module-2',
+      targetPortId: 'in',
+    };
+    const level: LevelView = {
+      ...baseLevel(),
+      dataLinks: [],
+      proxyDataLinks: [proxyLink],
+    };
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.proxyDataLinks).toEqual([]);
   });
 
   it('derives an input proxy port when an edge enters the collapsed subgraph', () => {
