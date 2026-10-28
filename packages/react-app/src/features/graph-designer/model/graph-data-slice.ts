@@ -576,6 +576,17 @@ function removeLink(connections: Connection[], linkId: string): Connection[] {
  * `existing` rather than recomputed, defaulting to `[]` only for a
  * subsystem that didn't previously exist.
  */
+function toSubsystemDataPort(
+  port: SubsystemDto['dataPorts'][number],
+): SubsystemPort {
+  return {
+    direction: port.portIoType === 'InputOutput' ? 'input' : 'output',
+    portId: port.systemId,
+    portName: port.name,
+    portType: 'data',
+  };
+}
+
 function toSubsystem(
   ss: SubsystemDto,
   existing: Subsystem | undefined,
@@ -588,12 +599,7 @@ function toSubsystem(
       portName: p.controlPortName,
       portType: 'control' as const,
     })),
-    dataPorts: (ss.dataPorts ?? []).map((p) => ({
-      direction: p.portIoType === 'Input' ? 'input' : 'output',
-      portId: p.systemId,
-      portName: p.name,
-      portType: 'data' as const,
-    })),
+    dataPorts: (ss.dataPorts ?? []).map(toSubsystemDataPort),
     parentSubsystemId: ss.parentSystemId,
     subgraphs: existing?.subgraphs ?? [],
     subsystemId: ss.systemId,
@@ -1196,12 +1202,7 @@ export function createGraphDataSlice<
               portName: p.controlPortName,
               portType: 'control' as const,
             })),
-            dataPorts: (ss.dataPorts ?? []).map((p) => ({
-              direction: p.portIoType === 'Input' ? 'input' : 'output',
-              portId: p.systemId,
-              portName: p.name,
-              portType: 'data' as const,
-            })),
+            dataPorts: (ss.dataPorts ?? []).map(toSubsystemDataPort),
             parentSubsystemId: ss.parentSystemId,
             subgraphs: subsystemIdToSubgraphs.get(ss.systemId) ?? [],
             subsystemId: ss.systemId,
