@@ -69,6 +69,7 @@ interface UsecaseItemRowProps {
   handleSelectCategory: (itemNames: string[], isSelected: boolean) => void;
   handleSelectUsecase: (itemName: string, isSelected: boolean) => void;
   item: UsecaseItem;
+  lockedUsecases: Set<string>;
   selectedUsecasesSet: Set<string>;
   setContextMenuItem: React.Dispatch<
     React.SetStateAction<{item: UsecaseItem; x: number; y: number} | null>
@@ -85,6 +86,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
     handleSelectCategory,
     handleSelectUsecase,
     item,
+    lockedUsecases,
     selectedUsecasesSet,
     setContextMenuItem,
     setExpandedItems,
@@ -102,6 +104,10 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
         checkedCount,
         leafDescendants.length,
       );
+
+      const isGroupLocked =
+        leafDescendants.length > 0 &&
+        leafDescendants.every((i) => lockedUsecases.has(i.name));
 
       return (
         /* systemId is present for leaf usecases; group headers like subsystem filtered, use name as fallback key */
@@ -125,10 +131,13 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
               size="sm"
               variant="ghost"
             />
-            <label className="text-neutral-secondary flex cursor-pointer items-center text-sm font-medium">
+            <label
+              className={`text-neutral-secondary flex items-center text-sm font-medium ${isGroupLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+            >
               <Checkbox
                 aria-label={`Select all in ${item.name}`}
                 checked={checkboxState.checked}
+                disabled={isGroupLocked}
                 indeterminate={checkboxState.indeterminate}
                 onCheckedChange={(checked) => {
                   const names = leafDescendants.map((i) => i.name);
@@ -150,6 +159,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
                   handleSelectCategory={handleSelectCategory}
                   handleSelectUsecase={handleSelectUsecase}
                   item={child}
+                  lockedUsecases={lockedUsecases}
                   selectedUsecasesSet={selectedUsecasesSet}
                   setContextMenuItem={setContextMenuItem}
                   setExpandedItems={setExpandedItems}
@@ -161,6 +171,8 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
         </div>
       );
     }
+
+    const isLocked = lockedUsecases.has(item.name);
 
     // ── Leaf item ──────────────────────────────────────────────────────────────
     // Leaf usecases always have a systemId from the API.
@@ -182,10 +194,13 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
         }}
         onMouseLeave={() => setHoveredItem(null)}
       >
-        <label className="text-neutral-primary flex cursor-pointer items-center text-sm">
+        <label
+          className={`text-neutral-primary flex items-center text-sm ${isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        >
           <Checkbox
             aria-label={`Select ${item.name}`}
             checked={selectedUsecasesSet.has(item.name)}
+            disabled={isLocked}
             onCheckedChange={(checked) =>
               handleSelectUsecase(item.name, checked === true)
             }
@@ -214,6 +229,7 @@ interface UsecaseListPanelProps {
    * Set while a backend search request is in flight.
    */
   isSearching?: boolean;
+  lockedUsecases?: Set<string>;
   onClose: () => void;
   onCollapseAll: () => void;
   onDeleteSelected: () => void;
@@ -223,6 +239,8 @@ interface UsecaseListPanelProps {
   usecaseData: UsecaseCategory[];
 }
 
+const EMPTY_LOCKED: Set<string> = new Set();
+
 export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   allowDelete = true,
   expandedCategories,
@@ -230,6 +248,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   handleSelectCategory,
   handleSelectUsecase,
   isSearching = false,
+  lockedUsecases = EMPTY_LOCKED,
   onClose,
   onCollapseAll,
   onDeleteSelected,
@@ -313,8 +332,14 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
     const checkedVisibleCount = uniqueVisibleLeafNames.filter((name) =>
       selectedUsecasesSet.has(name),
     ).length;
-    return getCheckboxState(checkedVisibleCount, uniqueVisibleLeafNames.length);
-  }, [usecaseData, selectedUsecasesSet]);
+    return {
+      ...getCheckboxState(checkedVisibleCount, uniqueVisibleLeafNames.length),
+      // Nothing to select or unselect: no results, or all results locked.
+      disabled:
+        lockedUsecases.size > 0 &&
+        uniqueVisibleLeafNames.every((name) => lockedUsecases.has(name)),
+    };
+  }, [usecaseData, selectedUsecasesSet, lockedUsecases]);
 
   return (
     <div className="flex w-full flex-col">
@@ -323,10 +348,13 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
         className="border-neutral-02 flex-shrink-0 border-b px-3 py-2"
       >
         <div className="flex items-center justify-between">
-          <label className="text-neutral-primary flex cursor-pointer items-center text-sm">
+          <label
+            className={`text-neutral-primary flex items-center text-sm ${selectAllState.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+          >
             <Checkbox
               aria-label="Select all usecases"
               checked={selectAllState.checked}
+              disabled={selectAllState.disabled}
               indeterminate={selectAllState.indeterminate}
               onCheckedChange={(checked) => handleSelectAll(checked === true)}
               size="sm"
@@ -443,6 +471,9 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               checkedInCategory,
               categoryLeafItems.length,
             );
+            const isCategoryLocked =
+              categoryLeafItems.length > 0 &&
+              categoryLeafItems.every((item) => lockedUsecases.has(item.name));
             const icon = isCategoryExpanded ? ChevronDown : ChevronRight;
 
             return (
@@ -457,10 +488,13 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                     size="sm"
                     variant="ghost"
                   />
-                  <label className="text-neutral-primary flex cursor-pointer items-center text-sm font-semibold">
+                  <label
+                    className={`text-neutral-primary flex items-center text-sm font-semibold ${isCategoryLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                  >
                     <Checkbox
                       aria-label={`Select all usecases in ${category.name}`}
                       checked={categoryCheckboxState.checked}
+                      disabled={isCategoryLocked}
                       indeterminate={categoryCheckboxState.indeterminate}
                       onCheckedChange={(checked) => {
                         const names = categoryLeafItems.map(
@@ -486,6 +520,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
                         handleSelectCategory={handleSelectCategory}
                         handleSelectUsecase={handleSelectUsecase}
                         item={item}
+                        lockedUsecases={lockedUsecases}
                         selectedUsecasesSet={selectedUsecasesSet}
                         setContextMenuItem={setContextMenuItem}
                         setExpandedItems={setExpandedItems}

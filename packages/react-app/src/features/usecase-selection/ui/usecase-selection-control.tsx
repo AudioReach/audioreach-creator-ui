@@ -52,6 +52,11 @@ interface UsecaseSelectionControlProps {
   /** When false, the delete button is hidden in the list panel. Defaults to true. */
   allowDelete?: boolean;
   disabled?: boolean;
+  /**
+   * When true, already-selected usecases cannot be unselected (e.g. during
+   * Edit mode). New usecases may still be added.
+   */
+  lockSelected?: boolean;
   onSelectedUsecasesChange: (usecases: string[]) => void;
   projectId: string;
   selectAll?: boolean;
@@ -64,6 +69,7 @@ export const UsecaseSelectionControl: React.FC<
 > = ({
   allowDelete = true,
   disabled = false,
+  lockSelected = false,
   onSelectedUsecasesChange,
   projectId,
   selectAll = false,
@@ -344,6 +350,12 @@ export const UsecaseSelectionControl: React.FC<
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
+  // Usecases that are already applied and must stay selected while locked.
+  const lockedUsecases = useMemo(
+    () => new Set(lockSelected ? selectedUsecases : []),
+    [lockSelected, selectedUsecases],
+  );
+
   const toggleCategoryExpansion = (categoryName: string) => {
     setExpandedCategories(
       projectId,
@@ -359,7 +371,7 @@ export const UsecaseSelectionControl: React.FC<
         if (!draftSelectedUsecases.includes(itemName)) {
           setDraftSelectedUsecases([...draftSelectedUsecases, itemName]);
         }
-      } else {
+      } else if (!lockedUsecases.has(itemName)) {
         setDraftSelectedUsecases(
           draftSelectedUsecases.filter((name) => name !== itemName),
         );
@@ -381,6 +393,7 @@ export const UsecaseSelectionControl: React.FC<
     },
     [
       draftSelectedUsecases,
+      lockedUsecases,
       panelLeafItemsByName,
       projectId,
     ],
@@ -399,11 +412,13 @@ export const UsecaseSelectionControl: React.FC<
       } else {
         const toRemove = new Set(itemNames);
         setDraftSelectedUsecases(
-          draftSelectedUsecases.filter((name) => !toRemove.has(name)),
+          draftSelectedUsecases.filter(
+            (name) => !toRemove.has(name) || lockedUsecases.has(name),
+          ),
         );
       }
     },
-    [draftSelectedUsecases],
+    [draftSelectedUsecases, lockedUsecases],
   );
 
   const handleExpandAll = () => {
@@ -434,7 +449,8 @@ export const UsecaseSelectionControl: React.FC<
       // Remove only visible usecases; keep selections outside the filter.
       setDraftSelectedUsecases(
         draftSelectedUsecases.filter(
-          (name) => !filteredUsecaseNames.has(name),
+          (name) =>
+            !filteredUsecaseNames.has(name) || lockedUsecases.has(name),
         ),
       );
     }
@@ -744,6 +760,7 @@ export const UsecaseSelectionControl: React.FC<
             handleSelectCategory={handleSelectCategory}
             handleSelectUsecase={handleSelectUsecase}
             isSearching={isSearching}
+            lockedUsecases={lockedUsecases}
             onClose={closeDropdown}
             onCollapseAll={handleCollapseAll}
             onDeleteSelected={() => void handleDeleteSelected()}
