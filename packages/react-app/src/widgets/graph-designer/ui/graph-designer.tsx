@@ -171,6 +171,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     showInterUsecaseLinks,
     showModuleInstanceIds,
     showSubgraphIds,
+    simplifySubsystems,
     viewMode,
   } = preferences.visualization;
   const isDetailedView = viewMode === 'detailed';
@@ -710,8 +711,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           graphData,
           activeSubsystemId,
           levelId,
+          {simplifySubsystems},
         )
-      : buildLevelViewFromGraphData(graphData, levelId);
+      : buildLevelViewFromGraphData(graphData, levelId, {
+          simplifySubsystems,
+        });
     if (!unpositioned) {
       return;
     }
@@ -735,6 +739,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     setLevelView,
     effectivePortVisibilityMode,
     activeSubsystemId,
+    simplifySubsystems,
   ]);
 
   // Effect — proactively fetch enable-parameter values so canvas enable

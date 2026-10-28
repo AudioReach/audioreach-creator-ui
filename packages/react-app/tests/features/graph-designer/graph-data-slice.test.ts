@@ -816,6 +816,58 @@ describe('createGraphDataSlice — Subsystem.subgraphs population (B5)', () => {
     expect(subsystem?.subgraphs).toContain('sys-sg-5');
   });
 
+  it('maps subsystem data ports to sides from their bidirectional IO type', async () => {
+    const store = makeStore([]);
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: {
+        ...dtoWithSubsystem,
+        subsystems: [
+          makeSubsystemDto({
+            dataPorts: [
+              {
+                name: 'Left port',
+                naturalId: 1,
+                portIoType: 'InputOutput',
+                portType: 'Static',
+                systemId: 'sys-ss-port-left',
+                totalLinksAtPort: 0,
+              },
+              {
+                name: 'Right port',
+                naturalId: 2,
+                portIoType: 'OutputInput',
+                portType: 'Static',
+                systemId: 'sys-ss-port-right',
+                totalLinksAtPort: 0,
+              },
+            ],
+          }),
+        ],
+      },
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    expect(
+      store.getState().graphData!.subsystems['sys-ss-1'].dataPorts,
+    ).toEqual([
+      {
+        direction: 'input',
+        portId: 'sys-ss-port-left',
+        portName: 'Left port',
+        portType: 'data',
+      },
+      {
+        direction: 'output',
+        portId: 'sys-ss-port-right',
+        portName: 'Right port',
+        portType: 'data',
+      },
+    ]);
+  });
+
   it('leaves Subsystem.subgraphs empty when no module has a parent linking it to that subsystem', async () => {
     const dtoNoParent = {
       ...dtoWithSubsystem,

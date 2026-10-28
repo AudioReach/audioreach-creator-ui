@@ -6,7 +6,10 @@
 jest.mock('~shared/lib/logger');
 
 import {NODE_KIND, type LevelView, type NodeKind} from '~entities/graph';
-import {buildSubsystemLevelViewFromGraphData} from '~widgets/graph-designer/lib/level-view-adapter';
+import {
+  buildLevelViewFromGraphData,
+  buildSubsystemLevelViewFromGraphData,
+} from '~widgets/graph-designer/lib/level-view-adapter';
 import type {
   ContextMenuTarget,
   NodeDisplayConfig,
@@ -1592,6 +1595,7 @@ describe('GraphDesigner - node double click', () => {
       expect.any(Object),
       'subsystem-1',
       'subsystem:subsystem-1',
+      {simplifySubsystems: false},
     );
     expect(tabLayoutService.createProjectTab).not.toHaveBeenCalled();
   });
@@ -1618,5 +1622,70 @@ describe('GraphDesigner - node double click', () => {
       'subsystem:missing-subsystem',
     );
     expect(tabLayoutService.createProjectTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('GraphDesigner - subsystem simplification', () => {
+  it('passes simplifySubsystems to the top-level adapter', async () => {
+    renderGraphDesigner({
+      graphData: makeSubsystemGraphData(),
+      userPreferences: makeUserPreferences({simplifySubsystems: true}),
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+
+    expect(buildLevelViewFromGraphData).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(String),
+      {simplifySubsystems: true},
+    );
+  });
+
+  it('rebuilds the current level after simplifySubsystems changes', async () => {
+    const {projectStore} = renderGraphDesigner({
+      graphData: makeSubsystemGraphData(),
+    });
+    await screen.findByTestId('usecase-visualizer');
+    jest.mocked(buildLevelViewFromGraphData).mockClear();
+
+    act(() => {
+      projectStore.setState({
+        userPreferences: makeUserPreferences({simplifySubsystems: true}),
+      });
+    });
+
+    await waitFor(() => {
+      expect(buildLevelViewFromGraphData).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(String),
+        {simplifySubsystems: true},
+      );
+    });
+  });
+
+  it('passes simplifySubsystems to the drilled subsystem adapter', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeSubsystemGraphData(),
+      userPreferences: makeUserPreferences({simplifySubsystems: true}),
+    });
+
+    await screen.findByTestId('usecase-visualizer');
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+        'subsystem-1',
+        NODE_KIND.SUBSYSTEM,
+        'Subsystem 1',
+      );
+    });
+
+    await waitFor(() => {
+      expect(buildSubsystemLevelViewFromGraphData).toHaveBeenCalledWith(
+        expect.any(Object),
+        'subsystem-1',
+        'subsystem:subsystem-1',
+        {simplifySubsystems: true},
+      );
+    });
+    expect(graphDesignerStore.getState().activeSubsystemId).toBe('subsystem-1');
   });
 });

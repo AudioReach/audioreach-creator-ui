@@ -10,6 +10,7 @@ import type {ApiResult} from '~shared/api';
 import type {UsecaseDto} from './usecase.dto';
 
 export type PortIOType = 'Input' | 'Output';
+export type SubsystemPortIOType = 'InputOutput' | 'OutputInput';
 export type PortType = 'Static' | 'Dynamic';
 export type ConnectionType =
   | 'MODULE_MODULE'
@@ -40,6 +41,15 @@ export interface DataPortDto {
   name: string;
   naturalId: number;
   portIoType: PortIOType;
+  portType: PortType;
+  systemId: string;
+  totalLinksAtPort: number;
+}
+
+export interface SubsystemDataPortDto {
+  name: string;
+  naturalId: number;
+  portIoType: SubsystemPortIOType;
   portType: PortType;
   systemId: string;
   totalLinksAtPort: number;
@@ -94,7 +104,7 @@ export interface ValueInfoDto {
 export interface SubsystemDto {
   children?: ComponentCollectionDto;
   controlPorts: ControlPortDto[];
-  dataPorts: DataPortDto[];
+  dataPorts: SubsystemDataPortDto[];
   filteredKeys: KeyInfoDto[];
   name?: string;
   naturalId: number;
