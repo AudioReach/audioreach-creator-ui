@@ -2,338 +2,141 @@
 
 Requirements: [requirements.md](./requirements.md)
 
-**Date:** 2026-10-09  
-**Status:** Approved design, pending written-spec review
-
----
+**Date:** 2026-10-28
+**Status:** Approved design
 
 ## 1. Decision
 
-Manual-usecase composition is session-local state in the Graph Designer tab
-store. It is neither project-global nor component-local: one tab owns one
-cache for the lifetime of its edit session. This preserves membership while
-the user navigates subsystem levels without exposing a cache panel or leaking
-selection to another graph-designer tab.
+Compose a session-local manual-usecase slice into GraphDesignerStore. It holds
+the selected subgraphs, data links, and control links in one serializable
+boundary, so subsystem navigation preserves membership and cascade cleanup is
+atomic.
 
-Three alternatives were considered:
+Rejected alternatives:
 
-1. Extend `edit-session-slice`. Rejected because generic session lifecycle
-   state would become coupled to manual-usecase composition.
-2. Keep the selection in `SubgraphHeader`. Rejected because header components
-   unmount during graph and subsystem navigation.
-3. Compose a `manual-usecase-slice` into `GraphDesignerStore`. Selected
-   because it matches existing tab-store slice composition and keeps the
-   cache session-scoped, serializable, and navigation-independent.
+1. Reuse excluded-links state: it is the inverse of explicit inclusion.
+2. Infer links from graph edits at Apply: manual topology must remain
+   explicitly user-controlled.
 
-## 2. Store design
-
-### 2.1 `manual-usecase-slice`
+## 2. Store
 
 **New file:**
-`packages/react-app/src/features/graph-designer/model/manual-usecase-slice.ts`
+packages/react-app/src/features/graph-designer/model/manual-usecase-slice.ts
 
-`GraphDesignerStore` composes `ManualUsecaseSlice` beside
-`EditSessionSlice`. Its state is plain data:
-
-```ts
+~~~ts
 interface ManualUsecaseSlice {
-  editedManualUsecaseSystemId: string | null;
+  manualControlLinksById: Record<string, ManualLinkSelection>;
+  manualDataLinksById: Record<string, ManualLinkSelection>;
   manualSubgraphsById: Record<string, SubgraphKvSelectionDto>;
+  addManualLink: (link: ManualLinkSelection) => void;
   addManualSubgraph: (selection: SubgraphKvSelectionDto) => void;
   clearManualUsecase: () => void;
-  removeManualSubgraph: (subgraphSystemId: string) => void;
-  seedManualUsecase: (
-    usecaseSystemId: string,
-    selections: SubgraphKvSelectionDto[],
-  ) => void;
+  removeManualLink: (kind: 'control' | 'data', id: string) => void;
+  removeManualSubgraph: (id: string) => void;
 }
-```
 
-The record key and `selection.systemId` are the subgraph system ID. The slice
-replaces an existing key rather than adding a duplicate. It stores the full
-`SubgraphKvSelectionDto`, not merely an ID, so the SGKV combinations submitted
-to the backend are exactly those chosen when the subgraph was added.
+interface ManualLinkSelection {
+  destinationSubgraphSystemId: string;
+  linkKind: 'control' | 'data';
+  sourceSubgraphSystemId: string;
+  systemId: string;
+}
+~~~
 
-`addManualSubgraph` and `removeManualSubgraph` mark the graph dirty. This
-makes Apply available when manual membership is the only edit. All mutations
-log their action and component context. `clearManualUsecase` resets both the
-cache and `editedManualUsecaseSystemId`.
+Record keys are system IDs and adds replace an existing key. addManualLink
+accepts only links whose endpoint subgraphs are selected. removeManualSubgraph
+also removes stored incident links. Link removal leaves its endpoints selected.
+Each mutation marks the graph dirty and logs action and component context.
+clearManualUsecase resets all three records.
 
-`createGraphDesignerStore` will include this slice in its composed
-`GraphDesignerStore` type. Zustand store construction is per graph-designer
-tab, so no global store or persistence layer is involved.
-
-### 2.2 Manual-usecase edit target
-
-The existing usecase selection is a view selection and may contain several
-usecases. It must not become the manual update target. The selected manual
-usecase's Edit action supplies its raw `systemId` to the graph-designer
-widget together with its identifying key-value pairs. After edit mode has
-successfully started, the widget queries
-`getUsecaseComponents(projectId, [systemId])`, groups the returned modules by
-`subgraphSystemId`, and resolves each group's CKV combination against those
-identifying values. It converts the resulting per-subgraph combinations to
-`SubgraphKvSelectionDto` values and calls `seedManualUsecase`.
-
-The target ID is therefore either `null` for a new manual usecase or exactly
-one ID for an update. It is never derived from displayed usecase labels or
-from the full `selectedUsecases` array.
-
-## 3. Entity API and request mapping
-
-### 3.1 Entity contract
+## 3. API and request builder
 
 **New DTO:**
-`entities/edit-session/model/create-manual-usecases.dto.ts`
+packages/react-app/src/entities/edit-session/model/create-manual-usecases.dto.ts
 
-`CreateManualUsecasesRequestDto` has the backend wire shape:
-
-```ts
-{
+~~~ts
+interface CreateManualUsecasesRequestDto {
   activeSubgraphs: SubgraphKvSelectionDto[];
-  excludedControlLinkSystemIds?: string[];
-  excludedDataLinkSystemIds?: string[];
-  excludedSubgraphSystemIds?: string[];
-  selectedUsecaseSystemIds: string[];
+  includedControlLinkSystemIds: string[];
+  includedDataLinkSystemIds: string[];
 }
-```
+~~~
 
-The DTO reuses `SubgraphKvSelectionDto` and the existing
-`CreateUsecasesResponseDto` change/issue response vocabulary. Both types and
-the client are exported from `entities/edit-session/index.ts`.
+Export the DTO and createManualUsecases(projectId, body) from
+entities/edit-session. The client posts to
+/projects/{projectId}/create-manual-usecases.
 
-**Client:** `createManualUsecases(projectId, body)` in
-`entities/edit-session/api/edit-session-api.ts` posts to:
+**New builder:**
+packages/react-app/src/features/graph-designer/lib/build-create-manual-usecases-request.ts
 
-```text
-/projects/{projectId}/create-manual-usecases
-```
-
-### 3.2 Request builder
-
-**New file:**
-`features/graph-designer/lib/build-create-manual-usecases-request.ts`
-
-The pure builder projects `Object.values(manualSubgraphsById)` to
-`activeSubgraphs`, partitions the existing `excludedLinks` into the two
-optional link fields, and accepts optional excluded-subgraph IDs as an input.
-The present graph session has no excluded-subgraph producer, so that optional
-field is omitted until such state is available rather than fabricated.
-
-It produces these contexts:
-
-| Operation | `selectedUsecaseSystemIds` |
+| Cache state | Request field |
 | --- | --- |
-| New manual usecase | `[]` |
-| Edit a manual usecase | `[editedManualUsecaseSystemId]` |
+| Object.values(manualSubgraphsById) | activeSubgraphs |
+| Object.keys(manualDataLinksById) | includedDataLinkSystemIds |
+| Object.keys(manualControlLinksById) | includedControlLinkSystemIds |
 
-The builder never reads `selectedUsecases`; this prevents multiple selected
-view usecases from becoming update targets. It runs only when the manual cache
-is non-empty.
+Both link arrays are required, including when empty. The builder validates the
+endpoint invariant defensively and refuses an inconsistent request rather than
+dropping a selected link.
 
-## 4. Graph interaction
-
-### 4.1 Subgraph quick action
+## 4. Reused graph-item quick actions
 
 **Modified file:**
-`features/graph-designer/ui/subgraph-header/subgraph-header.tsx`
+packages/react-app/src/widgets/graph-designer/lib/context-menu-config.ts
 
-`SubgraphHeader` reads `mode`, `manualSubgraphsById`, and the manual-slice
-actions using a narrow store selector. While in edit mode, its top-right quick
-action uses a keyboard-accessible QUI `IconButton` and Lucide icon:
+Reuse the existing `MANUAL_USECASE_ACTIONS` action IDs and
+`MANUAL_USECASE_ITEMS` toolbar items. Do not add link-specific action IDs,
+another menu, or a second set of visualizer events. Extend the existing
+`onAddToManualUsecase` and `onRemoveFromManualUsecase` Graph Designer callback
+placeholders so their existing `onAction(actionId, target)` dispatch receives
+the current subgraph or link target and routes it to the manual-usecase slice.
 
-| Cache membership | Action | Icon |
-| --- | --- | --- |
-| No entry for this subgraph | Add it | `CirclePlus` |
-| Entry for this subgraph | Remove it | `Minus` |
+The existing node and edge toolbar components already obtain their items and
+dispatch the target through `buildContextMenuConfig`; the configuration adds
+the existing actions to data-link, control-link, proxy-data-link, and
+proxy-control-link targets as well as subgraph targets. Link membership uses
+the canonical link system ID, so the direct and proxy representations share
+one add/remove state.
 
-The add handler resolves the current subgraph SGKV selection to a
-`SubgraphKvSelectionDto` and passes that snapshot to the store. The remove
-handler deletes its system ID. Header rendering must not return early merely
-because the subgraph has no CKV selector: eligible subgraphs still need the
-manual action. No selected-count, cache list, or other cache UI is added.
+For an unselected link, the reused Add action remains visible but is disabled
+until both endpoint subgraphs are selected. Its tooltip explains that both
+endpoint subgraphs must be added first. A selected link exposes the reused
+Remove action. The handler obtains the link kind, system ID, and endpoint
+subgraph IDs from the target before calling the slice; it does not introduce a
+separate link event API. The same tab store supplies state at every subsystem
+level. No selection count, list, or panel is added.
 
-The graph's existing node-content renderer continues to render this header at
-every level. It uses the same tab store after drilling into a subsystem, so a
-freshly mounted header derives the same `+` or `-` state without a navigation
-action changing membership.
+## 5. Apply and review
 
-### 4.2 Entering manual-usecase edit
+The existing Apply coordinator reads manual selection. If normal graph
+reconciliation is also required, it runs first because both endpoints write to
+the active session. It then calls the manual endpoint only if a subgraph is
+selected. Manual-only work does not call graph reconciliation; graph-only work
+does not call manual creation.
 
-**Modified files:**
-`features/usecase-selection/ui/usecase-selection-control.tsx` and
-`widgets/graph-designer/ui/graph-designer.tsx`
+A failure from creation, staging, commit, or session finalization is a hard
+barrier. It preserves edit mode and manual selection, publishes issues, and
+prevents later calls in the attempt. Successful creation responses join the
+existing ApplySummaryDialog review payload. Manual rows are checked initially;
+unchecked change IDs are omitted from stageChanges.
 
-The selection control shows the Edit icon only for selected manual-usecase
-items while the graph is in view mode. Its public callback carries the raw
-usecase ID and identifying key-value pairs. The widget, which may depend on
-both feature slices, coordinates:
+The finalization order remains:
 
-1. start edit mode;
-2. resolve the selected manual usecase's existing subgraph/SGKV membership;
-3. seed the manual slice with that membership and its one update target.
-
-Once edit mode begins, the selection control does not render the other Edit
-icons. There is no cancel icon. Discard is the cancellation path; after its
-confirmed terminal completion, the cleared cache and view-mode state restore
-the normal selected-item Edit icons.
-
-## 5. Apply, review, and finalization
-
-### 5.1 End-to-end Apply sequence
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Header as Subgraph header
-    participant Store as Graph Designer store
-    participant Apply as Apply coordinator
-    participant Routing as createUsecases API
-    participant Manual as createManualUsecases API
-    participant Review as Apply summary dialog
-    participant Session as Stage/commit/end APIs
-
-    User->>Header: Add or remove subgraph (+ / -)
-    Header->>Store: Add or remove selection snapshot
-    Store-->>Header: Re-render membership state
-
-    User->>Apply: Select Apply
-    Apply->>Store: Read graph changes and manual cache
-
-    opt Graph additions/deletions require reconciliation
-        Apply->>Routing: createUsecases()
-        alt Routed request fails
-            Routing-->>Apply: Failure and issues
-            Apply-->>User: Display returned issues
-            Note over Apply,Store: Retain edit mode and manual cache
-            break Apply attempt halted
-            end
-        else Routed request succeeds
-            Routing-->>Apply: Routed changes
-        end
-    end
-
-    opt Manual cache is non-empty
-        Apply->>Manual: createManualUsecases(request)
-        Note right of Manual: New: selectedUsecaseSystemIds = []\nEdit: [editedManualUsecaseSystemId]
-        alt Manual request fails
-            Manual-->>Apply: Failure and issues
-            Apply-->>User: Display returned issues
-            Note over Apply,Store: Retain edit mode and manual cache
-            break Apply attempt halted
-            end
-        else Manual request succeeds
-            Manual-->>Apply: Manual changes
-        end
-    end
-
-    opt One or more reviewable changes exist
-        Apply->>Review: Show accumulated creation changes
-        Review-->>User: Select manual rows (all checked initially)
-        User->>Review: Confirm checked changes
-        Review->>Apply: Checked change IDs
-    end
-    Apply->>Session: stageChanges(selected change IDs)
-    Session-->>Apply: Staged
-    Apply->>Session: commitChanges()
-    Session-->>Apply: Committed
-    Apply->>Session: endSession(), reload, exit edit mode
-    Apply->>Store: clearManualUsecase()
-```
-
-The manual endpoint runs only after successful routed reconciliation, when it
-is required. Any creation, staging, commit, or session-finalization error is a
-hard barrier: the remaining calls and cache cleanup do not occur.
-
-### 5.2 Reconciliation calls
-
-**Modified files:**
-`features/graph-designer/hooks/use-apply-discard.ts` and
-`features/graph-designer/model/apply-discard-coordinator.ts`
-
-Apply stays inside the existing `withMutationLock` boundary. It decides which
-creation endpoints to invoke from two independent conditions:
-
-| Condition | Endpoint |
-| --- | --- |
-| Graph additions/deletions require routing reconciliation | Existing `createUsecases` |
-| Manual cache is non-empty | `createManualUsecases` |
-
-If both conditions hold, the existing creation endpoint runs first and the
-manual endpoint runs second. They are sequential because each writes to the
-same backend edit session; the coordinator must not send both concurrently.
-Manual-only work must not invoke the routed endpoint, and graph-only work must
-not invoke the manual endpoint.
-
-The current temporary `routingTriggered = true` wiring must be replaced by the
-real graph-addition/deletion signal so a manual-only change does not generate
-a routed request.
-
-### 5.3 Error barrier
-
-Every determinate backend error is a hard barrier. A failure from either
-creation endpoint, staging, commit, or session finalization immediately stops
-the workflow. The coordinator does not call a later creation endpoint or any
-later finalization step, leaves edit mode and the manual cache intact, and
-publishes returned issues through the existing validation-results mechanism.
-
-For example, if `createUsecases` fails, `createManualUsecases` is not called.
-If the manual endpoint fails after routed reconciliation succeeds, the
-workflow does not stage, commit, end the session, or clear the cache.
-Transport-indeterminate results also stop the workflow and follow the existing
-reload/reconcile recovery path rather than continuing optimistically.
-
-### 5.4 Unified review
-
-Successful creation responses are accumulated into one review payload. The
-existing `ApplySummaryDialog` receives the combined results, retaining its
-existing routed-change presentation and adding a **Manual Usecases** section
-for changes returned by the manual endpoint. Each manual row is checked by
-default. Unchecking a row removes its `changeId` from the IDs supplied to
-`stageChanges`.
-
-Creation navigation uses all checked `CREATE` rows, including manual rows.
-Review cancellation is not a terminal operation; it leaves the edit session
-and manual cache unchanged.
-
-### 5.5 Terminal cleanup
-
-The existing finalization order remains:
-
-```text
+~~~text
 stageChanges -> commitChanges -> endSession -> reload -> exitEditMode
-```
+~~~
 
-`clearManualUsecase` runs only after a confirmed terminal Apply or Discard
-outcome. It never runs after a validation error, backend error, review
-cancellation, partial/failed commit, or indeterminate transport result.
+Clear manual selection only after confirmed terminal Apply or Discard.
 
 ## 6. Verification
 
-Tests extend the existing suites rather than introduce a separate test
-framework:
-
-| Area | Suite | Required coverage |
-| --- | --- | --- |
-| Manual slice | `tests/features/graph-designer/model/graph-designer-store.test.ts` or new slice suite | add, remove, deduplication, seed, clear, target context |
-| Request mapper | New graph-designer lib suite | exact new/update bodies, SGKV snapshots, optional exclusions |
-| Entity client | `tests/entities/edit-session/api/edit-session-api.test.ts` | endpoint and request body |
-| Header | `tests/features/graph-designer/ui/subgraph-header.test.tsx` | edit-mode visibility, immediate `+`/`-`, no cache UI, subsystem remount state |
-| Selection/edit entry | `tests/features/usecase-selection/ui/usecase-selection-control.test.tsx` | selected manual icon, single target, icons hidden during edit |
-| Coordinator/hook | `apply-discard-coordinator.test.ts` and `use-apply-discard.test.tsx` | endpoint conditions/order, hard error barrier, combined review, checked IDs, terminal-only cleanup |
-
-All tests mock `~shared/lib/logger` when rendered behavior logs. They assert
-that backend failures leave the store in edit mode and preserve manual cache
-content.
-
-## 7. Requirements alignment
-
-| Requirement area | Design coverage |
+| Area | Coverage |
 | --- | --- |
-| `+`/`-`, hidden cache, duplicate prevention | Sections 2 and 4.1 |
-| Subsystem persistence and edit seeding | Sections 2.2 and 4 |
-| New/update request contexts and manual API call | Section 3 and 5.1 |
-| Halt on backend errors | Section 5.2 |
-| Manual review and checkbox exclusion | Section 5.3 |
-| Successful Apply/Discard cleanup | Section 5.4 |
-| Immediate, accessible controls and logging | Sections 2, 4.1, and 6 |
+| Manual slice | add/remove, deduplication, endpoint validation, cascade cleanup, clear |
+| Request builder | exact body, required empty arrays, invariant failure |
+| Entity client | endpoint and request body |
+| Existing toolbar configuration | reused add/remove actions for every item kind, disabled link action, target-aware handler dispatch |
+| Apply coordinator | endpoint conditions/order, error barrier, review, terminal cleanup |
+
+Mock the shared logger in rendered suites. Assert failures preserve edit mode and
+manual selection.
