@@ -23,6 +23,7 @@ import {renderElement, type RenderElementContext} from './render-element';
 interface ElementTreeProps {
   arrayCounts: Map<string, number>;
   committedValues: Map<string, string>;
+  compactLabel?: boolean;
   dirtyPaths: Set<string>;
   elementValues: Map<string, string>;
   expandAll?: boolean;
@@ -103,6 +104,7 @@ function collectBranchKeys(
 export function ElementTree({
   arrayCounts,
   committedValues,
+  compactLabel,
   dirtyPaths,
   elementValues,
   expandAll,
@@ -155,6 +157,7 @@ export function ElementTree({
   const ctx: RenderElementContext = {
     arrayCounts,
     committedValues,
+    compactLabel,
     dirtyPaths,
     elementValues,
     invalidPaths,
@@ -172,7 +175,7 @@ export function ElementTree({
   };
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className={compactLabel ? 'h-full' : 'h-full overflow-y-auto'}>
       <Tree.Root
         key={`${item.id}-${resetKey}-${expandAll ? 'expand' : 'default'}`}
         collection={collection}

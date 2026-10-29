@@ -44,7 +44,7 @@ export function PropertyRow({
   const disabled = !isEditing || readOnly === true;
 
   return (
-    <div className="grid grid-cols-[minmax(7rem,35%)_minmax(0,1fr)] items-start gap-3 py-1">
+    <div className="grid grid-cols-[100px_minmax(0,1fr)] items-start gap-3 py-1 pl-3.75">
       <span className="pt-1 text-sm font-medium">{label}</span>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">

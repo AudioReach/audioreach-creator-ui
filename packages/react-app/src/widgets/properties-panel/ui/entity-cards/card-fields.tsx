@@ -40,7 +40,7 @@ export function CopyableIdRow({label, value}: {label: string; value: string}) {
   const displayValue = formatDisplayId(value);
 
   return (
-    <div className="grid grid-cols-[minmax(7rem,35%)_minmax(0,1fr)] items-start gap-3 py-1">
+    <div className="grid grid-cols-[100px_minmax(0,1fr)] items-start gap-3 py-1 pl-3.75">
       <span className="pt-1 text-sm font-medium">{label}</span>
       <CopyableId label={label} value={displayValue} />
     </div>

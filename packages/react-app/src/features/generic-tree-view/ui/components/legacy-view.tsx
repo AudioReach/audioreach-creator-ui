@@ -111,6 +111,7 @@ export function LegacyView({
     <ElementTree
       arrayCounts={arrayCounts}
       committedValues={committedValues}
+      compactLabel={compact}
       dirtyPaths={dirtyPaths}
       elementValues={elementValues}
       expandAll={expandAll}
@@ -143,23 +144,30 @@ export function LegacyView({
         </div>
       );
     }
-    return (
+    const branch = (
       <Tree.NodeProvider
         key={item.id}
         indexPath={indexPath}
         node={parent.children[indexPath[indexPath.length - 1]]}
       >
         <Tree.Branch>
-          <Tree.BranchNode>
+          <Tree.BranchNode style={compact ? {paddingLeft: 4} : undefined}>
             <Tree.NodeIndicator />
             <Tree.BranchTrigger />
             <Tree.NodeText>{item.name}</Tree.NodeText>
           </Tree.BranchNode>
           <Tree.BranchContent>
-            <div className="py-2 pl-4">{renderElementTree(item)}</div>
+            <div className="py-2 pl-4">{renderElementTree(item, compact)}</div>
           </Tree.BranchContent>
         </Tree.Branch>
       </Tree.NodeProvider>
+    );
+    return compact ? (
+      <div key={item.id} className="-ml-4">
+        {branch}
+      </div>
+    ) : (
+      branch
     );
   };
 
@@ -168,7 +176,9 @@ export function LegacyView({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4">
+      <div
+        className={`flex-1 p-4 ${compact ? 'overflow-auto' : 'overflow-y-auto'}`}
+      >
         {matchSets && filteredItems.length === 0 ? (
           <p className="text-neutral-secondary p-4 text-sm">
             {NO_MATCH_MESSAGE}
@@ -212,12 +222,14 @@ export function LegacyView({
         )}
       </div>
 
-      <StatusStrip
-        dirtyCount={dirtyCount}
-        paramCount={filteredItems.length}
-        setCount={setCount}
-        totalParamCount={items.length}
-      />
+      {!compact && (
+        <StatusStrip
+          dirtyCount={dirtyCount}
+          paramCount={filteredItems.length}
+          setCount={setCount}
+          totalParamCount={items.length}
+        />
+      )}
     </div>
   );
 }

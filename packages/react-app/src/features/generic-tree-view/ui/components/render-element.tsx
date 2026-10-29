@@ -37,6 +37,7 @@ import {SwitchControl} from './switch-control';
 export interface RenderElementContext {
   arrayCounts: Map<string, number>;
   committedValues: Map<string, string>;
+  compactLabel?: boolean;
   dirtyPaths: Set<string>;
   elementValues: Map<string, string>;
   invalidPaths: Set<string>;
@@ -51,6 +52,20 @@ export interface RenderElementContext {
   reduceLeafIndent?: boolean;
   setPaths: Set<string>;
   showRanges: boolean;
+}
+
+const REDUCED_INDENT_STYLE = {paddingLeft: 4};
+
+function getNodeIndentStyle(ctx: RenderElementContext) {
+  return ctx.reduceLeafIndent ? REDUCED_INDENT_STYLE : undefined;
+}
+
+function labelWidth(ctx: RenderElementContext): string {
+  return ctx.compactLabel ? 'w-24' : 'w-60';
+}
+
+function hintIndent(ctx: RenderElementContext): string {
+  return ctx.compactLabel ? 'pl-4' : 'pl-64';
 }
 
 export function renderElement(
@@ -89,7 +104,7 @@ function renderStruct(
       node={{id: nodeId, name: elem.name}}
     >
       <Tree.Branch>
-        <Tree.BranchNode>
+        <Tree.BranchNode style={getNodeIndentStyle(ctx)}>
           <Tree.NodeIndicator />
           <Tree.BranchTrigger />
           <Tree.NodeText>{elem.name}</Tree.NodeText>
@@ -142,7 +157,9 @@ function renderArray(
             className={`self-stretch ${barClassName} w-1 shrink-0 rounded-[2px]`}
           />
           <div className="flex items-center gap-4 py-2">
-            <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
+            <Tree.NodeText
+              className={`${labelWidth(ctx)} shrink-0 wrap-break-word`}
+            >
               {elem.name}
             </Tree.NodeText>
             <div className="shrink-0">
@@ -205,7 +222,7 @@ function renderArray(
       node={{id: arrayPath, name: elem.name}}
     >
       <Tree.Branch>
-        <Tree.BranchNode>
+        <Tree.BranchNode style={getNodeIndentStyle(ctx)}>
           <Tree.NodeIndicator />
           <Tree.BranchTrigger />
           <Tree.NodeText>{instanceCountLabel}</Tree.NodeText>
@@ -265,7 +282,7 @@ function renderLeaf(
   }
 
   const labelEl = (
-    <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
+    <Tree.NodeText className={`${labelWidth(ctx)} shrink-0 wrap-break-word`}>
       {elem.name}
     </Tree.NodeText>
   );
@@ -314,12 +331,14 @@ function renderLeaf(
         node={{id: key, name: elem.name}}
       >
         <Tree.Branch>
-          <Tree.BranchNode>
+          <Tree.BranchNode style={getNodeIndentStyle(ctx)}>
             <Tree.NodeIndicator />
             <Tree.BranchTrigger />
             {dirtyBar}
             <div className="flex items-center gap-4">
-              <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
+              <Tree.NodeText
+                className={`${labelWidth(ctx)} shrink-0 wrap-break-word`}
+              >
                 {elem.name}
               </Tree.NodeText>
               <span className="font-mono text-sm">{currentValue}</span>
@@ -351,8 +370,6 @@ function renderLeaf(
     ctx.showRanges && hasRange
       ? `Range: ${toHexString(elem.min!)} – ${toHexString(elem.max!)}`
       : null;
-  const leafStyle = ctx.reduceLeafIndent ? {paddingLeft: 4} : undefined;
-
   if (isFile) {
     return (
       <Tree.NodeProvider
@@ -360,7 +377,10 @@ function renderLeaf(
         indexPath={indexPath}
         node={{id: key, name: elem.name}}
       >
-        <Tree.LeafNode className="h-auto min-h-0 items-start" style={leafStyle}>
+        <Tree.LeafNode
+          className="h-auto min-h-0 items-start"
+          style={getNodeIndentStyle(ctx)}
+        >
           <Tree.NodeIndicator />
           {dirtyBar}
           <div className="flex w-full min-w-0 flex-col gap-1 py-1">
@@ -382,9 +402,11 @@ function renderLeaf(
         className={
           rangeHintText || isInvalid
             ? 'h-auto min-h-0 items-start py-1'
-            : undefined
+            : ctx.compactLabel
+              ? 'h-auto min-h-10 py-1'
+              : undefined
         }
-        style={leafStyle}
+        style={getNodeIndentStyle(ctx)}
       >
         <Tree.NodeIndicator />
         {dirtyBar}
@@ -394,12 +416,14 @@ function renderLeaf(
             <div className="shrink-0">{control}</div>
           </div>
           {rangeHintText && (
-            <div className="text-neutral-secondary pl-64 text-xs">
+            <div
+              className={`text-neutral-secondary ${hintIndent(ctx)} text-xs`}
+            >
               {rangeHintText}
             </div>
           )}
           {isInvalid && elem.min !== undefined && elem.max !== undefined && (
-            <span className="text-support-danger pl-64 text-xs">
+            <span className={`text-support-danger ${hintIndent(ctx)} text-xs`}>
               {`Must be between ${toHexString(elem.min)} and ${toHexString(elem.max)}`}
             </span>
           )}
