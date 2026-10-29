@@ -49,6 +49,7 @@ export interface ContextMenuConfigOptions {
   /** true for Subsystem level and System Workflow; shows the subsystem move actions. */
   onAddToManualUsecase: (subgraphId: number) => void;
   onRemoveFromManualUsecase: (subgraphId: number) => void;
+  onRequestMoveToSubsystem: (nodeId: string) => void;
   subsystemScoped: boolean;
 }
 
@@ -118,6 +119,25 @@ function isPairLink(store: GraphDesignerStore, connectionId: string): boolean {
     [...pair.dataLinks, ...pair.controlLinks].some(
       (link) => link.systemId === connectionId,
     ),
+  );
+}
+
+/** The subsystem an item currently sits in, or null at top level. */
+export function containingSubsystemIdOf(
+  graphData: UsecaseGraphData | null,
+  nodeId: string,
+): string | null {
+  if (!graphData) {
+    return null;
+  }
+  const subsystem = graphData.subsystems[nodeId];
+  if (subsystem) {
+    return subsystem.parentSubsystemId ?? null;
+  }
+  return (
+    Object.values(graphData.subsystems).find((candidate) =>
+      candidate.subgraphs.includes(nodeId),
+    )?.subsystemId ?? null
   );
 }
 
@@ -280,7 +300,7 @@ export function buildContextMenuConfig(
           return;
         }
         if (actionId === 'move-to-subsystem') {
-          void store.moveToSubsystem(get, nodeId, null);
+          options.onRequestMoveToSubsystem(nodeId);
           return;
         }
         if (actionId === 'remove-from-subsystem') {

@@ -20,6 +20,8 @@ interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
   defaultExpandedIds?: number[];
   onClick: (systemId: string) => void;
+  /** Adds hover and selection colours for use as a destination picker. */
+  pickerMode?: boolean;
   selectedSystemId: string;
 }
 
@@ -73,6 +75,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
   data,
   defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
   onClick,
+  pickerMode = false,
   selectedSystemId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,6 +198,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
           key={treeNode.id}
           isExpanded={isExpanded}
           onClick={onClick}
+          pickerMode={pickerMode}
           rootNode
           searchTerm={debouncedSearchTerm} // Using the debounced term for visibility to keep it in sync with expansion
           selectedSystemId={selectedSystemId}
