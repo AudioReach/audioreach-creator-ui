@@ -19,6 +19,8 @@ import {
   type StructDto,
 } from '~entities/spf-module-data';
 
+import {areNumericStringsEqual} from '~shared/lib/numeric-string';
+
 import {elementKey} from '../../lib/element-key';
 import {isBitField} from '../../lib/is-bit-field';
 import {isBooleanSwitch, resolveBooleanPair} from '../../lib/is-boolean-switch';
@@ -110,6 +112,7 @@ function renderArray(
     const tableKey = arrayPath;
     const valueElements = getArrayValueElements(elem) as ConfigElementDto[];
     const rows = valueElements.map((inst, i) => ({
+      dataType: inst.dataType,
       index: i,
       value:
         ctx.elementValues.get(
@@ -117,13 +120,19 @@ function renderArray(
         ) ?? inst.value,
     }));
     const originalRows = valueElements.map((inst, i) => ({
+      dataType: inst.dataType,
       index: i,
       value:
         ctx.committedValues.get(
           elementKey(ctx.itemId, ...ctx.pathPrefix, inst.name),
         ) ?? inst.value,
     }));
-    const isTableDirty = rows.some((r, i) => r.value !== originalRows[i].value);
+    const isTableDirty = rows.some(
+      (r, i) =>
+        r.value !== originalRows[i].value &&
+        (r.dataType === 'RawData' ||
+          !areNumericStringsEqual(r.value, originalRows[i].value)),
+    );
     const barClassName = isTableDirty ? 'bg-support-warning' : 'bg-transparent';
 
     return (
@@ -458,10 +467,12 @@ function renderControl(
     return (
       <QFormatControl
         currentValue={currentValue}
+        dataType={elem.dataType}
         disabled={disabled}
         elementKey={key}
         onAutoCommit={ctx.onAutoCommit}
         onValueChange={onValueChange}
+        precision={elem.precision}
         qFormatN={n}
       />
     );
@@ -470,6 +481,7 @@ function renderControl(
   return (
     <HexInputControl
       currentValue={currentValue}
+      dataType={elem.dataType}
       disabled={disabled}
       elementKey={key}
       onAutoCommit={ctx.onAutoCommit}

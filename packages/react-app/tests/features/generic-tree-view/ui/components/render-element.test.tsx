@@ -435,3 +435,69 @@ describe('renderElement debounce cleanup on unmount', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 });
+
+describe('calibration numeric display', () => {
+  it('displays decimal backend integers in hex', () => {
+    const elem = makeConfig({
+      dataType: 'UInt32',
+      name: 'log_code',
+      value: '5510',
+    });
+    render(<>{renderElement(elem, makeCtx(), [0])}</>);
+    expect(screen.getAllByTestId('text-input')[0]).toHaveValue('0x00001586');
+  });
+
+  it.each(['27', 'Q27'])(
+    'uses backend Q-format %s with five decimal places',
+    (qFormat) => {
+      const elem = makeConfig({
+        dataType: 'Int32',
+        name: 'threshold',
+        qFormat,
+        value: '189813',
+      });
+      const onValueChange = jest.fn();
+      render(<>{renderElement(elem, makeCtx({onValueChange}), [0])}</>);
+      expect(screen.getAllByTestId('text-input')[0]).toHaveValue('0x0002E575');
+      expect(screen.getAllByTestId('text-input')[1]).toHaveValue('0.00141');
+      fireEvent.focus(screen.getAllByTestId('text-input')[1]);
+      fireEvent.blur(screen.getAllByTestId('text-input')[1]);
+      expect(onValueChange).not.toHaveBeenCalled();
+    },
+  );
+
+  it('interprets signed hexadecimal Q-format data', () => {
+    const elem = makeConfig({
+      dataType: 'Int32',
+      name: 'gain',
+      qFormat: '27',
+      value: '0xFC000000',
+    });
+    render(<>{renderElement(elem, makeCtx(), [0])}</>);
+    expect(screen.getAllByTestId('text-input')[1]).toHaveValue('-0.50000');
+  });
+
+  it('honors supplied decimal precision', () => {
+    const elem = makeConfig({
+      dataType: 'Int32',
+      name: 'gain',
+      precision: 7,
+      qFormat: '27',
+      value: '189813',
+    });
+    render(<>{renderElement(elem, makeCtx(), [0])}</>);
+    expect(screen.getAllByTestId('text-input')[1]).toHaveValue('0.0014142');
+  });
+
+  it('preserves wide integers without truncation', () => {
+    const elem = makeConfig({
+      dataType: 'UInt64',
+      name: 'wide',
+      value: '4294967296',
+    });
+    render(<>{renderElement(elem, makeCtx(), [0])}</>);
+    expect(screen.getAllByTestId('text-input')[0]).toHaveValue(
+      '0x0000000100000000',
+    );
+  });
+});

@@ -7,8 +7,11 @@ import {useEffect, useRef} from 'react';
 
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
+import {formatNumericValue} from '../../lib/format-numeric-value';
+
 export interface HexInputControlProps {
   currentValue: string;
+  dataType?: string;
   disabled: boolean;
   elementKey: string;
   onAutoCommit?: () => void;
@@ -17,6 +20,7 @@ export interface HexInputControlProps {
 
 export function HexInputControl({
   currentValue,
+  dataType,
   disabled,
   elementKey: key,
   onAutoCommit,
@@ -52,7 +56,7 @@ export function HexInputControl({
       aria-label={key}
       className="w-32"
       clearable={false}
-      defaultValue={currentValue}
+      defaultValue={formatNumericValue(currentValue, dataType)}
       disabled={disabled}
       onFocusChange={(focused) => {
         if (!focused) {

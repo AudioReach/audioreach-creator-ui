@@ -28,7 +28,7 @@ function setupTableMock() {
             column: {columnDef: col, id: col.accessorKey},
             getContext: () => ({
               getValue: () => row[col.accessorKey as 'index' | 'value'],
-              row: {index: rowIdx},
+              row: {index: rowIdx, original: row},
             }),
             id: `r${rowIdx}_${col.accessorKey}`,
           })),
@@ -46,6 +46,16 @@ describe('TableComponent', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('formats decimal array cells as hex', () => {
+    render(
+      <TableComponent
+        data={[{index: 0, value: '5510'}]}
+        onCellChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('text-input')).toHaveValue('0x00001586');
   });
 
   it('renders one TextInput per row for the value column', () => {

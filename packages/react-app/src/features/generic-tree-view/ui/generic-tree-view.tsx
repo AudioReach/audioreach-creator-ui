@@ -22,6 +22,7 @@ import {buildDirtyItems as buildDirtyItemsFrom} from '../lib/build-dirty-items';
 import {buildLengthFormulaMap} from '../lib/build-length-formula-map';
 import {buildMatchSets} from '../lib/build-match-sets';
 import {findElementByKey} from '../lib/find-element-by-key';
+import {normalizeNumericValue} from '../lib/format-numeric-value';
 import {isPolicyVisible} from '../lib/is-policy-visible';
 import {itemIdsFromPaths} from '../lib/item-ids-from-paths';
 import {parseHexOrDec} from '../lib/parse-hex-or-dec';
@@ -384,8 +385,22 @@ function GenericTreeViewInner(
       const nextElementValues = new Map(elementValues);
       nextElementValues.set(key, value);
 
+      const itemId = key.split('/')[0];
+      const item = data.items.find((p) => p.id === itemId);
+      const elem = item
+        ? findElementByKey(item.elements, itemId, [], key)
+        : undefined;
+      value = normalizeNumericValue(value, elem?.dataType);
+      nextElementValues.set(key, value);
       const committedVal = committedValues.get(key);
-      const isDirty = value !== committedVal;
+      const isDirty =
+        value !== committedVal &&
+        (elem?.dataType === 'RawData' ||
+          committedVal === undefined ||
+          !areNumericStringsEqual(
+            value,
+            normalizeNumericValue(committedVal, elem?.dataType),
+          ));
       const nextDirtyPaths = new Set(dirtyPaths);
       if (isDirty) {
         nextDirtyPaths.add(key);
@@ -396,11 +411,8 @@ function GenericTreeViewInner(
       const nextSetPaths = new Set(setPaths);
       nextSetPaths.delete(key);
 
-      const itemId = key.split('/')[0];
-      const item = data.items.find((p) => p.id === itemId);
       const nextInvalidPaths = new Set(invalidPaths);
       if (item) {
-        const elem = findElementByKey(item.elements, itemId, [], key);
         if (
           elem &&
           isPolicyVisible(
