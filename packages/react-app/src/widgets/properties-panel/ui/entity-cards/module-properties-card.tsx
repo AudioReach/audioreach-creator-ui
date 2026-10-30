@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
+
 import {useCallback} from 'react';
 
 import {patchSpfModule} from '~entities/spf-modules';
@@ -208,8 +210,12 @@ function ModulePropertiesCardBody({
         onChange={(value) => aliasSave.saveText(String(value))}
         value={aliasSave.value}
       />
-      <CopyableIdRow label="Module ID" value={String(module.naturalId)} />
-      <CopyableIdRow label="Instance ID" value={module.systemId} />
+      <CopyableIdRow label="System ID" value={module.systemId} />
+      <CopyableIdRow
+        label="Instance ID"
+        preserveFormat
+        value={formatModuleInstanceId(module.naturalId)}
+      />
       <PropertyRow
         error={containerSave.error}
         isEditing={isEditing}
@@ -366,10 +372,13 @@ function usePortCountSave({
             };
           }
 
-          const refreshResult = await getModulesBySystemIds(projectId, [moduleId]);
+          const refreshResult = await getModulesBySystemIds(projectId, [
+            moduleId,
+          ]);
           const refreshedModule =
-            refreshResult.data?.find((module) => module.systemId === moduleId) ??
-            result.data;
+            refreshResult.data?.find(
+              (module) => module.systemId === moduleId,
+            ) ?? result.data;
           const committedValue = refreshedModule
             ? (portCountValueFromModule(refreshedModule, field) ?? nextValue)
             : nextValue;

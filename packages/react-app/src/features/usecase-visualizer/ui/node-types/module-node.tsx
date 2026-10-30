@@ -9,7 +9,7 @@ import type {Node, NodeProps} from '@xyflow/react';
 import {Box, LogIn, LogOut, type LucideIcon, ScrollText} from 'lucide-react';
 
 import type {ModuleNode as ModuleNodeData, ModuleShape} from '~entities/graph';
-import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
+import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 
 import {NODE_DIMENSIONS} from '../../lib/node-dimensions';
 import {useNodeHighlight} from '../../model/use-node-highlight';
@@ -106,12 +106,12 @@ function defaultFooter(
       className="text-primary text-xxs flex flex-col items-center leading-tight"
       data-testid="module-default-footer"
     >
-      <span className="max-w-full whitespace-normal break-words text-center">
+      <span className="max-w-full text-center break-words whitespace-normal">
         {node.alias ?? node.label}
       </span>
       {showModuleInstanceId ? (
         <span className="text-secondary" data-testid="module-instance-id">
-          {`IID: ${ConvertNumberToHexString(node.moduleId) ?? node.moduleId}`}
+          {`IID: ${formatModuleInstanceId(node.moduleId)}`}
         </span>
       ) : null}
     </div>
@@ -178,6 +178,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
     <div
       className="relative"
       data-locked={isLocked || undefined}
+      data-module-instance-id={node.moduleId}
       data-node-id={node.id}
       data-pp-module={isPpModule || undefined}
       data-shape={shape}
@@ -212,14 +213,14 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
         {node.icon ? (
           <img
             alt=""
-            className="module-icon absolute left-1/2 top-1/2 block h-6 w-6 -translate-x-1/2 -translate-y-1/2"
+            className="module-icon absolute top-1/2 left-1/2 block h-6 w-6 -translate-x-1/2 -translate-y-1/2"
             data-testid="module-icon"
             src={node.icon}
           />
         ) : (
           <ShapeIcon
             aria-hidden
-            className="module-icon text-secondary absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className="module-icon text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             data-testid="module-shape-icon"
             size={20}
           />

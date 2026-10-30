@@ -36,8 +36,16 @@ export function ReadOnlyProperty({
   );
 }
 
-export function CopyableIdRow({label, value}: {label: string; value: string}) {
-  const displayValue = formatDisplayId(value);
+export function CopyableIdRow({
+  label,
+  preserveFormat = false,
+  value,
+}: {
+  label: string;
+  preserveFormat?: boolean;
+  value: string;
+}) {
+  const displayValue = preserveFormat ? value : formatDisplayId(value);
 
   return (
     <div className="grid grid-cols-[minmax(7rem,35%)_minmax(0,1fr)] items-start gap-3 py-1">

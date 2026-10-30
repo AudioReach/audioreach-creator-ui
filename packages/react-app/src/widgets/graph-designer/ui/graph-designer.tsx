@@ -1514,6 +1514,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
         {/* Search overlay – floats above the graph canvas at top-right */}
         <div
+          aria-hidden={!isSearchVisible}
           className={`absolute top-1.25 right-3 z-10 w-95 max-w-[calc(100%-24px)] transition-[opacity,transform] duration-300 ease-in-out ${
             isSearchVisible
               ? 'pointer-events-auto translate-y-0 opacity-100'
