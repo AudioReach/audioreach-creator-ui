@@ -40,6 +40,7 @@ import {UsecaseListPanel} from './usecase-list-panel';
 
 /** Stable empty array — avoids a new reference on every render when unset. */
 const EMPTY_ITEMS: UsecaseItem[] = [];
+const EMPTY_EXPANDED_CATEGORIES: string[] = [];
 
 /** z-index for the autosuggestion popup portal. */
 const SUGGESTION_POPUP_Z_INDEX = 9998;
@@ -47,6 +48,15 @@ const SUGGESTION_POPUP_Z_INDEX = 9998;
 /** Returns all leaf items (no children) from a category. */
 const getAllLeafItems = (category: UsecaseCategory): UsecaseItem[] =>
   getLeafItems(category.items);
+
+/** Marks every nested group as expanded so search matches are visible. */
+function expandUsecaseItems(items: UsecaseItem[]): UsecaseItem[] {
+  return items.map((item) =>
+    item.children?.length
+      ? {...item, children: expandUsecaseItems(item.children), expanded: true}
+      : item,
+  );
+}
 
 interface UsecaseSelectionControlProps {
   /** When false, the delete button is hidden in the list panel. Defaults to true. */
@@ -76,7 +86,8 @@ export const UsecaseSelectionControl: React.FC<
   );
   const searchTerm = projectState?.searchTerm ?? '';
   const searchScopeOption = projectState?.searchScopeOption ?? 'All';
-  const expandedCategories = projectState?.expandedCategories ?? [];
+  const expandedCategories =
+    projectState?.expandedCategories ?? EMPTY_EXPANDED_CATEGORIES;
   const recentlySelected = projectState?.recentlySelected ?? EMPTY_ITEMS;
   const searchHistory = projectState?.searchHistory ?? [];
 
@@ -149,9 +160,7 @@ export const UsecaseSelectionControl: React.FC<
       return;
     }
 
-    const initial = localUsecaseData
-      .filter((cat) => cat.expanded)
-      .map((cat) => cat.name);
+    const initial = localUsecaseData.map((cat) => cat.name);
 
     if (initial.length > 0) {
       setExpandedCategories(projectId, initial);
@@ -301,6 +310,21 @@ export const UsecaseSelectionControl: React.FC<
     return filterUsecasesLocally(localUsecaseData, searchTerm);
   }, [isComplex, searchTerm, localUsecaseData]);
 
+  // Search results are always shown fully expanded so matches are visible.
+  const expandedSearchData = useMemo(() => {
+    const results = searchData ?? localSearchData;
+    return (
+      results?.map((cat) => ({...cat, items: expandUsecaseItems(cat.items)})) ??
+      null
+    );
+  }, [searchData, localSearchData]);
+
+  // Derived, not stored, so the saved expansion state is untouched by searches.
+  const panelExpandedCategories = useMemo(
+    () => expandedSearchData?.map((cat) => cat.name) ?? expandedCategories,
+    [expandedSearchData, expandedCategories],
+  );
+
   // ── Display data ─────────────────────────────────────────────────────────────
 
   // ── Autosuggestion data ──────────────────────────────────────────────────────
@@ -317,11 +341,8 @@ export const UsecaseSelectionControl: React.FC<
   // If no search is active and there are recently selected usecases, prepend a
   // virtual "Recently Selected" category at the top of the list.
   const panelUsecaseData: UsecaseCategory[] = useMemo(() => {
-    if (searchData !== null) {
-      return searchData;
-    }
-    if (localSearchData !== null) {
-      return localSearchData;
+    if (expandedSearchData !== null) {
+      return expandedSearchData;
     }
     if (recentlySelected.length === 0) {
       return localUsecaseData;
@@ -330,7 +351,7 @@ export const UsecaseSelectionControl: React.FC<
       {expanded: true, items: recentlySelected, name: 'Recently Selected'},
       ...localUsecaseData,
     ];
-  }, [searchData, localSearchData, recentlySelected, localUsecaseData]);
+  }, [expandedSearchData, recentlySelected, localUsecaseData]);
 
   const panelLeafItemsByName = useMemo(
     () =>
@@ -739,7 +760,7 @@ export const UsecaseSelectionControl: React.FC<
         <div className="bg-raised border-neutral-02 absolute top-full right-0 left-0 z-10 mt-1 flex max-h-96 rounded-md border shadow-lg">
           <UsecaseListPanel
             allowDelete={allowDelete}
-            expandedCategories={expandedCategories}
+            expandedCategories={panelExpandedCategories}
             handleSelectAll={handleSelectAll}
             handleSelectCategory={handleSelectCategory}
             handleSelectUsecase={handleSelectUsecase}
