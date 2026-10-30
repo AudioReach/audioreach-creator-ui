@@ -98,6 +98,10 @@ describe('withGhostFallback', () => {
     );
 
     expect(screen.getByTestId('ghost-node')).toBeInTheDocument();
+    expect(screen.getByTestId('ghost-node')).toHaveAttribute(
+      'data-module-instance-id',
+      '1',
+    );
     expect(screen.queryByTestId('wrapped')).not.toBeInTheDocument();
     expect(Wrapped).not.toHaveBeenCalled();
   });

@@ -83,7 +83,7 @@ describe('ModuleNode — default footer', () => {
     renderModuleNode(makeModule({label: 'Gain', moduleId: 42}));
     const footer = screen.getByTestId('module-default-footer');
     expect(footer).toHaveTextContent('Gain');
-    expect(footer).toHaveTextContent('IID: 0x0000002A');
+    expect(footer).toHaveTextContent('IID: 0x002A');
   });
 
   it('uses alias instead of label when alias is set', () => {
@@ -384,4 +384,24 @@ describe('ModuleNode — link-count fill color', () => {
       'bg-[var(--color-background-support-neutral-medium)]',
     );
   });
+});
+
+it.each([0x4002, 0x404b, 0x10000])(
+  'exposes natural instance %s independently of footer visibility',
+  (moduleId) => {
+    renderModuleNode(makeModule({moduleId}), {
+      nodeDisplayConfig: {showModuleInstanceId: false},
+    });
+    expect(screen.getByTestId('module-node')).toHaveAttribute(
+      'data-module-instance-id',
+      String(moduleId),
+    );
+  },
+);
+
+it('preserves significant digits in larger instance IDs', () => {
+  renderModuleNode(makeModule({moduleId: 0x10000}));
+  expect(screen.getByTestId('module-instance-id')).toHaveTextContent(
+    'IID: 0x10000',
+  );
 });

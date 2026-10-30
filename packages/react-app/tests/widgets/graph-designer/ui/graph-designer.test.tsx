@@ -103,9 +103,7 @@ jest.mock('~features/graph-designer/ui/apply-discard-controls', () => ({
   }: {
     projectId: string;
     selectedUsecaseSystemIds: string[];
-  }) => (
-    <div data-testid="apply-discard-controls">{projectId}</div>
-  ),
+  }) => <div data-testid="apply-discard-controls">{projectId}</div>,
 }));
 
 jest.mock(
@@ -1688,4 +1686,14 @@ describe('GraphDesigner - subsystem simplification', () => {
     });
     expect(graphDesignerStore.getState().activeSubsystemId).toBe('subsystem-1');
   });
+});
+
+it('hides closed search from accessibility queries and exposes it when opened', () => {
+  const {graphDesignerStore} = renderGraphDesigner({
+    graphData: makeGraphData(),
+  });
+  const panel = screen.getByTestId('search-component').parentElement;
+  expect(panel).toHaveAttribute('aria-hidden', 'true');
+  act(() => graphDesignerStore.getState().setSearchVisible(true));
+  expect(panel).toHaveAttribute('aria-hidden', 'false');
 });

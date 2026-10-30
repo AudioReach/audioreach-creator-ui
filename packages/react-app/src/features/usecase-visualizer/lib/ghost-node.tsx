@@ -66,6 +66,9 @@ export function GhostNode({node, selected}: GhostNodeProps) {
     <div
       aria-label={node.label}
       className={classNames}
+      data-module-instance-id={
+        node.nodeKind === 'module' ? node.moduleId : undefined
+      }
       data-node-id={node.id}
       data-testid="ghost-node"
       style={{height: node.height, width: node.width}}

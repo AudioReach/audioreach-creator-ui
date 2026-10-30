@@ -126,7 +126,7 @@ describe('node-info', () => {
 
     expect(resolveComponentInfo(graphData, 'm-1')).toEqual({
       displayName: 'Source Module',
-      id: 'm-1',
+      id: '0x0065',
       kind: 'module',
     });
     expect(resolveComponentInfo(graphData, 'ss-1')).toEqual({

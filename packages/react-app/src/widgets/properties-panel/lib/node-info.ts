@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
+
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 
 import {formatDisplayId} from './display-id';
@@ -35,7 +37,7 @@ export function resolveComponentInfo(
   if (module) {
     return {
       displayName: module.displayName,
-      id: formatDisplayId(module.systemId),
+      id: formatModuleInstanceId(module.naturalId),
       kind: 'module',
     };
   }
@@ -91,7 +93,10 @@ export function buildDirectLinkInfo(
 
   return {
     destination: {
-      component: resolveComponentInfo(graphData, connection.destinationSystemId),
+      component: resolveComponentInfo(
+        graphData,
+        connection.destinationSystemId,
+      ),
       nodeId: connection.destinationSystemId,
       portId: connection.destinationPortSystemId,
       portLabel: resolvePortLabel(

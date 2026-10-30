@@ -64,10 +64,10 @@ describe('ModulePropertiesCard', () => {
     );
 
     expect(screen.getByText('Alias')).toBeInTheDocument();
-    expect(screen.getByText('0x64')).toBeInTheDocument();
+    expect(screen.getByText('0x0064')).toBeInTheDocument();
     expect(screen.getByText('mod-1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('0x1')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Copy Module ID'})).toBeEnabled();
+    expect(screen.getByRole('button', {name: 'Copy System ID'})).toBeEnabled();
     expect(
       screen.getByRole('button', {name: 'Copy Instance ID'}),
     ).toBeEnabled();
@@ -76,7 +76,9 @@ describe('ModulePropertiesCard', () => {
     expect(screen.getByDisplayValue('1')).not.toHaveAttribute('readOnly');
     expect(screen.queryByDisplayValue('4294967295')).not.toBeInTheDocument();
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
     );
     expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument();
   });
@@ -103,7 +105,9 @@ describe('ModulePropertiesCard', () => {
 
     expect(screen.getByDisplayValue('1')).toHaveAttribute('readOnly');
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
     );
   });
 
@@ -124,7 +128,9 @@ describe('ModulePropertiesCard', () => {
     expect(screen.getByDisplayValue('4')).toHaveAttribute('readOnly');
     expect(screen.getByDisplayValue('1')).toHaveAttribute('readOnly');
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
     );
   });
 
@@ -150,7 +156,9 @@ describe('ModulePropertiesCard', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Alias')).not.toBeInTheDocument();
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
     );
   });
 
@@ -217,7 +225,9 @@ describe('ModulePropertiesCard', () => {
       />,
     );
     await waitFor(() =>
-      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', ['mod-1']),
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
     );
 
     const outputPortsInput = screen.getByDisplayValue('4');
