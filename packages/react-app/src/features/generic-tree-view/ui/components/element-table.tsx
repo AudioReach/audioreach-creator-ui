@@ -9,7 +9,10 @@ import {createColumnHelper, getCoreRowModel} from '@qualcomm-ui/core/table';
 import {flexRender, Table, useReactTable} from '@qualcomm-ui/react/table';
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
+import {formatNumericValue} from '../../lib/format-numeric-value';
+
 interface TableRowData {
+  dataType?: string;
   index: number;
   value: string;
 }
@@ -17,7 +20,7 @@ interface TableRowData {
 const columnHelper = createColumnHelper<TableRowData>();
 
 interface TableComponentProps {
-  data: Array<{index: number; value: string}>;
+  data: TableRowData[];
   disabled?: boolean;
   onCellChange: (rowIndex: number, value: string) => void;
 }
@@ -71,7 +74,10 @@ export function TableComponent({
             <TextInput
               aria-label={`element value row ${info.row.index}`}
               clearable={false}
-              defaultValue={info.getValue()}
+              defaultValue={formatNumericValue(
+                info.getValue(),
+                info.row.original.dataType,
+              )}
               disabled={disabled}
               onValueChange={(value) => handleCellChange(info.row.index, value)}
               size="sm"

@@ -1375,7 +1375,7 @@ describe('reset bumps resetKey', () => {
     // After reset + remount, the input should have the original defaultValue.
     // We query the input again since the DOM node may have been replaced.
     const resetInput = getInputByAriaLabel('100/gain');
-    expect(resetInput).toHaveValue('10');
+    expect(resetInput).toHaveValue('0x0000000A');
   });
 });
 
@@ -1560,4 +1560,14 @@ describe('resizable splitter ARIA and keyboard', () => {
     const lastCall = calls[calls.length - 1][0] as {panelSplitPct?: number};
     expect(lastCall.panelSplitPct).toBe(20);
   });
+});
+
+it('keeps representation-only edits clean', () => {
+  const ref = createRef<GenericTreeViewHandle>();
+  render(<GenericTreeView ref={ref} data={makeData()} title="Test" />);
+  fireEvent.change(getInputByAriaLabel('100/gain'), {
+    target: {value: '0x0000000A'},
+  });
+  act(() => jest.advanceTimersByTime(150));
+  expect(ref.current?.getEditedTreeViewItems()).toBeNull();
 });

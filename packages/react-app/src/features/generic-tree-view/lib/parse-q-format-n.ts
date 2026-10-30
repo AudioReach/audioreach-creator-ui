@@ -4,6 +4,6 @@
  */
 
 export function parseQFormatN(qFormat: string): number {
-  const m = qFormat.match(/^[Qq](\d+)$/);
+  const m = qFormat.match(/^[Qq]?(\d+)$/);
   return m ? parseInt(m[1], 10) : 15;
 }

@@ -7,28 +7,41 @@ import {useEffect, useRef, useState} from 'react';
 
 import {TextInput} from '@qualcomm-ui/react/text-input';
 
+import {
+  formatNumericValue,
+  normalizeNumericValue,
+} from '../../lib/format-numeric-value';
 import {parseHexOrDec} from '../../lib/parse-hex-or-dec';
 
 export interface QFormatControlProps {
   currentValue: string;
+  dataType?: string;
   disabled: boolean;
   elementKey: string;
   onAutoCommit?: () => void;
   onValueChange: (key: string, value: string) => void;
+  precision?: number;
   qFormatN: number;
 }
 
 export function QFormatControl({
   currentValue,
+  dataType,
   disabled,
   elementKey: key,
   onAutoCommit,
   onValueChange,
+  precision = 5,
   qFormatN,
 }: QFormatControlProps) {
-  const [hexVal, setHexVal] = useState(currentValue);
+  const [hexVal, setHexVal] = useState(
+    formatNumericValue(currentValue, dataType),
+  );
   const [decVal, setDecVal] = useState(
-    (parseHexOrDec(currentValue) / Math.pow(2, qFormatN)).toFixed(3),
+    (
+      parseHexOrDec(normalizeNumericValue(currentValue, dataType)) /
+      Math.pow(2, qFormatN)
+    ).toFixed(precision),
   );
   const hexTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,9 +91,9 @@ export function QFormatControl({
         }}
         onValueChange={(value) => {
           setHexVal(value);
-          const num = parseHexOrDec(value);
+          const num = parseHexOrDec(normalizeNumericValue(value, dataType));
           if (!isNaN(num)) {
-            setDecVal((num / Math.pow(2, qFormatN)).toFixed(3));
+            setDecVal((num / Math.pow(2, qFormatN)).toFixed(precision));
           }
           if (hexTimerRef.current) {
             clearTimeout(hexTimerRef.current);
@@ -110,9 +123,10 @@ export function QFormatControl({
           setDecVal(value);
           const num = parseFloat(value);
           if (!isNaN(num)) {
-            const newHex = `0x${Math.round(num * Math.pow(2, qFormatN))
-              .toString(16)
-              .padStart(8, '0')}`;
+            const newHex = formatNumericValue(
+              String(Math.round(num * Math.pow(2, qFormatN))),
+              dataType,
+            );
             setHexVal(newHex);
             if (decTimerRef.current) {
               clearTimeout(decTimerRef.current);
