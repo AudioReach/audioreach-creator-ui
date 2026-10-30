@@ -59,6 +59,7 @@ function GenericTreeViewInner(
   const {
     autoCommit,
     className,
+    compact = false,
     data,
     defaultPolicyFilter = ['BASIC'],
     defaultViewMode = 'modern',
@@ -861,6 +862,7 @@ function GenericTreeViewInner(
               <LegacyView
                 arrayCounts={arrayCounts}
                 committedValues={committedValues}
+                compact={compact}
                 dirtyPaths={dirtyPaths}
                 elementValues={elementValues}
                 expandAll={legacyExpandAll}
