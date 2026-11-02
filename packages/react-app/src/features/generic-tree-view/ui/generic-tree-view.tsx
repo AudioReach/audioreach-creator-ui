@@ -383,7 +383,6 @@ function GenericTreeViewInner(
       // Compute next state in locals so the emission below sees consistent
       // values (parallel setState calls with prev => ... don't compose).
       const nextElementValues = new Map(elementValues);
-      nextElementValues.set(key, value);
 
       const itemId = key.split('/')[0];
       const item = data.items.find((p) => p.id === itemId);
