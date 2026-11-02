@@ -125,6 +125,14 @@ export interface Port {
   /** Max edges connectable to this port. Absent means unlimited. */
   maxConnections?: number;
   name?: string;
+  /**
+   * Stable, definition-level port number (e.g. "3"). Unlike `id` (the
+   * per-project backend-assigned systemId), this is predictable across
+   * projects for a given module type — rendered as a DOM attribute so
+   * external tooling can locate a specific port without knowing its
+   * systemId ahead of time.
+   */
+  naturalId?: string;
   portIoType: PortIoType;
   /** Consumer-settable. Absent means no status indicator is shown. */
   portStatus?: PortStatus;

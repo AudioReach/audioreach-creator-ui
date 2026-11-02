@@ -188,6 +188,17 @@ describe('ModuleNode — port handles', () => {
     expect(out?.getAttribute('data-handlepos')).toBe('right');
   });
 
+  it("exposes the port's stable naturalId as a data attribute, alongside its systemId-based id", () => {
+    const node = makeModule({
+      ports: [{id: 'port-sys-3', naturalId: '3', portIoType: 'output'}],
+    });
+    const {container} = renderModuleNode(node);
+    const out = container.querySelector('[data-handleid="Data:port-sys-3"]');
+    expect(out).not.toBeNull();
+    expect(out?.getAttribute('data-port-id')).toBe('port-sys-3');
+    expect(out?.getAttribute('data-port-natural-id')).toBe('3');
+  });
+
   it('renders TWO Handles per control port on top', () => {
     const node = makeModule({
       ports: [{id: 'c1', portIoType: 'control'}],
