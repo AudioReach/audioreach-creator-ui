@@ -65,19 +65,16 @@ describe('properties API clients', () => {
 
     const result = await fetchSubgraphProperties('proj-1', 'sg-1');
     await patchSubgraph('proj-1', 'sg-1', {name: 'Main'});
-    await patchSubgraphProperty('proj-1', 'sg-1', 'prop-1', {
+    await patchSubgraphProperty('proj-1', 'sg-1', {
       elements: [],
-      name: 'Scenario ID',
       systemId: 'prop-1',
     });
     await patchSubgraphScenario('proj-1', 'sg-1', {
       elements: [],
-      name: 'Scenario ID',
       systemId: 'prop-1',
     });
     await patchSubgraphVsid('proj-1', 'sg-1', {
       elements: [],
-      name: 'VSID',
       systemId: 'prop-vsid',
     });
 
@@ -88,17 +85,17 @@ describe('properties API clients', () => {
     expect(mockPatch).toHaveBeenCalledWith('/projects/proj-1/subgraphs/sg-1', {
       name: 'Main',
     });
-    expect(mockPatch).toHaveBeenCalledWith(
-      '/projects/proj-1/subgraphs/sg-1/properties/prop-1',
-      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+    expect(mockPut).toHaveBeenCalledWith(
+      '/projects/proj-1/subgraphs/sg-1/properties',
+      {elements: [], systemId: 'prop-1'},
     );
-    expect(mockPatch).toHaveBeenCalledWith(
+    expect(mockPut).toHaveBeenCalledWith(
       '/projects/proj-1/subgraphs/sg-1/scenario',
-      {elements: [], name: 'Scenario ID', systemId: 'prop-1'},
+      {elements: [], systemId: 'prop-1'},
     );
-    expect(mockPatch).toHaveBeenCalledWith(
+    expect(mockPut).toHaveBeenCalledWith(
       '/projects/proj-1/subgraphs/sg-1/vsid',
-      {elements: [], name: 'VSID', systemId: 'prop-vsid'},
+      {elements: [], systemId: 'prop-vsid'},
     );
   });
 
@@ -127,9 +124,8 @@ describe('properties API clients', () => {
       newContainerNaturalId: 2,
       oldContainerNaturalId: 1,
     });
-    await patchContainerProperty('proj-1', 'cnt-1', 'prop-1', {
+    await patchContainerProperty('proj-1', 'cnt-1', {
       elements: [],
-      name: 'Container Type',
       systemId: 'prop-1',
     });
 
@@ -146,8 +142,8 @@ describe('properties API clients', () => {
       {newContainerNaturalId: 2, oldContainerNaturalId: 1},
     );
     expect(mockPut).toHaveBeenCalledWith(
-      '/projects/proj-1/containers/cnt-1/properties/prop-1',
-      {elements: [], name: 'Container Type', systemId: 'prop-1'},
+      '/projects/proj-1/containers/cnt-1/properties',
+      {elements: [], systemId: 'prop-1'},
     );
   });
 

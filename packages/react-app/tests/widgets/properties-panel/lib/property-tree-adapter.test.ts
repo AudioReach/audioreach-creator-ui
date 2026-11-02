@@ -119,8 +119,13 @@ describe('propertyDtosToTreeViewData', () => {
 
   it('builds a single-property update request', () => {
     expect(propertyDtoToUpdateRequest(visibleProperty)).toEqual({
-      elements: visibleProperty.elements,
-      name: 'Scenario',
+      elements: [
+        {
+          name: 'Scenario ID',
+          type: 'ConfigElement',
+          value: '1',
+        },
+      ],
       systemId: 'prop-scenario',
     });
   });

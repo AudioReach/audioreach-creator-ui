@@ -42,7 +42,6 @@ export function useContainerCardData({
       const result = await patchContainerProperty(
         projectId,
         containerId,
-        property.systemId,
         propertyDtoToUpdateRequest(property),
       );
       if (hasBlockingIssues(result) || !result.data) {

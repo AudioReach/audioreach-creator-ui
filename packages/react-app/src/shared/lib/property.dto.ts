@@ -25,6 +25,5 @@ export interface PropertyCollectionRequestDto {
 
 export interface UpdatePropertyRequestDto {
   elements: PropertyElement[];
-  name: string;
   systemId: string;
 }

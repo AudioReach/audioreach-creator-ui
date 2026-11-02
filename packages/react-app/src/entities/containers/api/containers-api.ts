@@ -67,11 +67,10 @@ export async function updateContainerId(
 export async function patchContainerProperty(
   projectId: string,
   containerId: string,
-  propSystemId: string,
   request: UpdatePropertyRequestDto,
 ): Promise<ApiResult<PropertyDto>> {
   return httpClient.put<PropertyDto>(
-    `/projects/${projectId}/containers/${containerId}/properties/${propSystemId}`,
+    `/projects/${projectId}/containers/${containerId}/properties`,
     request,
   );
 }
