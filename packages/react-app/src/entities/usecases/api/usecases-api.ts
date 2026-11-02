@@ -25,6 +25,7 @@ import type {
   ControlLinkWithUsecasesDto,
   DataLinkWithUsecasesDto,
   SpfModuleDto,
+  SpfModuleSummaryDto,
 } from '../model/usecase-component.dto';
 import type {
   SubsystemFilteredUsecasesDto,
@@ -75,6 +76,8 @@ export async function deleteUsecases(
 /**
  * Query usecase components for specified system IDs.
  * Returns flat component collection without subsystem hierarchy.
+ * `spfModules` entries are the trimmed `SpfModuleSummaryDto` shape — use
+ * `getModulesBySystemIds` to backfill ckvs/tags when needed.
  * @param projectId - The unique identifier of the project
  * @param systemIds - Array of usecase system identifiers
  * @returns ComponentCollectionDto with spfModules, dataLinks, and controlLinks
@@ -82,8 +85,8 @@ export async function deleteUsecases(
 export async function getUsecaseComponents(
   projectId: string,
   systemIds: string[],
-): Promise<ApiResult<ComponentCollectionDto>> {
-  return httpClient.post<ComponentCollectionDto>(
+): Promise<ApiResult<ComponentCollectionDto<SpfModuleSummaryDto>>> {
+  return httpClient.post<ComponentCollectionDto<SpfModuleSummaryDto>>(
     `/projects/${projectId}/usecases/components/query`,
     {systemIds},
   );
@@ -92,6 +95,8 @@ export async function getUsecaseComponents(
 /**
  * Query usecase components for specified system IDs.
  * Returns flat component collection without subsystem hierarchy.
+ * `spfModules` entries are the trimmed `SpfModuleSummaryDto` shape — use
+ * `getModulesBySystemIds` to backfill ckvs/tags when needed.
  * @param projectId - The unique identifier of the project
  * @param systemIds - Array of usecase system identifiers
  * @returns ComponentCollectionDto with spfModules, dataLinks, and controlLinks
@@ -99,8 +104,8 @@ export async function getUsecaseComponents(
 export async function getUsecaseComponentsFilteredBySubsystem(
   projectId: string,
   systemIds: string[],
-): Promise<ApiResult<ComponentCollectionDto>> {
-  return httpClient.post<ComponentCollectionDto>(
+): Promise<ApiResult<ComponentCollectionDto<SpfModuleSummaryDto>>> {
+  return httpClient.post<ComponentCollectionDto<SpfModuleSummaryDto>>(
     `/projects/${projectId}/usecases/components/query-with-subsystems`,
     {systemIds},
   );
@@ -331,16 +336,23 @@ export async function deleteControlLink(
 }
 
 /**
- * Batched lookup of modules by systemId
+ * Batched lookup of modules by systemId.
  * @param projectId - The unique identifier of the project
  * @param systemIds - Array of module system identifiers to resolve
+ * @param options.include - Optional extra fields to request (e.g. ckvs/tags,
+ *   otherwise omitted from the response)
  * @returns Array of SpfModuleDto matching the given system IDs
  */
 export async function getModulesBySystemIds(
   projectId: string,
   systemIds: string[],
+  options?: {include?: ReadonlyArray<'ckvs' | 'tags'>},
 ): Promise<ApiResult<SpfModuleDto[]>> {
-  const params = createCommaSeparatedQueryParam('systemId', systemIds);
+  const systemIdParam = createCommaSeparatedQueryParam('systemId', systemIds);
+  const includeParam = options?.include?.length
+    ? `include=${options.include.join(',')}`
+    : '';
+  const params = [systemIdParam, includeParam].filter(Boolean).join('&');
   const query = params ? `?${params}` : '';
   return httpClient.get<SpfModuleDto[]>(
     `/projects/${projectId}/spf-modules${query}`,
