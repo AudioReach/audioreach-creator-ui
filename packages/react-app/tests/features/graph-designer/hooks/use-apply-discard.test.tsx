@@ -217,7 +217,7 @@ describe('useApplyDiscard', () => {
         expect.anything(),
         expect.objectContaining({
           request: expect.objectContaining({
-            selectedUsecaseSystemIds: ['uc-123'],
+            usecaseSystemIds: ['uc-123'],
           }),
         }),
       );

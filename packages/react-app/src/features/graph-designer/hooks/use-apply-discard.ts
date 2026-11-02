@@ -404,9 +404,10 @@ export function useApplyDiscard(
       await withMutationLock(store.getState, async () => {
         const state = store.getState();
         const request = buildCreateUsecasesRequest({
+          allLinks: state.graphData?.connections ?? [],
           excludedLinks: state.excludedLinks,
           kvSelectionsById: state.kvSelectionsById,
-          selectedUsecaseSystemIds,
+          usecaseSystemIds: selectedUsecaseSystemIds,
         });
         const outcome = await runApplyReconcile(
           {

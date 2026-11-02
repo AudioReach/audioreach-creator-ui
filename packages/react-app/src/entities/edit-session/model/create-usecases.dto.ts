@@ -13,10 +13,9 @@ export interface SubgraphKvSelectionDto {
 
 export interface CreateUsecasesRequestDto {
   activeSubgraphs: SubgraphKvSelectionDto[];
-  excludedControlLinkSystemIds?: string[];
-  excludedDataLinkSystemIds?: string[];
-  excludedSubgraphSystemIds?: string[];
-  selectedUsecaseSystemIds: string[];
+  includedControlLinkSystemIds: string[];
+  includedDataLinkSystemIds: string[];
+  usecaseSystemIds?: string[];
 }
 
 export interface UsecaseChangeSnapshotDto {

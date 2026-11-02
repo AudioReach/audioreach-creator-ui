@@ -44,7 +44,9 @@ describe('edit-session-api', () => {
 
       const body: CreateUsecasesRequestDto = {
         activeSubgraphs: [],
-        selectedUsecaseSystemIds: [],
+        includedControlLinkSystemIds: [],
+        includedDataLinkSystemIds: [],
+        usecaseSystemIds: [],
       };
 
       const result = await createUsecases('p1', body);

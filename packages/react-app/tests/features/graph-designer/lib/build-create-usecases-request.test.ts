@@ -19,18 +19,34 @@ function makeKeyValue(id: number, valueSystemId: string): SubgraphKvPair {
   };
 }
 
+function makeConnection(
+  systemId: string,
+  linkKind: 'control' | 'data',
+): Connection {
+  return {
+    destinationPortSystemId: `${systemId}-dp`,
+    destinationSystemId: `${systemId}-d`,
+    linkKind,
+    linkType: 'NORMAL',
+    sourcePortSystemId: `${systemId}-sp`,
+    sourceSystemId: `${systemId}-s`,
+    systemId,
+  };
+}
+
 describe('buildCreateUsecasesRequest', () => {
-  it('returns empty inputs unchanged with no excluded-* keys', () => {
+  it('returns empty inputs unchanged with empty included-* arrays', () => {
     const result = buildCreateUsecasesRequest({
+      allLinks: [],
       excludedLinks: [],
       kvSelectionsById: {},
-      selectedUsecaseSystemIds: [],
+      usecaseSystemIds: [],
     });
 
-    expect(result.selectedUsecaseSystemIds).toEqual([]);
+    expect(result.usecaseSystemIds).toEqual([]);
     expect(result.activeSubgraphs).toEqual([]);
-    expect(Object.keys(result)).not.toContain('excludedDataLinkSystemIds');
-    expect(Object.keys(result)).not.toContain('excludedControlLinkSystemIds');
+    expect(result.includedDataLinkSystemIds).toEqual([]);
+    expect(result.includedControlLinkSystemIds).toEqual([]);
   });
 
   it('filters unselected KV entries and maps to valueSystemIds', () => {
@@ -56,9 +72,10 @@ describe('buildCreateUsecasesRequest', () => {
     };
 
     const result = buildCreateUsecasesRequest({
+      allLinks: [],
       excludedLinks: [],
       kvSelectionsById,
-      selectedUsecaseSystemIds: ['uc1'],
+      usecaseSystemIds: ['uc1'],
     });
 
     expect(result.activeSubgraphs).toHaveLength(1);
@@ -83,9 +100,10 @@ describe('buildCreateUsecasesRequest', () => {
     };
 
     const result = buildCreateUsecasesRequest({
+      allLinks: [],
       excludedLinks: [],
       kvSelectionsById,
-      selectedUsecaseSystemIds: [],
+      usecaseSystemIds: [],
     });
 
     expect(result.activeSubgraphs).toHaveLength(1);
@@ -95,67 +113,53 @@ describe('buildCreateUsecasesRequest', () => {
     });
   });
 
-  it('partitions mixed excludedLinks into data and control arrays', () => {
-    const excludedLinks: Connection[] = [
-      {
-        destinationPortSystemId: 'p2',
-        destinationSystemId: 'm2',
-        linkKind: 'data',
-        linkType: 'NORMAL',
-        sourcePortSystemId: 'p1',
-        sourceSystemId: 'm1',
-        systemId: 'conn1',
-      },
-      {
-        destinationPortSystemId: 'p4',
-        destinationSystemId: 'm3',
-        linkKind: 'control',
-        linkType: 'NORMAL',
-        sourcePortSystemId: 'p3',
-        sourceSystemId: 'm2',
-        systemId: 'conn2',
-      },
-      {
-        destinationPortSystemId: 'p6',
-        destinationSystemId: 'm4',
-        linkKind: 'data',
-        linkType: 'NORMAL',
-        sourcePortSystemId: 'p5',
-        sourceSystemId: 'm3',
-        systemId: 'conn3',
-      },
+  it('partitions all non-excluded links into included data and control arrays', () => {
+    const allLinks: Connection[] = [
+      makeConnection('conn1', 'data'),
+      makeConnection('conn2', 'control'),
+      makeConnection('conn3', 'data'),
     ];
 
     const result = buildCreateUsecasesRequest({
-      excludedLinks,
+      allLinks,
+      excludedLinks: [],
       kvSelectionsById: {},
-      selectedUsecaseSystemIds: [],
+      usecaseSystemIds: [],
     });
 
-    expect(result.excludedDataLinkSystemIds).toEqual(['conn1', 'conn3']);
-    expect(result.excludedControlLinkSystemIds).toEqual(['conn2']);
+    expect(result.includedDataLinkSystemIds).toEqual(['conn1', 'conn3']);
+    expect(result.includedControlLinkSystemIds).toEqual(['conn2']);
   });
 
-  it('omits excludedControlLinkSystemIds key when no control links excluded', () => {
-    const excludedLinks: Connection[] = [
-      {
-        destinationPortSystemId: 'p2',
-        destinationSystemId: 'm2',
-        linkKind: 'data',
-        linkType: 'NORMAL',
-        sourcePortSystemId: 'p1',
-        sourceSystemId: 'm1',
-        systemId: 'conn1',
-      },
+  it('excludes links present in excludedLinks from the included arrays', () => {
+    const allLinks: Connection[] = [
+      makeConnection('conn1', 'data'),
+      makeConnection('conn2', 'control'),
+      makeConnection('conn3', 'data'),
     ];
 
     const result = buildCreateUsecasesRequest({
-      excludedLinks,
+      allLinks,
+      excludedLinks: [makeConnection('conn1', 'data')],
       kvSelectionsById: {},
-      selectedUsecaseSystemIds: [],
+      usecaseSystemIds: [],
     });
 
-    expect(result.excludedDataLinkSystemIds).toEqual(['conn1']);
-    expect(Object.keys(result)).not.toContain('excludedControlLinkSystemIds');
+    expect(result.includedDataLinkSystemIds).toEqual(['conn3']);
+    expect(result.includedControlLinkSystemIds).toEqual(['conn2']);
+  });
+
+  it('returns an empty included-control array when every control link is excluded', () => {
+    const allLinks: Connection[] = [makeConnection('conn1', 'data')];
+
+    const result = buildCreateUsecasesRequest({
+      allLinks,
+      excludedLinks: [],
+      kvSelectionsById: {},
+      usecaseSystemIds: [],
+    });
+
+    expect(result.includedDataLinkSystemIds).toEqual(['conn1']);
+    expect(result.includedControlLinkSystemIds).toEqual([]);
   });
 });

@@ -17,16 +17,17 @@ import type {Connection} from '../model/graph-data-slice';
  * are presentation concerns and must not be sent to the backend.
  */
 export interface BuildCreateUsecasesRequestInput {
+  allLinks: Connection[];
   excludedLinks: Connection[];
   kvSelectionsById: Record<string, KvSelection[]>;
-  selectedUsecaseSystemIds: string[];
+  usecaseSystemIds: string[];
 }
 
 /** Serializes only selected editable SGKV vectors into the Apply request. */
 export function buildCreateUsecasesRequest(
   input: BuildCreateUsecasesRequestInput,
 ): CreateUsecasesRequestDto {
-  const {excludedLinks, kvSelectionsById, selectedUsecaseSystemIds} = input;
+  const {allLinks, excludedLinks, kvSelectionsById, usecaseSystemIds} = input;
 
   const activeSubgraphs: SubgraphKvSelectionDto[] = Object.entries(
     kvSelectionsById,
@@ -37,26 +38,22 @@ export function buildCreateUsecasesRequest(
       .map((s) => s.keyValuePairs.map((kv) => kv.valueInfo.valueSystemId)),
   }));
 
-  const excludedDataLinks = excludedLinks
-    .filter((l) => l.linkKind === 'data')
+  const excludedSystemIds = new Set(excludedLinks.map((l) => l.systemId));
+  const isIncluded = (l: Connection): boolean =>
+    !excludedSystemIds.has(l.systemId);
+
+  const includedDataLinkSystemIds = allLinks
+    .filter((l) => l.linkKind === 'data' && isIncluded(l))
     .map((l) => l.systemId);
 
-  const excludedControlLinks = excludedLinks
-    .filter((l) => l.linkKind === 'control')
+  const includedControlLinkSystemIds = allLinks
+    .filter((l) => l.linkKind === 'control' && isIncluded(l))
     .map((l) => l.systemId);
 
-  const result: CreateUsecasesRequestDto = {
+  return {
     activeSubgraphs,
-    selectedUsecaseSystemIds,
+    includedControlLinkSystemIds,
+    includedDataLinkSystemIds,
+    usecaseSystemIds,
   };
-
-  if (excludedDataLinks.length > 0) {
-    result.excludedDataLinkSystemIds = excludedDataLinks;
-  }
-
-  if (excludedControlLinks.length > 0) {
-    result.excludedControlLinkSystemIds = excludedControlLinks;
-  }
-
-  return result;
 }
