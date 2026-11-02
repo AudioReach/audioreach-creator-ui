@@ -149,6 +149,28 @@ describe('usecases-api — subgraph operations', () => {
         '/projects/proj-1/spf-modules?systemId=mod-1,mod-2',
       );
     });
+
+    it('appends include=ckvs,tags when requested', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getModulesBySystemIds('proj-1', ['mod-1'], {
+        include: ['ckvs', 'tags'],
+      });
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/spf-modules?systemId=mod-1&include=ckvs,tags',
+      );
+    });
+
+    it('omits the systemId filter but still appends include when system IDs are empty', async () => {
+      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+
+      await getModulesBySystemIds('proj-1', [], {include: ['ckvs', 'tags']});
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/spf-modules?include=ckvs,tags',
+      );
+    });
   });
 
   describe('getSubgraphPairs', () => {

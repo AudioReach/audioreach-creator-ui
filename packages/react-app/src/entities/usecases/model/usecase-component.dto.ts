@@ -89,6 +89,16 @@ export interface SpfModuleDto {
   tags?: TagInfoDto[];
 }
 
+/**
+ * Trimmed module shape returned by endpoints that don't need
+ * ckvs/tags/relatedEndPointLinks — use `getModulesBySystemIds` to backfill
+ * those when needed.
+ */
+export type SpfModuleSummaryDto = Omit<
+  SpfModuleDto,
+  'ckvs' | 'relatedEndPointLinks' | 'tags'
+>;
+
 export interface KeyInfoDto {
   name: string;
   naturalId: number;
@@ -181,10 +191,10 @@ export interface KeyValueInfo {
   value: ValueInfoDto;
 }
 
-export interface ComponentCollectionDto {
+export interface ComponentCollectionDto<TSpfModule = SpfModuleDto> {
   controlLinks: ControlLinkDto[];
   dataLinks: DataLinkDto[];
-  spfModules: SpfModuleDto[];
+  spfModules: TSpfModule[];
   subsystems?: SubsystemDto[];
 }
 

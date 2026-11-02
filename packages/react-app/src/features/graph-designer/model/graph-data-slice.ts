@@ -14,6 +14,7 @@ import type {
 } from '~entities/subgraph-definitions';
 import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {
+  getModulesBySystemIds,
   getSubgraphsByIds,
   getUsecaseComponents,
   getUsecaseComponentsFilteredBySubsystem,
@@ -323,6 +324,46 @@ async function hydrateContainerNaturalIds(
     const container = containers[containerDto.systemId];
     if (container) {
       container.naturalId = containerDto.naturalId;
+    }
+  }
+}
+
+/**
+ * `usecases/components/query*` return the trimmed `SpfModuleSummaryDto`
+ * shape (no ckvs/tags) — backfill those fields with a follow-up batched
+ * lookup against the full module DTO.
+ */
+async function hydrateModuleCkvsAndTags(
+  projectId: string,
+  moduleInstances: Record<string, ModuleInstance>,
+): Promise<void> {
+  const systemIds = Object.keys(moduleInstances);
+  if (systemIds.length === 0) {
+    return;
+  }
+
+  const result = await getModulesBySystemIds(projectId, systemIds, {
+    include: ['ckvs', 'tags'],
+  });
+  if (hasBlockingIssues(result) || !result.data) {
+    logger.error('graphDataSlice: hydrateModuleCkvsAndTags — API error', {
+      action: 'hydrate_module_ckvs_and_tags',
+      component: 'graphDataSlice',
+      error: getIssueMessage(result, 'Failed to load module ckvs/tags'),
+    });
+    return;
+  }
+
+  for (const moduleDto of result.data) {
+    const instance = moduleInstances[moduleDto.systemId];
+    if (!instance) {
+      continue;
+    }
+    if (moduleDto.ckvs) {
+      instance.ckvs = moduleDto.ckvs;
+    }
+    if (moduleDto.tags) {
+      instance.tags = moduleDto.tags;
     }
   }
 }
@@ -1161,12 +1202,6 @@ export function createGraphDataSlice<
             undefined,
             activeLinksByPortId,
           );
-          if (m.ckvs) {
-            instance.ckvs = m.ckvs;
-          }
-          if (m.tags) {
-            instance.tags = m.tags;
-          }
           moduleInstances[m.systemId] = instance;
         }
 
@@ -1175,6 +1210,7 @@ export function createGraphDataSlice<
         // The component response identifies subgraphs; detail data supplies SGKV.
         await applySubgraphDetails(projectId, newSubgraphs, get());
         await hydrateContainerNaturalIds(projectId, containers);
+        await hydrateModuleCkvsAndTags(projectId, moduleInstances);
 
         const subsystemIdToChildSubsystemIds = new Map<string, string[]>();
         for (const ss of subsystemDtos) {

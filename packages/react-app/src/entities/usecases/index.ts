@@ -29,6 +29,7 @@ export type {
   DataLinkWithUsecasesDto,
   LinkType,
   SpfModuleDto,
+  SpfModuleSummaryDto,
 } from './model/usecase-component.dto';
 export {
   isInterUsecaseLink,

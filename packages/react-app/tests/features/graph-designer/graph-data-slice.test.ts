@@ -25,6 +25,7 @@ jest.mock('~shared/store/project-store-registry', () => ({
 import {createStore} from 'zustand';
 
 import {
+  getModulesBySystemIds,
   getSubgraphsByIds,
   getUsecaseComponents,
 } from '~entities/usecases/api/usecases-api';
@@ -62,6 +63,7 @@ import {
 const mockGetUsecaseComponents = jest.mocked(getUsecaseComponents);
 const mockGetContainersBySystemIds = jest.mocked(getContainersBySystemIds);
 const mockGetSubgraphsByIds = jest.mocked(getSubgraphsByIds);
+const mockGetModulesBySystemIds = jest.mocked(getModulesBySystemIds);
 const mockPatchSpfModule = jest.mocked(patchSpfModule);
 
 beforeEach(() => {
@@ -72,6 +74,11 @@ beforeEach(() => {
     success: true,
   });
   mockGetSubgraphsByIds.mockResolvedValue({
+    data: [],
+    message: undefined as never,
+    success: true,
+  });
+  mockGetModulesBySystemIds.mockResolvedValue({
     data: [],
     message: undefined as never,
     success: true,
@@ -2413,20 +2420,26 @@ describe('createGraphDataSlice — ModuleInstance ckvs/tags (D1)', () => {
     tkvs: [],
   };
 
-  it('populates ckvs and tags from the module DTO when present', async () => {
-    const dtoWithCkvsTags = {
-      ...minimalDto,
-      spfModules: [{...minimalDto.spfModules[0], ckvs: [ckv], tags: [tag]}],
-    };
+  it('populates ckvs and tags from the getModulesBySystemIds backfill', async () => {
     const store = makeStore([]);
     mockGetUsecaseComponents.mockResolvedValueOnce({
-      data: dtoWithCkvsTags as never,
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+    mockGetModulesBySystemIds.mockResolvedValueOnce({
+      data: [{...minimalDto.spfModules[0], ckvs: [ckv], tags: [tag]}],
       message: undefined,
       success: true,
     });
 
     await store.getState().loadGraphData(['uc-1']);
 
+    expect(mockGetModulesBySystemIds).toHaveBeenCalledWith(
+      expect.any(String),
+      ['sys-mod-1'],
+      {include: ['ckvs', 'tags']},
+    );
     const instance = store.getState().graphData?.moduleInstances['sys-mod-1'];
     expect(instance?.ckvs).toEqual([ckv]);
     expect(instance?.tags).toEqual([tag]);
