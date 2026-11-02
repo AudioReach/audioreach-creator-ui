@@ -192,6 +192,57 @@ describe('buildLevelViewFromGraphData — subsystem black boxes', () => {
   });
 });
 
+describe('buildLevelViewFromGraphData — module port naturalId', () => {
+  it("carries each port's stable naturalId alongside its systemId-based id", () => {
+    const data: UsecaseGraphData = {
+      ...baseData,
+      moduleInstances: {
+        'sys-mod-1': {
+          ...baseData.moduleInstances['sys-mod-1'],
+          inputPorts: [
+            {
+              activeLinks: 0,
+              direction: 'input',
+              isStatic: false,
+              portId: '2',
+              portName: 'In',
+              portSystemId: 'port-sys-2',
+              portType: 'data',
+              totalLinksAtPort: 0,
+            },
+          ],
+          outputPorts: [
+            {
+              activeLinks: 0,
+              direction: 'output',
+              isStatic: false,
+              portId: '3',
+              portName: 'Out',
+              portSystemId: 'port-sys-3',
+              portType: 'data',
+              totalLinksAtPort: 0,
+            },
+          ],
+        },
+      },
+      // Module instances inside a subsystem's own subgraph render as a
+      // subsystem black box, not expanded module nodes — drop subsystem
+      // ownership so this module (subgraph '5') renders directly.
+      subsystems: {},
+    };
+
+    const lv = buildLevelViewFromGraphData(data, 'level-1');
+
+    const module = lv.modules?.find((m) => m.id === 'sys-mod-1');
+    expect(module?.ports).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({id: 'port-sys-2', naturalId: '2'}),
+        expect.objectContaining({id: 'port-sys-3', naturalId: '3'}),
+      ]),
+    );
+  });
+});
+
 describe('scoped boundary links', () => {
   it('exposes inner links through the focused subsystem boundary', () => {
     const moduleInstance = (id: string, subgraphSystemId: string) => ({

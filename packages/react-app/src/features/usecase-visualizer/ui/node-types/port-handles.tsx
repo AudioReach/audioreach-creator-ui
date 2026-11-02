@@ -90,6 +90,7 @@ export function PortHandle({
       )} ${sourceClass}`.trim()}
       data-connection-source={isConnectionSource || undefined}
       data-port-id={port.id}
+      data-port-natural-id={port.naturalId}
       id={id}
       isConnectable={isConnectable && !port.locked}
       position={position}
