@@ -104,7 +104,6 @@ export function useSubgraphCardData({
       const result = await patchSubgraphProperty(
         projectId,
         subgraphId,
-        property.systemId,
         request,
       );
       if (hasBlockingIssues(result) || !result.data) {

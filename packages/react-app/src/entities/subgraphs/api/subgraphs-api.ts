@@ -49,11 +49,10 @@ export async function patchSubgraph(
 export async function patchSubgraphProperty(
   projectId: string,
   subgraphId: string,
-  propSystemId: string,
   request: UpdatePropertyRequestDto,
 ): Promise<ApiResult<PropertyDto>> {
-  return httpClient.patch<PropertyDto>(
-    `/projects/${projectId}/subgraphs/${subgraphId}/properties/${propSystemId}`,
+  return httpClient.put<PropertyDto>(
+    `/projects/${projectId}/subgraphs/${subgraphId}/properties`,
     request,
   );
 }
@@ -63,7 +62,7 @@ export async function patchSubgraphScenario(
   subgraphId: string,
   request: UpdatePropertyRequestDto,
 ): Promise<ApiResult<unknown>> {
-  return httpClient.patch<unknown>(
+  return httpClient.put<unknown>(
     `/projects/${projectId}/subgraphs/${subgraphId}/scenario`,
     request,
   );
@@ -74,7 +73,7 @@ export async function patchSubgraphVsid(
   subgraphId: string,
   request: UpdatePropertyRequestDto,
 ): Promise<ApiResult<PatchSubgraphVsidResponseDto>> {
-  return httpClient.patch<PatchSubgraphVsidResponseDto>(
+  return httpClient.put<PatchSubgraphVsidResponseDto>(
     `/projects/${projectId}/subgraphs/${subgraphId}/vsid`,
     request,
   );
