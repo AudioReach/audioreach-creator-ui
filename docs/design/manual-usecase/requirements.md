@@ -1,6 +1,6 @@
 # Manual Usecase: Requirements
 
-**Date:** 2026-10-28
+**Date:** 2026-10-31
 **Status:** Frozen
 
 ## Context
@@ -26,10 +26,11 @@ The request always contains:
 | includedControlLinkSystemIds | Selected control-link IDs; an empty array when none |
 
 Each submitted link must exist, must not have been deleted in the session, and
-must have both endpoint subgraphs in activeSubgraphs. Submitted data links must
-not form a directed cycle. Control links augment topology but cannot create a
-usecase alone. The response changes, issues, and groupId remain the source for
-review and error presentation.
+must resolve to two distinct endpoint subgraphs in activeSubgraphs.
+Intra-subgraph links are never sent. Submitted data links must not form a
+directed cycle. Control links augment topology but cannot create a usecase
+alone. The response changes, issues, and groupId remain the source for review
+and error presentation.
 
 ## Functional Requirements
 
@@ -41,16 +42,20 @@ Designer handler placeholders for subgraphs, data links, and control links. An
 eligible unselected item shows add (+); a selected item shows remove (-).
 
 **FR-MUC-02 — Subgraph selection:** Selecting a subgraph's add action stores
-its current SGKV selection. Selecting its remove action removes it.
+its current SGKV selection. Selecting its remove action removes it. Stored SGKV
+selection is synchronized whenever the source subgraph's SGKVs change; it is
+not an immutable add-time snapshot.
 
 **FR-MUC-03 — Link selection:** Selecting a data-link or control-link add
 action stores that link. The action is enabled only after both endpoint
-subgraphs are selected; otherwise it remains visible but disabled with a
-tooltip explaining the prerequisite.
+subgraphs are selected and resolve to different subgraphs; otherwise it remains
+visible but disabled with a tooltip explaining the prerequisite.
 
 **FR-MUC-04 — Cascade cleanup:** Removing a selected subgraph also removes all
 selected data and control links incident to it. Removing a selected link does
-not remove either endpoint subgraph.
+not remove either endpoint subgraph. Any component or link addition, deletion,
+or endpoint change reconciles the manual cache with the live graph, removing
+only selected entries that no longer exist or satisfy eligibility.
 
 **FR-MUC-05 — Navigation:** The selection persists during the edit session and
 while navigating into or out of subsystems. Every remounted graph item,
@@ -59,12 +64,14 @@ add/remove state.
 
 ### Apply and review
 
-**FR-MUC-06 — Request:** When Apply is selected and at least one subgraph is
-selected, call the manual-usecase API with the exact selected subgraphs,
-data-link IDs, and control-link IDs.
+**FR-MUC-06 — Manual request first:** When Apply is selected and at least one
+subgraph is selected, first call the manual-usecase API with the synchronized
+selected subgraphs and only selected inter-subgraph data-link and control-link
+IDs. If routed reconciliation is also required, call its API only after the
+manual-usecase API succeeds.
 
-**FR-MUC-07 — Endpoint coverage:** Do not submit a selected link unless both
-endpoint subgraphs are active.
+**FR-MUC-07 — Link validity:** Do not submit a selected link unless it exists,
+has two distinct endpoint subgraphs, and both endpoints are active.
 
 **FR-MUC-08 — Empty selection:** When no subgraph is selected, do not call the
 manual-usecase API.
@@ -76,23 +83,33 @@ session, clear the cache, or invoke a later API in that attempt.
 **FR-MUC-10 — Review:** Show reviewable API changes in a Manual Usecases
 section. Each row is checked initially; unchecked rows are omitted from commit.
 
-**FR-MUC-11 — Terminal cleanup:** Clear all manual selection after successful
-Apply or Discard only.
+**FR-MUC-11 — Summary Cancel:** Canceling the generated-results summary calls
+the dedicated backend API that discards the currently staged manual-usecase
+proposals. On success, close the summary and remain in edit mode with the
+manual cache unchanged. On failure, keep the summary and cache so the user can
+retry or resolve the failure.
+
+**FR-MUC-12 — Terminal cleanup:** Clear all manual selection after successful
+Apply or normal session-wide Discard only. Summary Cancel does not clear it.
 
 ## Invariants
 
 - **I1 — Quick-action accuracy:** Add means absent; remove means selected.
 - **I2 — Endpoint coverage:** Every selected link has both endpoint subgraphs
-  selected.
+  selected and those endpoints are distinct.
 - **I3 — Hidden cache:** The cache is never rendered independently.
 - **I4 — Navigation:** Navigation does not change selection membership.
-- **I5 — Terminal cleanup:** Only successful Apply or Discard empties the
-  cache.
+- **I5 — Live cache:** A selected subgraph's cached SGKVs and every selected
+  link always match the current edit-session graph state.
+- **I6 — Terminal cleanup:** Only successful Apply or normal session-wide
+  Discard empties the cache.
 
 ## Non-Functional Requirements
 
 - Quick-action state updates immediately after a change.
 - Duplicate subgraph and link entries are prevented.
+- Cache reconciliation completes with every SGKV or graph mutation, before its
+  result can be submitted by Apply.
 - Selection changes and failures are logged with action and component context.
 - Controls use existing QUI components, design tokens, and keyboard-accessible
   interactions.
