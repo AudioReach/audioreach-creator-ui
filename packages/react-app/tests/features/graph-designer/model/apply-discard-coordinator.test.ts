@@ -196,14 +196,9 @@ describe('runFinalize', () => {
 
   it('commits and ends session when checkedChangeIds is empty', async () => {
     const stageChanges = jest.fn();
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: [],
-        message: 'committed',
-        processedChangeIds: [],
-        success: true,
-      }),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
     const endSession = jest
       .fn()
       .mockResolvedValue(apiSuccess(makeSessionResponse()));
@@ -221,16 +216,13 @@ describe('runFinalize', () => {
     expect(stageChanges).not.toHaveBeenCalled();
   });
 
-  it('returns commitRejected when checkedChangeIds is empty and commit fails all', async () => {
+  it('returns commitRejected when commit reports a blocking issue', async () => {
     const stageChanges = jest.fn();
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: ['a', 'b'],
-        message: 'validation failed',
-        processedChangeIds: [],
-        success: true,
-      }),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(
+        apiFailure<CommitChangesResponseDto>('validation failed'),
+      );
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
@@ -239,11 +231,9 @@ describe('runFinalize', () => {
     );
 
     expect(outcome).toEqual({
-      failedChangeIds: ['a', 'b'],
       issues: undefined,
       kind: 'commitRejected',
       message: 'validation failed',
-      missingDependencies: undefined,
     });
   });
 
@@ -330,43 +320,6 @@ describe('runFinalize', () => {
     });
   });
 
-  it('returns commitPartial and never calls endSession', async () => {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
-        failedChangeIds: [],
-        message: 'staged',
-        processedChangeIds: ['a'],
-        success: true,
-      }),
-    );
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: ['b'],
-        message: 'partial commit',
-        processedChangeIds: ['a'],
-        success: true,
-      }),
-    );
-    const endSession = jest.fn();
-
-    const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
-      {
-        checkedChangeIds: ['a', 'b'],
-        processedFromPrevAttempt: [],
-        projectId: 'proj-1',
-      },
-    );
-
-    expect(outcome).toEqual({
-      failedChangeIds: ['b'],
-      kind: 'commitPartial',
-      message: 'partial commit',
-      processedChangeIds: ['a'],
-    });
-    expect(endSession).not.toHaveBeenCalled();
-  });
-
   it('returns commitTransportIndeterminate and publishes no rows, never calls endSession', async () => {
     const stageChanges = jest.fn().mockResolvedValue(
       apiSuccess<StageChangesResponseDto>({
@@ -408,14 +361,9 @@ describe('runFinalize', () => {
         success: true,
       }),
     );
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: [],
-        message: 'committed',
-        processedChangeIds: ['a'],
-        success: true,
-      }),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
     const endSession = jest.fn(endSessionImpl);
     return {commitChanges, endSession, stageChanges};
   }
@@ -496,14 +444,9 @@ describe('runFinalize', () => {
         success: true,
       }),
     );
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: [],
-        message: 'committed',
-        processedChangeIds: ['a'],
-        success: true,
-      }),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
 
     const outcome = await runFinalize(
       {commitChanges, endSession, stageChanges},
@@ -591,14 +534,9 @@ describe('runFinalize', () => {
         success: true,
       }),
     );
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiSuccess<CommitChangesResponseDto>({
-        failedChangeIds: [],
-        message: 'committed',
-        processedChangeIds: ['a'],
-        success: true,
-      }),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
 
     const outcome = await runFinalize(
       {commitChanges, endSession, stageChanges},

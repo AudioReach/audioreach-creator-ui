@@ -194,41 +194,17 @@ export async function runFinalize(
     }
   }
 
-  const commitResult = await deps.commitChanges(projectId, undefined, true);
+  const commitResult = await deps.commitChanges(projectId, true);
 
   if (isTransportFailure(commitResult) && !commitResult.data) {
     return {kind: 'commitTransportIndeterminate'};
   }
 
-  const commitFailedChangeIds = commitResult.data?.failedChangeIds ?? [];
-  const commitProcessedChangeIds = commitResult.data?.processedChangeIds ?? [];
-
-  if (
-    hasBlockingIssues(commitResult) ||
-    commitResult.data?.success === false ||
-    (commitFailedChangeIds.length > 0 && commitProcessedChangeIds.length === 0)
-  ) {
+  if (hasBlockingIssues(commitResult)) {
     return {
-      failedChangeIds: commitResult.data?.failedChangeIds,
       issues: undefined,
       kind: 'commitRejected',
-      message: getIssueMessage(
-        commitResult,
-        commitResult.data?.message ?? 'Commit changes failed',
-      ),
-      missingDependencies: commitResult.data?.missingDependencies,
-    };
-  }
-
-  if (commitFailedChangeIds.length > 0 && commitProcessedChangeIds.length > 0) {
-    return {
-      failedChangeIds: commitFailedChangeIds,
-      kind: 'commitPartial',
-      message: getIssueMessage(
-        commitResult,
-        commitResult.data?.message ?? 'Commit changes partially failed',
-      ),
-      processedChangeIds: commitProcessedChangeIds,
+      message: getIssueMessage(commitResult, 'Commit changes failed'),
     };
   }
 

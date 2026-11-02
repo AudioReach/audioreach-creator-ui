@@ -6,6 +6,7 @@
 import {ApiRequest} from '@audioreach-creator-ui/api-utils';
 import {act, renderHook} from '@testing-library/react';
 
+import * as editSessionApi from '~entities/edit-session';
 import * as projectsApi from '~entities/project/api/projects-api';
 import {useProjectSaver} from '~features/project-operations/hooks/use-project-saver';
 import * as electronApiModule from '~shared/api';
@@ -14,6 +15,7 @@ import * as globalStore from '~shared/store/global-store';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
+jest.mock('~entities/edit-session');
 jest.mock('~entities/project/api/projects-api');
 jest.mock('~shared/api');
 jest.mock('~shared/controls/global-toaster');
@@ -26,6 +28,20 @@ jest.mock('~shared/store/global-store');
 
 const WORKSPACE_BYTES = new Uint8Array([80, 75, 3, 4]);
 const ACDB_BYTES = new Uint8Array([65, 67, 68, 66]);
+
+function makeCommitSuccess() {
+  (editSessionApi.commitChanges as jest.Mock).mockResolvedValue({data: {}});
+}
+
+function makeCommitFail(message = 'Commit failed') {
+  (editSessionApi.commitChanges as jest.Mock).mockResolvedValue({
+    issues: [{code: 'COMMIT_REJECTED', message, severity: 'ERROR'}],
+  });
+  (electronApiModule.hasBlockingIssues as jest.Mock).mockReturnValue(true);
+  (electronApiModule.getIssueMessage as jest.Mock).mockImplementation(
+    () => message,
+  );
+}
 
 function makeDownloadSuccess() {
   (projectsApi.downloadProjectFiles as jest.Mock).mockResolvedValue({
@@ -121,6 +137,13 @@ describe('useProjectSaver', () => {
     jest.clearAllMocks();
     // Default: electronApi available
     makeElectronSendSuccess();
+    // Default: no pending calibration changes to commit
+    makeCommitSuccess();
+    // Default: issue helpers pass through so fallback messages surface
+    (electronApiModule.hasBlockingIssues as jest.Mock).mockReturnValue(false);
+    (electronApiModule.getIssueMessage as jest.Mock).mockImplementation(
+      (_result: unknown, fallback: string) => fallback,
+    );
     // Default: store with one project
     makeStoreWithProjects([
       {filePath: '/original/project.awsp', projectId: 'proj-1'},
@@ -203,6 +226,42 @@ describe('useProjectSaver', () => {
       expect(globalToaster.showToast).toHaveBeenCalledTimes(1);
       expect(globalToaster.showToast).toHaveBeenCalledWith(
         'Download failed',
+        'danger',
+      );
+    });
+
+    // Pending calibration changes (made outside edit mode) must be committed
+    // before files are downloaded, or they'd be saved stale.
+    it('commits pending changes before downloading project files', async () => {
+      makeDownloadSuccess();
+      const {result} = renderHook(() => useProjectSaver());
+
+      await act(async () => {
+        await result.current.saveProject('proj-1', '/original/project.awsp');
+      });
+
+      expect(editSessionApi.commitChanges).toHaveBeenCalledWith('proj-1');
+      expect(
+        (editSessionApi.commitChanges as jest.Mock).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        (projectsApi.downloadProjectFiles as jest.Mock)
+          .mock.invocationCallOrder[0],
+      );
+    });
+
+    // Commit failure must abort the save — files are never downloaded or
+    // written, and the backend's error message is shown.
+    it('shows error toast and skips download when commit fails', async () => {
+      makeCommitFail('Commit rejected');
+      const {result} = renderHook(() => useProjectSaver());
+
+      await act(async () => {
+        await result.current.saveProject('proj-1', '/original/project.awsp');
+      });
+
+      expect(projectsApi.downloadProjectFiles).not.toHaveBeenCalled();
+      expect(globalToaster.showToast).toHaveBeenCalledWith(
+        'Commit rejected',
         'danger',
       );
     });

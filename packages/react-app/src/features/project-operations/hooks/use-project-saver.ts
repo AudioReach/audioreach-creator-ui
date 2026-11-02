@@ -7,8 +7,9 @@ import {useCallback, useRef, useState} from 'react';
 
 import {ApiRequest} from '@audioreach-creator-ui/api-utils';
 
+import {commitChanges} from '~entities/edit-session';
 import {downloadProjectFiles} from '~entities/project/api/projects-api';
-import {electronApi} from '~shared/api';
+import {electronApi, getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useGlobalStore} from '~shared/store/global-store';
@@ -53,6 +54,16 @@ async function writeSavedFiles(
   if (!electronApi) {
     showToast('Electron API not available', 'danger');
     return {success: false};
+  }
+
+  // Calibration edits can be made outside edit mode and are only staged
+  // until committed — commit here so Save/Save As/Save All persist them.
+  const commitResult = await commitChanges(projectId);
+  if (hasBlockingIssues(commitResult)) {
+    return {
+      error: getIssueMessage(commitResult, 'Failed to commit pending changes'),
+      success: false,
+    };
   }
 
   const files = await fetchProjectContent(projectId);

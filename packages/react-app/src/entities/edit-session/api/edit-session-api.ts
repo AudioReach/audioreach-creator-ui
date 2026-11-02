@@ -43,16 +43,15 @@ export async function stageChanges(
   );
 }
 
-/** Omitting `changeIds` commits all staged changes. */
+/** Commits every staged change in the session; selective commit isn't supported. */
 export async function commitChanges(
   projectId: string,
-  changeIds?: string[],
   enforceValidation = false,
 ): Promise<ApiResult<CommitChangesResponseDto>> {
   const query = enforceValidation ? '?enforceValidation=true' : '';
   return httpClient.post<CommitChangesResponseDto>(
     `/projects/${projectId}/commit-changes${query}`,
-    {changeIds} satisfies CommitChangesRequestDto,
+    {} satisfies CommitChangesRequestDto,
   );
 }
 
