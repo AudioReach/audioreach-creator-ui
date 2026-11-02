@@ -447,13 +447,20 @@ export function useApplyDiscard(
       if (!response) {
         return;
       }
-      const createdSystemIds = response.changes
+      const checkedChanges = response.changes.filter((change) =>
+        checkedChangeIds.includes(change.changeId),
+      );
+      const createdSystemIds = checkedChanges
+        .filter((change) => change.operation === 'CREATE')
+        .map((change) => change.systemId);
+      // UPDATE changes are already staged server-side.
+      // only usecase additions/deletions need an explicit stage call here.
+      const stageChangeIds = checkedChanges
         .filter(
           (change) =>
-            change.operation === 'CREATE' &&
-            checkedChangeIds.includes(change.changeId),
+            change.operation === 'CREATE' || change.operation === 'DELETE',
         )
-        .map((change) => change.systemId);
+        .map((change) => change.changeId);
       setPendingReview(null);
       pendingReviewResponseRef.current = null;
       setIsBusy(true);
@@ -462,7 +469,7 @@ export function useApplyDiscard(
           finalize(
             store,
             projectId,
-            checkedChangeIds,
+            stageChangeIds,
             navChoice,
             createdSystemIds,
             'submit_review',
