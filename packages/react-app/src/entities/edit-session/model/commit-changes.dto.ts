@@ -3,14 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export interface CommitChangesRequestDto {
-  changeIds?: string[];
-}
+/** Commit applies every staged action — there is no selective request payload. */
+export type CommitChangesRequestDto = Record<string, never>;
 
-export interface CommitChangesResponseDto {
-  failedChangeIds: string[];
-  message: string;
-  missingDependencies?: string[];
-  processedChangeIds: string[];
-  success: boolean;
-}
+/** Success is HTTP 200 with an empty body; outcome detail travels via issues. */
+export type CommitChangesResponseDto = Record<string, never>;

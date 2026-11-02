@@ -85,41 +85,23 @@ describe('edit-session-api', () => {
   });
 
   describe('commitChanges', () => {
-    it('should call httpClient.post with enforceValidation query param', async () => {
-      const mockResponse: CommitChangesResponseDto = {
-        failedChangeIds: [],
-        message: 'success',
-        processedChangeIds: ['a'],
-        success: true,
-      };
+    it('should call httpClient.post with enforceValidation query param and empty body', async () => {
+      const mockResponse: CommitChangesResponseDto = {};
       (httpClient.post as jest.Mock).mockResolvedValue({
         data: mockResponse,
         success: true,
       });
 
-      const result = await commitChanges('p1', ['a'], true);
+      const result = await commitChanges('p1', true);
 
       expect(httpClient.post).toHaveBeenCalledWith(
         '/projects/p1/commit-changes?enforceValidation=true',
-        {changeIds: ['a']},
+        {},
       );
       expect(result.success).toBe(true);
     });
 
-    it('should serialize body to {} when changeIds is undefined with enforceValidation', async () => {
-      (httpClient.post as jest.Mock).mockResolvedValue({
-        data: {},
-        success: true,
-      });
-
-      await commitChanges('p1', undefined, true);
-
-      const callArgs = (httpClient.post as jest.Mock).mock.calls[0];
-      const body = callArgs[1];
-      expect(JSON.stringify(body)).toBe('{}');
-    });
-
-    it('should serialize body to {} when changeIds is undefined without enforceValidation', async () => {
+    it('should call httpClient.post with no query string when enforceValidation defaults to false', async () => {
       (httpClient.post as jest.Mock).mockResolvedValue({
         data: {},
         success: true,
@@ -140,7 +122,7 @@ describe('edit-session-api', () => {
         success: true,
       });
 
-      await commitChanges('p1', ['a'], false);
+      await commitChanges('p1', false);
 
       const callArgs = (httpClient.post as jest.Mock).mock.calls[0];
       const url = callArgs[0];
