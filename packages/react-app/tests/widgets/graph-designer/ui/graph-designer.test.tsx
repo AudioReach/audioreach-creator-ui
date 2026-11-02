@@ -246,6 +246,7 @@ import {
 import {SideNavProvider} from '~shared/controls/side-nav-provider';
 import {logger} from '~shared/lib/logger';
 import {createProjectStore, ProjectStoreContext} from '~shared/store';
+import {TabType} from '~shared/store/project-layout.types';
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {buildContextMenuConfig} from '~widgets/graph-designer/lib/context-menu-config';
 import {layoutLevelView} from '~widgets/graph-designer/lib/level-view-layout';
@@ -1569,6 +1570,148 @@ describe('GraphDesigner — port connections, end to end', () => {
 });
 
 describe('GraphDesigner - node double click', () => {
+  describe('module tab titles', () => {
+    beforeEach(() => {
+      let tabNumber = 0;
+      jest
+        .mocked(tabLayoutService.createProjectTab)
+        .mockImplementation((title) => ({
+          id: `module-tab-${++tabNumber}`,
+          tabType: TabType.ProjectTab,
+          title,
+        }));
+    });
+
+    it.each([
+      [0x4002, 'Data Logging (0x4002)'],
+      [0xa, 'Data Logging (0x000A)'],
+      [0x10000, 'Data Logging (0x10000)'],
+    ])('uses natural instance ID %i in the title', async (naturalId, title) => {
+      const graphData = makeGraphData();
+      graphData.moduleInstances['mod-1'].naturalId = naturalId;
+      const {graphDesignerStore} = renderGraphDesigner({graphData});
+      const query = jest
+        .spyOn(graphDesignerStore.getState(), 'queryModuleData')
+        .mockResolvedValue(true);
+      await screen.findByTestId('usecase-visualizer');
+
+      await act(async () => {
+        mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+          'mod-1',
+          NODE_KIND.MODULE,
+          'Data Logging',
+        );
+      });
+
+      expect(tabLayoutService.createProjectTab).toHaveBeenCalledWith(
+        title,
+        expect.anything(),
+        expect.any(Function),
+        expect.any(Function),
+      );
+      expect(query).toHaveBeenCalledWith('mod-1', 'Data Logging');
+      expect(graphDesignerStore.getState().moduleOpenTabs['mod-1']).toBe(
+        'module-tab-1',
+      );
+    });
+
+    it('distinguishes tabs for instances with the same name', async () => {
+      const graphData = makeGraphData();
+      graphData.moduleInstances['mod-1'].naturalId = 0x4002;
+      graphData.moduleInstances['mod-2'] = {
+        ...graphData.moduleInstances['mod-1'],
+        naturalId: 0x4012,
+        systemId: 'mod-2',
+      };
+      graphData.containers['cnt-1'].moduleInstances.push('mod-2');
+      const {graphDesignerStore} = renderGraphDesigner({graphData});
+      jest
+        .spyOn(graphDesignerStore.getState(), 'queryModuleData')
+        .mockResolvedValue(true);
+      await screen.findByTestId('usecase-visualizer');
+
+      for (const id of ['mod-1', 'mod-2']) {
+        await act(async () => {
+          mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+            id,
+            NODE_KIND.MODULE,
+            'Data Logging',
+          );
+        });
+      }
+
+      expect(
+        jest
+          .mocked(tabLayoutService.createProjectTab)
+          .mock.calls.map(([title]) => title),
+      ).toEqual(['Data Logging (0x4002)', 'Data Logging (0x4012)']);
+      expect(graphDesignerStore.getState().moduleOpenTabs).toMatchObject({
+        'mod-1': 'module-tab-1',
+        'mod-2': 'module-tab-2',
+      });
+    });
+
+    it.each(['module record', 'natural ID'])(
+      'keeps a name-only title without the %s',
+      async (missing) => {
+        const graphData = makeGraphData();
+        if (missing === 'natural ID') {
+          Reflect.deleteProperty(
+            graphData.moduleInstances['mod-1'],
+            'naturalId',
+          );
+        }
+        const nodeId = missing === 'module record' ? 'missing-module' : 'mod-1';
+        const {graphDesignerStore} = renderGraphDesigner({graphData});
+        jest
+          .spyOn(graphDesignerStore.getState(), 'queryModuleData')
+          .mockResolvedValue(true);
+        await screen.findByTestId('usecase-visualizer');
+
+        await act(async () => {
+          mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+            nodeId,
+            NODE_KIND.MODULE,
+            'Data Logging',
+          );
+        });
+
+        expect(tabLayoutService.createProjectTab).toHaveBeenCalledWith(
+          'Data Logging',
+          expect.anything(),
+          expect.any(Function),
+          expect.any(Function),
+        );
+      },
+    );
+
+    it('reuses the existing tab when the same instance is reopened', async () => {
+      const {graphDesignerStore} = renderGraphDesigner({
+        graphData: makeGraphData(),
+      });
+      const query = jest
+        .spyOn(graphDesignerStore.getState(), 'queryModuleData')
+        .mockResolvedValue(true);
+      await screen.findByTestId('usecase-visualizer');
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await act(async () => {
+          mockVisualizerProps?.eventHandlers?.onNodeDoubleClick?.(
+            'mod-1',
+            NODE_KIND.MODULE,
+            'Data Logging',
+          );
+        });
+      }
+
+      expect(tabLayoutService.createProjectTab).toHaveBeenCalledTimes(1);
+      expect(query).toHaveBeenCalledTimes(1);
+      expect(graphDesignerStore.getState().moduleOpenTabs['mod-1']).toBe(
+        'module-tab-1',
+      );
+    });
+  });
+
   it('navigates into a subsystem node without opening a module tab', async () => {
     const {graphDesignerStore} = renderGraphDesigner({
       graphData: makeSubsystemGraphData(),

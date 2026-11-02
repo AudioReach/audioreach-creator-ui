@@ -79,6 +79,7 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import {useProjectLayoutStore, useProjectStoreShallow} from '~shared/store';
+import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 import {
   ModuleDataTab,
   type ModuleDataTabHandle,
@@ -875,8 +876,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         }
         const moduleDataTabRef = createRef<ModuleDataTabHandle>();
         moduleDataTabRefs.current.set(nodeId, moduleDataTabRef);
+        const naturalId =
+          store.getState().graphData?.moduleInstances[nodeId]?.naturalId;
+        const title =
+          typeof naturalId === 'number'
+            ? `${label} (${formatModuleInstanceId(naturalId)})`
+            : label;
         const tab = tabLayoutService.createProjectTab(
-          label,
+          title,
           <GraphDesignerStoreContext.Provider value={store}>
             <ModuleDataTab ref={moduleDataTabRef} moduleInstanceId={nodeId} />
           </GraphDesignerStoreContext.Provider>,
