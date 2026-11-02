@@ -42,7 +42,9 @@ function apiTransportFailure<T>(code: string, message: string): ApiResult<T> {
 
 const request: CreateUsecasesRequestDto = {
   activeSubgraphs: [],
-  selectedUsecaseSystemIds: [],
+  includedControlLinkSystemIds: [],
+  includedDataLinkSystemIds: [],
+  usecaseSystemIds: [],
 };
 
 describe('transport issue fixtures', () => {
