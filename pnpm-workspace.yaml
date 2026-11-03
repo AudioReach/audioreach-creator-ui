@@ -18,6 +18,7 @@ minimumReleaseAgeExclude:
   - electron@43.4.1
 
 onlyBuiltDependencies:
+  - '@parcel/watcher'
   - electron
   - electron-winstaller
   - esbuild

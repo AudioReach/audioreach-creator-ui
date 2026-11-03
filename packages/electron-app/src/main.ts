@@ -10,7 +10,7 @@ import {
   type ConfigResult,
   type MruProjectInfo,
 } from '@audioreach-creator-ui/api-utils';
-import {app, BrowserWindow, ipcMain, Menu} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, Menu} from 'electron';
 import Store from 'electron-store';
 import {
   accessSync,
@@ -23,6 +23,16 @@ import {
 import {join, resolve} from 'node:path';
 import {setTimeout} from 'node:timers/promises';
 
+import {readAppDataConfig, readBackendPort} from './backend-lifecycle/backend-config-reader';
+import {spawnBackendProcess} from './backend-lifecycle/backend-spawner';
+import {type ConnectDeps, runConnectSequence} from './backend-lifecycle/connect-orchestrator';
+import {probeHealthy, waitUntilFileExists, waitUntilHealthy} from './backend-lifecycle/health-check';
+import {registerBackendLifecycleIpcHandlers} from './backend-lifecycle/ipc-handlers';
+import {
+  resolveAppDataConfigPath,
+  resolveArcBackendDir,
+  resolveArcBackendMainPath,
+} from './backend-lifecycle/installation-paths';
 import {
   getFileModificationDateSync,
   getSaveAsProjectFilePath,
@@ -31,10 +41,32 @@ import {
   saveValidationResults,
   showProjectInExplorer,
 } from './project-file-api';
+import {
+  closeSplashWindow,
+  createSplashWindow,
+  sendSplashFailed,
+  sendSplashStatus,
+} from './splash/splash-window';
 
 let win: BrowserWindow;
 const CONFIG_FILE = 'config.json';
 const MAX_RECENT_PROJECTS = 20;
+
+let registrationResultResolver: ((success: boolean) => void) | null = null;
+
+function waitForRegistrationResult(): Promise<boolean> {
+  return new Promise((resolve) => {
+    registrationResultResolver = resolve;
+  });
+}
+
+ipcMain.handle(
+  'connect:registration-result',
+  (_event, success: boolean): void => {
+    registrationResultResolver?.(success);
+    registrationResultResolver = null;
+  },
+);
 const APP_DATA_NAME = 'audioreach-creator-ui';
 
 app.setName(APP_DATA_NAME);
@@ -145,11 +177,12 @@ const mruStore = new Store<StoreSchema>({
 
 const appUrl = 'http://localhost:5173';
 
-const createWindow = async () => {
+const createWindow = async (show: boolean = true) => {
   const isDev = process.env.DEV;
 
   win = new BrowserWindow({
     height: 800,
+    show,
     title: 'AudioReach™ Creator',
     webPreferences: {
       contextIsolation: true,
@@ -219,10 +252,55 @@ const createWindow = async () => {
 };
 
 void app.whenReady().then(async () => {
-  await createWindow();
-  // Create application menu after window is ready
-  createApplicationMenu();
+  try {
+    await createSplashWindow();
+  } catch (error) {
+    dialog.showErrorBox(
+      'AudioReach Creator failed to start',
+      `The splash screen failed to load: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    app.quit();
+    return;
+  }
+
+  registerBackendLifecycleIpcHandlers();
+
+  void runConnectSequence(buildConnectDeps());
 });
+
+function buildConnectDeps(): ConnectDeps {
+  return {
+    backendBinaryExists: (path: string) => existsSync(path),
+    createHiddenMainWindow: () => {
+      void createWindow(false).then(() => {
+        createApplicationMenu();
+      });
+    },
+    notifyFailed: sendSplashFailed,
+    notifyStatus: sendSplashStatus,
+    probeHealthy: (port: number) => probeHealthy(port),
+    readBackendPort: (configJsonPath: string) =>
+      readBackendPort(configJsonPath),
+    resolveAppDataConfig: () =>
+      readAppDataConfig(resolveAppDataConfigPath()),
+    resolveArcBackendDir,
+    resolveBackendMainPath: resolveArcBackendMainPath,
+    showMainWindowAndCloseSplash: () => {
+      win.show();
+      closeSplashWindow();
+    },
+    spawnBackend: spawnBackendProcess,
+    waitForConfigFile: (path: string, intervalMs: number) =>
+      waitUntilFileExists(path, intervalMs),
+    waitForRegistrationResult: async () => {
+      return true; //TODO: Plugin registration logic
+    },
+    waitUntilLive: (port: number, intervalMs: number) =>
+      waitUntilHealthy(port, '/health/live', intervalMs),
+    waitUntilReady: (port: number, intervalMs: number) =>
+      waitUntilHealthy(port, '/health/ready', intervalMs),
+  };
+}
 
 app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the

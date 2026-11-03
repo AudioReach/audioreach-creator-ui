@@ -1,6 +1,11 @@
 import type {Configuration} from 'electron-builder';
 
+import {copyToFixedOutputDir} from './scripts/copy-to-fixed-output-dir';
+
 const config: Configuration = {
+  afterPack: async (context) => {
+    await copyToFixedOutputDir(context);
+  },
   appId: 'com.audioreach.creator',
 
   artifactName: '${productName}-${version}-${platform}-${arch}.${ext}',
