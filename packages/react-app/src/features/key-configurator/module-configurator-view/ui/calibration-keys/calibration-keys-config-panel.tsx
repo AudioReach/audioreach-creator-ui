@@ -19,6 +19,7 @@ import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
 import ArcSearchBar from '~shared/controls/arc-search-bar';
 import type {
+  Key,
   SortColumn,
   SortOrder,
 } from '~shared/types/key-configurator-config.types';
@@ -153,18 +154,18 @@ const partitionKeysBySelection = (
  */
 const generateCartesianProduct = (
   selectedPerKey: Array<{
-    key: {id: number; name: string};
+    key: Key;
     values: Array<{id: number; name: string}>;
   }>,
 ): Array<
   Array<{
-    key: {id: number; name: string};
+    key: Key;
     value: {id: number; name: string};
   }>
 > => {
   const combinations: Array<
     Array<{
-      key: {id: number; name: string};
+      key: Key;
       value: {id: number; name: string};
     }>
   > = [];
@@ -172,7 +173,7 @@ const generateCartesianProduct = (
   const generate = (
     index: number,
     currentCombo: Array<{
-      key: {id: number; name: string};
+      key: Key;
       value: {id: number; name: string};
     }>,
   ) => {
@@ -211,11 +212,11 @@ const groupSelectedValuesByKey = (
   selectedKeyValues: Record<number, Record<number, boolean>>,
   calibrationKeyData: Record<string, CalibrationKey>,
 ): Array<{
-  key: {id: number; name: string};
+  key: Key;
   values: Array<{id: number; name: string}>;
 }> => {
   const selectedPerKey: Array<{
-    key: {id: number; name: string};
+    key: Key;
     values: Array<{id: number; name: string}>;
   }> = [];
 
@@ -247,7 +248,7 @@ const groupSelectedValuesByKey = (
 
     if (selectedValues.length > 0) {
       selectedPerKey.push({
-        key: {id: key.id, name: key.name},
+        key: {id: key.id, name: key.name, systemId: key.systemId},
         values: selectedValues,
       });
     }
@@ -935,7 +936,7 @@ export function CalibrationKeysConfigPanel({
                         className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
                           allValuesSelected
                             ? 'bg-support-info-subtle'
-                            : 'bg-transparent hover:bg-neutral-03'
+                            : 'hover:bg-neutral-03 bg-transparent'
                         }`}
                         onClick={() => toggleKeyExpansion(key.id)}
                       >

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 
 import {useSubsystemConfigStore} from '~features/key-configurator/model/subsystem-config-store';
 import {SubsystemConfigPanel} from '~features/key-configurator/subsystem-configurator-view/ui/subsystem-config-panel';
@@ -26,8 +26,14 @@ jest.mock('~shared/controls/arc-search-bar', () => ({
 
 // Mock ConfigSummaryView
 jest.mock('~features/key-configurator/config-summary-view', () => ({
-  ConfigSummaryView: ({items, onAddClick, onDeleteItem, title}: any) => (
-    <div data-testid="config-summary">
+  ConfigSummaryView: ({
+    isEditable,
+    items,
+    onAddClick,
+    onDeleteItem,
+    title,
+  }: any) => (
+    <div data-editable={isEditable} data-testid="config-summary">
       <h2>{title}</h2>
       <button onClick={onAddClick}>Add</button>
       {items.map((item: any) => (
@@ -96,29 +102,40 @@ jest.mock('~shared/utils/converter-utils', () => ({
 
 describe('SubsystemConfigPanel', () => {
   const mockAvailableKeys = [
-    {id: 0xa1000000, name: 'StreamRx'},
-    {id: 0xb1000000, name: 'StreamTx'},
-    {id: 0xa2000000, name: 'DeviceRx'},
+    {id: 0xa1000000, name: 'StreamRx', systemId: 'key-rx'},
+    {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
+    {id: 0xa2000000, name: 'DeviceRx', systemId: 'key-device-rx'},
   ];
 
-  const mockConfiguredKeys = [{id: 0xa1000000, name: 'StreamRx'}];
+  const mockConfiguredKeys = [
+    {id: 0xa1000000, name: 'StreamRx', systemId: 'key-rx'},
+  ];
+  const mockBackendKeys = [
+    {id: 0xa1000000, name: 'StreamRx', systemId: 'key-rx'},
+  ];
 
   const mockStoreState = {
-    addConfiguredKey: jest.fn(),
     availableKeys: mockAvailableKeys,
     configuredKeys: [{keys: mockConfiguredKeys, subsystemId: 1}],
     error: null,
     fetchSubsystemConfig: jest.fn(),
+    initialize: jest.fn(),
     isLoading: false,
-    removeConfiguredKey: jest.fn(),
-    saveFilteredKeys: jest.fn(),
+    saveFilteredKeys: jest.fn().mockResolvedValue(true),
     updateConfiguredKeys: jest.fn(),
   };
 
-  const renderPanel = () =>
+  const renderPanel = (
+    isMutating = false,
+    runExclusive = <T,>(action: () => Promise<T>) => action(),
+  ) =>
     render(
       <SubsystemConfigPanel
+        backendKeys={mockBackendKeys}
         isEditable
+        isMutating={isMutating}
+        projectId="p-1"
+        runExclusive={runExclusive}
         subsystemId={1}
         subsystemSystemId="ss-1"
       />,
@@ -142,7 +159,14 @@ describe('SubsystemConfigPanel', () => {
   it('fetches subsystem config on mount', () => {
     renderPanel();
 
-    expect(mockStoreState.fetchSubsystemConfig).toHaveBeenCalledWith(1);
+    expect(mockStoreState.initialize).toHaveBeenCalledWith('p-1');
+    expect(mockStoreState.fetchSubsystemConfig).toHaveBeenCalledWith(
+      1,
+      mockBackendKeys,
+    );
+    expect(mockStoreState.initialize.mock.invocationCallOrder[0]).toBeLessThan(
+      mockStoreState.fetchSubsystemConfig.mock.invocationCallOrder[0],
+    );
   });
 
   it('shows keys list when Add button is clicked', () => {
@@ -263,7 +287,7 @@ describe('SubsystemConfigPanel', () => {
     expect(deviceRxCheckbox).toBeChecked();
   });
 
-  it('applies selected keys when Apply button is clicked', () => {
+  it('applies selected keys when Apply button is clicked', async () => {
     renderPanel();
 
     // Click Add to show keys list
@@ -277,15 +301,75 @@ describe('SubsystemConfigPanel', () => {
     const applyButton = screen.getByText('Apply');
     fireEvent.click(applyButton);
 
-    expect(mockStoreState.addConfiguredKey).toHaveBeenCalledWith(1, {
-      id: 0xb1000000,
-      name: 'StreamTx',
-    });
-    // Verify that the updated keys are saved for the backend subsystem.
-    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1');
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
+      1,
+      'ss-1',
+      [
+        ...mockConfiguredKeys,
+        {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
+      ],
+    );
 
-    // Keys list should be hidden
-    expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps the list open and selection when Apply fails', async () => {
+    mockStoreState.saveFilteredKeys.mockResolvedValueOnce(false);
+    renderPanel();
+
+    fireEvent.click(screen.getByText('Add'));
+    const streamTxCheckbox = screen.getByLabelText('Select StreamTx');
+    fireEvent.click(streamTxCheckbox);
+    fireEvent.click(screen.getByText('Apply'));
+
+    await waitFor(() => {
+      expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
+        1,
+        'ss-1',
+        [
+          ...mockConfiguredKeys,
+          {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
+        ],
+      );
+    });
+
+    expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+    expect(streamTxCheckbox).toBeChecked();
+  });
+
+  it('keeps the list open when the graph mutation lock is unavailable', async () => {
+    const rejectLock = async <T,>(
+      _action: () => Promise<T>,
+    ): Promise<T> => {
+      throw new Error('A graph mutation is already active');
+    };
+    renderPanel(false, rejectLock);
+
+    fireEvent.click(screen.getByText('Add'));
+    const streamTxCheckbox = screen.getByLabelText('Select StreamTx');
+    fireEvent.click(streamTxCheckbox);
+    fireEvent.click(screen.getByText('Apply'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+    });
+    expect(streamTxCheckbox).toBeChecked();
+    expect(mockStoreState.saveFilteredKeys).not.toHaveBeenCalled();
+  });
+
+  it('disables key edits while a graph mutation is active', () => {
+    renderPanel(true);
+
+    expect(screen.getByTestId('config-summary')).toHaveAttribute(
+      'data-editable',
+      'false',
+    );
+
+    fireEvent.click(screen.getByText('Add'));
+    fireEvent.click(screen.getByLabelText('Select StreamTx'));
+    expect(screen.getByText('Apply')).toBeDisabled();
   });
 
   it('does not add duplicate keys', () => {
@@ -388,12 +472,11 @@ describe('SubsystemConfigPanel', () => {
     const deleteButton = screen.getByText(`Delete ${0xa1000000}`);
     fireEvent.click(deleteButton);
 
-    expect(mockStoreState.removeConfiguredKey).toHaveBeenCalledWith(
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
       1,
-      0xa1000000,
+      'ss-1',
+      [],
     );
-    // Verify that the updated keys are saved after deletion.
-    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1');
   });
 
   it('disables Apply button when no keys are selected', () => {

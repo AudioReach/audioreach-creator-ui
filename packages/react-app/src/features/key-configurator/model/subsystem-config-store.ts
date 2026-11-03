@@ -5,11 +5,11 @@
 
 import {create} from 'zustand';
 
+import {getAllKeyDefinitions} from '~entities/key-definitions';
 import {setSubsystemFilteredKeys} from '~entities/subsystems';
-import {hasBlockingIssues} from '~shared/api';
+import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
-
-import type {SubsystemKey} from '../subsystem-configurator-view';
+import type {Key as SubsystemKey} from '~shared/types/key-configurator-config.types';
 
 // Cache entry for configured keys (per subsystem) - also serves as working state
 interface ConfiguredKeys {
@@ -23,7 +23,10 @@ interface SubsystemConfigStore {
   clearCache: () => void;
   configuredKeys: ConfiguredKeys[]; // Array of all subsystems' configured keys (cache + working state combined)
 
-  fetchSubsystemConfig: (subsystemId: number) => Promise<void>;
+  fetchSubsystemConfig: (
+    subsystemId: number,
+    backendKeys: SubsystemKey[],
+  ) => Promise<void>;
   // Actions
   initialize: (projectId: string) => void;
   // State
@@ -33,6 +36,7 @@ interface SubsystemConfigStore {
   saveFilteredKeys: (
     subsystemId: number,
     subsystemSystemId: string,
+    keys: SubsystemKey[],
   ) => Promise<boolean>;
   saveToBackend: () => Promise<boolean>;
   updateConfiguredKeys: (subsystemId: number, keys: SubsystemKey[]) => void;
@@ -80,69 +84,61 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
       });
     },
 
-    fetchSubsystemConfig: (subsystemId: number): Promise<void> => {
-      const state = get();
+    fetchSubsystemConfig: async (
+      subsystemId: number,
+      backendKeys: SubsystemKey[],
+    ): Promise<void> => {
+      const {configuredKeys, projectId} = get();
 
-      if (!state.projectId) {
+      if (!projectId) {
         logger.error('ProjectId not set. Call initialize() first', {
           action: 'fetch_subsystem_config',
           component: 'SubsystemConfigStore',
         });
-        return Promise.resolve();
+        return;
       }
 
-      // Check if this subsystem is already in cache
-      const cachedSubsystem = state.configuredKeys.find(
-        (c) => c.subsystemId === subsystemId,
-      );
+      // Seed this subsystem with the keys the backend already has. Cached
+      // entries hold unsaved working state, so never overwrite them.
+      if (!configuredKeys.some((c) => c.subsystemId === subsystemId)) {
+        get().updateConfiguredKeys(subsystemId, backendKeys);
+      }
 
-      // If both available keys and this subsystem's config are cached, no need to fetch
-      if (state.availableKeys && cachedSubsystem) {
-        logger.info('Subsystem configuration loaded from cache', {
+      // Available keys are project-wide: load once, share across subsystems.
+      if (get().availableKeys) {
+        return;
+      }
+
+      try {
+        const result = await getAllKeyDefinitions(projectId);
+
+        if (hasBlockingIssues(result) || !result.data) {
+          logger.error('Failed to load key definitions', {
+            action: 'fetch_subsystem_config',
+            component: 'SubsystemConfigStore',
+            error: getIssueMessage(result, 'Failed to fetch key definitions'),
+            projectId,
+          });
+          return;
+        }
+
+        set({
+          availableKeys: result.data
+            .filter((definition) => definition.isGraphKey)
+            .map((definition) => ({
+              id: definition.naturalId,
+              name: definition.name,
+              systemId: definition.systemId,
+            })),
+        });
+      } catch (error) {
+        logger.error('Error loading key definitions', {
           action: 'fetch_subsystem_config',
           component: 'SubsystemConfigStore',
-          projectId: state.projectId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          projectId,
         });
-        return Promise.resolve();
       }
-
-      // Fetch from backend
-
-      // TODO: Implement backend API call and data transformation
-      // 1. Call backend API: GET /projects/{projectId}/subsystems/{subsystemId}/config
-      // 2. Transform backend response to UI format (SubsystemConfigResponse)
-      // 3. Update availableKeys if not already loaded
-      // 4. Add/update this subsystem's entry in configuredKeys array
-      //
-      // Example structure:
-      // const result = await httpClient.get<BackendSubsystemConfigResponse>(...)
-      // const transformedData = transformBackendToUIFormat(result.data)
-      //
-      // const newConfiguredKeys = [...state.configuredKeys]
-      // const existingIndex = newConfiguredKeys.findIndex(c => c.subsystemId === subsystemId)
-      // const newEntry = {
-      //   subsystemId,
-      //   configuredKeys: transformedData.configuredKeys,
-      // }
-      // if (existingIndex >= 0) {
-      //   newConfiguredKeys[existingIndex] = newEntry
-      // } else {
-      //   newConfiguredKeys.push(newEntry)
-      // }
-      //
-      // set({
-      //   availableKeys: state.availableKeys || transformedData.availableKeys,
-      //   configuredKeys: newConfiguredKeys,
-      //   error: null,
-      //   isLoading: false,
-      // })
-
-      logger.warn('Backend API call not yet implemented', {
-        action: 'fetch_subsystem_config',
-        component: 'SubsystemConfigStore',
-        projectId: state.projectId,
-      });
-      return Promise.resolve();
     },
 
     initialize: (projectId: string) => {
@@ -175,19 +171,16 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
     saveFilteredKeys: async (
       subsystemId: number,
       subsystemSystemId: string,
+      keys: SubsystemKey[],
     ): Promise<boolean> => {
-      const {configuredKeys, projectId} = get();
-      const keys =
-        configuredKeys.find((c) => c.subsystemId === subsystemId)?.keys ?? [];
+      const {projectId} = get();
 
       try {
         const result = await setSubsystemFilteredKeys(
           projectId,
           subsystemSystemId,
           {
-            keySystemIds: keys
-              .map((key) => key.systemId)
-              .filter((id): id is string => !!id),
+            keySystemIds: keys.map((key) => key.systemId),
           },
         );
 
@@ -200,6 +193,15 @@ export const useSubsystemConfigStore = create<SubsystemConfigStore>(
           return false;
         }
 
+        const savedKeys = result.data
+          ? result.data.filteredKeys.map((key) => ({
+              id: key.naturalId,
+              name: key.name,
+              systemId: key.systemId,
+            }))
+          : keys;
+
+        get().updateConfiguredKeys(subsystemId, savedKeys);
         return true;
       } catch {
         return false;

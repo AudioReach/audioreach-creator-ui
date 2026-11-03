@@ -67,6 +67,7 @@ export {
   parseSubgraphDropPayload,
 } from './lib/subgraph-operations';
 export {canMoveToSubsystem} from './lib/subsystem-operations';
+export {withMutationLock} from './model/edit-session-slice';
 export {
   GraphDesignerStoreContext,
   useGraphDesignerStore,
