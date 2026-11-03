@@ -12,6 +12,7 @@ import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
 import ArcSearchBar from '~shared/controls/arc-search-bar';
 import type {
+  Key,
   SortColumn,
   SortOrder,
 } from '~shared/types/key-configurator-config.types';
@@ -23,16 +24,23 @@ import {
 import {ConfigSummaryView} from '../../config-summary-view';
 import {useSubsystemConfigStore} from '../../model/subsystem-config-store';
 
-import {AVAILABLE_KEYS, SAMPLE_CONFIGURED_KEYS} from './subsystem-config.types';
-
 export interface SubsystemConfigPanelProps {
+  /** Filtered keys the backend currently holds for this subsystem. */
+  backendKeys: Key[];
   isEditable: boolean;
+  isMutating: boolean;
+  projectId: string;
+  runExclusive: <T>(action: () => Promise<T>) => Promise<T>;
   subsystemId: number;
   subsystemSystemId: string;
 }
 
 export function SubsystemConfigPanel({
+  backendKeys,
   isEditable,
+  isMutating,
+  projectId,
+  runExclusive,
   subsystemId,
   subsystemSystemId,
 }: SubsystemConfigPanelProps) {
@@ -43,10 +51,7 @@ export function SubsystemConfigPanel({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // Get store state
-  let availableKeys = useSubsystemConfigStore((state) => state.availableKeys);
-  if (!availableKeys) {
-    availableKeys = AVAILABLE_KEYS;
-  }
+  const availableKeys = useSubsystemConfigStore((state) => state.availableKeys);
   const configuredKeysArray = useSubsystemConfigStore(
     (state) => state.configuredKeys,
   );
@@ -55,14 +60,8 @@ export function SubsystemConfigPanel({
   const fetchSubsystemConfig = useSubsystemConfigStore(
     (state) => state.fetchSubsystemConfig,
   );
-  const updateConfiguredKeys = useSubsystemConfigStore(
-    (state) => state.updateConfiguredKeys,
-  );
-  const addConfiguredKey = useSubsystemConfigStore(
-    (state) => state.addConfiguredKey,
-  );
-  const removeConfiguredKey = useSubsystemConfigStore(
-    (state) => state.removeConfiguredKey,
+  const initializeSubsystemConfig = useSubsystemConfigStore(
+    (state) => state.initialize,
   );
   const saveFilteredKeys = useSubsystemConfigStore(
     (state) => state.saveFilteredKeys,
@@ -76,24 +75,20 @@ export function SubsystemConfigPanel({
     return subsystem?.keys || [];
   }, [configuredKeysArray, subsystemId]);
 
-  // Fetch data on mount and initialize with sample data if needed
+  // Seed backend keys and load available keys on mount
   useEffect(() => {
-    fetchSubsystemConfig(subsystemId);
-
-    // TODO: Remove the below code after fecthing the data from the store.
-    // If store doesn't have data for this subsystem after fetch attempt, initialize with sample data
-    const subsystem = configuredKeysArray.find(
-      (c) => c.subsystemId === subsystemId,
-    );
-    if (!subsystem) {
-      // Initialize store with sample data so delete/add operations work
-      updateConfiguredKeys(subsystemId, SAMPLE_CONFIGURED_KEYS);
+    if (!projectId) {
+      return;
     }
+
+    initializeSubsystemConfig(projectId);
+    void fetchSubsystemConfig(subsystemId, backendKeys);
   }, [
+    projectId,
     subsystemId,
+    backendKeys,
+    initializeSubsystemConfig,
     fetchSubsystemConfig,
-    configuredKeysArray,
-    updateConfiguredKeys,
   ]);
 
   // Filter available keys based on search term
@@ -134,9 +129,15 @@ export function SubsystemConfigPanel({
     setSelectedKeys([]);
   };
 
-  const handleDeleteConfiguredKey = (id: number) => {
-    removeConfiguredKey(subsystemId, id);
-    void saveFilteredKeys(subsystemId, subsystemSystemId);
+  const handleDeleteConfiguredKey = async (id: number) => {
+    const newKeys = configuredKeys.filter((key) => key.id !== id);
+    try {
+      return await runExclusive(() =>
+        saveFilteredKeys(subsystemId, subsystemSystemId, newKeys),
+      );
+    } catch {
+      return false;
+    }
   };
 
   const handleKeySelection = (id: number, checked: boolean) => {
@@ -164,7 +165,7 @@ export function SubsystemConfigPanel({
     }
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!availableKeys) {
       return;
     }
@@ -176,11 +177,20 @@ export function SubsystemConfigPanel({
     );
 
     if (keysToAdd.length > 0) {
-      // Add each key individually
-      keysToAdd.forEach((key) => {
-        addConfiguredKey(subsystemId, key);
-      });
-      void saveFilteredKeys(subsystemId, subsystemSystemId);
+      let saved = false;
+      try {
+        saved = await runExclusive(() =>
+          saveFilteredKeys(subsystemId, subsystemSystemId, [
+            ...configuredKeys,
+            ...keysToAdd,
+          ]),
+        );
+      } catch {
+        saved = false;
+      }
+      if (!saved) {
+        return;
+      }
     }
 
     setSelectedKeys([]);
@@ -232,10 +242,10 @@ export function SubsystemConfigPanel({
     <div className="flex flex-col gap-4 p-2">
       {/* Configured Keys Summary */}
       <ConfigSummaryView
-        isEditable={isEditable}
+        isEditable={isEditable && !isMutating}
         items={summaryItems}
         onAddClick={handleAddClick}
-        onDeleteItem={handleDeleteConfiguredKey}
+        onDeleteItem={(id) => void handleDeleteConfiguredKey(id)}
         title="Configured Keys"
       />
 
@@ -327,9 +337,9 @@ export function SubsystemConfigPanel({
             Cancel
           </Button>
           <Button
-            disabled={selectedKeys.length === 0}
+            disabled={selectedKeys.length === 0 || isMutating}
             emphasis="primary"
-            onClick={handleApply}
+            onClick={() => void handleApply()}
             size="sm"
             variant="fill"
           >

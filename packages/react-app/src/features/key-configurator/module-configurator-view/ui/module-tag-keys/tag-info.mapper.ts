@@ -61,6 +61,7 @@ function transformTkvToConfiguredTKV(
     key: {
       id: kv.key.naturalId,
       name: kv.key.name,
+      systemId: kv.key.systemId,
     },
     value: {
       id: kv.value.naturalId,
@@ -144,6 +145,7 @@ function transformTagKeyDefinitionToModuleTagKey(
   return {
     id: keyDto.naturalId,
     name: keyDto.name,
+    systemId: keyDto.systemId,
     values: keyDto.values.map(transformTagValueDefinition),
   };
 }

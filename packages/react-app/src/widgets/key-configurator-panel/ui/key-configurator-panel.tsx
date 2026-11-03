@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 
 import {
   type ConfigurationContext,
@@ -18,14 +18,21 @@ import {
   type SubgraphKvFilterState,
 } from '~features/key-configurator/subgraph-configurator-view';
 import {SubsystemConfigPanel} from '~features/key-configurator/subsystem-configurator-view';
-import {useGraphDesignerStoreShallow} from '~features/graph-designer';
+import {
+  useGraphDesignerStore,
+  useGraphDesignerStoreShallow,
+  withMutationLock,
+} from '~features/graph-designer';
 import {useUserPreferences} from '~shared/config/hooks';
 import {logger} from '~shared/lib/logger';
 import {useProjectStoreShallow} from '~shared/store';
+import type {Key} from '~shared/types/key-configurator-config.types';
 import {
   ConfiguratorPanel,
   ConfiguratorUtils,
 } from '~widgets/configurator-panel';
+
+const NO_BACKEND_KEYS: Key[] = [];
 
 /**
  * Connects Graph Designer selection to the existing Key Configurator host.
@@ -34,6 +41,11 @@ import {
  */
 /** Hosts item configurators for selections supplied by Graph Designer. */
 export const KeyConfiguratorPanel: React.FC = () => {
+  const graphStore = useGraphDesignerStore();
+  const isMutating = useGraphDesignerStoreShallow((state) => state.isMutating);
+  const runExclusive = <T,>(action: () => Promise<T>) =>
+    withMutationLock(graphStore.getState, action);
+
   const useStore = useKeyConfiguratorSelectionStore();
   const selectedItems = useStore((state) => state.selectedItems);
   const projectId = useStore((state) => state.projectId);
@@ -67,6 +79,25 @@ export const KeyConfiguratorPanel: React.FC = () => {
     kvSelectionsById: state.kvSelectionsById,
     setSgKvVectorSelected: state.setSgKvVectorSelected,
   }));
+
+  // Map each subsystem's backend filtered keys to the configurator's key format.
+  const subsystems = graphData?.subsystems;
+  const backendKeysBySubsystem = useMemo<Record<string, Key[]>>(() => {
+    if (!subsystems) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(subsystems).map(([systemId, subsystem]) => [
+        systemId,
+        subsystem.filteredKeys?.map((key) => ({
+          id: key.naturalId,
+          name: key.name,
+          systemId: key.systemId,
+        })) ?? NO_BACKEND_KEYS,
+      ]),
+    );
+  }, [subsystems]);
 
   useEffect(() => {
     if (
@@ -104,7 +135,13 @@ export const KeyConfiguratorPanel: React.FC = () => {
       case ConfigurationItemType.SUBSYSTEM:
         return (
           <SubsystemConfigPanel
+            backendKeys={
+              backendKeysBySubsystem[item.systemId] ?? NO_BACKEND_KEYS
+            }
             isEditable={isEditableParam}
+            isMutating={isMutating}
+            projectId={projectId}
+            runExclusive={runExclusive}
             subsystemId={item.id}
             subsystemSystemId={item.systemId}
           />

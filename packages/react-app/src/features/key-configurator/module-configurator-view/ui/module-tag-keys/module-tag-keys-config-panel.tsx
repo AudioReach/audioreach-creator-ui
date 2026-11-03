@@ -21,6 +21,7 @@ import {Checkbox} from '@qualcomm-ui/react/checkbox';
 
 import ArcSearchBar from '~shared/controls/arc-search-bar';
 import type {
+  Key,
   SortColumn,
   SortOrder,
 } from '~shared/types/key-configurator-config.types';
@@ -452,7 +453,7 @@ export function ModuleTagKeysConfigPanel({
 
     // Group selected values by their keys (with full Key and KeyValue objects)
     const selectedPerKey: Array<{
-      key: {id: number; name: string};
+      key: Key;
       values: Array<{id: number; name: string}>;
     }> = [];
 
@@ -472,7 +473,11 @@ export function ModuleTagKeysConfigPanel({
             );
             if (!keyEntry) {
               keyEntry = {
-                key: {id: modKey.id, name: modKey.name},
+                key: {
+                  id: modKey.id,
+                  name: modKey.name,
+                  systemId: modKey.systemId,
+                },
                 values: [],
               };
               selectedPerKey.push(keyEntry);
@@ -500,7 +505,7 @@ export function ModuleTagKeysConfigPanel({
     // Generate Cartesian product of all selected values across keys
     const combinations: Array<
       Array<{
-        key: {id: number; name: string};
+        key: Key;
         value: {id: number; name: string};
       }>
     > = [];
@@ -508,7 +513,7 @@ export function ModuleTagKeysConfigPanel({
     function generateCombinations(
       index: number,
       currentCombo: Array<{
-        key: {id: number; name: string};
+        key: Key;
         value: {id: number; name: string};
       }>,
     ) {
@@ -1113,7 +1118,7 @@ export function ModuleTagKeysConfigPanel({
                         className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
                           isSelected
                             ? 'bg-support-info-subtle'
-                            : 'bg-transparent hover:bg-neutral-03'
+                            : 'hover:bg-neutral-03 bg-transparent'
                         }`}
                         onClick={() => toggleTagGroupExpansion(tagGroup.id)}
                       >
