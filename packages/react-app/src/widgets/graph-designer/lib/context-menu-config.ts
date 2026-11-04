@@ -101,9 +101,10 @@ function hasAnySubsystemChildren(
 
 function buildSubsystemPlacementItems(
   options: ContextMenuConfigOptions,
+  isMutating: boolean,
   parentId?: string,
 ): ContextMenuItem[] {
-  if (!options.subsystemScoped) {
+  if (!options.subsystemScoped || isMutating) {
     return [];
   }
   return [
@@ -230,7 +231,11 @@ export function buildContextMenuConfig(
           return [
             {icon: Trash2, id: 'delete', label: 'Delete'},
             ...MANUAL_USECASE_ITEMS,
-            ...buildSubsystemPlacementItems(options, target.node.parentId),
+            ...buildSubsystemPlacementItems(
+              options,
+              store.isMutating,
+              target.node.parentId,
+            ),
           ];
         case 'subsystem': {
           if (target.node.id === store.activeSubsystemId) {
@@ -247,7 +252,11 @@ export function buildContextMenuConfig(
                 ? 'Subsystem must be empty before it can be deleted'
                 : undefined,
             },
-            ...buildSubsystemPlacementItems(options, target.node.parentId),
+            ...buildSubsystemPlacementItems(
+              options,
+              store.isMutating,
+              target.node.parentId,
+            ),
             {icon: ChevronRight, id: 'expand', label: 'Expand'},
           ];
         }

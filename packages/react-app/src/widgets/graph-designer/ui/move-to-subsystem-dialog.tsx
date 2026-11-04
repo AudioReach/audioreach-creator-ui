@@ -18,6 +18,7 @@ import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subs
 interface MoveToSubsystemDialogProps {
   currentParentId: string | null;
   isMoving?: boolean;
+  movingNodeId: string | null;
   onCancel: () => void;
   onConfirm: (destinationId: string) => void;
   open: boolean;
@@ -31,12 +32,16 @@ const DEFAULT_EXPANDED_IDS = [TOP_NODE_ID];
 function MoveToSubsystemDialogContent({
   currentParentId,
   isMoving,
+  movingNodeId,
   onCancel,
   onConfirm,
   tree,
 }: Omit<MoveToSubsystemDialogProps, 'open'>) {
   const currentId = currentParentId ?? TOP_ID;
   const [selectedId, setSelectedId] = useState(currentId);
+  const disabledSystemIds = movingNodeId
+    ? [currentId, movingNodeId]
+    : [currentId];
 
   return (
     <>
@@ -46,6 +51,7 @@ function MoveToSubsystemDialogContent({
           <SubsystemTreeView
             data={tree}
             defaultExpandedIds={DEFAULT_EXPANDED_IDS}
+            disabledSystemIds={disabledSystemIds}
             onClick={setSelectedId}
             pickerMode
             selectedSystemId={selectedId}
@@ -54,6 +60,7 @@ function MoveToSubsystemDialogContent({
       </Dialog.Body>
       <Dialog.Footer>
         <Button
+          disabled={isMoving}
           emphasis="neutral"
           onClick={onCancel}
           size="sm"

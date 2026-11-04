@@ -1639,6 +1639,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
             : containingSubsystemIdOf(graphData, moveNodeId)
         }
         isMoving={isMoving}
+        movingNodeId={moveNodeId}
         onCancel={() => setMoveNodeId(null)}
         onConfirm={(destinationId) => {
           void handleMoveToSubsystem(destinationId);

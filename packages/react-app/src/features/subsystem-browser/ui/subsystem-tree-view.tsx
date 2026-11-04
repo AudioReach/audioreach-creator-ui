@@ -19,6 +19,7 @@ import SubsystemTreeNode from './subsystem-tree-node';
 interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
   defaultExpandedIds?: number[];
+  disabledSystemIds?: readonly string[];
   onClick: (systemId: string) => void;
   /** Adds hover and selection colours for use as a destination picker. */
   pickerMode?: boolean;
@@ -74,6 +75,7 @@ function collectAncestorIdsForMatches(
 const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
   data,
   defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
+  disabledSystemIds,
   onClick,
   pickerMode = false,
   selectedSystemId,
@@ -196,6 +198,7 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
       {data.map((treeNode) => (
         <SubsystemTreeNode
           key={treeNode.id}
+          disabledSystemIds={disabledSystemIds}
           isExpanded={isExpanded}
           onClick={onClick}
           pickerMode={pickerMode}
