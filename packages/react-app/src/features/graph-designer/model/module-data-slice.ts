@@ -27,10 +27,10 @@ import {logger} from '~shared/lib/logger';
 import {createDefaultTreeViewUiState} from '~shared/lib/tree-view-ui-state';
 import type {SliceStatus} from '~shared/store/global-store.types';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
+import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 
 import {resolveEnableParamSystemId} from '../lib/module-enable.constants';
 import {resolveActiveCkv} from '../lib/resolve-active-ckv';
-import {toUserFriendlyError} from '../lib/to-user-friendly-error';
 
 import type {GraphDataSlice} from './graph-data-slice';
 import type {ModuleListSlice} from './module-list-slice';
@@ -74,9 +74,10 @@ export interface ModuleDataEntry {
   };
 }
 
-function mergeParametersById<
-  T extends {parameters: ParameterDetailDto[]},
->(existingDto: T, responseDto: T): T {
+function mergeParametersById<T extends {parameters: ParameterDetailDto[]}>(
+  existingDto: T,
+  responseDto: T,
+): T {
   const byId = new Map(
     responseDto.parameters.map((param) => [param.naturalId, param]),
   );
@@ -205,6 +206,27 @@ export function createModuleDataSlice<
     } as Partial<S>);
   };
 
+  const resolveModuleName = (moduleInstanceId: string): string => {
+    const moduleInstance = get().graphData?.moduleInstances[moduleInstanceId];
+    return (
+      get().moduleDataByInstanceId[moduleInstanceId]?.moduleName ||
+      moduleInstance?.moduleName ||
+      moduleInstance?.displayName ||
+      'Module'
+    );
+  };
+
+  const showFetchError = (
+    moduleInstanceId: string,
+    moduleName: string,
+  ): void => {
+    const moduleInstance = get().graphData?.moduleInstances[moduleInstanceId];
+    const instanceId = moduleInstance
+      ? formatModuleInstanceId(moduleInstance.naturalId)
+      : moduleInstanceId;
+    showToast(`Failed to get data for ${moduleName} (${instanceId})`, 'danger');
+  };
+
   return {
     clearModuleData: (moduleInstanceId: string): void => {
       logger.debug('moduleDataSlice: clearModuleData', {
@@ -229,7 +251,7 @@ export function createModuleDataSlice<
       });
 
       const entry = get().moduleDataByInstanceId[moduleInstanceId];
-      const moduleName = entry?.moduleName ?? '';
+      const moduleName = resolveModuleName(moduleInstanceId);
 
       // Do not disturb a full DTO with a partial background prefetch — the
       // pre-request loading patch alone would overwrite status/selectedCalIndex.
@@ -277,7 +299,7 @@ export function createModuleDataSlice<
               status: 'error',
             }),
           });
-          showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+          showFetchError(moduleInstanceId, moduleName);
           return false;
         }
 
@@ -323,7 +345,7 @@ export function createModuleDataSlice<
             status: 'error',
           }),
         });
-        showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+        showFetchError(moduleInstanceId, moduleName);
         return false;
       }
     },
@@ -339,7 +361,7 @@ export function createModuleDataSlice<
       });
 
       const entry = get().moduleDataByInstanceId[moduleInstanceId];
-      const moduleName = entry?.moduleName ?? '';
+      const moduleName = resolveModuleName(moduleInstanceId);
 
       patchEntry(moduleInstanceId, {
         moduleName,
@@ -380,7 +402,7 @@ export function createModuleDataSlice<
               status: 'error',
             }),
           });
-          showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+          showFetchError(moduleInstanceId, moduleName);
           return false;
         }
 
@@ -413,7 +435,7 @@ export function createModuleDataSlice<
             status: 'error',
           }),
         });
-        showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+        showFetchError(moduleInstanceId, moduleName);
         return false;
       }
     },
@@ -469,7 +491,7 @@ export function createModuleDataSlice<
               status: 'error',
             }),
           });
-          showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+          showFetchError(moduleInstanceId, moduleName);
           return false;
         }
 
@@ -566,7 +588,7 @@ export function createModuleDataSlice<
             status: 'error',
           }),
         });
-        showToast(toUserFriendlyError(errorMsg, moduleName), 'danger');
+        showFetchError(moduleInstanceId, moduleName);
         return false;
       }
     },
@@ -812,8 +834,7 @@ export function createModuleDataSlice<
         if (!activeCkv.isResolved) {
           continue;
         }
-        const entry =
-          state.moduleDataByInstanceId[moduleInstance.systemId];
+        const entry = state.moduleDataByInstanceId[moduleInstance.systemId];
         const cal = entry?.calData;
         // Never background-fetch a module whose tab has already loaded a full
         // DTO — partial overlay fetches must not disturb a decoupled tab CKV.
@@ -895,10 +916,7 @@ export function createModuleDataSlice<
           return result.data;
         }
 
-        const errorMsg = getIssueMessage(
-          result,
-          'Failed to save module data',
-        );
+        const errorMsg = getIssueMessage(result, 'Failed to save module data');
         showToast(errorMsg, 'danger');
       } catch (error) {
         const errorMsg =
@@ -973,10 +991,7 @@ export function createModuleDataSlice<
           return result.data;
         }
 
-        const errorMsg = getIssueMessage(
-          result,
-          'Failed to save module data',
-        );
+        const errorMsg = getIssueMessage(result, 'Failed to save module data');
         showToast(errorMsg, 'danger');
       } catch (error) {
         const errorMsg =

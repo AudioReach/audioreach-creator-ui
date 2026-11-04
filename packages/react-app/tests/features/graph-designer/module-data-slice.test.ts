@@ -330,7 +330,10 @@ const ENABLE_MODULE_ID = 'mod-2012';
 function makeStoreWithEnableModule() {
   return makeWidenedStore({
     headerSelectionsBySubgraphId: {
-      'sg-502': {keyValues: {'key-device': 'v-btrx'}, subgraphSystemId: 'sg-502'},
+      'sg-502': {
+        keyValues: {'key-device': 'v-btrx'},
+        subgraphSystemId: 'sg-502',
+      },
     },
     moduleDefinitionsBySystemId: {
       'mod-def-2012': makeModuleDefinitionWithEnable(),
@@ -403,6 +406,115 @@ function makeStoreWithTwoSubgraphs() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe('module enable regression', () => {
+  it('fetches and saves a default module CKV without subgraph header keys', async () => {
+    const store = makeWidenedStore({
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({ckvs: [makeCkv('ckv-default', [])]}),
+      },
+    });
+    const dto = enableDtoFixture('1');
+    mockGetCalData.mockResolvedValueOnce({data: dto});
+    store.getState().syncEnableOverlays();
+    await Promise.resolve();
+    expect(mockGetCalData).toHaveBeenCalledWith(
+      PROJECT_ID,
+      MODULE_ID,
+      'ckv-default',
+      [ENABLE_PARAM_SYSTEM_ID],
+    );
+    expect(
+      store.getState().moduleDataByInstanceId[MODULE_ID].calData?.status,
+    ).toBe('ready');
+    mockPutCalData.mockResolvedValueOnce({data: dto});
+    await store.getState().setModuleEnable(MODULE_ID, false);
+    expect(mockPutCalData).toHaveBeenCalledWith(
+      PROJECT_ID,
+      MODULE_ID,
+      'ckv-default',
+      expect.anything(),
+      [ENABLE_PARAM_SYSTEM_ID],
+    );
+  });
+
+  it('names the module and canvas instance when its background fetch fails', async () => {
+    const store = makeWidenedStore({
+      moduleInstances: {
+        [MODULE_ID]: makeModuleInstance({naturalId: 0x407f}),
+      },
+    });
+    mockGetCalData.mockResolvedValueOnce({
+      data: makeCalDataDto(),
+      issues: [
+        {
+          code: 'PARAM_PAYLOAD_NOT_FOUND',
+          message: 'missing',
+          severity: 'ERROR',
+        },
+      ],
+    });
+    await store
+      .getState()
+      .fetchCalData(MODULE_ID, 'ckv-1', 'partial', [ENABLE_PARAM_SYSTEM_ID]);
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'Failed to get data for AudioDecoder (0x407F)',
+      'danger',
+    );
+    expect(store.getState().moduleDataByInstanceId[MODULE_ID].moduleName).toBe(
+      MODULE_NAME,
+    );
+  });
+
+  it('uses the definition systemId for enable writes and readback', async () => {
+    const store = makeStoreWithEnableModule();
+    const dto = enableDtoFixture('1');
+    dto.parameters[0] = {
+      ...dto.parameters[0],
+      systemId: ENABLE_PARAM_SYSTEM_ID,
+    };
+    store.setState({
+      moduleDataByInstanceId: {
+        [ENABLE_MODULE_ID]: {
+          calData: {
+            availableCalIndices: [],
+            dto,
+            loadedScope: 'partial',
+            selectedCalIndex: 'ckv-devicerx-btrx',
+            status: 'ready',
+          },
+          moduleName: MODULE_NAME,
+        },
+      },
+    });
+    const saved = {
+      ...dto,
+      parameters: [
+        {
+          ...dto.parameters[0],
+          elements: [{...dto.parameters[0].elements[0], value: '0'}],
+        },
+      ],
+    };
+    mockPutCalData.mockResolvedValueOnce({data: saved});
+    await store.getState().setModuleEnable(ENABLE_MODULE_ID, false);
+    expect(mockPutCalData).toHaveBeenCalledWith(
+      PROJECT_ID,
+      ENABLE_MODULE_ID,
+      'ckv-devicerx-btrx',
+      {
+        parameters: [
+          expect.objectContaining({systemId: ENABLE_PARAM_SYSTEM_ID}),
+        ],
+      },
+      [ENABLE_PARAM_SYSTEM_ID],
+    );
+    expect(
+      store.getState().moduleDataByInstanceId[ENABLE_MODULE_ID].calData?.dto
+        ?.parameters[0].elements[0],
+    ).toHaveProperty('value', '0');
+  });
 });
 
 describe('createModuleDataSlice — queryModuleData', () => {

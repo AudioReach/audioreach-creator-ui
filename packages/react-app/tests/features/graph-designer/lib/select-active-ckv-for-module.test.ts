@@ -53,6 +53,19 @@ function makeState(
 }
 
 describe('selectActiveCkvForModule', () => {
+  it('resolves an empty/default module CKV without a subgraph header', () => {
+    const state = makeState(
+      {
+        'inst-1': makeModule({ckvs: [makeCkv('ckv-default', [])]}),
+      },
+      {},
+    );
+    expect(selectActiveCkvForModule(state, 'inst-1')).toEqual({
+      ckvSystemId: 'ckv-default',
+      isResolved: true,
+    });
+  });
+
   it('resolves when the module has a CKV matching the subgraph header selection', () => {
     const moduleInstance = makeModule({
       ckvs: [makeCkv('ckv-1', [['key-1', 'v1']])],
