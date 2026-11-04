@@ -186,6 +186,56 @@ function makeStateWithEnableModule(options: {
 }
 
 describe('selectModuleEnable', () => {
+  it('shows the loaded enable value for a default CKV without header keys', () => {
+    const state = makeStateWithEnableModule({
+      cachedSelectedCalIndex: 'ckv-default',
+      enableValue: '1',
+      resolvedCkvSystemId: 'ckv-default',
+    });
+    state.headerSelectionsBySubgraphId = {};
+    state.graphData!.moduleInstances['mod-2012'].ckvs = [
+      makeCkv('ckv-default', []),
+    ];
+    expect(selectModuleEnable(state, 'mod-2012')).toEqual({
+      isCkvResolved: true,
+      isPresent: true,
+      isReady: true,
+      value: true,
+    });
+  });
+
+  it.each([
+    ['1', true],
+    ['0', false],
+    ['0x1', true],
+    ['invalid', false],
+  ])('decodes %s using the definition systemId', (value, enabled) => {
+    const state = makeStateWithEnableModule({
+      cachedSelectedCalIndex: 'ckv-devicerx-btrx',
+      enableValue: String(value),
+      resolvedCkvSystemId: 'ckv-devicerx-btrx',
+    });
+    const dto = state.moduleDataByInstanceId['mod-2012'].calData?.dto;
+    if (!dto) {
+      throw new Error('Missing calibration fixture');
+    }
+    dto.parameters[0] = {
+      ...dto.parameters[0],
+      systemId: ENABLE_PARAM_SYSTEM_ID,
+    };
+    dto.parameters.unshift({
+      ...dto.parameters[0],
+      elements: [],
+      systemId: 'other-definition',
+    });
+    expect(selectModuleEnable(state, 'mod-2012')).toEqual({
+      isCkvResolved: true,
+      isPresent: true,
+      isReady: true,
+      value: enabled,
+    });
+  });
+
   it('returns isPresent: false when the module definition is absent', () => {
     const state = makeState({
       moduleInstances: {'inst-1': makeModule()},

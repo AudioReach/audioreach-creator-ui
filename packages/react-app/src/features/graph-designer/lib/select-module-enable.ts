@@ -4,6 +4,7 @@
  */
 
 import type {GraphDesignerStore} from '../model/graph-designer-store';
+import {areNumericStringsEqual} from '~shared/lib/numeric-string';
 
 import {resolveEnableParamSystemId} from './module-enable.constants';
 import {selectActiveCkvForModule} from './select-active-ckv-for-module';
@@ -32,9 +33,7 @@ export function selectModuleEnable(
 ): ModuleEnable {
   const moduleInstance = state.graphData?.moduleInstances[moduleInstanceId];
   const moduleDefinition = moduleInstance
-    ? state.moduleDefinitionsBySystemId[
-        moduleInstance.moduleDefinitionSystemId
-      ]
+    ? state.moduleDefinitionsBySystemId[moduleInstance.moduleDefinitionSystemId]
     : undefined;
   const enableSystemId = resolveEnableParamSystemId(moduleDefinition);
   if (!enableSystemId) {
@@ -62,7 +61,8 @@ export function selectModuleEnable(
   const activeAllowedValue = enableElement.allowedValues?.find(
     (allowedValue) =>
       !('bitMask' in allowedValue) &&
-      allowedValue.value === enableElement.value,
+      (allowedValue.value === enableElement.value ||
+        areNumericStringsEqual(allowedValue.value, enableElement.value)),
   );
 
   return {

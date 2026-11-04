@@ -10,7 +10,7 @@ import {resolveActiveCkv, type ResolvedCkv} from './resolve-active-ckv';
 /**
  * Resolves the active CKV for a module instance against its subgraph's
  * current header selection. Unresolved when the module instance can't be
- * found, its subgraph has no header selection yet, or no CKV matches.
+ * found or no CKV matches. An empty/default CKV needs no header selection.
  */
 export function selectActiveCkvForModule(
   state: GraphDesignerStore,
@@ -23,9 +23,8 @@ export function selectActiveCkvForModule(
 
   const headerSelection =
     state.headerSelectionsBySubgraphId[moduleInstance.subgraphSystemId];
-  if (!headerSelection) {
-    return {isResolved: false};
-  }
-
-  return resolveActiveCkv(moduleInstance.ckvs ?? [], headerSelection.keyValues);
+  return resolveActiveCkv(
+    moduleInstance.ckvs ?? [],
+    headerSelection?.keyValues ?? {},
+  );
 }
