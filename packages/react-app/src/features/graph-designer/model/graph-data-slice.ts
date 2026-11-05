@@ -217,6 +217,7 @@ export interface GraphDataSlice {
     newContainerNaturalId: number,
   ) => void;
   updateModuleAliasLocal: (moduleSystemId: string, alias: string) => void;
+  updateModuleCkvsLocal: (moduleSystemId: string, ckvs: CkvDto[]) => void;
   updateModuleContainerLocal: (
     moduleSystemId: string,
     newContainerSystemId: string,
@@ -227,6 +228,7 @@ export interface GraphDataSlice {
     value: number,
     module?: SpfModuleDto,
   ) => void;
+  updateModuleTagsLocal: (moduleSystemId: string, tags: TagInfoDto[]) => void;
   /** Replaces derived View-mode selected/EC flags without changing vectors. */
   updateSgKvMetadata: (
     metadataBySubgraphId: Record<string, Record<string, KvSelectionMetadata>>,
@@ -484,9 +486,11 @@ function flattenComponentCollection(
  * concept that does not apply here.
  *
  * `existing` (the module's own prior `ModuleInstance`, if any) is
- * consulted only for `position` — `SpfModuleDto` carries no position
- * field, so an update must carry the canvas position forward rather than
- * resetting it to `{x: 0, y: 0}`.
+ * consulted as a fallback for three fields: `position`, since
+ * `SpfModuleDto` carries no position field and an update must carry the
+ * canvas position forward rather than resetting it to `{x: 0, y: 0}`; and
+ * `ckvs`/`tags`, since `getUsecaseComponents` does not yet populate those
+ * on `SpfModuleDto` (backend read-path gap, not an edit-only limitation).
  */
 function toModuleInstance(
   m: SpfModuleDto,
@@ -1197,12 +1201,17 @@ export function createGraphDataSlice<
 
         const activeLinksByPortId = buildActiveLinksByPortId(connections);
 
+        // getUsecaseComponents doesn't populate ckvs/tags on SpfModuleDto yet
+        // (backend read-path gap), so without this carry-forward a reload
+        // (e.g. remounting after a tab switch) would silently wipe saved
+        // CKV/TKV data via toModuleInstance's ckvs/tags fallback.
+        const existingModuleInstances = get().graphData?.moduleInstances;
         const moduleInstances: Record<string, ModuleInstance> = {};
         for (const m of spfModules) {
           const instance = toModuleInstance(
             m,
             defModuleTypeById.get(m.moduleDefinitionSystemId) ?? '',
-            undefined,
+            existingModuleInstances?.[m.systemId],
             activeLinksByPortId,
           );
           moduleInstances[m.systemId] = instance;
@@ -1446,6 +1455,24 @@ export function createGraphDataSlice<
       get().markDirty();
     },
 
+    updateModuleCkvsLocal: (moduleSystemId: string, ckvs: CkvDto[]): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleSystemId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleSystemId]: {...current, ckvs},
+          },
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
     updateModuleContainerLocal: (
       moduleSystemId: string,
       newContainerSystemId: string,
@@ -1504,6 +1531,27 @@ export function createGraphDataSlice<
         graphData: {
           ...graphData,
           moduleInstances,
+        },
+      } as unknown as Partial<S>);
+      get().markDirty();
+    },
+
+    updateModuleTagsLocal: (
+      moduleSystemId: string,
+      tags: TagInfoDto[],
+    ): void => {
+      const {graphData} = get();
+      const current = graphData?.moduleInstances[moduleSystemId];
+      if (!graphData || !current) {
+        return;
+      }
+      set({
+        graphData: {
+          ...graphData,
+          moduleInstances: {
+            ...graphData.moduleInstances,
+            [moduleSystemId]: {...current, tags},
+          },
         },
       } as unknown as Partial<S>);
       get().markDirty();

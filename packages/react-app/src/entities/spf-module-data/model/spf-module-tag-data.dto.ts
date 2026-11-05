@@ -4,6 +4,7 @@
  */
 
 import type {
+  CreateValuesRequestItem,
   KeyValueDto,
   KeyValueInfo,
   ParameterDetailDto,
@@ -31,7 +32,54 @@ export interface TkvDto {
   systemId: string;
 }
 
+export interface CreateTagsRequestDto {
+  tagDefinitionSystemIds: string[];
+}
+
+export interface CreateTkvsRequestDto {
+  tkvs: CreateValuesRequestItem[];
+}
+
+export interface DeleteTagsRequestDto {
+  tagSystemIds: string[];
+}
+
+export interface DeleteTkvsRequestDto {
+  tkvSystemIds: string[];
+}
+
 export interface UpdateSpfModuleTagDataRequest {
   parameters: ParameterDetailDto[];
   uiPersistence?: string;
+}
+
+export interface TkvParameterUpdateItem {
+  parameterSystemIds: string[];
+  tkvSystemId: string;
+}
+
+export interface CreateTkvParametersRequestDto {
+  updates: TkvParameterUpdateItem[];
+}
+
+export interface TkvParameterItem {
+  parameters: ParamInfo[];
+  tkvSystemId: string;
+}
+
+export interface TkvParametersResponseDto {
+  tkvParameters: TkvParameterItem[];
+}
+
+export interface RemoveTkvParametersRequestDto {
+  updates: TkvParameterUpdateItem[];
+}
+
+export interface TkvParameterRemovalItem {
+  removedParameterSystemIds: string[];
+  tkvSystemId: string;
+}
+
+export interface TkvParameterRemovalResponseDto {
+  updates: TkvParameterRemovalItem[];
 }

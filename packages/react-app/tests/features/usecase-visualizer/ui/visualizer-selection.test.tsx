@@ -15,12 +15,32 @@ import {
   latestReactFlowProps,
 } from '../test-utils/xyflow-mock-factory';
 
+interface SelectChange {
+  id: string;
+  selected: boolean;
+  type: 'select';
+}
+
 jest.mock('@xyflow/react', () => {
   const base =
     require('../test-utils/xyflow-mock-factory').createXyflowMockFactory();
   return {
     ...base,
-    applyNodeChanges: jest.fn((_changes: unknown[], nodes: unknown[]) => nodes),
+    // Mirrors real @xyflow/react: a 'select' change flips the `selected`
+    // flag on the matching node, which is what the production fix relies on
+    // to detect "previously selected" nodes across a graph prop rebuild.
+    applyNodeChanges: jest.fn(
+      (
+        changes: Array<SelectChange | {id: string; type: string}>,
+        nodes: {id: string}[],
+      ) =>
+        nodes.map((node) => {
+          const change = changes.find((c) => c.id === node.id);
+          return change?.type === 'select'
+            ? {...node, selected: (change as SelectChange).selected}
+            : node;
+        }),
+    ),
   };
 });
 

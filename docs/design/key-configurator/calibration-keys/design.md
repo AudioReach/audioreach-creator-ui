@@ -214,35 +214,56 @@ unchanged.
 
 **`features/graph-designer/model/calibration-key-config-slice.ts`** (new
 file) — owns the calibration key definitions cache and the actions that
-mutate configured CKVs on Graph Data:
+persist configured CKVs to the backend, mirroring the result onto Graph
+Data once the backend call succeeds:
 
 ```typescript
 interface CalibrationKeyConfigSlice {
-  availableCalibrationKeys: Record<string, CalibrationKey>;  // definitions, fetched once per tab
+  calibrationKeys: Record<string, GraphKey>;  // definitions, fetched once per tab
 
   initializeCalibrationKeyConfiguration: (projectId: string) => Promise<boolean>;
   resetCalibrationKeyConfiguration: () => void;
 
-  removeConfiguredCkv: (instanceSystemId: string, index: number) => void;
+  addCkvs: (
+    instanceSystemId: string,
+    valueSystemIdCombinations: string[][],
+    parameterSystemIds: string[],
+  ) => Promise<boolean>;
+  deleteCkvs: (instanceSystemId: string, ckvSystemIds: string[]) => Promise<boolean>;
+  updateCkvParametersOnly: (
+    instanceSystemId: string,
+    parameterSystemIds: string[],
+  ) => Promise<boolean>;
   updateConfiguredCkvs: (instanceSystemId: string, ckvs: ConfiguredCkv[]) => void;
 }
 ```
 
+This supersedes the slice's originally-designed shape
+(`removeConfiguredCkv`/a single general-purpose `updateConfiguredCkvs` as
+the only mutation actions, both synchronous and Graph-Data-only). The
+backend now has real CKV endpoints (see Back-End below), so each
+user-facing action that creates, deletes, or re-PIDs CKVs calls its backend
+endpoint first and only becomes `Promise<boolean>`-async as a result.
+`updateConfiguredCkvs` itself is unchanged in shape — it stays the
+synchronous, Graph-Data-only write every other action funnels through on
+success (see Backend-First Write-Back below); it is just no longer the only
+mutation action the panel calls directly.
+
 Unlike TKV, there is no `addConfiguredCkv`. Requirement 8's Cartesian-product
 expansion means a single Add's Apply click can produce more than one new
-entry at once; computing the full target array in the panel and making one
-`updateConfiguredCkvs` call covers both Add and Edit with a single
-read-mutate-write-back pass each, instead of looping a single-entry add
-action once per generated combination (which would mean N separate
-`markDirty()`/duplicate-check passes for one Apply click). `removeConfiguredCkv`
-stays single-entry since Delete always removes exactly one existing row.
+entry at once; the panel still computes the full
+`valueSystemIdCombinations` array before calling `addCkvs` once, instead of
+looping a single-entry add action once per generated combination (which
+would mean N separate backend round-trips for one Apply click).
+`deleteCkvs` stays similarly batched — it takes the full array of
+`ckvSystemIds` to remove in one call, not one call per row.
 
-`availableCalibrationKeys` is key _definitions_, shared across every module
+`calibrationKeys` is key _definitions_, shared across every module
 instance in the current project tab. `initializeCalibrationKeyConfiguration(projectId)`
-returns early if `availableCalibrationKeys` is already populated; otherwise
+returns early if `calibrationKeys` is already populated; otherwise
 it calls `getAllKeyDefinitions(projectId)` and stores the result through
 `transformKeyDefinitionsToCalibrationKeys`. `resetCalibrationKeyConfiguration()`
-clears `availableCalibrationKeys`, so the next
+clears `calibrationKeys`, so the next
 `initializeCalibrationKeyConfiguration` call re-fetches.
 
 A module instance's configured CKVs are not stored on this slice at all —
@@ -274,21 +295,19 @@ state; switching to a different module instance or clicking Cancel discards
 it, and only Apply writes the chosen PIDs back, as part of the entry's
 `pidConfig`.
 
-`removeConfiguredCkv`/`updateConfiguredCkvs` each read the instance's
-current configured CKVs via `selectConfiguredCkvs`, apply the mutation,
-and call `get().updateModuleCkvsLocal(instanceSystemId, ckvs)` in the same
-action, writing to Graph Data immediately (requirement 22). For Add, the
-panel first expands the current multi-key selection into its full set of
-Cartesian-product entries (requirement 8), appends that set to the
-instance's current list, and passes the full result to
-`updateConfiguredCkvs` in one call — not one `updateConfiguredCkvs` (or a
-hypothetical single-entry add) per generated entry. For Edit, the panel
-passes the current list with just the edited entry's values replaced:
+#### Backend-First Write-Back
+
+`addCkvs`, `deleteCkvs`, and `updateCkvParametersOnly` each call their
+backend endpoint first (see Back-End below) and only derive and write the
+updated `ConfiguredCkv[]` list on success, by calling
+`get().updateConfiguredCkvs(instanceSystemId, ckvs)` — which stays
+synchronous and Graph-Data-only, the shared final write-back step every
+mutation action funnels through:
 
 ```typescript
-updateConfiguredCkvs: (instanceSystemId, ckvs) => {
+updateConfiguredCkvs: (instanceSystemId: string, ckvs: ConfiguredCkv[]) => {
   const keyDefinitionsByNaturalId = buildKeyDefinitionLookup(
-    get().availableCalibrationKeys,
+    get().calibrationKeys,
   );
   get().updateModuleCkvsLocal(
     instanceSystemId,
@@ -297,18 +316,40 @@ updateConfiguredCkvs: (instanceSystemId, ckvs) => {
 },
 ```
 
-`removeConfiguredCkv` follows the same write-back pattern, reading via
-`selectConfiguredCkvs`, filtering out the one entry at `index`, and calling
-`updateModuleCkvsLocal` with the filtered result.
+`addCkvs` calls `createCkvParameters` (to resolve the chosen PIDs into a
+`pidConfig`) then `createCkvs` with the full batch of
+`valueSystemIdCombinations` (requirement 8's Cartesian-product expansion,
+computed once in the panel before the call); on success it merges
+`AddCkvsResponseDto.addedCkvs` into the instance's current list, drops any
+`removedCkvSystemIds` the backend reports, applies the resolved
+`pidConfig` to every entry, and calls `updateConfiguredCkvs` once with the
+result. `deleteCkvs` calls `deleteCkvsApi` with the full batch of
+`ckvSystemIds` to remove, then filters the deleted set out of the current
+list before calling `updateConfiguredCkvs`. `updateCkvParametersOnly`
+calls `createCkvParameters` for the instance's module-scoped PID set, then
+re-applies the resolved `pidConfig` across every currently-configured CKV
+before calling `updateConfiguredCkvs`. Any blocking issue or thrown error
+from the backend call short-circuits before `updateConfiguredCkvs` is ever
+called — Graph Data is left untouched (see Error Handling below).
+
+**Edit stays local-only.** Changing an existing entry's key/value selection
+(requirement 6's pre-populated Edit) has no backend call at all — there is
+no endpoint for "change this CKV's key/value combination," only for
+creating or deleting whole entries. The panel instead calls
+`updateConfiguredCkvs` directly with the edited entry (and, when a
+multi-key edit's Cartesian-product expansion produces more than one
+replacement row, the additional rows — see CKV Identity below), bypassing
+`addCkvs`/`deleteCkvs` entirely. This is an intentional, narrower gap, not
+an oversight: see the Open Question below.
 
 ### CKV Identity
 
-`ConfiguredCkv` (moving to `shared/types/key-configurator-config.types.ts`)
-gains one field it does not have today:
+`ConfiguredCkv` (`shared/types/key-configurator-config.types.ts`) carries
+its own identity:
 
 ```typescript
 export interface ConfiguredCkv {
-  keyValuePairs: Array<{key: CalibrationKey; value: KeyValue}>;
+  keyValuePairs: Array<{key: GraphKey; value: KeyValue}>;
   pidConfig: number[];
   systemId: string; // this CKV entry's own identity
 }
@@ -319,31 +360,38 @@ result, because every entry must round-trip back into a `CkvDto` on Apply,
 and `CkvDto.systemId` is non-optional. An entry loaded from Graph Data
 copies it directly from the source `CkvDto.systemId`.
 
-An entry created through Add has no backend-assigned `CkvDto.systemId`
-yet. The panel derives a deterministic composite key from the entry's own
-key/value selection: the `systemId` of each selected `KeyInfo`/`ValueInfo`
-pair, sorted and joined
-(e.g. `"KEY_SYS_010:VAL_SYS_100|KEY_SYS_040:VAL_SYS_402"`). Because Apply
-expands a multi-key selection into one entry per Cartesian-product
-combination (requirement 8), each resulting row gets its own composite key
-computed from that row's specific key/value pair, not from the full
-pre-expansion selection. This is unique by construction, because
-requirement 10 already forbids two entries on the same instance from
-sharing an identical key-value combination, and it is built entirely from
-backend-sourced data, with no client-generated value anywhere in it. The
-composite is computed once, at Add, and never recomputed — editing an
-already-loaded entry's key/value selection does not change its existing
-`systemId`. This is deliberate: once an entry has an identity, even this
-client-side composite stand-in, a later edit should read as "modify this
-entry," not "delete it and create a new one," matching how a
-backend-loaded entry's `systemId` already behaves across edits.
+**Add is fully resolved.** `createCkvs`'s response
+(`AddCkvsResponseDto { addedCkvs: CkvDto[]; removedCkvSystemIds: string[] }`)
+carries a real, backend-assigned `systemId` for every newly-created entry —
+`addCkvs` never synthesizes an identity. This resolves the design's
+original open question for the Add path: the backend contract for a
+new entry's `systemId` is confirmed, not a stand-in.
 
-**Open question — composite-key stand-in.** Same open question as TKV's
-design: this composite-key approach is a stand-in, not a confirmed backend
-contract. Nothing confirms the backend accepts or expects a `CkvDto.systemId`
-of this shape for a newly-created entry. This needs sign-off before
-implementation, and may share a single resolution with TKV's identical
-question (see Open Questions in requirements.md).
+**Edit still uses a client-side composite-key stand-in.** Because Edit has
+no backend call (see Backend-First Write-Back above), any additional rows
+a multi-key edit's Cartesian-product expansion produces beyond the first
+still need a locally-synthesized identity — there is no backend round-trip
+to assign one. The first resulting row keeps the original entry's real,
+backend-assigned `systemId` (edit-in-place); every additional row gets a
+deterministic composite key from `buildCkvSystemId`
+(`calibration-keys-config-panel.tsx`): the `systemId` of each selected
+`KeyInfo`/`ValueInfo` pair, sorted and joined
+(e.g. `"KEY_SYS_010:VAL_SYS_100|KEY_SYS_040:VAL_SYS_402"`). This is unique
+by construction, because requirement 10 already forbids two entries on the
+same instance from sharing an identical key-value combination, and it is
+built entirely from backend-sourced key/value data, with no client-generated
+value anywhere in it — but it is still never sent to or confirmed by the
+backend, since Edit never calls an API.
+
+**Open question — composite-key stand-in, Edit only.** Unlike Add (now
+resolved above) and unlike TKV (fully resolved — see TKV's design, TKV
+Identity), CKV's Edit path has no corresponding backend endpoint for
+changing an existing entry's key/value selection, so this composite-key
+approach remains a stand-in for any additional rows a multi-key edit
+produces. Nothing confirms the backend would accept a `CkvDto.systemId` of
+this shape if Edit ever gains a real endpoint. This needs sign-off before
+Edit itself is extended to call the backend (see Open Questions in
+requirements.md).
 
 ### Graph Data Write-Back
 
@@ -381,40 +429,40 @@ triggers.
 
 **`features/graph-designer/model/key-config-slice.ts`** — loses the
 `CalibrationKey`-definitions responsibility it holds today, superseded by
-`CalibrationKeyConfigSlice.availableCalibrationKeys`, populated the same
-way TKV's `moduleTagKeys` is. Every other field (`isEditable`,
-`keyConfigStatus`, `subgraphConfig`, `subsystemConfig`) and action keeps its
-existing shape, unchanged by this design except for `initializeConfiguration`'s
-module branch, which now awaits both slices:
+`CalibrationKeyConfigSlice.calibrationKeys`, populated the same way TKV's
+`moduleTagKeys` is. `initializeConfiguration` fans out to both slices
+unconditionally (not gated on `context.itemType`, since both caches are
+cheap to have loaded regardless of which item type is selected), and
+`resetConfiguration` resets both in the same way:
 
 ```typescript
 initializeConfiguration: async (context) => {
-  if (context.itemType === 'module') {
-    const [tkvSuccess, ckvSuccess] = await Promise.all([
-      get().initializeModuleTagKeyConfiguration(context.projectId),
-      get().initializeCalibrationKeyConfiguration(context.projectId),
-    ]);
-    const success = tkvSuccess && ckvSuccess;
-    set({keyConfigStatus: success ? 'ready' : 'error'} as Partial<S>);
-    return success;
-  }
-  // subgraph/subsystem branches: unchanged placeholder behavior
+  const [calibrationOk, tagOk] = await Promise.all([
+    get().initializeCalibrationKeyConfiguration(context.projectId),
+    get().initializeModuleTagKeyConfiguration(context.projectId),
+  ]);
+  const success = calibrationOk && tagOk;
+  set({keyConfigStatus: success ? 'ready' : 'error'} as Partial<S>);
+  return success;
 },
 
 resetConfiguration: () => {
-  get().resetModuleTagKeyConfiguration();
   get().resetCalibrationKeyConfiguration();
+  get().resetModuleTagKeyConfiguration();
   // ...remaining reset of isEditable/keyConfigStatus/subgraphConfig/
   // subsystemConfig: unchanged
 },
-
-saveConfiguration: async () => {
-  const {graphData} = get();
-  // stub backend call, reading configured CKVs/TKVs straight from
-  // graphData.moduleInstances — contract pending the Open Question below
-  return true;
-},
 ```
+
+**`saveConfiguration` no longer touches CKV/TKV at all.** It remains a
+stub (`// TODO: Replace with actual backend API call`, guarded on
+`configContext`/`projectId`, returning `true` without reading or sending
+anything) — but its scope has narrowed to subgraph/subsystem config only.
+CKV/TKV persistence moved entirely into `CalibrationKeyConfigSlice`'s and
+`ModuleTagKeyConfigSlice`'s own per-mutation backend calls above; there is
+no longer a separate "save" step for CKV/TKV at all, and the two features'
+original shared open question about `saveConfiguration`'s backend contract
+no longer applies to CKV/TKV — see Questions below.
 
 **`features/graph-designer/model/graph-designer-store.ts`** — the composed
 type becomes `KeyConfigSlice & ModuleTagKeyConfigSlice &
@@ -652,11 +700,32 @@ No new backend endpoints are built for reading CKV data — module selection
 no longer calls a dedicated tuning-config endpoint at all, since CKV data
 comes from Graph Data (already loaded by the existing graph-load flow) and
 module parameter definitions come from the already-loaded, per-tab module
-list. Database design is unaffected; no new persisted schema is introduced
-at this layer. The save-endpoint contract for pushing configured CKVs
-beyond Graph Data to the backend remains an open question (see below) —
-the same open question TKV's design has, which may share a single
-resolution across both features.
+list.
+
+Writing CKVs, however, now goes through real endpoints
+(`entities/spf-module-data/api/spf-module-api.ts`), called directly from
+`CalibrationKeyConfigSlice`'s mutation actions rather than through a
+separate save step:
+
+| Endpoint | Method | Called by |
+| --- | --- | --- |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs` | `POST` (`createCkvs`) | `addCkvs` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs` | `DELETE` (`deleteCkvs`) | `deleteCkvs` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckv-parameters` | `POST` (`createCkvParameters`) | `addCkvs`, `updateCkvParametersOnly` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckv-parameters` | `DELETE` (`deleteCkvParameters`) | none — defined, not currently called by any CKV action |
+
+`createCkvs` returns `AddCkvsResponseDto {addedCkvs: CkvDto[]; removedCkvSystemIds: string[]}`,
+giving every newly-created entry a real, backend-assigned `systemId` (see
+CKV Identity above). Persistence happens per-mutation — one request per
+Add/Delete/PID-update Apply click — not through a separate bulk save step;
+`KeyConfigSlice.saveConfiguration` is unrelated to CKV/TKV (see Graph Data
+Write-Back above).
+
+Edit (changing an existing entry's key/value selection) has no
+corresponding endpoint at all — it is the one CKV mutation that stays
+local-only (see Backend-First Write-Back above). Database design is
+otherwise unaffected; no new persisted schema is introduced at this layer
+beyond what the listed endpoints already imply server-side.
 
 ## Interfaces-Services
 
@@ -670,9 +739,9 @@ fetch or store access:
 - `transformConfiguredCkvsToCkvs(ckvs, keyDefinitionsByNaturalId): CkvDto[]`
   — the reverse, called before writing back to Graph Data. Resolves each
   `ConfiguredCkv`'s key/value `id`s back to `KeyInfo.systemId`/
-  `ValueInfo.systemId` against the loaded `availableCalibrationKeys`
-  definitions, the same way TKV's `transformConfiguredTkvsToTags` resolves
-  its own key/value identities.
+  `ValueInfo.systemId` against the loaded `calibrationKeys` definitions,
+  the same way TKV's `transformConfiguredTkvsToTags` resolves its own
+  key/value identities.
 
 Both functions take `CkvDto` from `entities/spf-module-data` — the type
 `graph-data-slice.ts` already uses for `ModuleInstance.ckvs` — not the
@@ -692,15 +761,34 @@ entity-layer transform — it needs both `graphData` and
 ## Error Handling
 
 `CalibrationKeyConfigSlice`'s `initializeCalibrationKeyConfiguration`
-returns a boolean, leaving `availableCalibrationKeys` empty rather than
-partially populated on failure, and logs via `~shared/lib/logger`. It does
-not know about `keyConfigStatus` — that stays owned by `KeyConfigSlice`'s
+returns a boolean, leaving `calibrationKeys` empty rather than partially
+populated on failure, and logs via `~shared/lib/logger`. It does not know
+about `keyConfigStatus` — that stays owned by `KeyConfigSlice`'s
 `initializeConfiguration`, which awaits both the TKV and CKV booleans and
 sets `keyConfigStatus` to `'error'` if either fails, `'ready'` only if both
 succeed. Apply-time input validation (duplicate-entry check, requirement
 10) and delete confirmations stay entirely inside the presentational
-panel's existing logic — unchanged. The CKV mutation actions are
-synchronous, non-failing map mutations with no error path of their own.
+panel's existing logic — unchanged.
+
+`addCkvs`, `deleteCkvs`, and `updateCkvParametersOnly` each wrap their
+backend call(s) in `try`/`catch` and check `hasBlockingIssues` on every
+response. On a blocking issue or a thrown error, the action calls
+`showToast(getIssueMessage(result, fallbackMessage), 'danger')` (or a fixed
+fallback message in the `catch` branch), logs via `logger.error` with
+`action`/`component`/`error` context, and returns `false` — Graph Data is
+never written, so `updateConfiguredCkvs` is never reached and the instance's
+previously-configured CKVs are left exactly as they were. The panel keeps
+its in-progress local selection (`selectedKeyValues`, `parameters`, open
+`activeOperation`) on a `false` return rather than closing the Add/Edit
+section, so the user can retry or adjust without re-entering their
+selection. `updateConfiguredCkvs` itself stays a synchronous, non-failing
+local write with no error path of its own — by the time it is called, the
+backend call it was gated behind has already succeeded.
+
+Edit's key/value-selection change has no error path to speak of, since it
+has no backend call: it is a local-only write via `updateConfiguredCkvs`,
+same as before this change (see CKV Identity and Backend-First Write-Back
+above).
 
 ## Security Considerations
 
@@ -726,6 +814,15 @@ configured CKVs from leaking into another's state.
   search scope. SGKV's search already performs acceptably at today's
   project sizes, so no new performance risk is introduced beyond what SGKV
   already carries.
+- `addCkvs`, `deleteCkvs`, and `updateCkvParametersOnly` each now issue one
+  or two network round-trips per Apply/Delete click, where before there was
+  none. This is bounded to a small, fixed number of requests per user
+  action, not per entry: Add still batches every Cartesian-product
+  combination into a single `createCkvs` call (plus one
+  `createCkvParameters` call for the chosen PIDs), Delete batches every
+  selected `ckvSystemId` into a single `deleteCkvs` call, and
+  `updateCkvParametersOnly` is a single `createCkvParameters` call. Edit
+  issues no network call at all, since it stays local-only.
 
 ## Testing Strategy
 
@@ -768,8 +865,10 @@ cases covering this design's additions:
     configured keys and PIDs.
 15. `DeleteCKVConfiguration` — validates an entry can be deleted, with
     confirmation.
-16. `ApplySavesConfiguredCKVs` — validates Apply saves selected keys/PIDs
-    to configuration.
+16. `ApplySavesConfiguredCKVs` — validates Apply calls `addCkvs` with the
+    full Cartesian-product batch and chosen PIDs, and that the resulting
+    merged `addedCkvs` (with `removedCkvSystemIds` filtered out) appear in
+    configuration only after the backend call resolves successfully.
 17. `CancelDiscardsChanges` — validates Cancel discards in-flight changes.
 18. `RejectsDuplicateCkvOnApply` — validates Apply rejects an exact
     key/value combination duplicate (order-independent), and that editing
@@ -795,9 +894,20 @@ cases covering this design's additions:
 25. `LoadsConfiguredCkvsFromGraphData` — validates `selectConfiguredCkvs`
     reads directly from `ModuleInstance.ckvs`, with no network request
     issued.
-26. `ApplyWritesBackToGraphData` — validates Apply calls
-    `updateModuleCkvsLocal` with the correct `CkvDto[]` and marks Graph
-    Data dirty.
+26. `ApplyWritesBackToGraphData` — validates a successful `addCkvs`/
+    `deleteCkvs`/`updateCkvParametersOnly` call reaches `updateConfiguredCkvs`,
+    which calls `updateModuleCkvsLocal` with the correct `CkvDto[]` and
+    marks Graph Data dirty.
+27. `BackendFailureLeavesGraphDataUnchanged` — validates that when
+    `createCkvs`/`deleteCkvsApi`/`createCkvParameters` returns a blocking
+    issue (or throws), the action shows a danger toast, logs via
+    `logger.error`, returns `false`, `updateConfiguredCkvs` is never
+    called, Graph Data is left unchanged, and the panel's in-progress
+    selection (search text, selected key/values, PID checklist, open
+    `activeOperation`) is preserved for retry.
+28. `EditStaysLocalOnly` — validates that applying an edit to an existing
+    entry's key/value selection calls `updateConfiguredCkvs` directly, with
+    no `addCkvs`/`deleteCkvs` call and no network request issued.
 
 ## Open-Source Libraries
 
@@ -806,28 +916,32 @@ v5, React, QUI, lucide-react).
 
 ## Questions
 
-1. **Backend save contract for CKV** (carried from requirements.md, still
-   unresolved). Saving configured CKVs needs to persist to the backend,
-   but no endpoint exists yet for CKV list-management. Whether this should
-   be a single bulk endpoint or a per-module/per-instance endpoint
-   determines the shape of `saveConfiguration`'s real implementation.
-   `saveConfiguration` is structured so either contract can be slotted in
-   without a rewrite of the surrounding slice, but the actual HTTP call
-   remains a stub until this is resolved. Mirrors TKV's identical open
-   question and may share a single resolution across both features.
-2. **New-entry `systemId` shape** (carried from requirements.md). The
-   composite-key stand-in proposed for new CKV entries (see CKV Identity
-   above) is not a confirmed backend contract. This needs sign-off before
-   implementation, and may share a single resolution with TKV's identical
-   question.
-3. **Definitions refresh during an active session.** `availableCalibrationKeys`
+1. **Backend save contract for CKV** (carried from requirements.md) —
+   **resolved for Add, Delete, and PID-update.** Real per-module endpoints
+   now exist (`POST`/`DELETE .../ckvs`, `POST .../ckv-parameters` — see
+   Back-End above) and `addCkvs`/`deleteCkvs`/`updateCkvParametersOnly`
+   call them directly; there is no separate bulk save step, and
+   `saveConfiguration` is no longer involved in CKV persistence at all
+   (see Graph Data Write-Back above). **Still open for Edit:** changing an
+   existing entry's key/value selection has no corresponding endpoint and
+   remains local-only — if Edit is ever extended to call the backend, its
+   contract is still undecided.
+2. **New-entry `systemId` shape** (carried from requirements.md) —
+   **resolved for Add.** `createCkvs`'s response
+   (`AddCkvsResponseDto.addedCkvs`) carries a real, backend-assigned
+   `systemId` for every new entry; no client-side stand-in is used (see CKV
+   Identity above). **Still open for Edit:** the composite-key stand-in
+   (`buildCkvSystemId`) is still in active use for any additional rows a
+   multi-key edit produces, and remains unconfirmed by the backend, since
+   Edit has no endpoint to confirm it against (see CKV Identity above).
+3. **Definitions refresh during an active session.** `calibrationKeys`
    is fetched once per project tab and cached for the tab's lifetime.
    If a future feature lets a user import new/updated key definitions
    mid-session, this slice has no way to learn about it on its own. The
    proposed resolution, deferred until such a feature exists: the
    import action calls `resetCalibrationKeyConfiguration()` (and TKV's
    equivalent) directly after a successful import, which clears
-   `availableCalibrationKeys`; the next `initializeCalibrationKeyConfiguration`
+   `calibrationKeys`; the next `initializeCalibrationKeyConfiguration`
    call then re-fetches, since its already-loaded guard sees an empty
    cache. This is out of scope for the current migration — no
    import-definitions feature exists today.
@@ -840,8 +954,9 @@ v5, React, QUI, lucide-react).
   Store-Wiring Gap" section specifies — TKV's design cites back to that
   section rather than respecifying it, and this design only adds CKV's
   slice and panel-side changes on top of that shared foundation.
-- Building the actual backend endpoint(s) for CKV persistence is not
-  decided or built here — see the Open Questions above.
+- Giving Edit its own backend endpoint (so changing an existing entry's
+  key/value selection round-trips through the backend like Add and Delete
+  already do) is not decided or built here — see Open Question 1 above.
 - Lifting SGKV's `findDistinctKeyAssignment` backtracking logic into a
   shared location is assumed but not designed in detail here — the exact
   shared module location is an implementation detail for the writing-plans

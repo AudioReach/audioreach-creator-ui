@@ -39,7 +39,6 @@ tabStoreRegistry.registerFactory(
 
 export {useApplyDiscard} from './hooks/use-apply-discard';
 export {useGraphDesigner} from './hooks/use-graph-designer';
-export {useKeyConfigurator} from './hooks/use-key-configurator';
 export {useModuleList} from './hooks/use-module-list';
 export {useSubgraphList} from './hooks/use-subgraph-list';
 export {useSubsystemBrowser} from './hooks/use-subsystem-browser';
@@ -62,6 +61,8 @@ export {
   parseModuleDropPayload,
   resolveModuleDropTarget,
 } from './lib/module-operations';
+export {selectConfiguredCkvs} from './lib/select-configured-ckvs';
+export {selectConfiguredTkvs} from './lib/select-configured-tkvs';
 export {
   CAN_CONNECT_TO_PROXY_NODE,
   parseSubgraphDropPayload,

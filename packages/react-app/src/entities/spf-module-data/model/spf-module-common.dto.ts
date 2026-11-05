@@ -68,6 +68,10 @@ export interface ConfigElementDto {
   value: string;
 }
 
+export interface CreateValuesRequestItem {
+  valueSystemIds: string[];
+}
+
 export interface ElementTemplateArrayDto {
   description?: string;
   group?: string;

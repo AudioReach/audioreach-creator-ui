@@ -155,8 +155,9 @@ it satisfies CKV's requirement 26.
 ### Front-End Interfaces
 
 **`features/graph-designer/model/module-tag-key-config-slice.ts`** (new file) —
-owns the tag key definitions cache and the actions that mutate configured
-TKVs on Graph Data:
+owns the tag key definitions cache and the actions that persist configured
+TKVs to the backend, mirroring the result onto Graph Data once the backend
+call succeeds:
 
 ```typescript
 interface ModuleTagKeyConfigSlice {
@@ -165,14 +166,52 @@ interface ModuleTagKeyConfigSlice {
   initializeModuleTagKeyConfiguration: (projectId: string) => Promise<boolean>;
   resetModuleTagKeyConfiguration: () => void;
 
-  addConfiguredTkv: (instanceSystemId: string, tkv: ConfiguredTkv) => void;
-  removeConfiguredTkv: (instanceSystemId: string, index: number) => void;
-  updateConfiguredTkvs: (
+  addTkvs: (
     instanceSystemId: string,
-    tkvs: ConfiguredTkv[],
-  ) => void;
+    tagGroupId: number,
+    valueSystemIdCombinations: string[][],
+    parameterSystemIds: string[],
+  ) => Promise<boolean>;
+  deleteTagGroup: (instanceSystemId: string, tagGroupId: number) => Promise<boolean>;
+  deleteTkvs: (
+    instanceSystemId: string,
+    targets: Array<{tagGroupId: number; tkvSystemId: string}>,
+  ) => Promise<boolean>;
+  updateTkvParameters: (
+    instanceSystemId: string,
+    tkvSystemId: string,
+    parameterSystemIds: string[],
+  ) => Promise<boolean>;
 }
 ```
+
+This supersedes the slice's originally-designed shape
+(`addConfiguredTkv`/`removeConfiguredTkv`/`updateConfiguredTkvs`, all
+synchronous and Graph-Data-only). The backend now has real tag/TKV
+endpoints (see Back-End below), so every mutation action is
+`Promise<boolean>`-async: each calls its backend endpoint(s) first and
+only writes to Graph Data (via `get().updateModuleTagsLocal`, inline — see
+Graph Data Write-Back below) on success. Unlike CKV, TKV has no separate
+synchronous local-write action the others funnel through — `addTkvs`,
+`deleteTagGroup`, `deleteTkvs`, and `updateTkvParameters` each build their
+own next `TagInfoDto[]` and call `updateModuleTagsLocal` directly, because
+each one's shape of change (new tag + TKVs, whole tag removal, scattered
+TKV removal across tags, one TKV's parameter diff) is different enough
+that a shared "take the final list and write it" step wouldn't save
+meaningful duplication the way CKV's did.
+
+`addTkvs` also creates the parent tag on demand: if `instanceSystemId`'s
+`tags` has no entry for `tagGroupId` yet, it calls `createTags` first,
+then proceeds to create TKVs under the newly-created tag's `systemId`.
+`deleteTagGroup` removes the entire tag (and all its TKVs) in one call;
+`deleteTkvs` removes a scattered batch of individual TKVs, potentially
+spanning more than one tag group, grouping the batch by the owning tag's
+`systemId` so each tag needs at most one `deleteTkvsApi` call.
+`updateTkvParameters` is scoped to a single TKV (unlike CKV's
+`updateCkvParametersOnly`, which is module-scoped across every configured
+CKV) — it diffs the requested PIDs against that one TKV's current
+`supportedParameters` and calls `createTkvParameters`/`deleteTkvParameters`
+only for the PIDs that actually changed.
 
 `moduleTagKeys` is tag key _definitions_, grouped by tag — populated once
 per tab via `getAllTagDefinitions`/`transformTagDefinitionsToTagGroups`,
@@ -201,47 +240,76 @@ Toggling a checkbox updates only that local state; switching to a
 different module instance or clicking Cancel discards it, and only Apply
 writes the chosen PIDs back, as part of the entry's `pidConfig`.
 
-`addConfiguredTkv`/`removeConfiguredTkv`/`updateConfiguredTkvs` replace
-the old moduleId+instanceId-keyed actions
+`addTkvs`/`deleteTagGroup`/`deleteTkvs`/`updateTkvParameters` replace the
+old moduleId+instanceId-keyed actions
 (`addConfiguredTagKeyValue`/`removeConfiguredTagKeyValue`/
-`updateConfiguredTagKeyValues`). Each reads the instance's current
-configured TKVs via `selectConfiguredTkvs`, applies the mutation, converts
-the result back into `TagInfoDto[]`, and calls
-`get().updateModuleTagsLocal(instanceSystemId, tags)` in the same action,
-writing to Graph Data immediately (requirement 23). The module definition
-needed to resolve PID naturalIds on write-back is read directly from
-`graphData.moduleInstances[instanceSystemId].moduleDefinitionSystemId`,
-not stored on this slice:
+`updateConfiguredTagKeyValues`), and are the real implementation of what
+this design originally specified as synchronous
+`addConfiguredTkv`/`removeConfiguredTkv`/`updateConfiguredTkvs`. Each
+calls its backend endpoint(s) first (see Back-End below) and only calls
+`get().updateModuleTagsLocal(instanceSystemId, tags)` with the derived
+next `TagInfoDto[]` once the backend call(s) resolve successfully — not
+before (see Error Handling below for the one exception, `deleteTkvs`'s
+per-tag-group partial write-back). `addTkvs`:
 
 ```typescript
-addConfiguredTkv: (instanceSystemId, tkv) => {
-  const current = selectConfiguredTkvs(get(), instanceSystemId);
-  const updated = [...current, tkv];
+addTkvs: async (instanceSystemId, tagGroupId, valueSystemIdCombinations, parameterSystemIds) => {
+  const tags = readTags(instanceSystemId);
+  let tag = tags.find((t) => t.naturalId === tagGroupId);
+  let mergedTags = tags;
 
-  const moduleDefinitionSystemId =
-    get().graphData?.moduleInstances[instanceSystemId]?.moduleDefinitionSystemId;
-  const paramInfoByNaturalId = buildParamInfoLookup(
-    get().moduleDefinitionsBySystemId[moduleDefinitionSystemId ?? ''],
+  if (!tag) {
+    const tagGroup = Object.values(get().moduleTagKeys).find((g) => g.id === tagGroupId);
+    const tagsResult = await createTags(projectId, instanceSystemId, {
+      tagDefinitionSystemIds: [tagGroup.systemId],
+    });
+    // on blocking issue: toast + return false
+    tag = tagsResult.data[0];
+    mergedTags = [...tags, tag];
+  }
+
+  const tkvsResult = await createTkvs(projectId, instanceSystemId, tag.systemId, {
+    tkvs: valueSystemIdCombinations.map((valueSystemIds) => ({valueSystemIds})),
+  });
+  // on blocking issue: toast + return false
+
+  let newTkvs = tkvsResult.data;
+  if (parameterSystemIds.length > 0) {
+    const paramsResult = await createTkvParameters(projectId, instanceSystemId, {
+      updates: newTkvs.map((tkv) => ({parameterSystemIds, tkvSystemId: tkv.systemId})),
+    });
+    // on blocking issue: toast + return false
+    newTkvs = newTkvs.map((tkv) => ({...tkv, supportedParameters: /* resolved from paramsResult */}));
+  }
+
+  const finalTags = mergedTags.map((t) =>
+    t.naturalId === tagGroupId ? {...t, tkvs: [...(t.tkvs ?? []), ...newTkvs]} : t,
   );
-  const tagDefinitionsByNaturalId = buildTagDefinitionLookup(get().moduleTagKeys);
-  get().updateModuleTagsLocal(
-    instanceSystemId,
-    transformConfiguredTkvsToTags(
-      updated,
-      tagDefinitionsByNaturalId,
-      paramInfoByNaturalId,
-    ),
-  );
+  get().updateModuleTagsLocal(instanceSystemId, finalTags);
+  return true;
 },
 ```
 
-`removeConfiguredTkv`/`updateConfiguredTkvs` follow the same
-read-mutate-write-back pattern.
+If the instance has no tag yet for `tagGroupId`, `addTkvs` creates the
+parent tag via `createTags` first, then creates TKVs under the newly
+backend-assigned tag `systemId` — a single Apply click on a brand-new tag
+group still issues at most two write calls (`createTags`, `createTkvs`),
+not per-value calls. `deleteTagGroup` removes an entire tag (and every TKV
+under it) in one `deleteTags` call. `deleteTkvs` accepts a batch of
+`{tagGroupId, tkvSystemId}` targets that may span more than one tag group,
+groups them by the owning tag's `systemId`, and issues one `deleteTkvsApi`
+call per distinct tag in the batch. `updateTkvParameters` is scoped to a
+single TKV (unlike CKV's `updateCkvParametersOnly`, which re-applies one
+PID set across every configured CKV on the module) — it diffs the
+requested PIDs against that one TKV's current `supportedParameters` and
+calls `createTkvParameters`/`deleteTkvParameters` only for the PIDs that
+actually changed, skipping either call entirely when nothing was added or
+removed on that side.
 
 ### TKV Identity
 
 `ConfiguredTkv` (defined in `shared/types/key-configurator-config.types.ts`)
-gains one field it does not have today:
+carries its own identity:
 
 ```typescript
 export interface ConfiguredTkv {
@@ -266,30 +334,23 @@ definitions behind `moduleTagKeys`, the same way `KeyInfo.systemId`/
 `.value.id` against the matching key/value definitions. See
 Interfaces-Services below for where this lookup happens.
 
-An entry created through Add has no backend-assigned `TkvDto.systemId`
-yet. Rather than generating one client-side — every `systemId` elsewhere in
-this codebase is backend-assigned — the panel derives a
-deterministic composite key from the entry's own key/value selection: the
-`systemId` of each selected `TagKeyDefinitionInfo`/`TagValueDefinitionInfo`
-pair, sorted and joined (e.g. `"KEY_SYS_010:VAL_SYS_100|KEY_SYS_040:VAL_SYS_402"`).
-This is unique by construction, because requirement 24 already forbids two
-entries on the same instance from sharing an identical key-value
-combination, and it is built entirely from backend-sourced data, with no
-client-generated value anywhere in it. The composite is computed once, at
-Add, and never recomputed — editing an already-loaded entry's key/value
-selection does not change its existing `systemId`. This is deliberate:
-once an entry has an identity, even this client-side composite stand-in,
-a later edit should read as "modify this entry," not "delete it and
-create a new one," matching how a backend-loaded entry's `systemId`
-already behaves across edits.
-
-**Open question — composite-key stand-in.** This composite-key approach is
-a stand-in, not a confirmed backend contract: nothing confirms the backend
-accepts or expects a `TkvDto.systemId` of this shape for a newly-created
-entry. This needs sign-off before implementation; if the backend expects a
-different shape (or an entry has yet to be assigned one), this section
-will need revisiting. Tracked as an open question until feedback is
-available (see Open Questions in requirements.md).
+**This is fully resolved — no client-side stand-in exists anywhere in the
+TKV codebase.** Every new TKV's `systemId` comes directly from
+`createTkvs`'s response (`TkvDto[]`), a real backend-assigned identity,
+because TKV has no path that creates a new key/value combination without
+going through `addTkvs`. Unlike CKV, TKV's "editing" an existing entry
+(`updateTkvParameters`) is PID-only — it can never change which tag group
+or which value an existing TKV points to, so there is no multi-key-edit
+Cartesian-product expansion that could produce additional rows needing a
+synthesized identity. The design's originally-proposed composite-key
+stand-in (`TagKeyDefinitionInfo`/`TagValueDefinitionInfo` `systemId`s,
+sorted and joined) was never implemented, because it is never needed:
+`module-tag-keys-config-panel.tsx` has only `buildTkvId`, a React
+list-`key` helper for rendering, not an identity generator — it is never
+read by any backend call or by `transformConfiguredTkvsToTags`. This
+resolves the design's original open question for TKV in full, unlike
+CKV's identical question, which remains partially open for CKV's Edit
+path (see CKV's design, CKV Identity).
 
 ### Graph Data Write-Back
 
@@ -331,40 +392,40 @@ flat `ModuleTagKey {tagKeyId, tagKeyName, value}` interface are both
 removed, superseded by `ModuleTagKeyConfigSlice.moduleTagKeys: Record<string, TagGroup>`
 (grouped by tag, each key carrying its full value list — see Front-End
 Interfaces above), which is also where `getAllTagDefinitions` is now
-called from, instead of inline inside `initializeConfiguration`. Every
-other field (`isEditable`, `keyConfigStatus`, `subgraphConfig`,
-`subsystemConfig`) and action keeps its existing shape, unchanged by this
-design except for `initializeConfiguration`'s module branch, which now
-awaits CKV's slice alongside TKV's:
+called from, instead of inline inside `initializeConfiguration`.
+`initializeConfiguration` fans out to both slices unconditionally (not
+gated on `context.itemType`, since both caches are cheap to have loaded
+regardless of which item type is selected), and `resetConfiguration`
+resets both in the same way:
 
 ```typescript
 initializeConfiguration: async (context) => {
-  if (context.itemType === 'module') {
-    const [tkvSuccess, ckvSuccess] = await Promise.all([
-      get().initializeModuleTagKeyConfiguration(context.projectId),
-      get().initializeCalibrationKeyConfiguration(context.projectId),
-    ]);
-    const success = tkvSuccess && ckvSuccess;
-    set({keyConfigStatus: success ? 'ready' : 'error'} as Partial<S>);
-    return success;
-  }
-  // subgraph/subsystem branches: unchanged placeholder behavior
+  const [calibrationOk, tagOk] = await Promise.all([
+    get().initializeCalibrationKeyConfiguration(context.projectId),
+    get().initializeModuleTagKeyConfiguration(context.projectId),
+  ]);
+  const success = calibrationOk && tagOk;
+  set({keyConfigStatus: success ? 'ready' : 'error'} as Partial<S>);
+  return success;
 },
 
 resetConfiguration: () => {
-  get().resetModuleTagKeyConfiguration();
   get().resetCalibrationKeyConfiguration();
+  get().resetModuleTagKeyConfiguration();
   // ...remaining reset of isEditable/keyConfigStatus/subgraphConfig/
   // subsystemConfig: unchanged
 },
-
-saveConfiguration: async () => {
-  const {graphData} = get();
-  // stub backend call, reading configured TKVs/CKVs straight from
-  // graphData.moduleInstances — contract pending the Open Question below
-  return true;
-},
 ```
+
+**`saveConfiguration` no longer touches CKV/TKV at all.** It remains a
+stub (`// TODO: Replace with actual backend API call`, guarded on
+`configContext`/`projectId`, returning `true` without reading or sending
+anything) — but its scope has narrowed to subgraph/subsystem config only.
+TKV/CKV persistence moved entirely into `ModuleTagKeyConfigSlice`'s and
+`CalibrationKeyConfigSlice`'s own per-mutation backend calls above; there
+is no longer a separate "save" step for TKV/CKV at all, and the two
+features' original shared open question about `saveConfiguration`'s
+backend contract no longer applies to TKV/CKV — see Questions below.
 
 **`features/graph-designer/model/graph-designer-store.ts`** — the composed
 type becomes `KeyConfigSlice & ModuleTagKeyConfigSlice &
@@ -665,7 +726,7 @@ existing, untouched calibration-key props.
 `MODULE` branch of `renderKeyConfigView` reads `KeyConfigSlice` and
 `ModuleTagKeyConfigSlice` state via `useGraphDesignerStoreShallow`,
 resolving the selected item's real `systemId` as `instanceSystemId` so
-the panel's `addConfiguredTkv`/`removeConfiguredTkv`/`updateConfiguredTkvs`
+the panel's `addTkvs`/`deleteTagGroup`/`deleteTkvs`/`updateTkvParameters`
 calls target the right instance. The existing
 `instanceId={(item as any).instanceId || 1}` placeholder is replaced with
 that real `systemId`. Rewiring the widget's per-item initialization call
@@ -681,9 +742,30 @@ No new backend endpoints are built for reading TKV data — module selection
 no longer calls a dedicated tuning-config endpoint at all, since TKV data
 comes from Graph Data (already loaded by the existing graph-load flow) and
 module parameter definitions come from the already-loaded, per-tab module
-list. Database design is unaffected; no new persisted schema is introduced
-at this layer. The save-endpoint contract for pushing configured TKVs
-beyond Graph Data to the backend remains an open question (see below).
+list.
+
+Writing TKVs, however, now goes through real endpoints
+(`entities/spf-module-data/api/spf-module-api.ts`), called directly from
+`ModuleTagKeyConfigSlice`'s mutation actions rather than through a
+separate save step:
+
+| Endpoint | Method | Called by |
+| --- | --- | --- |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags` | `POST` (`createTags`) | `addTkvs` (only when the parent tag doesn't exist yet) |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags` | `DELETE` (`deleteTags`) | `deleteTagGroup` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `POST` (`createTkvs`) | `addTkvs` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `DELETE` (`deleteTkvs`) | `deleteTkvs` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters` | `POST` (`createTkvParameters`) | `addTkvs`, `updateTkvParameters` |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters` | `DELETE` (`deleteTkvParameters`) | `updateTkvParameters` |
+
+`createTkvs` returns `TkvDto[]` directly, giving every newly-created entry
+a real, backend-assigned `systemId` (see TKV Identity above). Persistence
+happens per-mutation — one or two requests per Add/Delete/PID-update
+Apply click — not through a separate bulk save step;
+`KeyConfigSlice.saveConfiguration` is unrelated to CKV/TKV (see Graph Data
+Write-Back above). Database design is otherwise unaffected; no new
+persisted schema is introduced at this layer beyond what the listed
+endpoints already imply server-side.
 
 ### Interfaces-Services
 
@@ -722,9 +804,29 @@ failure, and logs via `~shared/lib/logger`. It does not know about
 `SliceStatus` pattern), the same way it already handles its
 `subgraph`/`subsystem` branches. Apply-time input validation stays entirely
 inside the presentational panel's existing logic — unchanged. Delete
-confirmations (tag-level and entry-level) also stay in the panel; the new
-`ModuleTagKeyConfigSlice` mutation actions are synchronous, non-failing map
-mutations with no error path of their own.
+confirmations (tag-level and entry-level) also stay in the panel.
+
+`addTkvs`, `deleteTagGroup`, `deleteTkvs`, and `updateTkvParameters` each
+wrap their backend call(s) in `try`/`catch` and check `hasBlockingIssues`
+on every response. On a blocking issue or a thrown error, the action calls
+`showToast(getIssueMessage(result, fallbackMessage), 'danger')` (or a
+fixed fallback message in the `catch` branch), logs via `logger.error`
+with `action`/`component`/`error` context, and returns `false`. The panel
+keeps its in-progress local state (selected values, PID checklist, open
+`ActiveTkvOperation`) on a `false` return rather than closing the Add/Edit
+section, so the user can retry without re-entering their selection.
+
+**`deleteTkvs` is the one exception to "no write until the whole action
+succeeds."** It processes its batch of targets one owning tag at a time;
+if a later tag's `deleteTkvsApi` call fails after an earlier tag's call
+already succeeded, it calls `updateModuleTagsLocal` with the
+already-applied partial result *before* returning `false` — so Graph Data
+reflects whichever tag groups' deletions actually completed on the
+backend, not a full rollback to the pre-Apply state. `addTkvs`,
+`deleteTagGroup`, and `updateTkvParameters` do not have this partial-write
+behavior: each only calls `updateModuleTagsLocal` once, after every one of
+its backend call(s) has already succeeded, so a failure at any point
+leaves Graph Data completely untouched.
 
 ## Security Considerations
 
@@ -745,6 +847,17 @@ configured TKVs from leaking into another's state.
 - Tag-group definitions are cached in slice state after their first fetch
   per project tab, avoiding redundant network calls on repeated module
   selections within the same tab.
+- `addTkvs`, `deleteTagGroup`, `deleteTkvs`, and `updateTkvParameters` each
+  now issue one or more network round-trips per Apply/Delete click, where
+  before there was none. This stays bounded per user action: `addTkvs`
+  batches every Cartesian-product combination into a single `createTkvs`
+  call (plus at most one `createTags` call when the tag group doesn't
+  exist yet, and one `createTkvParameters` call for the chosen PIDs);
+  `deleteTagGroup` is a single `deleteTags` call; `deleteTkvs` issues one
+  `deleteTkvsApi` call per distinct tag group touched by the batch, not
+  one per TKV; `updateTkvParameters` issues at most one
+  `createTkvParameters` and one `deleteTkvParameters` call, skipping
+  either side that has no PID changes.
 
 ## Testing Strategy
 
@@ -798,8 +911,11 @@ the existing test suite and continue to apply against the new
     before delete.
 23. `DeleteUpdatesZeroState` — validates the UI updates to the zero state
     after delete.
-24. `ApplySavesConfiguredTKVs` — validates Apply saves selected tags/PIDs to
-    configuration.
+24. `ApplySavesConfiguredTKVs` — validates Apply calls `addTkvs` with the
+    full Cartesian-product batch and chosen PIDs (creating the parent tag
+    first via `createTags` when it doesn't exist yet), and that the
+    resulting `createTkvs` response appears in configuration only after
+    the backend call resolves successfully.
 25. `CancelDiscardsChanges` — validates Cancel discards in-flight changes.
 26. `SelectAllValuesUnderTagKey` — validates Select All selects all values
     under a tag key.
@@ -812,7 +928,8 @@ the existing test suite and continue to apply against the new
 30. `LoadsConfiguredTkvsFromGraphData` — validates `selectConfiguredTkvs`
     reads `ModuleInstance.tags` directly from Graph Data, with no network
     request issued.
-31. `ApplyWritesBackToGraphData` — validates Apply calls
+31. `ApplyWritesBackToGraphData` — validates a successful `addTkvs`/
+    `deleteTagGroup`/`deleteTkvs`/`updateTkvParameters` call reaches
     `updateModuleTagsLocal` with the correct, regrouped `TagInfoDto[]` and
     marks Graph Data dirty.
 32. `RejectsDuplicateTkvOnApply` — validates Apply rejects an exact
@@ -822,6 +939,25 @@ the existing test suite and continue to apply against the new
     `useState` (search text, selections, editing tag group) survives
     switching to the Calibration Keys tab and back, since
     `ModuleTagKeysConfigPanel` is never unmounted (requirement 33).
+34. `BackendFailureLeavesGraphDataUnchanged` — validates that when
+    `createTags`/`createTkvs`/`createTkvParameters` (within `addTkvs`),
+    `deleteTags` (within `deleteTagGroup`), or `createTkvParameters`/
+    `deleteTkvParameters` (within `updateTkvParameters`) returns a
+    blocking issue or throws, the action shows a danger toast, logs via
+    `logger.error`, returns `false`, `updateModuleTagsLocal` is never
+    called, Graph Data is left unchanged, and the panel's in-progress
+    selection is preserved for retry.
+35. `DeleteTkvsPartialFailureWritesBackCompletedTags` — validates that
+    when `deleteTkvs`'s batch spans more than one tag group and a later
+    tag's `deleteTkvsApi` call fails after an earlier tag's call already
+    succeeded, `updateModuleTagsLocal` is called with the already-deleted
+    tag group's TKVs removed (not a full rollback), a danger toast is
+    shown, and the action returns `false`.
+36. `UpdateTkvParametersOnlyCallsChangedSide` — validates
+    `updateTkvParameters` calls `createTkvParameters` only when PIDs were
+    added, `deleteTkvParameters` only when PIDs were removed, and neither
+    when the requested PID set matches the TKV's current
+    `supportedParameters` exactly.
 
 ## Open-Source Libraries
 
@@ -830,14 +966,19 @@ v5, React, QUI, lucide-react).
 
 ## Questions
 
-1. **Backend save contract for TKV** (carried from requirements.md, still
-   unresolved). Saving configured TKVs needs to persist to the backend, but
-   no endpoint exists yet for TKV list-management. Whether this should be a
-   single bulk endpoint or a per-module/per-instance endpoint determines the
-   shape of `saveConfiguration`'s real implementation. `saveConfiguration`
-   is structured so either contract can be slotted in without a rewrite of
-   the surrounding slice, but the actual HTTP call remains a stub until this
-   is resolved.
+1. **Backend save contract for TKV** (carried from requirements.md) —
+   **fully resolved.** Real per-module endpoints now exist (`POST`/
+   `DELETE .../tags`, `POST`/`DELETE .../tags/{tagSystemId}/tkvs`, `POST`/
+   `DELETE .../tkv-parameters` — see Back-End above) and
+   `addTkvs`/`deleteTagGroup`/`deleteTkvs`/`updateTkvParameters` call them
+   directly; there is no separate bulk save step, and `saveConfiguration`
+   is no longer involved in TKV persistence at all (see Graph Data
+   Write-Back above). Unlike CKV's identical question — which remains
+   partially open, since CKV's Edit path has no corresponding endpoint
+   (see CKV's design, Questions) — TKV has no such gap: TKV's "editing" an
+   existing entry (`updateTkvParameters`) is PID-only and never changes a
+   TKV's key/value combination, so every TKV mutation already has a real
+   backend call.
 2. **Definitions refresh during an active session.** `moduleTagKeys` is
    fetched once per project tab and cached for the tab's lifetime. If a
    future feature lets a user import new/updated tag definitions
@@ -856,5 +997,3 @@ v5, React, QUI, lucide-react).
   paths are untouched.
 - The existing configuration-item selection and routing behavior shared
   across all key-configuration sub-panels is not changed.
-- Building the actual backend endpoint(s) for TKV persistence is not decided
-  or built here — see the Open Question above.
