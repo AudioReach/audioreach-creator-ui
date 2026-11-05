@@ -28,10 +28,15 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 import {useListCollection} from '@qualcomm-ui/react-core/collection';
 import {useFilter} from '@qualcomm-ui/react-core/locale';
 
-import {type ProjectInfo, ProjectService} from '~entities/project';
+import {
+  type ProjectInfo,
+  ProjectService,
+  type UpdateProjectRequestDto,
+} from '~entities/project';
 import {useDeviceManager} from '~features/device-operations';
 import {useProjectLifecycle} from '~features/project-operations';
 import useArcRecentProjects from '~features/recent-projects/hooks/use-recent-projects';
+import {EditProjectDialog} from '~features/recent-projects/ui/edit-project-dialog';
 import UnifiedGridView from '~features/recent-projects/ui/unified-grid-view';
 import UnifiedListView from '~features/recent-projects/ui/unified-list-view';
 import ArcSearchBar from '~shared/controls/arc-search-bar';
@@ -66,7 +71,24 @@ export default function ArcStartPage({
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const {projects: recentProjects, removeFromRecent} = useArcRecentProjects();
+  const {
+    projects: recentProjects,
+    removeFromRecent,
+    updateProjectDetails,
+  } = useArcRecentProjects();
+  const [editingProject, setEditingProject] = useState<ProjectInfo>();
+
+  async function handleSaveProjectDetails(
+    project: ProjectInfo,
+    details: UpdateProjectRequestDto,
+  ) {
+    const result = await updateProjectDetails(project, details);
+    if (result.success) {
+      setEditingProject(undefined);
+      showToast('Project updated', 'success');
+    }
+    return result;
+  }
 
   // Project lifecycle management (screenshot capture on close)
   const {handleProjectClose, screenshotRegistry} = useProjectLifecycle();
@@ -271,6 +293,12 @@ export default function ArcStartPage({
           document.body,
         )}
 
+      <EditProjectDialog
+        onClose={() => setEditingProject(undefined)}
+        onSave={handleSaveProjectDetails}
+        project={editingProject}
+      />
+
       <div>
         {/* Top Navigation Bar */}
         <div
@@ -406,6 +434,7 @@ export default function ArcStartPage({
               {viewMode === 'grid' ? (
                 <UnifiedGridView
                   devices={filteredDevices}
+                  onEditProject={setEditingProject}
                   onOpenDevice={openDevice}
                   onOpenProject={(project) => void openRecentProject(project)}
                   onRemoveFromRecent={removeFromRecent}
@@ -417,6 +446,7 @@ export default function ArcStartPage({
               ) : (
                 <UnifiedListView
                   devices={filteredDevices}
+                  onEditProject={setEditingProject}
                   onOpenDevice={openDevice}
                   onOpenProject={(project) => void openRecentProject(project)}
                   onRemoveFromRecent={removeFromRecent}

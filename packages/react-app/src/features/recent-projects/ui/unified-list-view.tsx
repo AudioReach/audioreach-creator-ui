@@ -5,7 +5,7 @@
 
 import {useMemo} from 'react';
 
-import {Database, FolderOpen, Smartphone, Trash2} from 'lucide-react';
+import {Database, FolderOpen, Pencil, Smartphone, Trash2} from 'lucide-react';
 
 import {IconButton} from '@qualcomm-ui/react/button';
 
@@ -17,6 +17,7 @@ type UnifiedItem =
 
 interface UnifiedListViewProps {
   devices: DeviceInfo[];
+  onEditProject: (project: ProjectInfo) => void;
   onOpenDevice: (device: DeviceInfo) => void;
   onOpenProject: (project: ProjectInfo) => void;
   onRemoveFromRecent: (projectId: string) => void;
@@ -56,6 +57,7 @@ function formatDate(date: Date | undefined): string {
 
 export default function UnifiedListView({
   devices,
+  onEditProject,
   onOpenDevice,
   onOpenProject,
   onRemoveFromRecent,
@@ -125,6 +127,18 @@ export default function UnifiedListView({
 
             {/* Actions */}
             <div className="flex gap-1">
+              <IconButton
+                aria-label="Edit project"
+                emphasis="neutral"
+                icon={Pencil}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditProject(item.data);
+                }}
+                size="sm"
+                title="Edit project"
+                variant="ghost"
+              />
               <IconButton
                 aria-label="Show in Explorer"
                 emphasis="neutral"

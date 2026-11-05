@@ -6,6 +6,7 @@
 import type {
   ProjectFilesDownload,
   ProjectInfoResponseDto,
+  UpdateProjectRequestDto,
 } from '~entities/project/model/project.dto';
 import type {ApiResult} from '~shared/api/api-response.types';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api/api-result-utils';
@@ -29,6 +30,20 @@ export async function getProjectById(
   projectId: string,
 ): Promise<ApiResult<ProjectInfoResponseDto>> {
   return httpClient.get<ProjectInfoResponseDto>(`/projects/${projectId}`);
+}
+
+/**
+ * Update a project's name and description.
+ * PATCH /projects/{projectId}
+ */
+export async function updateProject(
+  projectId: string,
+  body: UpdateProjectRequestDto,
+): Promise<ApiResult<ProjectInfoResponseDto>> {
+  return httpClient.patch<ProjectInfoResponseDto>(
+    `/projects/${projectId}`,
+    body,
+  );
 }
 
 /**
