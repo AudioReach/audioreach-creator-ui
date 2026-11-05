@@ -30,3 +30,8 @@ export interface ProjectInfoResponseDto {
   /** Current session mode for the project */
   sessionMode: SessionMode;
 }
+
+export type UpdateProjectRequestDto = Pick<
+  ProjectInfoResponseDto,
+  'description' | 'name'
+>;

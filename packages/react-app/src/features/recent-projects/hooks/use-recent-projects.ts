@@ -8,7 +8,12 @@ import {useCallback, useEffect, useState} from 'react';
 import type {MruProjectInfo} from '@audioreach-creator-ui/api-utils';
 import {toPng} from 'html-to-image';
 
-import {getProjects, type ProjectInfo} from '~entities/project';
+import {
+  getProjects,
+  type ProjectInfo,
+  type UpdateProjectRequestDto,
+  updateProject,
+} from '~entities/project';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
@@ -38,6 +43,12 @@ interface ArcRecentProjectsApi {
    * @returns
    */
   updateImage: (projectId: string, htmlElem: HTMLElement) => void;
+
+  /** Updates a project's name and description on the backend, then in the list */
+  updateProjectDetails: (
+    project: ProjectInfo,
+    details: UpdateProjectRequestDto,
+  ) => Promise<{message?: string; success: boolean}>;
 }
 
 /** A hook containing functionality for managing the recent files list containing files in the order of most to least recent
@@ -285,10 +296,39 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
     [updateImageAsync],
   );
 
+  const updateProjectDetails = useCallback(
+    async (
+      project: ProjectInfo,
+      details: UpdateProjectRequestDto,
+    ): Promise<{message?: string; success: boolean}> => {
+      try {
+        const result = await updateProject(project.id, details);
+        if (hasBlockingIssues(result)) {
+          return {
+            message: getIssueMessage(result, 'Failed to update project'),
+            success: false,
+          };
+        }
+
+        // Backend succeeded - persist to the recent list and refresh it
+        await addToRecentAsync({...project, ...details});
+        return {success: true};
+      } catch (error) {
+        logger.error('Error updating project details', {
+          component: 'useArcRecentProjects',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return {message: 'Failed to update project', success: false};
+      }
+    },
+    [addToRecentAsync],
+  );
+
   return {
     addToRecent,
     projects: recentProjects,
     removeFromRecent,
     updateImage,
+    updateProjectDetails,
   };
 }
