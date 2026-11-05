@@ -4,6 +4,7 @@
  */
 
 import type {
+  CreateValuesRequestItem,
   KeyValueDto,
   KeyValueInfo,
   ParameterDetailDto,
@@ -24,7 +25,38 @@ export interface CkvDto {
   systemId: string;
 }
 
+export interface AddCkvsResponseDto {
+  addedCkvs: CkvDto[];
+  removedCkvSystemIds: string[];
+}
+
+export interface CreateCkvsRequestDto {
+  ckvs: CreateValuesRequestItem[];
+}
+
+export interface DeleteCkvsRequestDto {
+  ckvSystemIds: string[];
+}
+
 export interface UpdateSpfModuleCalDataRequest {
   parameters: ParameterDetailDto[];
   uiPersistence?: string;
+}
+
+export interface CreateCkvParametersRequestDto {
+  parameterSystemIds: string[];
+}
+
+export interface CkvParametersResponseDto {
+  parameters: ParamInfo[];
+}
+
+export interface DeleteCkvParametersRequestDto {
+  parameterSystemIds: string[];
+}
+
+export interface CkvParameterRemovalResponseDto {
+  affectedCkvSystemIds: string[];
+  removedCkvSystemIds: string[];
+  removedParameterSystemIds: string[];
 }

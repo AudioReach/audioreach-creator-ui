@@ -16,6 +16,40 @@ export interface GraphKey extends Key {
 export interface KeyValue {
   id: number;
   name: string;
+  systemId: string;
+}
+
+export interface CkvParameter {
+  checked: boolean;
+  name: string;
+  pid: number;
+}
+
+export interface ConfiguredCkv {
+  keyValuePairs: Array<{key: GraphKey; value: KeyValue}>;
+  pidConfig: number[];
+  systemId: string;
+}
+
+export interface TagGroup {
+  id: number;
+  keys: Record<string, GraphKey>;
+  name: string;
+  systemId: string;
+}
+
+export interface TkvParameter {
+  checked: boolean;
+  name: string;
+  pid: number;
+}
+
+export interface ConfiguredTkv {
+  keyValuePairs: Array<{key: Key; value: KeyValue}>;
+  pidConfig: number[];
+  systemId: string;
+  tagGroup: string;
+  tagGroupId: number;
 }
 
 export type SortColumn = 'id' | 'name' | null;

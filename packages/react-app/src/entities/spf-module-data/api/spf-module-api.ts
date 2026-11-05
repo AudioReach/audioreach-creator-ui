@@ -6,11 +6,29 @@
 import {type ApiResult, httpClient} from '~shared/api';
 
 import type {
+  AddCkvsResponseDto,
   CalDataDto,
+  CkvDto,
+  CkvParameterRemovalResponseDto,
+  CkvParametersResponseDto,
+  CreateCkvParametersRequestDto,
+  CreateCkvsRequestDto,
+  DeleteCkvParametersRequestDto,
+  DeleteCkvsRequestDto,
   UpdateSpfModuleCalDataRequest,
 } from '../model/spf-module-cal-data.dto';
 import type {
+  CreateTagsRequestDto,
+  CreateTkvParametersRequestDto,
+  CreateTkvsRequestDto,
+  DeleteTagsRequestDto,
+  DeleteTkvsRequestDto,
+  RemoveTkvParametersRequestDto,
   TagDataDto,
+  TagInfoDto,
+  TkvDto,
+  TkvParameterRemovalResponseDto,
+  TkvParametersResponseDto,
   UpdateSpfModuleTagDataRequest,
 } from '../model/spf-module-tag-data.dto';
 import type {SpfModuleDto} from '../model/spf-module.dto';
@@ -81,5 +99,117 @@ export async function queryModuleIndices(
 ): Promise<ApiResult<SpfModuleDto[]>> {
   return httpClient.get<SpfModuleDto[]>(
     `/projects/${projectId}/spf-modules?systemId=${moduleSystemId}&include=ckvs,tags`,
+  );
+}
+
+export async function createCkvs(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: CreateCkvsRequestDto,
+): Promise<ApiResult<AddCkvsResponseDto>> {
+  return httpClient.post<AddCkvsResponseDto>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/ckvs`,
+    payload,
+  );
+}
+
+export async function deleteCkvs(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: DeleteCkvsRequestDto,
+): Promise<ApiResult<CkvDto[]>> {
+  return httpClient.delete<CkvDto[]>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/ckvs`,
+    payload,
+  );
+}
+
+export async function createTags(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: CreateTagsRequestDto,
+): Promise<ApiResult<TagInfoDto[]>> {
+  return httpClient.post<TagInfoDto[]>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tags`,
+    payload,
+  );
+}
+
+export async function deleteTags(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: DeleteTagsRequestDto,
+): Promise<ApiResult<TagInfoDto[]>> {
+  return httpClient.delete<TagInfoDto[]>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tags`,
+    payload,
+  );
+}
+
+export async function createTkvs(
+  projectId: string,
+  spfModuleSystemId: string,
+  tagSystemId: string,
+  payload: CreateTkvsRequestDto,
+): Promise<ApiResult<TkvDto[]>> {
+  return httpClient.post<TkvDto[]>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tags/${tagSystemId}/tkvs`,
+    payload,
+  );
+}
+
+export async function deleteTkvs(
+  projectId: string,
+  spfModuleSystemId: string,
+  tagSystemId: string,
+  payload: DeleteTkvsRequestDto,
+): Promise<ApiResult<TkvDto[]>> {
+  return httpClient.delete<TkvDto[]>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tags/${tagSystemId}/tkvs`,
+    payload,
+  );
+}
+
+export async function createCkvParameters(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: CreateCkvParametersRequestDto,
+): Promise<ApiResult<CkvParametersResponseDto>> {
+  return httpClient.post<CkvParametersResponseDto>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/ckv-parameters`,
+    payload,
+  );
+}
+
+export async function deleteCkvParameters(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: DeleteCkvParametersRequestDto,
+): Promise<ApiResult<CkvParameterRemovalResponseDto>> {
+  return httpClient.delete<CkvParameterRemovalResponseDto>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/ckv-parameters`,
+    payload,
+  );
+}
+
+export async function createTkvParameters(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: CreateTkvParametersRequestDto,
+): Promise<ApiResult<TkvParametersResponseDto>> {
+  return httpClient.post<TkvParametersResponseDto>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tkv-parameters`,
+    payload,
+  );
+}
+
+export async function deleteTkvParameters(
+  projectId: string,
+  spfModuleSystemId: string,
+  payload: RemoveTkvParametersRequestDto,
+): Promise<ApiResult<TkvParameterRemovalResponseDto>> {
+  return httpClient.delete<TkvParameterRemovalResponseDto>(
+    `/projects/${projectId}/spf-modules/${spfModuleSystemId}/tkv-parameters`,
+    payload,
   );
 }

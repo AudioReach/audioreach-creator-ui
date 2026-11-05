@@ -103,11 +103,13 @@ export class HttpClient {
 
   async delete<T>(
     endpoint: string,
+    body?: unknown,
     overrides?: RequestOverrides,
   ): Promise<ApiResult<T>> {
     return this.request<T>(endpoint, {
       apiVersion: overrides?.apiVersion,
-      headers: overrides?.headers,
+      body,
+      headers: composeHeaders(body, overrides?.headers),
       method: 'DELETE',
       retries: overrides?.retries,
       retryBaseDelayMs: overrides?.retryBaseDelayMs,
