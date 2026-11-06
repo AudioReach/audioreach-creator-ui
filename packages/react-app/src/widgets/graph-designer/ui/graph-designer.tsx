@@ -842,6 +842,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         if (moved) {
           setMoveNodeId(null);
         }
+      } catch (error) {
+        // withMutationLock throws if another mutation is already running.
+        logger.warn('Move to subsystem aborted', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        showToast('Another change is in progress. Try again shortly.', 'danger');
       } finally {
         setIsMoving(false);
       }

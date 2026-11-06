@@ -39,9 +39,12 @@ function MoveToSubsystemDialogContent({
 }: Omit<MoveToSubsystemDialogProps, 'open'>) {
   const currentId = currentParentId ?? TOP_ID;
   const [selectedId, setSelectedId] = useState(currentId);
-  const disabledSystemIds = movingNodeId
-    ? [currentId, movingNodeId]
-    : [currentId];
+  const disabledReasons: Record<string, string> = {
+    ...(movingNodeId && {
+      [movingNodeId]: "A subsystem can't be moved into itself",
+    }),
+    [currentId]: 'Already in this subsystem',
+  };
 
   return (
     <>
@@ -51,7 +54,7 @@ function MoveToSubsystemDialogContent({
           <SubsystemTreeView
             data={tree}
             defaultExpandedIds={DEFAULT_EXPANDED_IDS}
-            disabledSystemIds={disabledSystemIds}
+            disabledReasons={disabledReasons}
             onClick={setSelectedId}
             pickerMode
             selectedSystemId={selectedId}

@@ -8,12 +8,14 @@ import type {FC, KeyboardEvent} from 'react';
 import {ChevronDown, ChevronRight, Dot} from 'lucide-react';
 
 import {Checkbox} from '@qualcomm-ui/react/checkbox';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
 interface SubsystemTreeNodeProps {
-  disabledSystemIds?: readonly string[];
+  /** Picker mode only: systemId -> tooltip explaining why it can't be chosen. */
+  disabledReasons?: Readonly<Record<string, string>>;
   isExpanded: (id: number) => boolean;
   onClick: (systemId: string) => void;
   pickerMode?: boolean;
@@ -25,7 +27,7 @@ interface SubsystemTreeNodeProps {
 }
 
 const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
-  disabledSystemIds,
+  disabledReasons,
   isExpanded,
   onClick,
   pickerMode = false,
@@ -75,8 +77,10 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
   // It decides the subsystem node visibility
   const isVisible = hasMatchInSubtree(treeNode, searchTerm);
   const isSelected = treeNode.systemId === selectedSystemId;
-  const isDisabled =
-    pickerMode && !!disabledSystemIds?.includes(treeNode.systemId);
+  const disabledReason = pickerMode
+    ? disabledReasons?.[treeNode.systemId]
+    : undefined;
+  const isDisabled = disabledReason !== undefined;
   let rowClassName: string | undefined;
   if (isDisabled) {
     rowClassName = 'text-neutral-disabled rounded px-2 py-0.5';
@@ -99,6 +103,32 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
       handleSelect();
     }
   };
+
+  const checkbox = pickerMode && (
+    <Checkbox
+      aria-label={`Select ${treeNode.name}`}
+      checked={isSelected}
+      disabled={isDisabled}
+      onCheckedChange={handleSelect}
+      size="sm"
+    />
+  );
+
+  const nameLabel = (
+    <span
+      aria-current={isSelected ? 'page' : undefined}
+      aria-label={`Navigate to ${treeNode.name}`}
+      className={rowClassName}
+      onClick={handleSelect}
+      onKeyDown={handleNavigationKeyDown}
+      role="button"
+      style={{fontWeight: 'bold'}}
+      tabIndex={0}
+      title={isDisabled ? undefined : `ID: ${treeNode.id}`}
+    >
+      {treeNode.name}
+    </span>
+  );
 
   return (
     <div style={{cursor: 'pointer', marginLeft: rootNode ? 0 : '1rem'}}>
@@ -125,29 +155,23 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             </span>
           )}
 
-          {pickerMode && (
-            <Checkbox
-              aria-label={`Select ${treeNode.name}`}
-              checked={isSelected || isDisabled}
-              disabled={isDisabled}
-              onCheckedChange={handleSelect}
-              size="sm"
-            />
+          {disabledReason ? (
+            <Tooltip
+              trigger={
+                <span style={{alignItems: 'center', display: 'flex', gap: 2}}>
+                  {checkbox}
+                  {nameLabel}
+                </span>
+              }
+            >
+              {disabledReason}
+            </Tooltip>
+          ) : (
+            <>
+              {checkbox}
+              {nameLabel}
+            </>
           )}
-
-          <span
-            aria-current={isSelected ? 'page' : undefined}
-            aria-label={`Navigate to ${treeNode.name}`}
-            className={rowClassName}
-            onClick={handleSelect}
-            onKeyDown={handleNavigationKeyDown}
-            role="button"
-            style={{fontWeight: 'bold'}}
-            tabIndex={0}
-            title={`ID: ${treeNode.id}`}
-          >
-            {treeNode.name}
-          </span>
         </div>
       )}
       {expanded &&
@@ -155,7 +179,7 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
         treeNode.children.map((childNode) => (
           <SubsystemTreeNode
             key={childNode.id}
-            disabledSystemIds={disabledSystemIds}
+            disabledReasons={disabledReasons}
             isExpanded={isExpanded}
             onClick={onClick}
             pickerMode={pickerMode}
