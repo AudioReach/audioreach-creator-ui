@@ -16,6 +16,7 @@ type UnifiedItem =
 
 interface UnifiedGridViewProps {
   devices: DeviceInfo[];
+  onEditProject: (project: ProjectInfo) => void;
   onOpenDevice: (device: DeviceInfo) => void;
   onOpenProject: (project: ProjectInfo) => void;
   onRemoveFromRecent: (projectId: string) => void;
@@ -27,6 +28,7 @@ interface UnifiedGridViewProps {
 
 export default function UnifiedGridView({
   devices,
+  onEditProject,
   onOpenDevice,
   onOpenProject,
   onRemoveFromRecent,
@@ -83,6 +85,7 @@ export default function UnifiedGridView({
             }
             lastModifiedDate={item.data.lastModifiedDate}
             onDoubleClick={() => onOpenProject(item.data)}
+            onEdit={() => onEditProject(item.data)}
             onRemoveFromRecent={() => onRemoveFromRecent(item.data.id)}
             onShowInExplorer={async () => await onShowInExplorer(item.data.id)}
             title={item.data.name}

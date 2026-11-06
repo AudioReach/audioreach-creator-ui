@@ -5,10 +5,11 @@
 
 import {useRef, useState} from 'react';
 
-import {Database, Smartphone} from 'lucide-react';
+import {Database, Pencil, Smartphone} from 'lucide-react';
 
 import {Avatar} from '@qualcomm-ui/react/avatar';
 import {Badge} from '@qualcomm-ui/react/badge';
+import {IconButton} from '@qualcomm-ui/react/button';
 import {Menu} from '@qualcomm-ui/react/menu';
 import {Portal} from '@qualcomm-ui/react-core/portal';
 
@@ -38,6 +39,8 @@ export interface ArcProjectCardProps {
   lastModifiedDate?: Date;
   /** A callback thats called when a card is double-clicked */
   onDoubleClick?: () => void;
+  /** Callback for the edit button, which is hidden if omitted */
+  onEdit?: () => void;
   /** Callback when user selects to remove item from the recent files */
   onRemoveFromRecent?: () => void;
   /** Show the selected project in the file explorer */
@@ -55,6 +58,7 @@ export default function ArcProjectCard({
   label,
   lastModifiedDate,
   onDoubleClick,
+  onEdit,
   onRemoveFromRecent,
   onShowInExplorer,
   title,
@@ -169,6 +173,21 @@ export default function ArcProjectCard({
               <CardDescription>{getTimeStampMesage()}</CardDescription>
             )}
           </div>
+
+          {onEdit && (
+            <IconButton
+              aria-label="Edit project"
+              className="place-self-center"
+              emphasis="neutral"
+              icon={Pencil}
+              onClick={onEdit}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              size="sm"
+              title="Edit project"
+              variant="ghost"
+            />
+          )}
 
           <Avatar.Root
             className="place-self-center"
