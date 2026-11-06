@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {getElementList, type ConfigElementDto} from '~entities/spf-module-data';
+import {
+  getElementList,
+  type AnyElementDto,
+  type ConfigElementDto,
+} from '~entities/spf-module-data';
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
 import type {
   PropertyDto,
@@ -83,12 +87,33 @@ export function dirtyItemsToProperties(
   });
 }
 
+// Strip every element to the minimal write-side shape { name, type, value }.
+// The backend serializer only reads `type` and `value` from input elements;
+// all other fields (dataType, isReadOnly, description, etc.) are resolved
+// from the property definition stored in the DB.
+type ElementWriteDto = {
+  name?: string;
+  type: string;
+  value: string | ElementWriteDto[];
+};
+
+function toWriteElement(element: AnyElementDto): ElementWriteDto {
+  if (element.type === 'ConfigElement') {
+    return {name: element.name, type: element.type, value: element.value};
+  }
+  return {
+    name: element.name,
+    type: element.type,
+    value: element.value.map(toWriteElement),
+  };
+}
+
 export function propertyDtoToUpdateRequest(
   property: PropertyDto,
 ): UpdatePropertyRequestDto {
   return {
-    elements: getElementList(property.elements),
-    name: property.propertyName,
-    systemId: property.systemId,
+    elements: getElementList(property.elements).map(
+      toWriteElement,
+    ) as UpdatePropertyRequestDto['elements'],
   };
 }
