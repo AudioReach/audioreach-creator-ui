@@ -6,12 +6,10 @@
 import {type FC, useMemo} from 'react';
 
 import {useSubsystemBrowser} from '~features/graph-designer';
-import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 
+import {TOP_ID, TOP_NODE_ID, withTopNode} from '../lib/subsystem-top-node';
 import SubSystemTreeView from './subsystem-tree-view';
 
-const TOP_NODE_ID = 0;
-const TOP_NODE_SYSTEM_ID = '__top__';
 const DEFAULT_EXPANDED_IDS = [TOP_NODE_ID];
 
 export const SubsystemBrowser: FC = () => {
@@ -19,27 +17,17 @@ export const SubsystemBrowser: FC = () => {
     useSubsystemBrowser();
 
   const handleOnClick = (systemId: string) => {
-    if (systemId === TOP_NODE_SYSTEM_ID) {
+    if (systemId === TOP_ID) {
       navigateToSubsystem(null);
       return;
     }
     navigateToSubsystem(systemId);
   };
 
-  const treeData = useMemo<SubsystemBrowserTreeNode[]>(() => {
-    if (subsystemData.length === 0) {
-      return [];
-    }
-    return [
-      {
-        children: subsystemData,
-        id: TOP_NODE_ID,
-        name: 'TOP',
-        subgraphIds: [],
-        systemId: TOP_NODE_SYSTEM_ID,
-      },
-    ];
-  }, [subsystemData]);
+  const treeData = useMemo(
+    () => (subsystemData.length === 0 ? [] : withTopNode(subsystemData)),
+    [subsystemData],
+  );
 
   return (
     <div
@@ -55,7 +43,7 @@ export const SubsystemBrowser: FC = () => {
           data={treeData}
           defaultExpandedIds={DEFAULT_EXPANDED_IDS}
           onClick={handleOnClick}
-          selectedSystemId={activeSubsystemId ?? TOP_NODE_SYSTEM_ID}
+          selectedSystemId={activeSubsystemId ?? TOP_ID}
         />
       </div>
     </div>
