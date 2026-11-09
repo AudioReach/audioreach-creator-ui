@@ -13,7 +13,6 @@ import {
   type ModuleNode,
   PORT_IO_TYPE,
   type SubgraphNode,
-  type SubsystemNode,
 } from '~entities/graph';
 import {
   calculateModuleHeight,
@@ -26,16 +25,28 @@ const elk = new ELK();
 const ELK_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
+  'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-  'elk.padding': '[top=44,left=20,bottom=20,right=20]',
   'elk.spacing.nodeNode': '30',
 };
 
 const SUBGRAPH_COLUMN_GAP = 80;
 
 type Dims = {height: number; width: number};
-type Pos = {x: number; y: number};
-type Box = {height: number; width: number; x: number; y: number};
+type SubgraphLayoutResult = {
+  containers: ContainerNode[];
+  modules: ModuleNode[];
+  subgraph: SubgraphNode;
+};
+
+function elkPadding(
+  top: number,
+  left: number,
+  bottom: number,
+  right: number,
+): string {
+  return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
+}
 
 function computeModuleDimensions(modules: ModuleNode[]): Map<string, Dims> {
   const map = new Map<string, Dims>();
@@ -142,142 +153,12 @@ function assignSubgraphColumns(
 }
 
 async function runSubgraphElkPass(
-  sgId: string,
+  subgraph: SubgraphNode,
   modules: ModuleNode[],
+  containers: ContainerNode[],
   dataLinks: DataLink[],
   dims: Map<string, Dims>,
-): Promise<Map<string, Pos>> {
-  const graph: ElkNode = {
-    children: modules.map((m) => {
-      const d = dims.get(m.id) ?? {height: 80, width: 160};
-      return {height: d.height, id: m.id, width: d.width};
-    }),
-    edges: dataLinks.map((e) => ({
-      id: e.id,
-      sources: [e.sourceNodeId],
-      targets: [e.targetNodeId],
-    })),
-    id: sgId,
-    layoutOptions: ELK_OPTIONS,
-  };
-
-  const result = await elk.layout(graph);
-
-  const pos = new Map<string, Pos>();
-  for (const n of result.children ?? []) {
-    if (n.x !== undefined) {
-      pos.set(n.id, {x: n.x, y: n.y ?? 0});
-    } else {
-      logger.warn('layoutLevelView: node missing from ELK result', {
-        action: 'layout_level_view',
-        component: 'levelViewLayout',
-      });
-    }
-  }
-  return pos;
-}
-
-function splitContainers(
-  modules: ModuleNode[],
-  containers: ContainerNode[],
-  positions: Map<string, Pos>,
-): {containers: ContainerNode[]; modules: ModuleNode[]} {
-  const moduleX = new Map<string, number>();
-  for (const m of modules) {
-    moduleX.set(m.id, positions.get(m.id)?.x ?? 0);
-  }
-
-  const newContainers: ContainerNode[] = [];
-  const moduleParentUpdates = new Map<string, string>();
-
-  for (const container of containers) {
-    const cMods = modules.filter((m) => m.parentId === container.id);
-
-    if (cMods.length === 0) {
-      newContainers.push(container);
-      continue;
-    }
-
-    // Sorted unique x-values belonging to this container
-    const cXs = [...new Set(cMods.map((m) => moduleX.get(m.id) ?? 0))].sort(
-      (a, b) => a - b,
-    );
-
-    // x-values belonging to OTHER containers
-    const foreignXs = modules
-      .filter((m) => m.parentId !== container.id)
-      .map((m) => moduleX.get(m.id) ?? 0);
-
-    // Find gaps: consecutive container columns with a foreign column strictly
-    // between
-    const splitAfterX: number[] = [];
-    for (let i = 0; i < cXs.length - 1; i++) {
-      const x1 = cXs[i];
-      const x2 = cXs[i + 1];
-      if (foreignXs.some((fx) => fx > x1 && fx < x2)) {
-        splitAfterX.push(x1);
-      }
-    }
-
-    if (splitAfterX.length === 0) {
-      newContainers.push(container);
-      continue;
-    }
-
-    // Assign each module to a cluster based on where its x falls
-    const thresholds = [...splitAfterX, Infinity];
-    const clusters: ModuleNode[][] = Array.from(
-      {length: thresholds.length},
-      () => [],
-    );
-    for (const m of cMods) {
-      const mx = moduleX.get(m.id) ?? 0;
-      const idx = thresholds.findIndex((t) => mx <= t);
-      clusters[idx].push(m);
-    }
-
-    let partIdx = 0;
-    for (const cluster of clusters) {
-      if (cluster.length === 0) {
-        continue;
-      }
-      const logicalContainerId = `${container.id}:part-${partIdx}`;
-      newContainers.push({
-        ...container,
-        height: 0,
-        logicalContainerId,
-        width: 0,
-        x: 0,
-        y: 0,
-      });
-      for (const m of cluster) {
-        moduleParentUpdates.set(m.id, logicalContainerId);
-      }
-      partIdx++;
-    }
-  }
-
-  const updatedModules = modules.map((m) => {
-    const newParentId = moduleParentUpdates.get(m.id);
-    return newParentId ? {...m, parentId: newParentId} : m;
-  });
-
-  return {containers: newContainers, modules: updatedModules};
-}
-
-function computeBoundingBoxes(
-  modules: ModuleNode[],
-  containers: ContainerNode[],
-  subgraphs: SubgraphNode[],
-  subsystems: SubsystemNode[],
-  positions: Map<string, Pos>,
-  dims: Map<string, Dims>,
-): {
-  containers: ContainerNode[];
-  modules: ModuleNode[];
-  subgraphs: SubgraphNode[];
-  subsystems: SubsystemNode[];
-} {
+): Promise<SubgraphLayoutResult> {
   const {headerHeight: CH, padding: CP} = NODE_DIMENSIONS.container;
   const {
     headerHeight: SH,
@@ -285,168 +166,97 @@ function computeBoundingBoxes(
     padding: SP,
   } = NODE_DIMENSIONS.subgraph;
 
-  // --- Container bounding boxes (from global module positions) ---
-  // Module parentId is the effective container key:
-  //   split part  → logicalContainerId   non-split → container.id
-  const modsByContainer = new Map<string, ModuleNode[]>();
+  const modulesByContainer = new Map<string, ModuleNode[]>();
   for (const m of modules) {
-    const key = m.parentId ?? '';
-    if (!modsByContainer.has(key)) {
-      modsByContainer.set(key, []);
+    const parentId = m.parentId ?? '';
+    if (!modulesByContainer.has(parentId)) {
+      modulesByContainer.set(parentId, []);
     }
-    modsByContainer.get(key)!.push(m);
+    modulesByContainer.get(parentId)!.push(m);
   }
 
-  const containerGlobal = new Map<string, Box>();
-  const updatedContainers: ContainerNode[] = containers.map((container) => {
-    const key = container.logicalContainerId ?? container.id;
-    const cMods = modsByContainer.get(key) ?? [];
-    if (cMods.length === 0) {
+  const graph: ElkNode = {
+    children: containers.map((container) => ({
+      children: (modulesByContainer.get(container.id) ?? []).map((m) => {
+        const d = dims.get(m.id) ?? {height: 80, width: 160};
+        return {height: d.height, id: m.id, width: d.width};
+      }),
+      id: container.id,
+      layoutOptions: {
+        ...ELK_OPTIONS,
+        'elk.padding': elkPadding(CH + CP, CP, CP, CP),
+      },
+    })),
+    edges: dataLinks.map((e) => ({
+      id: e.id,
+      sources: [e.sourceNodeId],
+      targets: [e.targetNodeId],
+    })),
+    id: subgraph.id,
+    layoutOptions: {
+      ...ELK_OPTIONS,
+      'elk.padding': elkPadding(SH + SP, SP, SP, SP),
+    },
+  };
+
+  const result = await elk.layout(graph);
+
+  const elkContainers = new Map(
+    (result.children ?? []).map((node) => [node.id, node]),
+  );
+  const updatedContainers = containers.map((container) => {
+    const node = elkContainers.get(container.id);
+    if (!node || node.x === undefined || node.y === undefined) {
+      logger.warn('layoutLevelView: node missing from ELK result', {
+        action: 'layout_level_view',
+        component: 'levelViewLayout',
+      });
       return container;
     }
-
-    let minX = Infinity,
-      minY = Infinity,
-      maxRight = -Infinity,
-      maxBottom = -Infinity;
-    for (const m of cMods) {
-      const pos = positions.get(m.id);
-      const dim = dims.get(m.id);
-      const x = pos?.x ?? 0;
-      const y = pos?.y ?? 0;
-      const w = dim?.width ?? 0;
-      const h = dim?.height ?? 0;
-      if (x < minX) {
-        minX = x;
-      }
-      if (y < minY) {
-        minY = y;
-      }
-      if (x + w > maxRight) {
-        maxRight = x + w;
-      }
-      if (y + h > maxBottom) {
-        maxBottom = y + h;
-      }
-    }
-
-    const gx = minX - CP;
-    const gy = minY - CH - CP;
-    const gw = maxRight - gx + CP;
-    const gh = maxBottom - gy + CP;
-
-    containerGlobal.set(key, {height: gh, width: gw, x: gx, y: gy});
-    return {...container, height: gh, width: gw, x: gx, y: gy};
+    return {
+      ...container,
+      height: node.height ?? container.height,
+      width: node.width ?? container.width,
+      x: node.x,
+      y: node.y,
+    };
   });
 
-  // --- Subgraph bounding boxes (from global container positions) ---
-  const containersBySubgraph = new Map<string, ContainerNode[]>();
-  for (const c of updatedContainers) {
-    const sgId = c.parentId ?? '';
-    if (!containersBySubgraph.has(sgId)) {
-      containersBySubgraph.set(sgId, []);
+  const elkModules = new Map<string, ElkNode>();
+  for (const containerNode of result.children ?? []) {
+    for (const moduleNode of containerNode.children ?? []) {
+      elkModules.set(moduleNode.id, moduleNode);
     }
-    containersBySubgraph.get(sgId)!.push(c);
   }
-
-  const subgraphGlobal = new Map<string, Box>();
-  const updatedSubgraphs: SubgraphNode[] = subgraphs.map((sg) => {
-    const sgContainers = containersBySubgraph.get(sg.id) ?? [];
-    if (sgContainers.length === 0) {
-      return sg;
-    }
-
-    let minX = Infinity,
-      minY = Infinity,
-      maxRight = -Infinity,
-      maxBottom = -Infinity;
-    for (const c of sgContainers) {
-      const key = c.logicalContainerId ?? c.id;
-      const b = containerGlobal.get(key) ?? {height: 0, width: 0, x: 0, y: 0};
-      if (b.x < minX) {
-        minX = b.x;
-      }
-      if (b.y < minY) {
-        minY = b.y;
-      }
-      if (b.x + b.width > maxRight) {
-        maxRight = b.x + b.width;
-      }
-      if (b.y + b.height > maxBottom) {
-        maxBottom = b.y + b.height;
-      }
-    }
-
-    const gx = minX - SP;
-    const gy = minY - SH - SP;
-    const gw = Math.max(maxRight - gx + SP, SMW);
-    const gh = maxBottom - gy + SP;
-
-    subgraphGlobal.set(sg.id, {height: gh, width: gw, x: gx, y: gy});
-    return {...sg, height: gh, width: gw, x: gx, y: gy};
-  });
-
-  // --- Relativize container positions → subgraph-relative ---
-  const relativizedContainers: ContainerNode[] = updatedContainers.map((c) => {
-    const key = c.logicalContainerId ?? c.id;
-    const cg = containerGlobal.get(key);
-    if (!cg) {
-      return c;
-    }
-    const sg = subgraphGlobal.get(c.parentId ?? '');
-    if (!sg) {
-      return {...c, x: cg.x, y: cg.y};
-    }
-    return {...c, x: cg.x - sg.x, y: cg.y - sg.y};
-  });
-
-  // --- Relativize module positions → container-relative ---
-  const relativizedModules: ModuleNode[] = modules.map((m) => {
-    const gpos = positions.get(m.id);
-    const cg = containerGlobal.get(m.parentId ?? '');
+  const updatedModules = modules.map((m) => {
+    const node = elkModules.get(m.id);
     const d = dims.get(m.id);
-    if (!gpos || !cg) {
-      logger.warn(
-        'layoutLevelView: module has no container in layout — check parentId',
-        {
-          action: 'layout_level_view',
-          component: 'levelViewLayout',
-        },
-      );
-      return {
-        ...m,
-        height: d?.height ?? m.height,
-        parentId: undefined,
-        width: d?.width ?? m.width,
-      };
+    if (!node || node.x === undefined || node.y === undefined) {
+      logger.warn('layoutLevelView: node missing from ELK result', {
+        action: 'layout_level_view',
+        component: 'levelViewLayout',
+      });
+      return {...m, height: d?.height ?? m.height, width: d?.width ?? m.width};
     }
     return {
       ...m,
       height: d?.height ?? m.height,
       width: d?.width ?? m.width,
-      x: gpos.x - cg.x,
-      y: gpos.y - cg.y,
+      x: node.x,
+      y: node.y,
     };
   });
 
-  // --- Subsystem positioning ---
-  // Subsystems are opaque in the drill model; tile them after all subgraphs.
-  const sgRight = [...subgraphGlobal.values()].reduce(
-    (max, sg) => Math.max(max, sg.x + sg.width),
-    0,
-  );
-  const ssStartX = subsystems.length > 0 ? sgRight + SP * 2 : 0;
-  const updatedSubsystems: SubsystemNode[] = subsystems.map((ss, i) => ({
-    ...ss,
-    x: ssStartX + i * (ss.width + SP * 2),
-    y: 0,
-  }));
-
   return {
-    containers: relativizedContainers,
-    modules: relativizedModules,
-    subgraphs: updatedSubgraphs,
-    subsystems: updatedSubsystems,
+    containers: updatedContainers,
+    modules: updatedModules,
+    subgraph: {
+      ...subgraph,
+      height: result.height ?? subgraph.height,
+      width: Math.max(result.width ?? subgraph.width, SMW),
+      x: 0,
+      y: 0,
+    },
   };
 }
 
@@ -539,31 +349,17 @@ export async function layoutLevelView(graph: LevelView): Promise<LevelView> {
       const sgContainers = containersBySg.get(sg.id) ?? [];
       const sgLinks = intraSgLinks.get(sg.id) ?? [];
 
-      const positions = await runSubgraphElkPass(
-        sg.id,
+      const layoutResult = await runSubgraphElkPass(
+        sg,
         sgModules,
+        sgContainers,
         sgLinks,
         dims,
       );
 
-      const {containers: splitConts, modules: splitMods} = splitContainers(
-        sgModules,
-        sgContainers,
-        positions,
-      );
-
-      const bbResult = computeBoundingBoxes(
-        splitMods,
-        splitConts,
-        [sg],
-        [],
-        positions,
-        dims,
-      );
-
-      allPositionedSgs.push(bbResult.subgraphs[0] ?? sg);
-      allRelConts.push(...bbResult.containers);
-      allRelMods.push(...bbResult.modules);
+      allPositionedSgs.push(layoutResult.subgraph);
+      allRelConts.push(...layoutResult.containers);
+      allRelMods.push(...layoutResult.modules);
     }
   } catch (err) {
     logger.error(
