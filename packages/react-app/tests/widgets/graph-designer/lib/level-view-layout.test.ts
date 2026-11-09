@@ -26,6 +26,67 @@ const CP = NODE_DIMENSIONS.container.padding;
 const CH = NODE_DIMENSIONS.container.headerHeight;
 const SP = NODE_DIMENSIONS.subgraph.padding;
 const SH = NODE_DIMENSIONS.subgraph.headerHeight;
+const MH = NODE_DIMENSIONS.module.minHeight;
+const MW = NODE_DIMENSIONS.module.minWidth;
+
+interface MockElkNode {
+  children?: MockElkNode[];
+  height: number;
+  id: string;
+  width: number;
+  x?: number;
+  y?: number;
+}
+
+function mockModule(id: string, x: number, y: number): MockElkNode {
+  return {height: MH, id, width: MW, x, y};
+}
+
+function mockContainer(
+  id: string,
+  children: MockElkNode[],
+  x: number,
+  y: number,
+): MockElkNode {
+  const maxRight = Math.max(0, ...children.map((node) => node.x! + node.width));
+  const maxBottom = Math.max(
+    0,
+    ...children.map((node) => node.y! + node.height),
+  );
+  return {
+    children,
+    height: Math.max(maxBottom + CP, CH + 2 * CP),
+    id,
+    width: Math.max(maxRight + CP, 2 * CP),
+    x,
+    y,
+  };
+}
+
+function mockSubgraph(id: string, children: MockElkNode[]): MockElkNode {
+  const maxRight = Math.max(0, ...children.map((node) => node.x! + node.width));
+  const maxBottom = Math.max(
+    0,
+    ...children.map((node) => node.y! + node.height),
+  );
+  return {
+    children,
+    height: maxBottom + SP,
+    id,
+    width: Math.max(maxRight + SP, NODE_DIMENSIONS.subgraph.minWidth),
+  };
+}
+
+function baselineElkResult(): MockElkNode {
+  return mockSubgraph('test', [
+    mockContainer(
+      'container-1:1',
+      [mockModule('mod-a', CP, CH + CP), mockModule('mod-b', 200 + CP, CH + CP)],
+      SP,
+      SH + SP,
+    ),
+  ]);
+}
 
 // Single container, two modules, one data link — the baseline fixture.
 const unpositioned: LevelView = {
@@ -293,7 +354,7 @@ const twoSubgraphGraph: LevelView = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockELKLayout.mockResolvedValue({children: [], id: 'test'});
+  mockELKLayout.mockResolvedValue(baselineElkResult());
 });
 
 describe('layoutLevelView', () => {
@@ -331,8 +392,8 @@ describe('layoutLevelView', () => {
       await layoutLevelView(unpositioned);
       expect(mockELKLayout).toHaveBeenCalledTimes(1);
       const elkArg = mockELKLayout.mock.calls[0][0];
-      expect(elkArg.children).toHaveLength(2);
-      expect(elkArg.children.map((n: {id: string}) => n.id)).toEqual(
+      expect(elkArg.children).toHaveLength(1);
+      expect(elkArg.children[0].children.map((n: {id: string}) => n.id)).toEqual(
         expect.arrayContaining(['mod-a', 'mod-b']),
       );
     });
@@ -363,7 +424,9 @@ describe('layoutLevelView', () => {
     it('passes correctly sized module nodes to ELK', async () => {
       await layoutLevelView(unpositioned);
       const elkArg = mockELKLayout.mock.calls[0][0];
-      const modA = elkArg.children.find((n: {id: string}) => n.id === 'mod-a');
+      const modA = elkArg.children[0].children.find(
+        (n: {id: string}) => n.id === 'mod-a',
+      );
       // mod-a has 0 inputs, 1 output → calculateModuleHeight(0, 1, false) = 120
       // (minHeight)
       expect(modA).toMatchObject({
@@ -374,7 +437,7 @@ describe('layoutLevelView', () => {
 
     it('emits a warning when ELK returns a child node without a position', async () => {
       mockELKLayout.mockResolvedValueOnce({
-        children: [{height: 80, id: 'mod-a', width: 160}],
+        children: [{children: [], height: 80, id: 'container-1:1', width: 160}],
         id: 'test',
       });
       await layoutLevelView(unpositioned);
@@ -396,13 +459,7 @@ describe('layoutLevelView', () => {
     // header+padding) container at (SP, SH+SP) — x=SP inside subgraph, y=SH+SP
     // (below header+padding)
     beforeEach(() => {
-      mockELKLayout.mockResolvedValue({
-        children: [
-          {height: 80, id: 'mod-a', width: 160, x: 0, y: 0},
-          {height: 80, id: 'mod-b', width: 160, x: 200, y: 0},
-        ],
-        id: 'test',
-      });
+      mockELKLayout.mockResolvedValue(baselineElkResult());
     });
 
     it('sets module width and height from calculateModuleHeight in the output', async () => {
@@ -437,7 +494,6 @@ describe('layoutLevelView', () => {
       const container = result.containers?.find(
         (c) => c.id === 'container-1:1',
       );
-      const MH = NODE_DIMENSIONS.module.minHeight;
       // height = module_height + CH (header) + 2*CP (top+bottom padding)
       expect(container).toMatchObject({
         height: MH + CH + 2 * CP,
@@ -458,7 +514,6 @@ describe('layoutLevelView', () => {
     it('computes subgraph dimensions from container positions', async () => {
       const result = await layoutLevelView(unpositioned);
       const sg = result.subgraphs!.find((s) => s.id === 'subgraph-1');
-      const MH = NODE_DIMENSIONS.module.minHeight;
       // height = module_height + CH + 2*CP + SH (header) + 2*SP (top+bottom padding)
       expect(sg).toMatchObject({
         height: MH + CH + 2 * CP + SH + 2 * SP,
@@ -498,29 +553,44 @@ describe('layoutLevelView', () => {
     });
   });
 
-  describe('container splitting', () => {
+  describe('compound container layout', () => {
     beforeEach(() => {
-      // ELK places: mod-1 at x=0, mod-3 at x=200, mod-2 at x=400.
-      // mod-3 (cnt-b) has x strictly between mod-1 and mod-2 (both cnt-a) → cnt-a
-      // splits.
-      mockELKLayout.mockResolvedValue({
-        children: [
-          {height: 80, id: 'mod-1', width: 160, x: 0, y: 0},
-          {height: 80, id: 'mod-2', width: 160, x: 400, y: 0},
-          {height: 80, id: 'mod-3', width: 160, x: 200, y: 0},
-        ],
-        id: 'split-test',
-      });
+      mockELKLayout.mockResolvedValue(
+        mockSubgraph('split-test', [
+          mockContainer(
+            'cnt-a',
+            [
+              mockModule('mod-1', CP, CH + CP),
+              mockModule('mod-2', 200 + CP, CH + CP),
+            ],
+            SP,
+            SH + SP,
+          ),
+          mockContainer(
+            'cnt-b',
+            [mockModule('mod-3', CP, CH + CP)],
+            460,
+            SH + SP,
+          ),
+        ]),
+      );
     });
 
-    it('contiguous container is not split and has no logicalContainerId', async () => {
-      mockELKLayout.mockResolvedValue({
-        children: [
-          {height: 80, id: 'mod-a', width: 160, x: 0, y: 0},
-          {height: 80, id: 'mod-b', width: 160, x: 200, y: 0},
-        ],
-        id: 'test',
-      });
+    it('passes containers as ELK parents and modules as their children', async () => {
+      await layoutLevelView(splitGraph);
+
+      const elkArg = mockELKLayout.mock.calls[0][0];
+      const cntA = elkArg.children.find((n: {id: string}) => n.id === 'cnt-a');
+      const cntB = elkArg.children.find((n: {id: string}) => n.id === 'cnt-b');
+
+      expect(cntA.children.map((n: {id: string}) => n.id)).toEqual([
+        'mod-1',
+        'mod-2',
+      ]);
+      expect(cntB.children.map((n: {id: string}) => n.id)).toEqual(['mod-3']);
+    });
+
+    it('does not create logical container parts in phase 1', async () => {
       const result = await layoutLevelView(unpositioned);
       const container = result.containers?.find(
         (c) => c.id === 'container-1:1',
@@ -529,31 +599,31 @@ describe('layoutLevelView', () => {
       expect(container?.logicalContainerId).toBeUndefined();
     });
 
-    it('non-contiguous container is replaced by two parts with the same id', async () => {
-      const result = await layoutLevelView(splitGraph);
-      const parts = result.containers?.filter((c) => c.id === 'cnt-a');
-      expect(parts).toHaveLength(2);
-    });
-
-    it('split parts get unique logicalContainerIds', async () => {
-      const result = await layoutLevelView(splitGraph);
-      const parts = result.containers?.filter((c) => c.id === 'cnt-a') ?? [];
-      expect(parts[0].logicalContainerId).toBe('cnt-a:part-0');
-      expect(parts[1].logicalContainerId).toBe('cnt-a:part-1');
-    });
-
-    it('module parentId is updated to the logicalContainerId of its part', async () => {
+    it('keeps modules in their original parent containers', async () => {
       const result = await layoutLevelView(splitGraph);
       const m1 = result.modules?.find((m) => m.id === 'mod-1');
       const m2 = result.modules?.find((m) => m.id === 'mod-2');
-      expect(m1?.parentId).toBe('cnt-a:part-0');
-      expect(m2?.parentId).toBe('cnt-a:part-1');
+      const m3 = result.modules?.find((m) => m.id === 'mod-3');
+      expect(m1?.parentId).toBe('cnt-a');
+      expect(m2?.parentId).toBe('cnt-a');
+      expect(m3?.parentId).toBe('cnt-b');
     });
 
-    it('modules in a non-split container keep their original parentId', async () => {
-      const result = await layoutLevelView(splitGraph);
-      const m3 = result.modules?.find((m) => m.id === 'mod-3');
-      expect(m3?.parentId).toBe('cnt-b');
+    it('keeps an unlinked module nested under its assigned container', async () => {
+      const orphanGraph: LevelView = {
+        ...splitGraph,
+        dataLinks: [splitGraph.dataLinks![0]],
+      };
+
+      await layoutLevelView(orphanGraph);
+
+      const elkArg = mockELKLayout.mock.calls[0][0];
+      const cntA = elkArg.children.find((n: {id: string}) => n.id === 'cnt-a');
+
+      expect(cntA.children.map((n: {id: string}) => n.id)).toEqual([
+        'mod-1',
+        'mod-2',
+      ]);
     });
   });
 
@@ -644,14 +714,26 @@ describe('layoutLevelView', () => {
       // Both subgraphs start at y=0 (same column); enforceSubgraphGaps pushes
       // the lower one down to ensure minGap=50.
       mockELKLayout
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-top', width: 160, x: 0, y: 0}],
-          id: 'sg-1',
-        })
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-bot', width: 160, x: 0, y: 0}],
-          id: 'sg-2',
-        });
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-1', [
+            mockContainer(
+              'cnt-1',
+              [mockModule('mod-top', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        )
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-2', [
+            mockContainer(
+              'cnt-2',
+              [mockModule('mod-bot', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        );
 
       const result = await layoutLevelView(verticalGraph);
       const sg1 = result.subgraphs!.find((s) => s.id === 'sg-1')!;
@@ -664,14 +746,26 @@ describe('layoutLevelView', () => {
       // sg-a (col 0) and sg-b (col 1) have non-overlapping x-bands; the gap
       // enforcement must leave sg-b.y unchanged at 0.
       mockELKLayout
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-x', width: 160, x: 0, y: 0}],
-          id: 'sg-a',
-        })
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-y', width: 160, x: 0, y: 0}],
-          id: 'sg-b',
-        });
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-a', [
+            mockContainer(
+              'cnt-ax',
+              [mockModule('mod-x', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        )
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-b', [
+            mockContainer(
+              'cnt-by',
+              [mockModule('mod-y', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        );
 
       const result = await layoutLevelView(twoSubgraphGraph);
       const sgB = result.subgraphs!.find((s) => s.id === 'sg-b')!;
@@ -682,14 +776,26 @@ describe('layoutLevelView', () => {
   describe('two-level layout (R1+R2)', () => {
     it('places the upstream subgraph to the left of the downstream subgraph', async () => {
       mockELKLayout
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-x', width: 160, x: 0, y: 0}],
-          id: 'sg-a',
-        })
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-y', width: 160, x: 0, y: 0}],
-          id: 'sg-b',
-        });
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-a', [
+            mockContainer(
+              'cnt-ax',
+              [mockModule('mod-x', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        )
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-b', [
+            mockContainer(
+              'cnt-by',
+              [mockModule('mod-y', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        );
 
       const result = await layoutLevelView(twoSubgraphGraph);
       const sgA = result.subgraphs!.find((s) => s.id === 'sg-a')!;
@@ -699,14 +805,26 @@ describe('layoutLevelView', () => {
 
     it('calls ELK once per subgraph and excludes the cross-subgraph link', async () => {
       mockELKLayout
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-x', width: 160, x: 0, y: 0}],
-          id: 'sg-a',
-        })
-        .mockResolvedValueOnce({
-          children: [{height: 80, id: 'mod-y', width: 160, x: 0, y: 0}],
-          id: 'sg-b',
-        });
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-a', [
+            mockContainer(
+              'cnt-ax',
+              [mockModule('mod-x', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        )
+        .mockResolvedValueOnce(
+          mockSubgraph('sg-b', [
+            mockContainer(
+              'cnt-by',
+              [mockModule('mod-y', CP, CH + CP)],
+              SP,
+              SH + SP,
+            ),
+          ]),
+        );
 
       await layoutLevelView(twoSubgraphGraph);
 
