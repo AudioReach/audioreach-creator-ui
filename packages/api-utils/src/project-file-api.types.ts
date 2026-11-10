@@ -19,6 +19,7 @@ export interface ProjectFilePropertiesRequest {
 export interface OpenProjectFileResponseData {
   /** Binary data of the .acdb file found in the same directory */
   acdbFileData?: Buffer;
+  acdbFileName?: string;
   /** A flag indicating if the open file dialog was successful (true) or cancled (false) */
   cancelled: boolean;
   /** The project being opened */
