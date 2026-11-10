@@ -57,6 +57,7 @@ export async function openProjectFile(
       // Find .acdb file in the same directory
       const dirPath = dirname(filepath);
       let acdbFileData: Buffer | undefined;
+      let acdbFileName: string | undefined;
 
       try {
         const files = await readdir(dirPath);
@@ -74,6 +75,7 @@ export async function openProjectFile(
           const acdbFilePath = join(dirPath, acdbName);
           if (acdbFilePath.indexOf(dirPath) === 0) {
             acdbFileData = readFileSync(acdbFilePath);
+            acdbFileName = acdbName;
           }
         }
       } catch (error) {
@@ -83,6 +85,7 @@ export async function openProjectFile(
       response = `File selected: ${filepath}`;
       data = {
         acdbFileData,
+        acdbFileName,
         cancelled: false,
         project: getProjectFileInfo(filepath),
         workspaceFileData,

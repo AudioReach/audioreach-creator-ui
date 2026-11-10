@@ -120,6 +120,14 @@ export const ProjectService = {
         };
       }
 
+      const acdbFileName = response.data.acdbFileName;
+      if (!acdbFileName) {
+        return {
+          message: 'Failed to determine the .acdb file name',
+          success: false,
+        };
+      }
+
       const workspaceFileName =
         projectInfo.filepath.split(/[\\/]/).pop() || 'workspace.awsp';
       const workspaceFile = new File(
@@ -130,7 +138,7 @@ export const ProjectService = {
 
       const acdbFile = new File(
         [new Uint8Array(acdbFileData)],
-        'project.acdb',
+        acdbFileName,
         {type: 'application/octet-stream'},
       );
 
