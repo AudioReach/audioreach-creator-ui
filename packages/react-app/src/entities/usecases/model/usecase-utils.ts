@@ -39,3 +39,9 @@ export const getLeafItems = (items: UsecaseItem[]): UsecaseItem[] =>
   items.flatMap((item) =>
     (item.children?.length ?? 0) > 0 ? getLeafItems(item.children!) : [item],
   );
+
+/** Makes an ID from the usecase key-values; it stays the same on every open. */
+export const getUsecaseKeyValueKey = (item: UsecaseItem): string =>
+  item.keyValuePairs
+    .map((kv) => `${kv.key.naturalId}:${kv.value.naturalId}`)
+    .join(',');
