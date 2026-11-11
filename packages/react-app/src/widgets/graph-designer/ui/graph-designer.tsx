@@ -35,7 +35,9 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {
   formatUsecaseDisplay,
+  getLeafItems,
   getSystemIdsFromFormattedUsecases,
+  getUsecaseKeyValueKey,
   type UsecaseDto,
 } from '~entities/usecases';
 import {
@@ -72,6 +74,7 @@ import {
   type VisualizerContextMenuConfig,
   type XY,
 } from '~features/usecase-visualizer';
+import {ConfigFileManager} from '~shared/config/config-manager';
 import {useUserPreferences} from '~shared/config/hooks';
 import {WORKFLOW_TYPES} from '~shared/config/user-preferences-types';
 import {ArcBreadcrumbs} from '~shared/controls/arc-breadcrumbs';
@@ -79,6 +82,7 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import {useProjectLayoutStore, useProjectStoreShallow} from '~shared/store';
+import {useGlobalStore} from '~shared/store/global-store';
 import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 import {
   ModuleDataTab,
@@ -150,6 +154,11 @@ function graphDataHasContent(
   );
 }
 
+const getProjectFilePath = (projectId: string): string | undefined =>
+  useGlobalStore
+    .getState()
+    .openProjects.find((pg) => pg.projectId === projectId)?.filePath;
+
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectId,
   screenshotRegistry,
@@ -195,6 +204,59 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     () => getSystemIdsFromFormattedUsecases(selectedUsecases, resolvedData),
     [selectedUsecases, resolvedData],
   );
+
+  // Persist / restore selected usecases via the project config
+  const restoreDoneRef = useRef(false);
+  const isUsecaseListReady = !isWorkflowLoading && resolvedData.length > 0;
+
+  const leafUsecases = useMemo(
+    () => resolvedData.flatMap((cat) => getLeafItems(cat.items)),
+    [resolvedData],
+  );
+
+  // Save keys, not names or systemIds, because those change between opens.
+  const selectedUsecaseKeys = useMemo(() => {
+    const selected = new Set(selectedUsecases);
+    return leafUsecases
+      .filter((item) => selected.has(item.name))
+      .map(getUsecaseKeyValueKey);
+  }, [selectedUsecases, leafUsecases]);
+
+  // Restore once, as soon as the usecase list is available.
+  useEffect(() => {
+    if (restoreDoneRef.current || !isUsecaseListReady) {
+      return;
+    }
+    restoreDoneRef.current = true;
+
+    const filePath = getProjectFilePath(projectId);
+    const savedKeys = filePath
+      ? ConfigFileManager.instance.getSelectedUsecaseKeys(filePath)
+      : undefined;
+    const keySet = new Set(savedKeys ?? []);
+    // Usecases deleted from the project are skipped.
+    const names = leafUsecases
+      .filter((item) => keySet.has(getUsecaseKeyValueKey(item)))
+      .map((item) => item.name);
+    setSelectedUsecases(names);
+  }, [isUsecaseListReady, leafUsecases, projectId, setSelectedUsecases]);
+
+  // Save every later change so the next open starts with the same selection.
+  useEffect(() => {
+    // Do not save before the restore has run (the selection is still empty).
+    if (!restoreDoneRef.current) {
+      return;
+    }
+    const filePath = getProjectFilePath(projectId);
+    if (!filePath) {
+      return;
+    }
+    // Saved in every open project's config so one project cannot erase another.
+    ConfigFileManager.instance.setSelectedUsecaseKeys(
+      filePath,
+      selectedUsecaseKeys,
+    );
+  }, [projectId, selectedUsecaseKeys]);
 
   // Derived flags for UsecaseSelectionControl
   const isSystemWorkflow = workflowType === WORKFLOW_TYPES.SYSTEM;

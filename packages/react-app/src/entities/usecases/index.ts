@@ -51,6 +51,7 @@ export type {UsecaseCategory, UsecaseItem} from './model/usecase.types';
 export {
   getSystemIdsFromFormattedUsecases,
   getLeafItems,
+  getUsecaseKeyValueKey,
 } from './model/usecase-utils';
 export {
   formatAsKeysValues,
