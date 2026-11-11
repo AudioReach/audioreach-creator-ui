@@ -558,6 +558,85 @@ describe('layoutLevelView', () => {
       mockELKLayout.mockResolvedValue(
         mockSubgraph('split-test', [
           mockContainer(
+            'cnt-a:part-0',
+            [mockModule('mod-1', CP, CH + CP)],
+            SP,
+            SH + SP,
+          ),
+          mockContainer(
+            'cnt-b',
+            [mockModule('mod-3', CP, CH + CP)],
+            260,
+            SH + SP,
+          ),
+          mockContainer(
+            'cnt-a:part-1',
+            [mockModule('mod-2', CP, CH + CP)],
+            500,
+            SH + SP,
+          ),
+        ]),
+      );
+    });
+
+    it('passes containers as ELK parents and modules as their children', async () => {
+      await layoutLevelView(splitGraph);
+
+      const elkArg = mockELKLayout.mock.calls[0][0];
+      const cntAPart0 = elkArg.children.find(
+        (n: {id: string}) => n.id === 'cnt-a:part-0',
+      );
+      const cntAPart1 = elkArg.children.find(
+        (n: {id: string}) => n.id === 'cnt-a:part-1',
+      );
+      const cntB = elkArg.children.find((n: {id: string}) => n.id === 'cnt-b');
+
+      expect(cntAPart0.children.map((n: {id: string}) => n.id)).toEqual([
+        'mod-1',
+      ]);
+      expect(cntAPart1.children.map((n: {id: string}) => n.id)).toEqual([
+        'mod-2',
+      ]);
+      expect(cntB.children.map((n: {id: string}) => n.id)).toEqual(['mod-3']);
+    });
+
+    it('does not create logical container parts for contiguous modules', async () => {
+      const result = await layoutLevelView(unpositioned);
+      const container = result.containers?.find(
+        (c) => c.id === 'container-1:1',
+      );
+      expect(container).toBeDefined();
+      expect(container?.logicalContainerId).toBeUndefined();
+    });
+
+    it('creates logical container parts for a genuine A to B to A split', async () => {
+      const result = await layoutLevelView(splitGraph);
+      const parts = result.containers?.filter((c) => c.id === 'cnt-a') ?? [];
+
+      expect(parts.map((part) => part.logicalContainerId)).toEqual([
+        'cnt-a:part-0',
+        'cnt-a:part-1',
+      ]);
+    });
+
+    it('updates split module parentIds to their logical container parts', async () => {
+      const result = await layoutLevelView(splitGraph);
+      const m1 = result.modules?.find((m) => m.id === 'mod-1');
+      const m2 = result.modules?.find((m) => m.id === 'mod-2');
+      const m3 = result.modules?.find((m) => m.id === 'mod-3');
+      expect(m1?.parentId).toBe('cnt-a:part-0');
+      expect(m2?.parentId).toBe('cnt-a:part-1');
+      expect(m3?.parentId).toBe('cnt-b');
+    });
+
+    it('keeps an unlinked module nested under its assigned container', async () => {
+      const orphanGraph: LevelView = {
+        ...splitGraph,
+        dataLinks: [splitGraph.dataLinks![0]],
+      };
+      mockELKLayout.mockResolvedValueOnce(
+        mockSubgraph('split-test', [
+          mockContainer(
             'cnt-a',
             [
               mockModule('mod-1', CP, CH + CP),
@@ -574,46 +653,6 @@ describe('layoutLevelView', () => {
           ),
         ]),
       );
-    });
-
-    it('passes containers as ELK parents and modules as their children', async () => {
-      await layoutLevelView(splitGraph);
-
-      const elkArg = mockELKLayout.mock.calls[0][0];
-      const cntA = elkArg.children.find((n: {id: string}) => n.id === 'cnt-a');
-      const cntB = elkArg.children.find((n: {id: string}) => n.id === 'cnt-b');
-
-      expect(cntA.children.map((n: {id: string}) => n.id)).toEqual([
-        'mod-1',
-        'mod-2',
-      ]);
-      expect(cntB.children.map((n: {id: string}) => n.id)).toEqual(['mod-3']);
-    });
-
-    it('does not create logical container parts in phase 1', async () => {
-      const result = await layoutLevelView(unpositioned);
-      const container = result.containers?.find(
-        (c) => c.id === 'container-1:1',
-      );
-      expect(container).toBeDefined();
-      expect(container?.logicalContainerId).toBeUndefined();
-    });
-
-    it('keeps modules in their original parent containers', async () => {
-      const result = await layoutLevelView(splitGraph);
-      const m1 = result.modules?.find((m) => m.id === 'mod-1');
-      const m2 = result.modules?.find((m) => m.id === 'mod-2');
-      const m3 = result.modules?.find((m) => m.id === 'mod-3');
-      expect(m1?.parentId).toBe('cnt-a');
-      expect(m2?.parentId).toBe('cnt-a');
-      expect(m3?.parentId).toBe('cnt-b');
-    });
-
-    it('keeps an unlinked module nested under its assigned container', async () => {
-      const orphanGraph: LevelView = {
-        ...splitGraph,
-        dataLinks: [splitGraph.dataLinks![0]],
-      };
 
       await layoutLevelView(orphanGraph);
 
@@ -624,6 +663,52 @@ describe('layoutLevelView', () => {
         'mod-1',
         'mod-2',
       ]);
+    });
+
+    it('skips container splitting when module ordering is cyclic', async () => {
+      const cycleGraph: LevelView = {
+        ...splitGraph,
+        dataLinks: [
+          ...splitGraph.dataLinks!,
+          {
+            edgeKind: EDGE_KIND.DATA,
+            id: 'cycle-e3',
+            sourceNodeId: 'mod-2',
+            sourcePortId: 'p2',
+            targetNodeId: 'mod-1',
+            targetPortId: 'p1',
+          },
+        ],
+      };
+      mockELKLayout.mockResolvedValueOnce(
+        mockSubgraph('split-test', [
+          mockContainer(
+            'cnt-a',
+            [
+              mockModule('mod-1', CP, CH + CP),
+              mockModule('mod-2', 200 + CP, CH + CP),
+            ],
+            SP,
+            SH + SP,
+          ),
+          mockContainer(
+            'cnt-b',
+            [mockModule('mod-3', CP, CH + CP)],
+            460,
+            SH + SP,
+          ),
+        ]),
+      );
+
+      const result = await layoutLevelView(cycleGraph);
+      const parts = result.containers?.filter((c) => c.id === 'cnt-a') ?? [];
+
+      expect(parts).toHaveLength(1);
+      expect(parts[0].logicalContainerId).toBeUndefined();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('cycle detected in module graph'),
+        expect.objectContaining({action: 'layout_level_view'}),
+      );
     });
   });
 

@@ -38,6 +38,10 @@ type SubgraphLayoutResult = {
   modules: ModuleNode[];
   subgraph: SubgraphNode;
 };
+type ContainerSplitResult = {
+  containers: ContainerNode[];
+  modules: ModuleNode[];
+};
 
 function elkPadding(
   top: number,
@@ -46,6 +50,10 @@ function elkPadding(
   right: number,
 ): string {
   return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
+}
+
+function containerLayoutId(container: ContainerNode): string {
+  return container.logicalContainerId ?? container.id;
 }
 
 function computeModuleDimensions(modules: ModuleNode[]): Map<string, Dims> {
@@ -152,6 +160,201 @@ function assignSubgraphColumns(
   return columns;
 }
 
+function assignModuleLayers(
+  modules: ModuleNode[],
+  dataLinks: DataLink[],
+): Map<string, number> {
+  const moduleIds = new Set(modules.map((m) => m.id));
+  const adj = new Map<string, Set<string>>();
+  const inDegree = new Map<string, number>();
+  const layers = new Map<string, number>();
+
+  for (const m of modules) {
+    adj.set(m.id, new Set());
+    inDegree.set(m.id, 0);
+    layers.set(m.id, 0);
+  }
+
+  for (const link of dataLinks) {
+    if (!moduleIds.has(link.sourceNodeId) || !moduleIds.has(link.targetNodeId)) {
+      continue;
+    }
+    const targets = adj.get(link.sourceNodeId)!;
+    if (targets.has(link.targetNodeId)) {
+      continue;
+    }
+    targets.add(link.targetNodeId);
+    inDegree.set(link.targetNodeId, (inDegree.get(link.targetNodeId) ?? 0) + 1);
+  }
+
+  const queue = modules
+    .map((m) => m.id)
+    .filter((id) => (inDegree.get(id) ?? 0) === 0);
+  let processed = 0;
+
+  while (queue.length > 0) {
+    const u = queue.shift()!;
+    processed++;
+    const layer = layers.get(u) ?? 0;
+    for (const v of adj.get(u) ?? []) {
+      layers.set(v, Math.max(layers.get(v) ?? 0, layer + 1));
+      const newDeg = (inDegree.get(v) ?? 0) - 1;
+      inDegree.set(v, newDeg);
+      if (newDeg === 0) {
+        queue.push(v);
+      }
+    }
+  }
+
+  if (processed !== modules.length) {
+    logger.warn(
+      'layoutLevelView: cycle detected in module graph — skipping container splits',
+      {
+        action: 'layout_level_view',
+        component: 'levelViewLayout',
+      },
+    );
+    return new Map();
+  }
+
+  return layers;
+}
+
+function isLinkedToContainer(
+  moduleId: string,
+  containerModuleIds: Set<string>,
+  dataLinks: DataLink[],
+): boolean {
+  return dataLinks.some(
+    (link) =>
+      (link.sourceNodeId === moduleId &&
+        containerModuleIds.has(link.targetNodeId)) ||
+      (link.targetNodeId === moduleId &&
+        containerModuleIds.has(link.sourceNodeId)),
+  );
+}
+
+function splitContainersByTopology(
+  modules: ModuleNode[],
+  containers: ContainerNode[],
+  dataLinks: DataLink[],
+): ContainerSplitResult {
+  const layers = assignModuleLayers(modules, dataLinks);
+  if (layers.size === 0) {
+    return {containers, modules};
+  }
+
+  const linkedModuleIds = new Set<string>();
+  for (const link of dataLinks) {
+    linkedModuleIds.add(link.sourceNodeId);
+    linkedModuleIds.add(link.targetNodeId);
+  }
+
+  const modulesByContainer = new Map<string, ModuleNode[]>();
+  for (const m of modules) {
+    const parentId = m.parentId ?? '';
+    if (!modulesByContainer.has(parentId)) {
+      modulesByContainer.set(parentId, []);
+    }
+    modulesByContainer.get(parentId)!.push(m);
+  }
+
+  const newContainers: ContainerNode[] = [];
+  const moduleParentUpdates = new Map<string, string>();
+
+  for (const container of containers) {
+    const cMods = modulesByContainer.get(container.id) ?? [];
+    if (cMods.length === 0) {
+      newContainers.push(container);
+      continue;
+    }
+
+    const containerModuleIds = new Set(cMods.map((m) => m.id));
+    const ownLayers = [
+      ...new Set(
+        cMods
+          .filter((m) => linkedModuleIds.has(m.id))
+          .map((m) => layers.get(m.id))
+          .filter((layer): layer is number => layer !== undefined),
+      ),
+    ].sort((a, b) => a - b);
+    if (ownLayers.length < 2) {
+      newContainers.push(container);
+      continue;
+    }
+
+    const foreignLayers = modules
+      .filter(
+        (m) =>
+          m.parentId !== container.id &&
+          linkedModuleIds.has(m.id) &&
+          isLinkedToContainer(m.id, containerModuleIds, dataLinks),
+      )
+      .map((m) => layers.get(m.id))
+      .filter((layer): layer is number => layer !== undefined);
+
+    const splitAfterLayers: number[] = [];
+    for (let i = 0; i < ownLayers.length - 1; i++) {
+      const left = ownLayers[i];
+      const right = ownLayers[i + 1];
+      if (foreignLayers.some((layer) => layer > left && layer < right)) {
+        splitAfterLayers.push(left);
+      }
+    }
+
+    if (splitAfterLayers.length === 0) {
+      newContainers.push(container);
+      continue;
+    }
+
+    const thresholds = [...splitAfterLayers, Infinity];
+    const clusters: ModuleNode[][] = Array.from(
+      {length: thresholds.length},
+      () => [],
+    );
+    for (const m of cMods) {
+      const layer = layers.get(m.id);
+      const idx =
+        layer === undefined || !linkedModuleIds.has(m.id)
+          ? 0
+          : thresholds.findIndex((threshold) => layer <= threshold);
+      clusters[idx].push(m);
+    }
+
+    let partIdx = 0;
+    for (const cluster of clusters) {
+      if (cluster.length === 0) {
+        continue;
+      }
+      const logicalContainerId = `${container.id}:part-${partIdx}`;
+      newContainers.push({
+        ...container,
+        height: 0,
+        logicalContainerId,
+        width: 0,
+        x: 0,
+        y: 0,
+      });
+      for (const m of cluster) {
+        moduleParentUpdates.set(m.id, logicalContainerId);
+      }
+      partIdx++;
+    }
+  }
+
+  if (moduleParentUpdates.size === 0) {
+    return {containers, modules};
+  }
+
+  return {
+    containers: newContainers,
+    modules: modules.map((m) => {
+      const newParentId = moduleParentUpdates.get(m.id);
+      return newParentId ? {...m, parentId: newParentId} : m;
+    }),
+  };
+}
+
 async function runSubgraphElkPass(
   subgraph: SubgraphNode,
   modules: ModuleNode[],
@@ -177,11 +380,13 @@ async function runSubgraphElkPass(
 
   const graph: ElkNode = {
     children: containers.map((container) => ({
-      children: (modulesByContainer.get(container.id) ?? []).map((m) => {
-        const d = dims.get(m.id) ?? {height: 80, width: 160};
-        return {height: d.height, id: m.id, width: d.width};
-      }),
-      id: container.id,
+      children: (modulesByContainer.get(containerLayoutId(container)) ?? []).map(
+        (m) => {
+          const d = dims.get(m.id) ?? {height: 80, width: 160};
+          return {height: d.height, id: m.id, width: d.width};
+        },
+      ),
+      id: containerLayoutId(container),
       layoutOptions: {
         ...ELK_OPTIONS,
         'elk.padding': elkPadding(CH + CP, CP, CP, CP),
@@ -205,7 +410,7 @@ async function runSubgraphElkPass(
     (result.children ?? []).map((node) => [node.id, node]),
   );
   const updatedContainers = containers.map((container) => {
-    const node = elkContainers.get(container.id);
+    const node = elkContainers.get(containerLayoutId(container));
     if (!node || node.x === undefined || node.y === undefined) {
       logger.warn('layoutLevelView: node missing from ELK result', {
         action: 'layout_level_view',
@@ -348,11 +553,13 @@ export async function layoutLevelView(graph: LevelView): Promise<LevelView> {
 
       const sgContainers = containersBySg.get(sg.id) ?? [];
       const sgLinks = intraSgLinks.get(sg.id) ?? [];
+      const {containers: layoutContainers, modules: layoutModules} =
+        splitContainersByTopology(sgModules, sgContainers, sgLinks);
 
       const layoutResult = await runSubgraphElkPass(
         sg,
-        sgModules,
-        sgContainers,
+        layoutModules,
+        layoutContainers,
         sgLinks,
         dims,
       );
