@@ -11,7 +11,7 @@ import {
   type CreateUsecasesResponseDto,
   discardChanges,
   endSession,
-  stageChanges,
+  stageUsecases,
 } from '~entities/edit-session';
 import {useUserPreferences} from '~shared/config/hooks';
 import {showToast} from '~shared/controls/global-toaster';
@@ -150,7 +150,7 @@ async function settleAfterReload(
 async function finalize(
   store: GraphDesignerStoreApi,
   projectId: string,
-  checkedChangeIds: string[],
+  stageSystemIds: string[],
   navChoice: NavChoice,
   createdSystemIds: string[],
   actionLabel: 'apply_changes' | 'submit_review',
@@ -160,12 +160,12 @@ async function finalize(
     {
       commitChanges: withCallLog('commit_changes', projectId, commitChanges),
       endSession: withCallLog('end_session', projectId, endSession),
-      stageChanges: withCallLog('stage_changes', projectId, stageChanges),
+      stageUsecases: withCallLog('stage_usecases', projectId, stageUsecases),
     },
     {
-      checkedChangeIds,
       processedFromPrevAttempt: store.getState().stagedProcessedChangeIds,
       projectId,
+      stageSystemIds,
     },
   );
 
@@ -455,12 +455,12 @@ export function useApplyDiscard(
         .map((change) => change.systemId);
       // UPDATE changes are already staged server-side.
       // only usecase additions/deletions need an explicit stage call here.
-      const stageChangeIds = checkedChanges
+      const stageSystemIds = checkedChanges
         .filter(
           (change) =>
             change.operation === 'CREATE' || change.operation === 'DELETE',
         )
-        .map((change) => change.changeId);
+        .map((change) => change.systemId);
       setPendingReview(null);
       pendingReviewResponseRef.current = null;
       setIsBusy(true);
@@ -469,7 +469,7 @@ export function useApplyDiscard(
           finalize(
             store,
             projectId,
-            stageChangeIds,
+            stageSystemIds,
             navChoice,
             createdSystemIds,
             'submit_review',

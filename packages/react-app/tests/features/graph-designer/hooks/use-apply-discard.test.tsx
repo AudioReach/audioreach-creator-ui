@@ -223,7 +223,7 @@ describe('useApplyDiscard', () => {
       );
     });
 
-    it('finalizeDirectly proceeds to finalize with empty checkedChangeIds and keep nav', async () => {
+    it('finalizeDirectly proceeds to finalize with empty stageSystemIds and keep nav', async () => {
       const store = makeStore();
       store.getState().markDirty();
       mockRunApplyReconcile.mockResolvedValue({kind: 'finalizeDirectly'});
@@ -240,7 +240,7 @@ describe('useApplyDiscard', () => {
 
       expect(mockRunFinalize).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({checkedChangeIds: []}),
+        expect.objectContaining({stageSystemIds: []}),
       );
       expect(mockShowToast).toHaveBeenCalledWith(
         expect.stringContaining('applied'),
@@ -299,7 +299,7 @@ describe('useApplyDiscard', () => {
       expect(mockFocusTab).toHaveBeenCalledWith('validation-results');
       expect(mockRunFinalize).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({checkedChangeIds: []}),
+        expect.objectContaining({stageSystemIds: []}),
       );
     });
 
@@ -409,9 +409,13 @@ describe('useApplyDiscard', () => {
       mockRunFinalize.mockResolvedValue(outcome);
 
       await act(async () => {
-        await result.current.submitReview(['a', 'b'], 'keep');
+        await result.current.submitReview(['change-1'], 'keep');
       });
 
+      expect(mockRunFinalize).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({stageSystemIds: ['uc-new-1']}),
+      );
       expect(mockShowToast).toHaveBeenCalledWith(
         expect.stringContaining('Stage failed'),
         'danger',

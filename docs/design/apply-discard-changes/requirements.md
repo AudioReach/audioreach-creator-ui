@@ -23,9 +23,9 @@ and Discard.
 
 - The backend modification framework: `create-usecases`, `stage-changes`,
   `discard-changes`, `end-session`. Apply finalizes through `end-session` rather than the
-  partial `commit-changes` / `unstage-changes` flow, and the review dialog is
+  partial `commit-changes` / `unstage-usecases` flow, and the review dialog is
   populated entirely from the `create-usecases` response, whose rows each carry a
-  `changeId`. `preview-changes` is not used (not currently planned).
+  `changeId` and `systemId`. `preview-changes` is not used (not currently planned).
 - Existing graph-designer store scaffolding: `selectedUsecases`,
   `loadGraphData(usecases)`, `isDirty` / `markClean` / `markDirty`.
 - The `use-project-saver` hook pattern for project-level operations (toast,
@@ -200,7 +200,7 @@ out-of-scope code. Each names the seam this design consumes.
 - Entering edit mode / `start-session`.
 - The edits themselves (`spf-modules`, `data-links`, `control-links`, etc.).
 - `preview-changes` API (not currently planned).
-- `unstage-changes` and partial `commit-changes` (committing a subset by `changeId`).
+- `unstage-usecases` and partial `commit-changes` (committing a subset by `changeId`).
   This feature commits all staged changes in one sweep (no `changeIds`); selective
   unstaging and per-`changeId` partial commits are not used.
 - Link-exclusion UI (A3 — fields sourced from a store, default empty).

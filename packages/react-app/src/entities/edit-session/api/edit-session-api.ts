@@ -19,9 +19,9 @@ import type {
   DiscardChangesResponseDto,
 } from '../model/discard-changes.dto';
 import type {
-  StageChangesRequestDto,
-  StageChangesResponseDto,
-} from '../model/stage-changes.dto';
+  StageUsecasesRequestDto,
+  StageUsecasesResponseDto,
+} from '../model/stage-usecases.dto';
 
 export async function createUsecases(
   projectId: string,
@@ -33,13 +33,13 @@ export async function createUsecases(
   );
 }
 
-export async function stageChanges(
+export async function stageUsecases(
   projectId: string,
-  changeIds: string[],
-): Promise<ApiResult<StageChangesResponseDto>> {
-  return httpClient.post<StageChangesResponseDto>(
-    `/projects/${projectId}/stage-changes`,
-    {changeIds} satisfies StageChangesRequestDto,
+  systemIds: string[],
+): Promise<ApiResult<StageUsecasesResponseDto>> {
+  return httpClient.post<StageUsecasesResponseDto>(
+    `/projects/${projectId}/stage-usecases`,
+    {systemIds} satisfies StageUsecasesRequestDto,
   );
 }
 

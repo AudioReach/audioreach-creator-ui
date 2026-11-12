@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-export interface StageChangesRequestDto {
-  changeIds: string[];
+export interface StageUsecasesRequestDto {
+  systemIds: string[];
 }
 
-export interface StageChangesResponseDto {
+export interface StageUsecasesResponseDto {
   failedChangeIds: string[];
   message: string;
   processedChangeIds: string[];
