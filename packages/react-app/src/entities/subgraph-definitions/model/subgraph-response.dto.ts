@@ -5,7 +5,9 @@
 
 import type {
   ControlLinkDto,
+  ControlLinkWithUsecasesDto,
   DataLinkDto,
+  DataLinkWithUsecasesDto,
   EndPointLink,
 } from '~entities/usecases/model/usecase-component.dto';
 
@@ -43,4 +45,12 @@ export interface SubgraphPairResponseDto {
   dataLinks: DataLinkDto[];
   destinationSubgraphSystemId: string;
   sourceSubgraphSystemId: string;
+}
+
+/**
+ * Cross-subgraph link response data transfer object
+ */
+export interface SubgraphLinksResponseDto {
+  controlLinks: ControlLinkWithUsecasesDto[];
+  dataLinks: DataLinkWithUsecasesDto[];
 }

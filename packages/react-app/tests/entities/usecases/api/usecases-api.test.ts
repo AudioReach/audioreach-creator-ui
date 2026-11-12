@@ -174,13 +174,31 @@ describe('usecases-api — subgraph operations', () => {
   });
 
   describe('getSubgraphPairs', () => {
-    it('GETs the subgraph-scoped subgraph-pairs endpoint', async () => {
-      mockGet.mockResolvedValue({data: [], message: 'ok', success: true});
+    it('GETs the subgraph-links endpoint with the required subgraph query', async () => {
+      mockGet.mockResolvedValue({
+        data: {controlLinks: [], dataLinks: []},
+        message: 'ok',
+        success: true,
+      });
 
       await getSubgraphPairs('proj-1', 'sg-1');
 
       expect(mockGet).toHaveBeenCalledWith(
-        '/projects/proj-1/subgraphs/sg-1/subgraph-pairs',
+        '/projects/proj-1/subgraph-links?subgraphSystemId=sg-1',
+      );
+    });
+
+    it('appends the optional peer subgraph query when provided', async () => {
+      mockGet.mockResolvedValue({
+        data: {controlLinks: [], dataLinks: []},
+        message: 'ok',
+        success: true,
+      });
+
+      await getSubgraphPairs('proj-1', 'sg-1', 'sg-2');
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/projects/proj-1/subgraph-links?subgraphSystemId=sg-1&subgraphPeerSystemId=sg-2',
       );
     });
   });
