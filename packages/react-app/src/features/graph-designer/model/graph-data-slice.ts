@@ -1136,6 +1136,10 @@ export function createGraphDataSlice<
       usecases: string[],
       options?: {filterBySubsystem?: boolean; stagingSessionId?: string},
     ) => {
+      if (usecases.length === 0) {
+        get().initializeEmptyGraphData();
+        return;
+      }
       logger.debug('graphDataSlice: loadGraphData — loading', {
         action: 'loadGraphData',
         component: 'graphDataSlice',
