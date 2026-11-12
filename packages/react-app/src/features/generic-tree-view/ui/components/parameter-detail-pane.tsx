@@ -176,8 +176,6 @@ export function ParameterDetailPane({
       {selectedItems.length > 1 && (
         <div className="text-neutral-secondary bg-neutral-01 flex shrink-0 items-center gap-2 border-b px-4 py-2.5 text-xs">
           <span>{selectedItems.length} parameters selected</span>
-          <span className="opacity-30">·</span>
-          <span>Ctrl+click to add/remove</span>
         </div>
       )}
 

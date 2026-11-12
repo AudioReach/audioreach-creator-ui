@@ -219,6 +219,7 @@ function GenericTreeViewInner(
     setArrayCounts(ac);
     setDirtyPaths(new Set());
     setSetPaths(new Set());
+    setInvalidPaths(new Set());
     setResetKey((k) => k + 1);
     onUiStateChange?.({
       arrayCounts: Object.fromEntries(ac),
@@ -328,6 +329,23 @@ function GenericTreeViewInner(
     () => initialUiState?.showErrorsOnly ?? false,
   );
 
+  useEffect(() => {
+    if (showErrorsOnly && invalidPaths.size === 0) {
+      setShowErrorsOnly(false);
+      onUiStateChange?.({showErrorsOnly: false});
+    }
+    if (showModifiedOnly && dirtyPaths.size === 0) {
+      setShowModifiedOnly(false);
+      onUiStateChange?.({showModifiedOnly: false});
+    }
+  }, [
+    dirtyPaths.size,
+    invalidPaths.size,
+    onUiStateChange,
+    showErrorsOnly,
+    showModifiedOnly,
+  ]);
+
   const [panelSplitPct, setPanelSplitPct] = useState(
     () => initialUiState?.panelSplitPct ?? 30,
   );
@@ -419,11 +437,15 @@ function GenericTreeViewInner(
             elem.policy as 'ADVANCED' | 'BASIC' | 'HIDDEN' | undefined,
             policyFilter,
           ) &&
-          elem.min !== undefined &&
-          elem.max !== undefined
+          elem.dataType !== 'RawData'
         ) {
-          const num = parseHexOrDec(value);
-          if (!isNaN(num) && (num < elem.min || num > elem.max)) {
+          const num = parseHexOrDec(value, elem.dataType);
+          if (
+            Number.isNaN(num) ||
+            (elem.min !== undefined &&
+              elem.max !== undefined &&
+              (num < elem.min || num > elem.max))
+          ) {
             nextInvalidPaths.add(key);
           } else {
             nextInvalidPaths.delete(key);

@@ -14,6 +14,7 @@ export interface HexInputControlProps {
   dataType?: string;
   disabled: boolean;
   elementKey: string;
+  invalid?: boolean;
   onAutoCommit?: () => void;
   onValueChange: (key: string, value: string) => void;
 }
@@ -23,6 +24,7 @@ export function HexInputControl({
   dataType,
   disabled,
   elementKey: key,
+  invalid = false,
   onAutoCommit,
   onValueChange,
 }: HexInputControlProps) {
@@ -58,6 +60,7 @@ export function HexInputControl({
       clearable={false}
       defaultValue={formatNumericValue(currentValue, dataType)}
       disabled={disabled}
+      invalid={invalid}
       onFocusChange={(focused) => {
         if (!focused) {
           flushPendingValue();

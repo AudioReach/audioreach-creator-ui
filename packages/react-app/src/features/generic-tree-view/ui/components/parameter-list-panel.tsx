@@ -7,6 +7,7 @@ import {useMemo} from 'react';
 
 import {createTreeCollection} from '@qualcomm-ui/core/tree';
 import {StatusBadge} from '@qualcomm-ui/react/badge';
+import {Checkbox} from '@qualcomm-ui/react/checkbox';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 import {Tree} from '@qualcomm-ui/react/tree';
 
@@ -64,6 +65,34 @@ export function ParameterListPanel({
 
   const dirtyCount = dirtyItemIds.size;
   const setCount = setItemIds.size;
+  const visibleIds = new Set(filteredItems.map((item) => item.id));
+  const selectedIdSet = new Set(selectedIds);
+  const selectedVisibleCount = filteredItems.filter((item) =>
+    selectedIdSet.has(item.id),
+  ).length;
+  const allVisibleSelected =
+    filteredItems.length > 0 && selectedVisibleCount === filteredItems.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
+  const toggleParameter = (id: string) => {
+    onSelectionChange(
+      selectedIdSet.has(id)
+        ? selectedIds.filter((selectedId) => selectedId !== id)
+        : [...selectedIds, id],
+    );
+  };
+
+  const toggleVisibleParameters = () => {
+    if (filteredItems.length === 0) {
+      return;
+    }
+    onSelectionChange(
+      allVisibleSelected
+        ? selectedIds.filter((id) => !visibleIds.has(id))
+        : [...new Set([...selectedIds, ...visibleIds])],
+      false,
+    );
+  };
 
   const rootNode: ParamListNode = useMemo(
     () => ({
@@ -95,10 +124,6 @@ export function ParameterListPanel({
         <Tree.Root
           key={moduleName}
           collection={collection}
-          onSelectedValueChange={(details) => {
-            const expandNew = details.selectedValue.length < items.length;
-            onSelectionChange(details.selectedValue, expandNew);
-          }}
           selectedValue={selectedIds}
           selectionMode="multiple"
           style={{'--indent-spacing': '0px'} as React.CSSProperties}
@@ -107,22 +132,24 @@ export function ParameterListPanel({
             className="flex cursor-pointer items-center gap-2 truncate border-b px-4 py-2.5 text-sm font-semibold"
             onClick={(e) => {
               e.stopPropagation();
-              if (e.ctrlKey || e.metaKey) {
-                const allSelected = filteredItems.every((p) =>
-                  selectedIds.includes(p.id),
-                );
-                onSelectionChange(
-                  allSelected ? [] : filteredItems.map((p) => p.id),
-                  false,
-                );
-              } else {
-                onSelectionChange(
-                  filteredItems.map((p) => p.id),
-                  false,
-                );
-              }
+              toggleVisibleParameters();
             }}
           >
+            <Checkbox
+              aria-label={`Select visible parameters in ${moduleName}`}
+              checked={allVisibleSelected}
+              disabled={filteredItems.length === 0}
+              hiddenInputProps={{
+                'aria-checked': someVisibleSelected
+                  ? 'mixed'
+                  : allVisibleSelected,
+              }}
+              indeterminate={someVisibleSelected}
+              onCheckedChange={toggleVisibleParameters}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              size="sm"
+            />
             {moduleName}
           </Tree.Label>
 
@@ -144,8 +171,28 @@ export function ParameterListPanel({
               >
                 <Tooltip.Root positioning={{placement: 'right'}}>
                   <Tooltip.Trigger>
-                    <Tree.LeafNode>
+                    <Tree.LeafNode
+                      onClick={(event) => {
+                        event.preventDefault();
+                        toggleParameter(item.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === ' ' || event.key === 'Enter') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleParameter(item.id);
+                        }
+                      }}
+                    >
                       <Tree.NodeIndicator />
+                      <Checkbox
+                        aria-label={`Select ${item.name}`}
+                        checked={selectedIdSet.has(item.id)}
+                        onCheckedChange={() => toggleParameter(item.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        size="sm"
+                      />
                       <ItemRowContent
                         isDirty={isDirty}
                         isSet={isSet}
@@ -159,7 +206,7 @@ export function ParameterListPanel({
                       <Tooltip.Arrow>
                         <Tooltip.ArrowTip />
                       </Tooltip.Arrow>
-                      <div className="max-w-[260px] whitespace-pre-line text-xs">
+                      <div className="max-w-[260px] text-xs whitespace-pre-line">
                         {tooltipLines.join('\n')}
                       </div>
                     </Tooltip.Content>

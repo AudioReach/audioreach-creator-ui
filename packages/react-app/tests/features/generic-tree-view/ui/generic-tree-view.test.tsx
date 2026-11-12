@@ -953,6 +953,183 @@ describe('arrayCounts emission from length-controller edit', () => {
 });
 
 describe('invalidPaths range validation', () => {
+  it('rejects malformed Q-format decimal input before committing', () => {
+    const onCommit = jest.fn();
+    render(
+      <GenericTreeView
+        autoCommit={{onCommit}}
+        data={makeData([
+          makeItem('100', {
+            elements: [
+              {
+                dataType: 'Int32',
+                displayType: 'Q_FORMATTED_VALUE',
+                isReadOnly: false,
+                name: 'gain',
+                qFormat: 'Q8',
+                type: 'ConfigElement',
+                value: '0',
+              },
+            ],
+          }),
+        ])}
+        title="Test"
+      />,
+    );
+
+    fireInputChange('100/gain dec', '0.5junk');
+    fireEvent.blur(getInputByAriaLabel('100/gain dec'));
+
+    expect(screen.getByText(/Enter a valid .* number/)).toBeInTheDocument();
+    expect(onCommit).not.toHaveBeenCalled();
+
+    fireInputChange('100/gain dec', '0.5');
+    fireEvent.blur(getInputByAriaLabel('100/gain dec'));
+
+    expect(
+      screen.queryByText(/Enter a valid .* number/),
+    ).not.toBeInTheDocument();
+    expect(onCommit).toHaveBeenCalledWith([
+      expect.objectContaining({
+        elements: [expect.objectContaining({value: '128'})],
+      }),
+    ]);
+  });
+
+  it('allows RawData text without numeric validation', () => {
+    const onUiStateChange = jest.fn();
+    render(
+      <GenericTreeView
+        data={makeData([
+          makeItem('100', {
+            elements: [
+              {
+                dataType: 'RawData',
+                isReadOnly: false,
+                name: 'gain',
+                type: 'ConfigElement',
+                value: '00 FF',
+              },
+            ],
+          }),
+        ])}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+    fireInputChange('100/gain', '10x00000000');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({invalidPaths: []}),
+    );
+    expect(
+      screen.queryByText(/Enter a valid .* number/),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(['10x00000000', '0x12junk', 'oops', ''])(
+    'rejects malformed input %p without range metadata and recovers on correction',
+    (value) => {
+      const onCommit = jest.fn();
+      const onUiStateChange = jest.fn();
+      render(
+        <GenericTreeView
+          autoCommit={{onCommit}}
+          data={makeData()}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+
+      fireInputChange('100/gain', value);
+      fireEvent.blur(getInputByAriaLabel('100/gain'));
+
+      expect(screen.getByText(/Enter a valid .* number/)).toBeInTheDocument();
+      expect(onUiStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({invalidPaths: ['100/gain']}),
+      );
+      expect(onCommit).not.toHaveBeenCalled();
+
+      onUiStateChange.mockClear();
+      fireInputChange('100/gain', '0x0000000F');
+      fireEvent.blur(getInputByAriaLabel('100/gain'));
+
+      expect(
+        screen.queryByText(/Enter a valid .* number/),
+      ).not.toBeInTheDocument();
+      expect(onUiStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({invalidPaths: []}),
+      );
+      expect(onCommit).toHaveBeenCalled();
+    },
+  );
+
+  it.each(['modern', 'legacy'] as const)(
+    'shows a format error for malformed ranged input in %s view',
+    (defaultViewMode) => {
+      render(
+        <GenericTreeView
+          data={makeData([makeItemWithRangedGain('100')])}
+          defaultViewMode={defaultViewMode}
+          title="Test"
+        />,
+      );
+      if (defaultViewMode === 'legacy') {
+        fireEvent.click(screen.getByText('Expand All'));
+      }
+
+      fireInputChange('100/gain', '10x00000000');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(screen.getByText(/Enter a valid .* number/)).toBeInTheDocument();
+      expect(screen.queryByText(/Must be between/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('validates fractional Float values against their range', () => {
+    const onUiStateChange = jest.fn();
+    render(
+      <GenericTreeView
+        data={makeData([
+          makeItem('100', {
+            elements: [
+              {
+                dataType: 'Float',
+                isReadOnly: false,
+                max: 1,
+                min: 0,
+                name: 'gain',
+                type: 'ConfigElement',
+                value: '0.5',
+              },
+            ],
+          }),
+        ])}
+        onUiStateChange={onUiStateChange}
+        title="Test"
+      />,
+    );
+    fireInputChange('100/gain', '1.25');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.getByText(/Must be between/)).toBeInTheDocument();
+
+    onUiStateChange.mockClear();
+    fireInputChange('100/gain', '0.75');
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.queryByText(/Must be between/)).not.toBeInTheDocument();
+    expect(onUiStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({invalidPaths: []}),
+    );
+  });
+
   function makeItemWithRangedGain(id: string): TreeViewItem {
     return makeItem(id, {
       elements: [
@@ -1019,6 +1196,47 @@ describe('invalidPaths range validation', () => {
       expect.objectContaining({invalidPaths: []}),
     );
   });
+
+  it.each(['modern', 'legacy'] as const)(
+    'clears range errors after Get replaces edits in %s view',
+    (defaultViewMode) => {
+      const onUiStateChange = jest.fn();
+      const data = makeData([makeItemWithRangedGain('100')]);
+      const {rerender} = render(
+        <GenericTreeView
+          data={data}
+          defaultViewMode={defaultViewMode}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+      if (defaultViewMode === 'legacy') {
+        fireEvent.click(screen.getByText('Expand All'));
+      }
+
+      fireInputChange('100/gain', '200');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(screen.getByText(/Must be between/)).toBeInTheDocument();
+      onUiStateChange.mockClear();
+
+      rerender(
+        <GenericTreeView
+          data={{...makeData([makeItemWithRangedGain('100')]), source: 'get'}}
+          defaultViewMode={defaultViewMode}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+
+      expect(getInputByAriaLabel('100/gain')).toHaveValue('0x00000032');
+      expect(onUiStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({invalidPaths: []}),
+      );
+      expect(screen.queryByText(/Must be between/)).not.toBeInTheDocument();
+    },
+  );
 
   it('restores invalidPaths from initialUiState on mount', () => {
     // Build an item with two ranged elements: 'gain' (seeded invalid) and
@@ -1131,7 +1349,7 @@ describe('Modified Only / Errors Only filters', () => {
   // item's name; scope assertions to the list panel's tree via node-text.
   function listedParamNames(): string[] {
     return screen
-      .getAllByTestId('node-text')
+      .queryAllByTestId('node-text')
       .map((el) => el.textContent)
       .filter(
         (text): text is string => text !== null && text.startsWith('Param '),
@@ -1245,6 +1463,86 @@ describe('Modified Only / Errors Only filters', () => {
 
     expect(screen.queryByText('Errors Only')).not.toBeInTheDocument();
   });
+
+  it.each(['Errors Only', 'Modified Only'] as const)(
+    'restores the parameter list after Get clears %s matches',
+    (label) => {
+      const onUiStateChange = jest.fn();
+      const data = makeData([
+        makeItemWithRangedGain('100'),
+        makeItemWithRangedGain('101'),
+      ]);
+      const {rerender} = render(
+        <GenericTreeView
+          data={data}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+
+      fireInputChange('100/gain', '200');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      toggleSwitch(label);
+      expect(listedParamNames()).toEqual(['Param 100']);
+      onUiStateChange.mockClear();
+
+      rerender(
+        <GenericTreeView
+          data={{...data, source: 'get'}}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+      expect(listedParamNames()).toEqual(['Param 100', 'Param 101']);
+      const filterKey =
+        label === 'Errors Only' ? 'showErrorsOnly' : 'showModifiedOnly';
+      expect(onUiStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({[filterKey]: false}),
+      );
+    },
+  );
+
+  it.each(['Errors Only', 'Modified Only'] as const)(
+    'restores the parameter list when manual correction clears %s matches',
+    (label) => {
+      const onUiStateChange = jest.fn();
+      render(
+        <GenericTreeView
+          data={makeData([
+            makeItemWithRangedGain('100'),
+            makeItemWithRangedGain('101'),
+          ])}
+          onUiStateChange={onUiStateChange}
+          title="Test"
+        />,
+      );
+
+      fireInputChange('100/gain', '200');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      toggleSwitch(label);
+      expect(listedParamNames()).toEqual(['Param 100']);
+      onUiStateChange.mockClear();
+
+      fireInputChange('100/gain', label === 'Errors Only' ? '75' : '50');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+      expect(listedParamNames()).toEqual(['Param 100', 'Param 101']);
+      const filterKey =
+        label === 'Errors Only' ? 'showErrorsOnly' : 'showModifiedOnly';
+      expect(onUiStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({[filterKey]: false}),
+      );
+    },
+  );
 
   it('shows only parameters satisfying both filters when both are active', () => {
     render(
