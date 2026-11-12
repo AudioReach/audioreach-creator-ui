@@ -18,6 +18,7 @@ export interface QFormatControlProps {
   dataType?: string;
   disabled: boolean;
   elementKey: string;
+  invalid?: boolean;
   onAutoCommit?: () => void;
   onValueChange: (key: string, value: string) => void;
   precision?: number;
@@ -29,6 +30,7 @@ export function QFormatControl({
   dataType,
   disabled,
   elementKey: key,
+  invalid = false,
   onAutoCommit,
   onValueChange,
   precision = 5,
@@ -83,6 +85,7 @@ export function QFormatControl({
         className="w-28"
         clearable={false}
         disabled={disabled}
+        invalid={invalid}
         onFocusChange={(focused) => {
           if (!focused) {
             flushPendingValue();
@@ -113,6 +116,7 @@ export function QFormatControl({
         className="w-24"
         clearable={false}
         disabled={disabled}
+        invalid={invalid}
         onFocusChange={(focused) => {
           if (!focused) {
             flushPendingValue();
@@ -121,23 +125,24 @@ export function QFormatControl({
         }}
         onValueChange={(value) => {
           setDecVal(value);
-          const num = parseFloat(value);
-          if (!isNaN(num)) {
-            const newHex = formatNumericValue(
+          const num = parseHexOrDec(value, 'Double');
+          let nextValue = value;
+          if (!Number.isNaN(num)) {
+            nextValue = formatNumericValue(
               String(Math.round(num * Math.pow(2, qFormatN))),
               dataType,
             );
-            setHexVal(newHex);
-            if (decTimerRef.current) {
-              clearTimeout(decTimerRef.current);
-            }
-            pendingValueRef.current = newHex;
-            decTimerRef.current = setTimeout(() => {
-              pendingValueRef.current = null;
-              decTimerRef.current = null;
-              onValueChange(key, newHex);
-            }, 100);
+            setHexVal(nextValue);
           }
+          if (decTimerRef.current) {
+            clearTimeout(decTimerRef.current);
+          }
+          pendingValueRef.current = nextValue;
+          decTimerRef.current = setTimeout(() => {
+            pendingValueRef.current = null;
+            decTimerRef.current = null;
+            onValueChange(key, nextValue);
+          }, 100);
         }}
         size="sm"
         value={decVal}

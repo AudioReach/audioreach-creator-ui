@@ -28,6 +28,7 @@ import {isBooleanSwitch, resolveBooleanPair} from '../../lib/is-boolean-switch';
 import {isPolicyVisible} from '../../lib/is-policy-visible';
 import {parseQFormatN} from '../../lib/parse-q-format-n';
 import {toHexString} from '../../lib/to-hex-string';
+import {parseHexOrDec} from '../../lib/parse-hex-or-dec';
 
 import {BitFieldRow} from './bit-field-row';
 import {TableComponent} from './element-table';
@@ -374,6 +375,14 @@ function renderLeaf(
 
   const isInvalid = ctx.invalidPaths.has(key);
   const control = renderControl(elem, key, currentValue, disabled, ctx);
+  let validationError: string | undefined;
+  if (isInvalid) {
+    if (Number.isNaN(parseHexOrDec(currentValue, elem.dataType))) {
+      validationError = 'Enter a valid hexadecimal or decimal number';
+    } else if (elem.min !== undefined && elem.max !== undefined) {
+      validationError = `Must be between ${toHexString(elem.min)} and ${toHexString(elem.max)}`;
+    }
+  }
 
   const rangeHintText =
     ctx.showRanges && hasRange
@@ -431,9 +440,9 @@ function renderLeaf(
               {rangeHintText}
             </div>
           )}
-          {isInvalid && elem.min !== undefined && elem.max !== undefined && (
+          {validationError && (
             <span className={`text-support-danger ${hintIndent(ctx)} text-xs`}>
-              {`Must be between ${toHexString(elem.min)} and ${toHexString(elem.max)}`}
+              {validationError}
             </span>
           )}
         </div>
@@ -509,6 +518,7 @@ function renderControl(
         dataType={elem.dataType}
         disabled={disabled}
         elementKey={key}
+        invalid={ctx.invalidPaths.has(key)}
         onAutoCommit={ctx.onAutoCommit}
         onValueChange={onValueChange}
         precision={elem.precision}
@@ -523,6 +533,7 @@ function renderControl(
       dataType={elem.dataType}
       disabled={disabled}
       elementKey={key}
+      invalid={ctx.invalidPaths.has(key)}
       onAutoCommit={ctx.onAutoCommit}
       onValueChange={onValueChange}
     />

@@ -121,7 +121,8 @@ jest.mock('@qualcomm-ui/react/text-input', () => ({
       ...restProps
     } = props;
 
-    // Filter out non-DOM props — restProps should now be empty for standard QUI usage
+    // Filter out non-DOM props — restProps should now be empty for standard QUI
+    // usage
     const cleanProps = restProps;
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,7 +275,18 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
   Checkbox: jest
     .fn()
     .mockImplementation(
-      ({checked, className, disabled, label, onChange, ...props}) => {
+      ({
+        checked,
+        className,
+        disabled,
+        hiddenInputProps,
+        indeterminate,
+        label,
+        onChange,
+        onCheckedChange,
+        size: _size,
+        ...props
+      }) => {
         return createElement(
           'label',
           {
@@ -285,9 +297,18 @@ jest.mock('@qualcomm-ui/react/checkbox', () => ({
             checked,
             'data-testid': 'q-checkbox',
             disabled,
-            onChange,
+            onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+              onChange?.(event);
+              onCheckedChange?.(event.target.checked);
+            },
+            ref: (input: HTMLInputElement | null) => {
+              if (input) {
+                input.indeterminate = !!indeterminate;
+              }
+            },
             type: 'checkbox',
             ...props,
+            ...hiddenInputProps,
           }),
           label && createElement('span', null, label),
         );
@@ -681,7 +702,11 @@ jest.mock('@qualcomm-ui/react/breadcrumbs', () => ({
         return createElement(
           'li',
           props,
-          createElement('button', {'aria-label': ariaLabel, type: 'button'}, '…'),
+          createElement(
+            'button',
+            {'aria-label': ariaLabel, type: 'button'},
+            '…',
+          ),
           children,
         );
       }),
