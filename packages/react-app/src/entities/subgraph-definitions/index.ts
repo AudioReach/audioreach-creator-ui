@@ -2,6 +2,7 @@ export {getAllSubgraphs} from './api/subgraph-definition-api';
 export {areKvVectorsEqual} from './lib/kv-vector-identity';
 export type {
   SetSubgraphNameRequestDto,
+  SubgraphLinksResponseDto,
   SubgraphPairResponseDto,
   SubgraphResponseDto,
 } from './model/subgraph-response.dto';

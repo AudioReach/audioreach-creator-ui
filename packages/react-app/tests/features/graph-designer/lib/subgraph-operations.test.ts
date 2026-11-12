@@ -245,7 +245,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       success: true,
     });
     mockGetSubgraphPairs.mockResolvedValueOnce({
-      data: [],
+      data: {controlLinks: [], dataLinks: []},
       message: 'ok',
       success: true,
     });
@@ -286,7 +286,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       success: true,
     });
     mockGetSubgraphPairs.mockResolvedValueOnce({
-      data: [],
+      data: {controlLinks: [], dataLinks: []},
       message: 'ok',
       success: true,
     });
@@ -355,7 +355,7 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       success: true,
     });
     mockGetSubgraphPairs.mockResolvedValueOnce({
-      data: [],
+      data: {controlLinks: [], dataLinks: []},
       message: 'ok',
       success: true,
     });
@@ -504,7 +504,11 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
     expect(mockGetSubgraphPairs).toHaveBeenCalledWith('proj-sg-ops-1', 'sg-1');
     expect(settled).toBe(false);
 
-    resolvePairs({data: [], message: 'ok', success: true});
+    resolvePairs({
+      data: {controlLinks: [], dataLinks: []},
+      message: 'ok',
+      success: true,
+    });
 
     await expect(placement).resolves.toBe(true);
     expect(settled).toBe(true);
@@ -590,20 +594,20 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
     }));
 
     resolvePairs({
-      data: [
-        {
-          controlLinks: [],
-          dataLinks: [
-            makeDataLinkDto({
+      data: {
+        controlLinks: [],
+        dataLinks: [
+          {
+            link: makeDataLinkDto({
               destinationPortSystemId: 'port-b',
               destinationSystemId: 'mod-2',
+              sourceSystemId: 'mod-1',
               systemId: 'pair-link-stale',
             }),
-          ],
-          destinationSubgraphSystemId: 'sg-2',
-          sourceSubgraphSystemId: 'sg-1',
-        },
-      ],
+            usecases: [],
+          },
+        ],
+      },
       message: 'ok',
       success: true,
     });
@@ -683,26 +687,28 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       success: true,
     });
     mockGetSubgraphPairs.mockResolvedValueOnce({
-      data: [
-        {
-          controlLinks: [],
-          dataLinks: [
-            makeDataLinkDto({
+      data: {
+        controlLinks: [],
+        dataLinks: [
+          {
+            link: makeDataLinkDto({
               destinationPortSystemId: 'port-b',
               destinationSystemId: 'mod-2',
+              sourceSystemId: 'mod-1',
               systemId: 'pair-link-1',
             }),
-          ],
-          destinationSubgraphSystemId: 'sg-2',
-          sourceSubgraphSystemId: 'sg-1',
-        },
-        {
-          controlLinks: [],
-          dataLinks: [makeDataLinkDto({systemId: 'pair-link-2'})],
-          destinationSubgraphSystemId: 'sg-3',
-          sourceSubgraphSystemId: 'sg-1',
-        },
-      ],
+            usecases: [],
+          },
+          {
+            link: makeDataLinkDto({
+              destinationSystemId: 'mod-3',
+              sourceSystemId: 'mod-1',
+              systemId: 'pair-link-2',
+            }),
+            usecases: [],
+          },
+        ],
+      },
       message: 'ok',
       success: true,
     });
