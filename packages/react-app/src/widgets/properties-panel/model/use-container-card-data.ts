@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useCallback} from 'react';
+import {useCallback, useContext} from 'react';
 
 import {
   fetchContainerProperties,
   patchContainerProperty,
 } from '~entities/containers';
 import type {TreeViewItem} from '~features/generic-tree-view';
+import {GraphDesignerStoreContext} from '~features/graph-designer/model/graph-designer-store-context';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
@@ -33,6 +34,7 @@ export function useContainerCardData({
   moduleIds: string[];
   projectId: string;
 }): UseSchemaCardDataResult {
+  const graphDesignerStore = useContext(GraphDesignerStoreContext);
   const fetchProperties = useCallback(
     (entityId: string) => fetchContainerProperties(projectId, entityId),
     [projectId],
@@ -75,6 +77,7 @@ export function useContainerCardData({
         await refreshCachedModulePropertiesForContainer(projectId, moduleIds);
       }
     },
+    onStagedChange: () => graphDesignerStore?.getState().markDirty(),
     projectId,
     saveProperty,
   });

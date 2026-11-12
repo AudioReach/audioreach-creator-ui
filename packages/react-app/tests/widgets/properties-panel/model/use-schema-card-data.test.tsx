@@ -274,4 +274,94 @@ describe('useSchemaCardData', () => {
     expect(result.current.data?.items[0]?.name).toBe('Container Type');
     expect(onCommitSuccess).not.toHaveBeenCalled();
   });
+
+  describe('onStagedChange', () => {
+    const property = makeProperty(1, 'Scenario ID');
+    const dirtyItem: TreeViewItem = {
+      elements: property.elements,
+      id: '1',
+      name: 'Scenario ID',
+    };
+
+    async function commit(
+      saveProperty: jest.Mock,
+      onStagedChange: jest.Mock,
+    ): Promise<void> {
+      const fetchProperties = jest
+        .fn()
+        .mockResolvedValue(successResult([property]));
+      const {result} = renderHook(() =>
+        useSchemaCardData({
+          entityId: 'sg-1',
+          entityType: 'subgraph',
+          fetchProperties,
+          onStagedChange,
+          projectId: 'proj-1',
+          saveProperty,
+        }),
+      );
+      await waitFor(() => expect(result.current.data).not.toBeNull());
+      await act(async () => {
+        await result.current.handleCommit([dirtyItem]);
+      });
+    }
+
+    // A successful save is staged by the backend, so the host must be told.
+    it('fires after a successful property save', async () => {
+      const onStagedChange = jest.fn();
+      await commit(
+        jest
+          .fn()
+          .mockResolvedValue(
+            saveResult({property, type: 'replaceProperty'}),
+          ),
+        onStagedChange,
+      );
+      expect(onStagedChange).toHaveBeenCalledTimes(1);
+    });
+
+    // A failed save stages nothing, so Apply must stay disabled.
+    it('does not fire when the save fails', async () => {
+      const onStagedChange = jest.fn();
+      await commit(
+        jest.fn().mockResolvedValue({
+          issues: [{code: 'X', message: 'nope', severity: 'ERROR'}],
+        }),
+        onStagedChange,
+      );
+      expect(onStagedChange).not.toHaveBeenCalled();
+    });
+
+    // An unchanged VSID is a backend no-op and stages nothing.
+    it('does not fire for a VSID no-op with no affected subgraphs', async () => {
+      const onStagedChange = jest.fn();
+      await commit(
+        jest.fn().mockResolvedValue(
+          saveResult({
+            affectedSubgraphSystemIds: [],
+            property,
+            type: 'propagateVsid',
+          }),
+        ),
+        onStagedChange,
+      );
+      expect(onStagedChange).not.toHaveBeenCalled();
+    });
+
+    // A real VSID change stages updates for the affected subgraphs.
+    it('fires for a VSID change that affects subgraphs', async () => {
+      const onStagedChange = jest.fn();
+      await commit(
+        jest.fn().mockResolvedValue(
+          saveResult({
+            affectedSubgraphSystemIds: ['sg-1'],
+            property,
+            type: 'propagateVsid',
+          }),
+        ),
+        onStagedChange,
+      );
+      expect(onStagedChange).toHaveBeenCalledTimes(1);
+    });
+  });
 });
