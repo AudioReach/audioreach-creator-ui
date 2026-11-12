@@ -103,6 +103,22 @@ describe('ModuleNode — default footer', () => {
   });
 });
 
+describe('ModuleNode — hierarchy metadata', () => {
+  it('exposes the parent container id as a stable data attribute', () => {
+    renderModuleNode(makeModule({parentId: 'container-5:1'}));
+
+    const node = screen.getByTestId('module-node');
+    expect(node).toHaveAttribute('data-container-id', 'container-5:1');
+  });
+
+  it('exposes the original container id for split containers', () => {
+    renderModuleNode(makeModule({parentId: 'container-5:1:part-0'}));
+
+    const node = screen.getByTestId('module-node');
+    expect(node).toHaveAttribute('data-container-id', 'container-5:1');
+  });
+});
+
 describe('ModuleNode — custom footer', () => {
   it('renders renderNodeContent footer instead of default', () => {
     renderModuleNode(makeModule(), {

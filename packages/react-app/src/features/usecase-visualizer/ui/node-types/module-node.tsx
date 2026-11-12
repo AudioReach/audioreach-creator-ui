@@ -56,6 +56,17 @@ const SHAPE_ICONS: Record<ModuleShape, LucideIcon> = {
   triangle: Box,
 };
 
+const SPLIT_CONTAINER_SUFFIX_PATTERN = /:part-\d+$/;
+
+function getContainerId(parentId: string | undefined): string | undefined {
+  const isSplitContainer =
+    parentId !== undefined && SPLIT_CONTAINER_SUFFIX_PATTERN.test(parentId);
+
+  return isSplitContainer
+    ? parentId.replace(SPLIT_CONTAINER_SUFFIX_PATTERN, '')
+    : parentId;
+}
+
 function ShapeOutline({
   background,
   border,
@@ -142,6 +153,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
     0,
     node.height - NODE_DIMENSIONS.module.footerHeight,
   );
+  const containerId = getContainerId(node.parentId);
 
   const background =
     highlight.state === 'active'
@@ -177,6 +189,7 @@ export function ModuleNode({data: node, selected}: ModuleNodeProps) {
   return (
     <div
       className="relative"
+      data-container-id={containerId}
       data-locked={isLocked || undefined}
       data-module-instance-id={node.moduleId}
       data-node-id={node.id}
