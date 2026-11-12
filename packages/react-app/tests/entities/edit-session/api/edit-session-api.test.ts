@@ -18,8 +18,8 @@ import {
   discardChanges,
   type DiscardChangesResponseDto,
   endSession,
-  stageChanges,
-  type StageChangesResponseDto,
+  stageUsecases,
+  type StageUsecasesResponseDto,
   startSession,
 } from '~entities/edit-session';
 import {SessionMode, type SessionResponseDto} from '~entities/project';
@@ -60,9 +60,9 @@ describe('edit-session-api', () => {
     });
   });
 
-  describe('stageChanges', () => {
+  describe('stageUsecases', () => {
     it('should call httpClient.post with correct URL and body', async () => {
-      const mockResponse: StageChangesResponseDto = {
+      const mockResponse: StageUsecasesResponseDto = {
         failedChangeIds: [],
         message: 'success',
         processedChangeIds: ['a', 'b'],
@@ -73,11 +73,11 @@ describe('edit-session-api', () => {
         success: true,
       });
 
-      const result = await stageChanges('p1', ['a', 'b']);
+      const result = await stageUsecases('p1', ['a', 'b']);
 
       expect(httpClient.post).toHaveBeenCalledWith(
-        '/projects/p1/stage-changes',
-        {changeIds: ['a', 'b']},
+        '/projects/p1/stage-usecases',
+        {systemIds: ['a', 'b']},
       );
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResponse);

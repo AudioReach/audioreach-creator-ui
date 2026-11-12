@@ -85,7 +85,7 @@ Three layers, bottom-up (FSD: `entities` → `features` → UI within the featur
                 │ calls
 ┌───────────────┴───────────────────────────────────────────────┐
 │ Entity client (entities/project-edit-session)                  │
-│   createUsecases / stageChanges / commitChanges /              │
+│   createUsecases / stageUsecases / commitChanges /             │
 │   discardChanges / endSession   + DTOs                         │
 └───────────────▲───────────────────────────────────────────────┘
                 │ uses
@@ -109,10 +109,10 @@ This keeps the sequencing testable without React.
 | File                              | Responsibility                                                                                |
 | --------------------------------- | --------------------------------------------------------------------------------------------- |
 | `model/create-usecases.dto.ts`    | `CreateUsecasesRequestDto`, `CreateUsecasesResponseDto`, `UsecaseIdentifierWithChangeInfoDto` |
-| `model/stage-changes.dto.ts`      | `StageChangesRequestDto`, `StageChangesResponseDto`                                           |
+| `model/stage-usecases.dto.ts`     | `StageUsecasesRequestDto`, `StageUsecasesResponseDto`                                         |
 | `model/commit-changes.dto.ts`     | `CommitChangesRequestDto`, `CommitChangesResponseDto`                                         |
 | `model/discard-changes.dto.ts`    | `DiscardChangesRequestDto`, `DiscardChangesResponseDto`                                       |
-| `api/project-edit-session-api.ts` | `createUsecases`, `stageChanges`, `commitChanges`, `discardChanges`, `endSession`             |
+| `api/project-edit-session-api.ts` | `createUsecases`, `stageUsecases`, `commitChanges`, `discardChanges`, `endSession`            |
 | `index.ts`                        | Public API — the five fns + DTO types                                                         |
 
 **New — session DTO in the existing project entity (`packages/react-app/src/entities/project/`):**
@@ -236,15 +236,15 @@ The `create-usecases` issue array lives inside the response payload; an
 "empty arrays with success: true" reconciliation (FR-AD-08) is read as: response `data`
 present and `created`/`updated`/`deleted` all empty.
 
-### 5.2 `stage-changes`
+### 5.2 `stage-usecases`
 
 ```ts
-// model/stage-changes.dto.ts
-export interface StageChangesRequestDto {
-  changeIds: string[];
+// model/stage-usecases.dto.ts
+export interface StageUsecasesRequestDto {
+  systemIds: string[];
 }
 
-export interface StageChangesResponseDto {
+export interface StageUsecasesResponseDto {
   failedChangeIds: string[];
   message: string;
   processedChangeIds: string[];
@@ -379,9 +379,9 @@ import type {
 } from '../model/discard-changes.dto';
 import type {SessionResponseDto} from '~entities/project';
 import type {
-  StageChangesRequestDto,
-  StageChangesResponseDto,
-} from '../model/stage-changes.dto';
+  StageUsecasesRequestDto,
+  StageUsecasesResponseDto,
+} from '../model/stage-usecases.dto';
 
 export async function createUsecases(
   projectId: string,
@@ -393,13 +393,13 @@ export async function createUsecases(
   );
 }
 
-export async function stageChanges(
+export async function stageUsecases(
   projectId: string,
-  changeIds: string[],
-): Promise<ApiResult<StageChangesResponseDto>> {
-  return httpClient.post<StageChangesResponseDto>(
-    `/projects/${projectId}/stage-changes`,
-    {changeIds} satisfies StageChangesRequestDto,
+  systemIds: string[],
+): Promise<ApiResult<StageUsecasesResponseDto>> {
+  return httpClient.post<StageUsecasesResponseDto>(
+    `/projects/${projectId}/stage-usecases`,
+    {systemIds} satisfies StageUsecasesRequestDto,
   );
 }
 
@@ -460,7 +460,7 @@ For "commit all / discard all", the coordinator passes `changeIds` as `undefined
 `JSON.stringify` dropping the `undefined` property so the wire body is `{}` — this is
 intentional and matches the codebase idiom, and the implementation plan pins it with a
 test asserting the serialized body carries **no** `changeIds` key when the argument is
-omitted. `stageChanges` always receives a concrete `string[]` (never omitted).
+omitted. `stageUsecases` always receives a concrete `string[]` (never omitted).
 
 ---
 
@@ -1055,7 +1055,7 @@ Prevents duplicate DTO definitions across this feature and the edit-mode work.
 | `CreateUsecasesRequestDto`                               | create-usecases (request)                   |
 | `CreateUsecasesResponseDto`                              | create-usecases (response)                  |
 | `UsecaseIdentifierWithChangeInfoDto`                     | create-usecases response rows               |
-| `StageChangesRequestDto` / `StageChangesResponseDto`     | stage-changes                               |
+| `StageUsecasesRequestDto` / `StageUsecasesResponseDto`   | stage-usecases                              |
 | `CommitChangesRequestDto` / `CommitChangesResponseDto`   | commit-changes                              |
 | `DiscardChangesRequestDto` / `DiscardChangesResponseDto` | discard-changes                             |
 

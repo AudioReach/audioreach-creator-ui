@@ -9,7 +9,7 @@ import type {
   CreateUsecasesRequestDto,
   CreateUsecasesResponseDto,
   DiscardChangesResponseDto,
-  StageChangesResponseDto,
+  StageUsecasesResponseDto,
 } from '~entities/edit-session';
 import type {SessionResponseDto} from '~entities/project';
 import {
@@ -194,8 +194,8 @@ describe('runFinalize', () => {
     };
   }
 
-  it('commits and ends session when checkedChangeIds is empty', async () => {
-    const stageChanges = jest.fn();
+  it('commits and ends session when stageSystemIds is empty', async () => {
+    const stageUsecases = jest.fn();
     const commitChanges = jest
       .fn()
       .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
@@ -204,8 +204,8 @@ describe('runFinalize', () => {
       .mockResolvedValue(apiSuccess(makeSessionResponse()));
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
-      {checkedChangeIds: [], processedFromPrevAttempt: [], projectId: 'proj-1'},
+      {commitChanges, endSession, stageUsecases},
+      {processedFromPrevAttempt: [], projectId: 'proj-1', stageSystemIds: []},
     );
 
     expect(outcome).toEqual({
@@ -213,11 +213,11 @@ describe('runFinalize', () => {
       sessionMode: 'READONLY',
       summary: 'done',
     });
-    expect(stageChanges).not.toHaveBeenCalled();
+    expect(stageUsecases).not.toHaveBeenCalled();
   });
 
   it('returns commitRejected when commit reports a blocking issue', async () => {
-    const stageChanges = jest.fn();
+    const stageUsecases = jest.fn();
     const commitChanges = jest
       .fn()
       .mockResolvedValue(
@@ -226,8 +226,8 @@ describe('runFinalize', () => {
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
-      {checkedChangeIds: [], processedFromPrevAttempt: [], projectId: 'proj-1'},
+      {commitChanges, endSession, stageUsecases},
+      {processedFromPrevAttempt: [], projectId: 'proj-1', stageSystemIds: []},
     );
 
     expect(outcome).toEqual({
@@ -238,8 +238,8 @@ describe('runFinalize', () => {
   });
 
   it('returns stageFailed and never calls commit when stage returns failed ids', async () => {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: ['a'],
         message: 'stage failed',
         processedChangeIds: [],
@@ -250,11 +250,11 @@ describe('runFinalize', () => {
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a'],
         processedFromPrevAttempt: [],
         projectId: 'proj-1',
+        stageSystemIds: ['a'],
       },
     );
 
@@ -270,8 +270,8 @@ describe('runFinalize', () => {
   });
 
   it('returns stageTransportIndeterminate and publishes no rows on stage transport failure', async () => {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiTransportFailure<StageChangesResponseDto>(
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiTransportFailure<StageUsecasesResponseDto>(
         'NETWORK',
         'Network error: fetch failed',
       ),
@@ -280,11 +280,11 @@ describe('runFinalize', () => {
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a'],
         processedFromPrevAttempt: [],
         projectId: 'proj-1',
+        stageSystemIds: ['a'],
       },
     );
 
@@ -293,8 +293,8 @@ describe('runFinalize', () => {
   });
 
   it('stages only the not-yet-staged subset and recomputes on repeated failure', async () => {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: ['b'],
         message: 'stage failed',
         processedChangeIds: [],
@@ -305,15 +305,15 @@ describe('runFinalize', () => {
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a', 'b'],
         processedFromPrevAttempt: ['a'],
         projectId: 'proj-1',
+        stageSystemIds: ['a', 'b'],
       },
     );
 
-    expect(stageChanges).toHaveBeenCalledWith('proj-1', ['b']);
+    expect(stageUsecases).toHaveBeenCalledWith('proj-1', ['b']);
     expect(outcome).toMatchObject({
       kind: 'stageFailed',
       notYetStagedChangeIds: ['b'],
@@ -321,8 +321,8 @@ describe('runFinalize', () => {
   });
 
   it('returns commitTransportIndeterminate and publishes no rows, never calls endSession', async () => {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: [],
         message: 'staged',
         processedChangeIds: ['a'],
@@ -338,11 +338,11 @@ describe('runFinalize', () => {
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a'],
         processedFromPrevAttempt: [],
         projectId: 'proj-1',
+        stageSystemIds: ['a'],
       },
     );
 
@@ -353,8 +353,8 @@ describe('runFinalize', () => {
   function fullHappyPathDeps(
     endSessionImpl: () => Promise<ApiResult<SessionResponseDto>>,
   ) {
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: [],
         message: 'staged',
         processedChangeIds: ['a'],
@@ -365,7 +365,7 @@ describe('runFinalize', () => {
       .fn()
       .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
     const endSession = jest.fn(endSessionImpl);
-    return {commitChanges, endSession, stageChanges};
+    return {commitChanges, endSession, stageUsecases};
   }
 
   it('returns endSessionDeterminate with code 422', async () => {
@@ -376,9 +376,9 @@ describe('runFinalize', () => {
     );
 
     const outcome = await runFinalize(deps, {
-      checkedChangeIds: ['a'],
       processedFromPrevAttempt: [],
       projectId: 'proj-1',
+      stageSystemIds: ['a'],
     });
 
     expect(outcome).toEqual({
@@ -396,9 +396,9 @@ describe('runFinalize', () => {
     );
 
     const outcome = await runFinalize(deps, {
-      checkedChangeIds: ['a'],
       processedFromPrevAttempt: [],
       projectId: 'proj-1',
+      stageSystemIds: ['a'],
     });
 
     expect(outcome).toEqual({
@@ -417,9 +417,9 @@ describe('runFinalize', () => {
     const deps = fullHappyPathDeps(endSession);
 
     const outcome = await runFinalize(deps, {
-      checkedChangeIds: ['a'],
       processedFromPrevAttempt: [],
       projectId: 'proj-1',
+      stageSystemIds: ['a'],
     });
 
     expect(outcome).toEqual({kind: 'endSessionPostCommitReloadNeeded'});
@@ -436,8 +436,8 @@ describe('runFinalize', () => {
         ),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: [],
         message: 'staged',
         processedChangeIds: ['a'],
@@ -449,11 +449,11 @@ describe('runFinalize', () => {
       .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a'],
         processedFromPrevAttempt: [],
         projectId: 'proj-1',
+        stageSystemIds: ['a'],
       },
     );
 
@@ -481,9 +481,9 @@ describe('runFinalize', () => {
     );
 
     const outcome = await runFinalize(deps, {
-      checkedChangeIds: ['a'],
       processedFromPrevAttempt: [],
       projectId: 'proj-1',
+      stageSystemIds: ['a'],
     });
 
     expect(outcome).toEqual({kind: 'endSessionPostCommitReloadNeeded'});
@@ -508,9 +508,9 @@ describe('runFinalize', () => {
     );
 
     const outcome = await runFinalize(deps, {
-      checkedChangeIds: ['a'],
       processedFromPrevAttempt: [],
       projectId: 'proj-1',
+      stageSystemIds: ['a'],
     });
 
     expect(outcome).toEqual({kind: 'endSessionTransportIndeterminate'});
@@ -526,8 +526,8 @@ describe('runFinalize', () => {
         ),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
-    const stageChanges = jest.fn().mockResolvedValue(
-      apiSuccess<StageChangesResponseDto>({
+    const stageUsecases = jest.fn().mockResolvedValue(
+      apiSuccess<StageUsecasesResponseDto>({
         failedChangeIds: [],
         message: 'staged',
         processedChangeIds: ['a'],
@@ -539,11 +539,11 @@ describe('runFinalize', () => {
       .mockResolvedValue(apiSuccess<CommitChangesResponseDto>({}));
 
     const outcome = await runFinalize(
-      {commitChanges, endSession, stageChanges},
+      {commitChanges, endSession, stageUsecases},
       {
-        checkedChangeIds: ['a'],
         processedFromPrevAttempt: [],
         projectId: 'proj-1',
+        stageSystemIds: ['a'],
       },
     );
 

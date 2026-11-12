@@ -9,7 +9,7 @@ import type {
   CreateUsecasesRequestDto,
   discardChanges,
   endSession,
-  stageChanges,
+  stageUsecases,
 } from '~entities/edit-session';
 import {
   getIssueMessage,
@@ -89,13 +89,13 @@ export async function runApplyReconcile(
 export interface FinalizeDeps {
   commitChanges: typeof commitChanges;
   endSession: typeof endSession;
-  stageChanges: typeof stageChanges;
+  stageUsecases: typeof stageUsecases;
 }
 
 export interface FinalizeArgs {
-  checkedChangeIds: string[];
   processedFromPrevAttempt: string[];
   projectId: string;
+  stageSystemIds: string[];
 }
 
 async function finalizeEndSession(
@@ -149,14 +149,14 @@ export async function runFinalize(
   deps: FinalizeDeps,
   args: FinalizeArgs,
 ): Promise<FinalizeOutcome> {
-  const {checkedChangeIds, processedFromPrevAttempt, projectId} = args;
+  const {processedFromPrevAttempt, projectId, stageSystemIds} = args;
 
-  const notYetStagedChangeIds = checkedChangeIds.filter(
+  const notYetStagedChangeIds = stageSystemIds.filter(
     (id) => !processedFromPrevAttempt.includes(id),
   );
 
   if (notYetStagedChangeIds.length > 0) {
-    const stageResult = await deps.stageChanges(
+    const stageResult = await deps.stageUsecases(
       projectId,
       notYetStagedChangeIds,
     );
@@ -186,7 +186,7 @@ export async function runFinalize(
           stageResult,
           stageResult.data?.message ?? 'Stage changes failed',
         ),
-        notYetStagedChangeIds: checkedChangeIds.filter(
+        notYetStagedChangeIds: stageSystemIds.filter(
           (id) => !alreadyProcessed.has(id),
         ),
         processedChangeIds: stageProcessedChangeIds,

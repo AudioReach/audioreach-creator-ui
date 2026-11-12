@@ -3,7 +3,7 @@ export {
   createUsecases,
   discardChanges,
   endSession,
-  stageChanges,
+  stageUsecases,
   startSession,
 } from './api/edit-session-api';
 export type {
@@ -22,6 +22,6 @@ export type {
   DiscardChangesResponseDto,
 } from './model/discard-changes.dto';
 export type {
-  StageChangesRequestDto,
-  StageChangesResponseDto,
-} from './model/stage-changes.dto';
+  StageUsecasesRequestDto,
+  StageUsecasesResponseDto,
+} from './model/stage-usecases.dto';
