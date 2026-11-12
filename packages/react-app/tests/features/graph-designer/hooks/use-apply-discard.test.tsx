@@ -174,6 +174,17 @@ function mockSuccessfulReload(): void {
   });
 }
 
+function graphDataWithUsecase() {
+  return {
+    connections: [],
+    containers: {},
+    moduleInstances: {},
+    selectedUsecases: ['uc-system-1'],
+    subgraphs: {},
+    subsystems: {},
+  };
+}
+
 function mockFailedReload(): void {
   mockGetUsecaseComponents.mockResolvedValue({
     message: 'reload failed',
@@ -802,9 +813,32 @@ describe('useApplyDiscard', () => {
       markCleanSpy.mockRestore();
     });
 
+    it('discarded with no usecase selected shows an empty graph without calling the API', async () => {
+      const store = makeStore();
+      store.getState().markDirty();
+      mockRunDiscard.mockResolvedValue({
+        cascadedChangeIds: [],
+        kind: 'discarded',
+      });
+      mockFailedReload();
+      const {result} = renderApplyDiscard(store);
+
+      await act(async () => {
+        await result.current.discard();
+      });
+
+      expect(mockGetUsecaseComponents).not.toHaveBeenCalled();
+      expect(store.getState().graphDataStatus).toBe('ready');
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'Changes discarded',
+        'success',
+      );
+    });
+
     it('discarded keeps the session dirty and in edit mode when the reload fails', async () => {
       const store = makeStore();
       store.getState().markDirty();
+      store.setState({graphData: graphDataWithUsecase()});
       const outcome: DiscardOutcome = {
         cascadedChangeIds: [],
         kind: 'discarded',
@@ -930,6 +964,7 @@ describe('useApplyDiscard', () => {
 
     it('endSessionPostDiscardReloadNeeded keeps the session in edit mode when the reload fails', async () => {
       const store = makeStore();
+      store.setState({graphData: graphDataWithUsecase()});
       mockRunDiscard.mockResolvedValue({
         kind: 'endSessionPostDiscardReloadNeeded',
       });
