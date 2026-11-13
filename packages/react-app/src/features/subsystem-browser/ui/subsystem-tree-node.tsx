@@ -7,12 +7,18 @@ import type {FC, KeyboardEvent} from 'react';
 
 import {ChevronDown, ChevronRight, Dot} from 'lucide-react';
 
+import {Checkbox} from '@qualcomm-ui/react/checkbox';
+import {Tooltip} from '@qualcomm-ui/react/tooltip';
+
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 import {ConvertStringToNumber} from '~shared/utils/converter-utils';
 
 interface SubsystemTreeNodeProps {
+  /** Picker mode only: systemId -> tooltip explaining why it can't be chosen. */
+  disabledReasons?: Readonly<Record<string, string>>;
   isExpanded: (id: number) => boolean;
   onClick: (systemId: string) => void;
+  pickerMode?: boolean;
   rootNode?: boolean;
   searchTerm: string;
   selectedSystemId: string;
@@ -21,8 +27,10 @@ interface SubsystemTreeNodeProps {
 }
 
 const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
+  disabledReasons,
   isExpanded,
   onClick,
+  pickerMode = false,
   rootNode = false,
   searchTerm,
   selectedSystemId,
@@ -69,13 +77,58 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
   // It decides the subsystem node visibility
   const isVisible = hasMatchInSubtree(treeNode, searchTerm);
   const isSelected = treeNode.systemId === selectedSystemId;
+  const disabledReason = pickerMode
+    ? disabledReasons?.[treeNode.systemId]
+    : undefined;
+  const isDisabled = disabledReason !== undefined;
+  let rowClassName: string | undefined;
+  if (isDisabled) {
+    rowClassName = 'text-neutral-disabled rounded px-2 py-0.5';
+  } else if (pickerMode) {
+    rowClassName =
+      'text-neutral-primary hover:bg-neutral-02 rounded px-2 py-0.5 transition-colors';
+  } else if (isSelected) {
+    rowClassName = 'bg-neutral-02 text-neutral-primary rounded';
+  }
+
+  const handleSelect = () => {
+    if (!isDisabled) {
+      onClick(treeNode.systemId);
+    }
+  };
 
   const handleNavigationKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      onClick(treeNode.systemId);
+      handleSelect();
     }
   };
+
+  const checkbox = pickerMode && (
+    <Checkbox
+      aria-label={`Select ${treeNode.name}`}
+      checked={isSelected}
+      disabled={isDisabled}
+      onCheckedChange={handleSelect}
+      size="sm"
+    />
+  );
+
+  const nameLabel = (
+    <span
+      aria-current={isSelected ? 'page' : undefined}
+      aria-label={`Navigate to ${treeNode.name}`}
+      className={rowClassName}
+      onClick={handleSelect}
+      onKeyDown={handleNavigationKeyDown}
+      role="button"
+      style={{fontWeight: 'bold'}}
+      tabIndex={0}
+      title={isDisabled ? undefined : `ID: ${treeNode.id}`}
+    >
+      {treeNode.name}
+    </span>
+  );
 
   return (
     <div style={{cursor: 'pointer', marginLeft: rootNode ? 0 : '1rem'}}>
@@ -102,23 +155,23 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
             </span>
           )}
 
-          <span
-            aria-current={isSelected ? 'page' : undefined}
-            aria-label={`Navigate to ${treeNode.name}`}
-            className={
-              isSelected
-                ? 'bg-neutral-02 text-neutral-primary rounded'
-                : undefined
-            }
-            onClick={() => onClick(treeNode.systemId)}
-            onKeyDown={handleNavigationKeyDown}
-            role="button"
-            style={{fontWeight: 'bold'}}
-            tabIndex={0}
-            title={`ID: ${treeNode.id}`}
-          >
-            {treeNode.name}
-          </span>
+          {disabledReason ? (
+            <Tooltip
+              trigger={
+                <span style={{alignItems: 'center', display: 'flex', gap: 2}}>
+                  {checkbox}
+                  {nameLabel}
+                </span>
+              }
+            >
+              {disabledReason}
+            </Tooltip>
+          ) : (
+            <>
+              {checkbox}
+              {nameLabel}
+            </>
+          )}
         </div>
       )}
       {expanded &&
@@ -126,8 +179,10 @@ const SubsystemTreeNode: FC<SubsystemTreeNodeProps> = ({
         treeNode.children.map((childNode) => (
           <SubsystemTreeNode
             key={childNode.id}
+            disabledReasons={disabledReasons}
             isExpanded={isExpanded}
             onClick={onClick}
+            pickerMode={pickerMode}
             searchTerm={searchTerm}
             selectedSystemId={selectedSystemId}
             toggleNode={toggleNode}

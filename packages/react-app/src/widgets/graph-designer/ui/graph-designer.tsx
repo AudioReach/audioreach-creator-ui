@@ -50,6 +50,7 @@ import {
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
+import {toMoveDestination, withTopNode} from '~features/subsystem-browser';
 import {keyConfiguratorStoreManager} from '~features/key-configurator';
 import {
   PortConnectionsInfoPopup,
@@ -87,7 +88,10 @@ import {
 import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 
 import {applyCollapses} from '../lib/apply-collapses';
-import {buildContextMenuConfig} from '../lib/context-menu-config';
+import {
+  buildContextMenuConfig,
+  containingSubsystemIdOf,
+} from '../lib/context-menu-config';
 import {applyLinkVisibility} from '../lib/apply-link-visibility';
 import {applyPortVisibility} from '../lib/apply-port-visibility';
 import {applyPositionOverrides} from '../lib/apply-position-overrides';
@@ -114,6 +118,7 @@ import {collapseSetForLevel} from '../lib/subgraph-collapse';
 import {buildSubsystemBreadcrumbPath} from '../lib/subsystem-breadcrumbs';
 
 import {DisplayOptionsPopover} from './display-options-popover';
+import {MoveToSubsystemDialog} from './move-to-subsystem-dialog';
 import {useSubgraphKvMetadataRefresh} from './use-subgraph-kv-metadata-refresh';
 
 interface GraphDesignerProps {
@@ -201,6 +206,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Graph data from store
   const graphData = useGraphDesignerStoreShallow((s) => s.graphData);
+  const subsystemData = useGraphDesignerStoreShallow((s) => s.subsystemData);
+  const subsystemPickTree = useMemo(
+    () => withTopNode(subsystemData),
+    [subsystemData],
+  );
   const graphDataError = useGraphDesignerStoreShallow((s) => s.graphDataError);
   const graphDataStatus = useGraphDesignerStoreShallow(
     (s) => s.graphDataStatus,
@@ -327,6 +337,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const [viewportByLevel, setViewportByLevel] = useState<
     Record<string, ViewportState>
   >({});
+  const [moveNodeId, setMoveNodeId] = useState<string | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
   const levelId = levelView?.levelId ?? '';
   const collapsedSubgraphs = collapseByLevel[levelId] ?? EMPTY_SET;
   const positionOverrides =
@@ -782,6 +794,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     const baseContextMenu = buildContextMenuConfig(store.getState, {
       onAddToManualUsecase: handleAddToManualUsecase,
       onRemoveFromManualUsecase: handleRemoveFromManualUsecase,
+      onRequestMoveToSubsystem: setMoveNodeId,
       subsystemScoped: filterComponentsBySubsystem,
     });
     return {
@@ -813,8 +826,40 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     handleAddToManualUsecase,
     handleRemoveFromManualUsecase,
     open,
+    setMoveNodeId,
     store,
   ]);
+
+  const handleMoveToSubsystem = useCallback(
+    async (destinationId: string) => {
+      if (moveNodeId === null) {
+        return;
+      }
+      setIsMoving(true);
+      try {
+        const moved = await store
+          .getState()
+          .moveToSubsystem(
+            store.getState,
+            moveNodeId,
+            toMoveDestination(destinationId),
+          );
+        // Keep the dialog open on failure so the selection isn't lost.
+        if (moved) {
+          setMoveNodeId(null);
+        }
+      } catch (error) {
+        // withMutationLock throws if another mutation is already running.
+        logger.warn('Move to subsystem aborted', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        showToast('Another change is in progress. Try again shortly.', 'danger');
+      } finally {
+        setIsMoving(false);
+      }
+    },
+    [moveNodeId, store],
+  );
 
   const isPortConnectionsPopupOpen =
     state.status === 'loading-modules' ||
@@ -1607,6 +1652,21 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           />
         ) : null}
       </div>
+      <MoveToSubsystemDialog
+        currentParentId={
+          moveNodeId === null
+            ? null
+            : containingSubsystemIdOf(graphData, moveNodeId)
+        }
+        isMoving={isMoving}
+        movingNodeId={moveNodeId}
+        onCancel={() => setMoveNodeId(null)}
+        onConfirm={(destinationId) => {
+          void handleMoveToSubsystem(destinationId);
+        }}
+        open={moveNodeId !== null}
+        tree={subsystemPickTree}
+      />
     </div>
   );
 };
