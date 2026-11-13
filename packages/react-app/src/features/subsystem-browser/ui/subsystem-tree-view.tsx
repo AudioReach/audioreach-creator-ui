@@ -19,7 +19,10 @@ import SubsystemTreeNode from './subsystem-tree-node';
 interface SubsystemTreeViewProps {
   data: SubsystemBrowserTreeNode[];
   defaultExpandedIds?: number[];
+  disabledReasons?: Readonly<Record<string, string>>;
   onClick: (systemId: string) => void;
+  /** Adds hover and selection colours for use as a destination picker. */
+  pickerMode?: boolean;
   selectedSystemId: string;
 }
 
@@ -72,7 +75,9 @@ function collectAncestorIdsForMatches(
 const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
   data,
   defaultExpandedIds = EMPTY_DEFAULT_EXPANDED_IDS,
+  disabledReasons,
   onClick,
+  pickerMode = false,
   selectedSystemId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -193,8 +198,10 @@ const SubsystemTreeView: FC<SubsystemTreeViewProps> = ({
       {data.map((treeNode) => (
         <SubsystemTreeNode
           key={treeNode.id}
+          disabledReasons={disabledReasons}
           isExpanded={isExpanded}
           onClick={onClick}
+          pickerMode={pickerMode}
           rootNode
           searchTerm={debouncedSearchTerm} // Using the debounced term for visibility to keep it in sync with expansion
           selectedSystemId={selectedSystemId}
