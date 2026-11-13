@@ -42,6 +42,7 @@ export interface UseSchemaCardDataOptions {
     dirtyItems: TreeViewItem[],
     nextProperties: PropertyDto[],
   ) => Promise<void> | void;
+  onStagedChange?: () => void;
   projectId: string;
   saveProperty?: (
     property: PropertyDto,
@@ -65,6 +66,7 @@ export function useSchemaCardData({
   entityType,
   fetchProperties,
   onCommitSuccess,
+  onStagedChange,
   projectId,
   saveProperty,
 }: UseSchemaCardDataOptions): UseSchemaCardDataResult {
@@ -199,6 +201,7 @@ export function useSchemaCardData({
       );
       setSaveError(null);
       const committedProperties = [...entry.properties];
+      let stagedAnyChange = false;
 
       try {
         for (const property of dirtyProperties) {
@@ -229,6 +232,8 @@ export function useSchemaCardData({
 
           switch (commitResult.type) {
             case 'propagateVsid':
+              stagedAnyChange ||=
+                commitResult.affectedSubgraphSystemIds.length > 0;
               replaceProperty(
                 projectId,
                 entityType,
@@ -242,6 +247,7 @@ export function useSchemaCardData({
               );
               break;
             case 'replaceProperties':
+              stagedAnyChange = true;
               replaceProperties(
                 projectId,
                 entityType,
@@ -255,6 +261,7 @@ export function useSchemaCardData({
               );
               break;
             case 'replaceProperty':
+              stagedAnyChange = true;
               replaceProperty(
                 projectId,
                 entityType,
@@ -287,6 +294,9 @@ export function useSchemaCardData({
 
         setSaveError('Failed to save schema properties');
       } finally {
+        if (stagedAnyChange) {
+          onStagedChange?.();
+        }
         if (
           requestId === patchRequestIdRef.current &&
           committedEntityId === activeEntityIdRef.current
@@ -309,6 +319,7 @@ export function useSchemaCardData({
       entityType,
       entry.properties,
       onCommitSuccess,
+      onStagedChange,
       projectId,
       replaceProperties,
       replaceProperty,

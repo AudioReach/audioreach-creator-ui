@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useCallback, useRef} from 'react';
+import {useCallback, useContext, useRef} from 'react';
 
 import {
   fetchSubgraphProperties,
@@ -12,6 +12,7 @@ import {
   patchSubgraphVsid,
 } from '~entities/subgraphs';
 import type {TreeViewItem} from '~features/generic-tree-view';
+import {GraphDesignerStoreContext} from '~features/graph-designer/model/graph-designer-store-context';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
@@ -35,6 +36,7 @@ export function useSubgraphCardData({
   projectId: string;
   subgraphId: string;
 }): UseSchemaCardDataResult {
+  const graphDesignerStore = useContext(GraphDesignerStoreContext);
   const loadRef = useRef<(() => Promise<void>) | null>(null);
   const fetchProperties = useCallback(
     (entityId: string) => fetchSubgraphProperties(projectId, entityId),
@@ -56,6 +58,10 @@ export function useSubgraphCardData({
             success: false as const,
           };
         }
+
+        // The scenario change is already staged; don't lose it if the
+        // refresh below fails.
+        graphDesignerStore?.getState().markDirty();
 
         const nextProperties = await fetchSubgraphProperties(
           projectId,
@@ -119,7 +125,7 @@ export function useSubgraphCardData({
         success: true as const,
       };
     },
-    [projectId, subgraphId],
+    [graphDesignerStore, projectId, subgraphId],
   );
 
   const schemaData = useSchemaCardData({
@@ -137,6 +143,7 @@ export function useSubgraphCardData({
         await loadRef.current?.();
       }
     },
+    onStagedChange: () => graphDesignerStore?.getState().markDirty(),
     projectId,
     saveProperty,
   });
