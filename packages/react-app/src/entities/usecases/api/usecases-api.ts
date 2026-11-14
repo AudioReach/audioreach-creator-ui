@@ -5,7 +5,7 @@
 
 import type {
   SetSubgraphNameRequestDto,
-  SubgraphPairResponseDto,
+  SubgraphLinksResponseDto,
   SubgraphResponseDto,
 } from '~entities/subgraph-definitions/model/subgraph-response.dto';
 import {
@@ -185,17 +185,24 @@ export async function getDataLinkWithUsecases(
 }
 
 /**
- * Fetch every subgraph-pair link bundle involving the given subgraph, used
- * to render cross-subgraph connections once both sides are on canvas.
+ * Fetch every cross-subgraph link involving the given subgraph, used to render
+ * cross-subgraph connections once both sides are on canvas.
  * @param projectId - The unique identifier of the project
  * @param subgraphSystemId - The subgraph's systemId
+ * @param subgraphPeerSystemId - Optional peer subgraph systemId to narrow the
+ * response
  */
 export async function getSubgraphPairs(
   projectId: string,
   subgraphSystemId: string,
-): Promise<ApiResult<SubgraphPairResponseDto[]>> {
-  return httpClient.get<SubgraphPairResponseDto[]>(
-    `/projects/${projectId}/subgraphs/${subgraphSystemId}/subgraph-pairs`,
+  subgraphPeerSystemId?: string,
+): Promise<ApiResult<SubgraphLinksResponseDto>> {
+  const params = new URLSearchParams({subgraphSystemId});
+  if (subgraphPeerSystemId) {
+    params.set('subgraphPeerSystemId', subgraphPeerSystemId);
+  }
+  return httpClient.get<SubgraphLinksResponseDto>(
+    `/projects/${projectId}/subgraph-links?${params.toString()}`,
   );
 }
 

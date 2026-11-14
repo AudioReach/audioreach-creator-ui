@@ -5,11 +5,13 @@
 
 import type {StoreApi} from 'zustand';
 
+import type {SubgraphPairResponseDto} from '~entities/subgraph-definitions';
 import {deleteSpfModule} from '~entities/spf-modules';
 import {
   getSubgraphContents,
   getSubgraphPairs,
   renameSubgraph as renameSubgraphApi,
+  toControlLinkType,
 } from '~entities/usecases';
 import type {
   ControlLinkDto,
@@ -190,18 +192,87 @@ export function createSubgraphOperations(
     const pairLinksById = {...get().pairLinksById};
     const addedLinks: Array<ControlLinkDto | DataLinkDto> = [];
 
-    for (const pair of result.data) {
+    const fetchedPairLinksById: Record<string, SubgraphPairResponseDto> = {};
+
+    for (const {link} of result.data.dataLinks) {
+      const sourceSubgraphSystemId =
+        graphData.moduleInstances[link.sourceSystemId]?.subgraphSystemId;
+      const destinationSubgraphSystemId =
+        graphData.moduleInstances[link.destinationSystemId]?.subgraphSystemId;
+      if (
+        !sourceSubgraphSystemId ||
+        !destinationSubgraphSystemId ||
+        sourceSubgraphSystemId === destinationSubgraphSystemId
+      ) {
+        continue;
+      }
+
       const otherId =
-        pair.sourceSubgraphSystemId === subgraphId
-          ? pair.destinationSubgraphSystemId
-          : pair.sourceSubgraphSystemId;
+        sourceSubgraphSystemId === subgraphId
+          ? destinationSubgraphSystemId
+          : destinationSubgraphSystemId === subgraphId
+            ? sourceSubgraphSystemId
+            : null;
+      if (!otherId) {
+        continue;
+      }
       if (!(otherId in graphData.subgraphs)) {
         continue;
       }
 
-      const pairKey = `${pair.sourceSubgraphSystemId}:${pair.destinationSubgraphSystemId}`;
-      pairLinksById[pairKey] = pair;
+      const pairKey = `${sourceSubgraphSystemId}:${destinationSubgraphSystemId}`;
+      const pair = fetchedPairLinksById[pairKey] ?? {
+        controlLinks: [],
+        dataLinks: [],
+        destinationSubgraphSystemId,
+        sourceSubgraphSystemId,
+      };
+      pair.dataLinks.push(link);
+      fetchedPairLinksById[pairKey] = pair;
+    }
 
+    for (const {link} of result.data.controlLinks) {
+      const sourceSubgraphSystemId =
+        graphData.moduleInstances[link.sourceSystemId]?.subgraphSystemId;
+      const destinationSubgraphSystemId =
+        graphData.moduleInstances[link.destinationSystemId]?.subgraphSystemId;
+      if (
+        !sourceSubgraphSystemId ||
+        !destinationSubgraphSystemId ||
+        sourceSubgraphSystemId === destinationSubgraphSystemId
+      ) {
+        continue;
+      }
+
+      const otherId =
+        sourceSubgraphSystemId === subgraphId
+          ? destinationSubgraphSystemId
+          : destinationSubgraphSystemId === subgraphId
+            ? sourceSubgraphSystemId
+            : null;
+      if (!otherId) {
+        continue;
+      }
+      if (!(otherId in graphData.subgraphs)) {
+        continue;
+      }
+
+      const pairKey = `${sourceSubgraphSystemId}:${destinationSubgraphSystemId}`;
+      const pair = fetchedPairLinksById[pairKey] ?? {
+        controlLinks: [],
+        dataLinks: [],
+        destinationSubgraphSystemId,
+        sourceSubgraphSystemId,
+      };
+      pair.controlLinks.push({
+        ...link,
+        linkType: toControlLinkType(link.linkType),
+      });
+      fetchedPairLinksById[pairKey] = pair;
+    }
+
+    for (const [pairKey, pair] of Object.entries(fetchedPairLinksById)) {
+      pairLinksById[pairKey] = pair;
       for (const link of pair.dataLinks) {
         connections = upsertLink(connections, link, 'data');
         addedLinks.push(link);
