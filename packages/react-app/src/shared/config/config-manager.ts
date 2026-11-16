@@ -42,9 +42,9 @@ const USER_PREFERENCE_PATHS = new Set([
   'visualization.viewMode',
 ]);
 
-/** Map of project file path -> selected usecase key-value keys. */
+/** Usecase key-value keys that are selected by default in every project. */
 const SELECTED_USECASE_KEYS_PATH =
-  'userPreferences.usecases.selectedUsecaseKeysByFile';
+  'userPreferences.usecases.selectedUsecaseKeysByDefault';
 
 const BRANDS = Object.values(Brand) as Brand[];
 const THEMES = Object.values(Theme) as Theme[];
@@ -354,35 +354,28 @@ export class ConfigFileManager {
   }
 
   /**
-   * Saves the selected usecase keys for one project file.
+   * Saves the default usecase keys, used for every project that is opened.
    *
-   * The selections of all project files live in one shared map, so the entry
-   * is written to the base config and every open project's copy. Otherwise the
-   * project saved last would overwrite the entries of the others.
+   * The list is shared by all projects, so it is written to the base config
+   * and every open project's copy. Otherwise the project saved last would
+   * overwrite the list with its own older copy.
    */
-  setSelectedUsecaseKeys(filePath: string, keys: string[]): void {
+  setSelectedUsecaseKeys(keys: string[]): void {
     for (const config of [
       this.configDataMap,
       ...this.projectConfigMap.values(),
     ]) {
-      const byFile =
-        getConfigData(config, SELECTED_USECASE_KEYS_PATH, this.rootKey) ?? {};
-      setConfigData(
-        config,
-        SELECTED_USECASE_KEYS_PATH,
-        {...byFile, [filePath]: keys},
-        this.rootKey,
-      );
+      setConfigData(config, SELECTED_USECASE_KEYS_PATH, keys, this.rootKey);
     }
   }
 
-  /** Gets the saved usecase keys for one project file, if any. */
-  getSelectedUsecaseKeys(filePath: string): string[] | undefined {
+  /** Gets the default usecase keys, if any were saved. */
+  getSelectedUsecaseKeys(): string[] | undefined {
     return getConfigData(
       this.configDataMap,
       SELECTED_USECASE_KEYS_PATH,
       this.rootKey,
-    )?.[filePath];
+    );
   }
 
   /** Sets global appearance preferences together. */
