@@ -84,7 +84,7 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import {useProjectLayoutStore, useProjectStoreShallow} from '~shared/store';
-import {useGlobalStore} from '~shared/store/global-store';
+import {deepEqual} from '~shared/utils/deep-equality';
 import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 import {
   ModuleDataTab,
@@ -160,10 +160,8 @@ function graphDataHasContent(
   );
 }
 
-const getProjectFilePath = (projectId: string): string | undefined =>
-  useGlobalStore
-    .getState()
-    .openProjects.find((pg) => pg.projectId === projectId)?.filePath;
+/** Tabs whose default usecase selection was already applied once. */
+const restoredTabKeys = new Set<string>();
 
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectId,
@@ -211,8 +209,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [selectedUsecases, resolvedData],
   );
 
-  // Persist / restore selected usecases via the project config
+  // Persist / restore the default selected usecases via the config
   const restoreDoneRef = useRef(false);
+  const saveArmedRef = useRef(false);
+  const syncedKeysRef = useRef<string[]>([]);
   const isUsecaseListReady = !isWorkflowLoading && resolvedData.length > 0;
 
   const leafUsecases = useMemo(
@@ -220,7 +220,6 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     [resolvedData],
   );
 
-  // Save keys, not names or systemIds, because those change between opens.
   const selectedUsecaseKeys = useMemo(() => {
     const selected = new Set(selectedUsecases);
     return leafUsecases
@@ -235,34 +234,51 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     }
     restoreDoneRef.current = true;
 
-    const filePath = getProjectFilePath(projectId);
-    const savedKeys = filePath
-      ? ConfigFileManager.instance.getSelectedUsecaseKeys(filePath)
-      : undefined;
-    const keySet = new Set(savedKeys ?? []);
-    // Usecases deleted from the project are skipped.
-    const names = leafUsecases
-      .filter((item) => keySet.has(getUsecaseKeyValueKey(item)))
-      .map((item) => item.name);
-    setSelectedUsecases(names);
-  }, [isUsecaseListReady, leafUsecases, projectId, setSelectedUsecases]);
+    // Already restored and mounted again: keep the tab's own selection.
+    const restoreKey = tabId ?? projectId;
+    if (restoredTabKeys.has(restoreKey)) {
+      saveArmedRef.current = true;
+      syncedKeysRef.current = selectedUsecaseKeys;
+      return;
+    }
+    restoredTabKeys.add(restoreKey);
 
-  // Save every later change so the next open starts with the same selection.
+    const keySet = new Set(
+      ConfigFileManager.instance.getSelectedUsecaseKeys() ?? [],
+    );
+    // Defaults this project does not have are skipped.
+    const matched = leafUsecases.filter((item) =>
+      keySet.has(getUsecaseKeyValueKey(item)),
+    );
+    // Remember what was restored so it is not saved back as a user change.
+    syncedKeysRef.current = matched.map(getUsecaseKeyValueKey);
+    setSelectedUsecases(matched.map((item) => item.name));
+  }, [
+    isUsecaseListReady,
+    leafUsecases,
+    projectId,
+    selectedUsecaseKeys,
+    setSelectedUsecases,
+    tabId,
+  ]);
+
+  // Save the selection when the user changes it. Other open projects keep
+  // their own selection; the new default applies to projects opened later.
   useEffect(() => {
-    // Do not save before the restore has run (the selection is still empty).
     if (!restoreDoneRef.current) {
       return;
     }
-    const filePath = getProjectFilePath(projectId);
-    if (!filePath) {
+    // Skip the initial save until the restored selection is applied.
+    if (!saveArmedRef.current) {
+      saveArmedRef.current = true;
       return;
     }
-    // Saved in every open project's config so one project cannot erase another.
-    ConfigFileManager.instance.setSelectedUsecaseKeys(
-      filePath,
-      selectedUsecaseKeys,
-    );
-  }, [projectId, selectedUsecaseKeys]);
+    if (deepEqual(selectedUsecaseKeys, syncedKeysRef.current)) {
+      return;
+    }
+    syncedKeysRef.current = selectedUsecaseKeys;
+    ConfigFileManager.instance.setSelectedUsecaseKeys(selectedUsecaseKeys);
+  }, [selectedUsecaseKeys]);
 
   // Derived flags for UsecaseSelectionControl
   const isSystemWorkflow = workflowType === WORKFLOW_TYPES.SYSTEM;
