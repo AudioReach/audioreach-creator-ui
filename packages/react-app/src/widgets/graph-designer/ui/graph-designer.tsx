@@ -102,7 +102,7 @@ import {
   type SearchMatch,
 } from '../lib/graph-search';
 import {
-  buildDroppedModulePositionOverrides,
+  buildDroppedModulePlacementOverrides,
   type ModuleDropPlacement,
 } from '../lib/dropped-module-position-overrides';
 import {usecaseSelectionsMatch} from '../lib/usecase-selection';
@@ -331,6 +331,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   const [positionOverridesByLevel, setPositionOverridesByLevel] = useState<
     Record<string, Record<string, XY>>
   >({});
+  const positionOverridesByLevelRef = useRef(positionOverridesByLevel);
   const [parentSizesByLevel, setParentSizesByLevel] = useState<
     Record<string, Record<string, {height: number; width: number}>>
   >({});
@@ -360,6 +361,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Compares levelId plus subgraph ids together, so a link mutation doesn't reset the subgraphs the user manually expanded or collapsed.
   const appliedLevelSignatureRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    positionOverridesByLevelRef.current = positionOverridesByLevel;
+  }, [positionOverridesByLevel]);
 
   // Keep subsystem navigation when Graph Designer is remounted after switching
   // to a project tab. The subsystem scope should only reset when the selected
@@ -680,6 +685,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     resetSearch();
     clearLevelView();
     setCollapseByLevel({});
+    positionOverridesByLevelRef.current = {};
     setPositionOverridesByLevel({});
     setParentSizesByLevel({});
     setViewportByLevel({});
@@ -853,7 +859,10 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         logger.warn('Move to subsystem aborted', {
           error: error instanceof Error ? error.message : String(error),
         });
-        showToast('Another change is in progress. Try again shortly.', 'danger');
+        showToast(
+          'Another change is in progress. Try again shortly.',
+          'danger',
+        );
       } finally {
         setIsMoving(false);
       }
@@ -969,33 +978,51 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   const applyCreatedModuleDropPosition = useCallback(
     (createdModuleId: string, position: XY, placement: ModuleDropPlacement) => {
-      const overrides = buildDroppedModulePositionOverrides(
+      const previous = positionOverridesByLevelRef.current;
+      const previousLevelOverrides = previous[levelId] ?? {};
+      const overrides = buildDroppedModulePlacementOverrides(
         store.getState().graphData,
+        graph,
+        previousLevelOverrides,
         createdModuleId,
         position,
         placement,
       );
-      if (Object.keys(overrides).length === 0) {
+      if (Object.keys(overrides.positions).length === 0) {
         return;
       }
-      setPositionOverridesByLevel((previous) => ({
+      const next = {
         ...previous,
-        [levelId]: {...(previous[levelId] ?? {}), ...overrides},
-      }));
+        [levelId]: {...previousLevelOverrides, ...overrides.positions},
+      };
+      positionOverridesByLevelRef.current = next;
+      setPositionOverridesByLevel(next);
+      if (Object.keys(overrides.sizes).length > 0) {
+        setParentSizesByLevel((sizesByLevel) => ({
+          ...sizesByLevel,
+          [levelId]: {
+            ...(sizesByLevel[levelId] ?? {}),
+            ...overrides.sizes,
+          },
+        }));
+      }
     },
-    [levelId, store],
+    [graph, levelId, store],
   );
 
   const applyPlacedSubgraphDropPosition = useCallback(
     (subgraphId: string, position: XY) => {
-      setPositionOverridesByLevel((previous) => ({
+      const previous = positionOverridesByLevelRef.current;
+      const next = {
         ...previous,
         [levelId]: {
           ...(previous[levelId] ?? {}),
           [subgraphNodeId(subgraphId)]: position,
           [subgraphProxyNodeId(subgraphId)]: position,
         },
-      }));
+      };
+      positionOverridesByLevelRef.current = next;
+      setPositionOverridesByLevel(next);
     },
     [levelId],
   );
