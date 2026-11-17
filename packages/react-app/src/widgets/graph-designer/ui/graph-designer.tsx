@@ -160,9 +160,6 @@ function graphDataHasContent(
   );
 }
 
-/** Tabs whose default usecase selection was already applied once. */
-const restoredTabKeys = new Set<string>();
-
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectId,
   screenshotRegistry,
@@ -210,6 +207,13 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   );
 
   // Persist / restore the default selected usecases via the config
+  // The flag lives in the tab store, so it survives this component remounting.
+  const defaultUsecasesApplied = useGraphDesignerStoreShallow(
+    (state) => state.defaultUsecasesApplied,
+  );
+  const markDefaultUsecasesApplied = useGraphDesignerStoreShallow(
+    (state) => state.markDefaultUsecasesApplied,
+  );
   const restoreDoneRef = useRef(false);
   const saveArmedRef = useRef(false);
   const syncedKeysRef = useRef<string[]>([]);
@@ -235,13 +239,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     restoreDoneRef.current = true;
 
     // Already restored and mounted again: keep the tab's own selection.
-    const restoreKey = tabId ?? projectId;
-    if (restoredTabKeys.has(restoreKey)) {
+    if (defaultUsecasesApplied) {
       saveArmedRef.current = true;
       syncedKeysRef.current = selectedUsecaseKeys;
       return;
     }
-    restoredTabKeys.add(restoreKey);
+    markDefaultUsecasesApplied();
 
     const keySet = new Set(
       ConfigFileManager.instance.getSelectedUsecaseKeys() ?? [],
@@ -254,12 +257,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     syncedKeysRef.current = matched.map(getUsecaseKeyValueKey);
     setSelectedUsecases(matched.map((item) => item.name));
   }, [
+    defaultUsecasesApplied,
     isUsecaseListReady,
     leafUsecases,
-    projectId,
+    markDefaultUsecasesApplied,
     selectedUsecaseKeys,
     setSelectedUsecases,
-    tabId,
   ]);
 
   // Save the selection when the user changes it. Other open projects keep

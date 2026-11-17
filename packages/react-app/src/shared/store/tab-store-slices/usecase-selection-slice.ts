@@ -12,6 +12,8 @@ import type {SliceStatus} from '../global-store.types';
 export interface UsecaseSelectionSlice {
   addSelectedUsecase: (usecase: string) => void;
   clearSelectedUsecases: () => void;
+  defaultUsecasesApplied: boolean;
+  markDefaultUsecasesApplied: () => void;
   removeSelectedUsecase: (usecase: string) => void;
   selectedUsecases: string[];
   setSelectedUsecases: (usecases: string[]) => void;
@@ -53,6 +55,12 @@ export function createUsecaseSelectionSlice<S extends UsecaseSelectionSlice>(
         component: 'usecaseSelectionSlice',
       });
       set({selectedUsecases: [] as string[]} as Partial<S>);
+    },
+
+    defaultUsecasesApplied: false,
+
+    markDefaultUsecasesApplied: () => {
+      set({defaultUsecasesApplied: true} as Partial<S>);
     },
 
     removeSelectedUsecase: (usecase: string) => {
