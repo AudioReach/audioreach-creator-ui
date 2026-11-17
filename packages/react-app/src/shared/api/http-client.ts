@@ -42,6 +42,8 @@ export interface RequestOverrides {
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+const RETRYABLE_HTTP_STATUSES = new Set([408, 429, 502, 503, 504]);
+
 interface RequestOptions extends RequestOverrides {
   body?: unknown;
   method: HttpMethod;
@@ -62,6 +64,16 @@ function backoffDelay(
   const raw = baseMs * Math.pow(2, exp);
   const jitter = Math.floor(Math.random() * jitterMs);
   return raw + jitter;
+}
+
+function isRetryableMethod(method: HttpMethod): boolean {
+  return method !== 'POST' && method !== 'PATCH';
+}
+
+function shouldRetryResponse(response: Response, method: HttpMethod): boolean {
+  return (
+    isRetryableMethod(method) && RETRYABLE_HTTP_STATUSES.has(response.status)
+  );
 }
 
 /** Compose headers — omits Content-Type for FormData (browser sets boundary). */
@@ -260,7 +272,7 @@ export class HttpClient {
           store.incrementFail(message);
         }
 
-        if (isServerError && attempt < retries) {
+        if (shouldRetryResponse(response, options.method) && attempt < retries) {
           const delay = backoffDelay(
             attempt,
             options.retryBaseDelayMs ?? this.retryBaseDelayMs,
@@ -276,7 +288,8 @@ export class HttpClient {
           error instanceof DOMException
             ? error.name === 'AbortError'
             : error instanceof Error && error.name === 'AbortError';
-        const shouldRetry = !isAbort && attempt < retries;
+        const shouldRetry =
+          isRetryableMethod(options.method) && !isAbort && attempt < retries;
 
         if (shouldRetry) {
           const delay = backoffDelay(
