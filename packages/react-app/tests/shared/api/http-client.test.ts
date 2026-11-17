@@ -167,24 +167,78 @@ describe('HttpClient', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('retries on 5xx up to maxRetries then returns a transport issue', async () => {
+    it('retries on retryable 5xx up to maxRetries', async () => {
       const client = makeClient({
         maxRetries: 2,
         retryBaseDelayMs: 0,
         retryJitterMs: 0,
       });
-      const resp = mockJsonResponse({}, {status: 500});
+      const resp = mockJsonResponse(
+        {},
+        {status: 503, statusText: 'Service Unavailable'},
+      );
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       const result = await client.get('/flaky');
 
       expect(result.issues).toEqual([
         expect.objectContaining({
-          code: 'TRANSPORT_HTTP_500',
+          code: 'TRANSPORT_HTTP_503',
           severity: 'ERROR',
         }),
       ]);
       expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not retry on 501 Not Implemented', async () => {
+      const client = makeClient({
+        maxRetries: 2,
+        retryBaseDelayMs: 0,
+        retryJitterMs: 0,
+      });
+      const resp = mockJsonResponse(
+        {},
+        {status: 501, statusText: 'Not Implemented'},
+      );
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      const result = await client.get('/not-implemented');
+
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          code: 'TRANSPORT_HTTP_501',
+          severity: 'ERROR',
+        }),
+      ]);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry POST requests on retryable status codes', async () => {
+      const client = makeClient({
+        maxRetries: 2,
+        retryBaseDelayMs: 0,
+        retryJitterMs: 0,
+      });
+      const resp = mockJsonResponse({}, {status: 502, statusText: 'Bad Gateway'});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.post('/flaky', {name: 'test'});
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry PATCH requests on retryable status codes', async () => {
+      const client = makeClient({
+        maxRetries: 2,
+        retryBaseDelayMs: 0,
+        retryJitterMs: 0,
+      });
+      const resp = mockJsonResponse({}, {status: 503});
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      await client.patch('/flaky', {name: 'test'});
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('returns a timeout issue on AbortError without retrying', async () => {
