@@ -301,7 +301,7 @@ export function useProjectOpener({
         if (component === VALIDATION_RESULTS_COMPONENT_NAME) {
           return (
             <GraphDesignerStoreContext.Provider value={tabStore}>
-              <ValidationResultPanel />
+              <ValidationResultPanel projectId={openedProject.id} />
             </GraphDesignerStoreContext.Provider>
           );
         }

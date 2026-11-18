@@ -4,6 +4,7 @@
  */
 
 import {
+  applyProjectFix,
   closeProject,
   downloadProjectFiles,
   openProject,
@@ -103,6 +104,26 @@ describe('downloadProjectFiles', () => {
 
     expect(result.data).toEqual(projectInfo);
     expect(postMock).toHaveBeenCalledWith('/projects/proj-1/disconnect');
+  });
+
+  it('applies a validation fix using command type and payload', async () => {
+    postMock.mockResolvedValue({data: undefined});
+
+    const request = {
+      commandPayload: {
+        collisionId: 'collision-1',
+        mode: 'KEEP_EXISTING',
+      },
+      commandType: 'ResolveSameGkvCollisionCommand',
+    };
+
+    const result = await applyProjectFix('project-1', request);
+
+    expect(result).toEqual({data: undefined});
+    expect(postMock).toHaveBeenCalledWith(
+      '/projects/project-1/apply-fix',
+      request,
+    );
   });
 
   // Both files extracted correctly when backend returns full multipart response

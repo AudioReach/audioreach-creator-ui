@@ -26,7 +26,9 @@ import type {
   ReconcileOutcome,
 } from './apply-discard.types';
 
-function getTransportHttpStatus(result: ApiResult<unknown>): number | undefined {
+function getTransportHttpStatus(
+  result: ApiResult<unknown>,
+): number | undefined {
   const issueCode = result.issues?.find((issue) =>
     issue.code.startsWith('TRANSPORT_HTTP_'),
   )?.code;
@@ -58,15 +60,8 @@ export async function runApplyReconcile(
     return {kind: 'reconcileTransportIndeterminate'};
   }
 
-  if (!result.data && hasBlockingIssues(result)) {
-    return {
-      kind: 'reconcileFailed',
-      message: getIssueMessage(result, 'Failed to reconcile staged changes'),
-    };
-  }
-
   const response = result.data;
-  const issues = response?.issues ?? [];
+  const issues = response?.issues ?? result.issues ?? [];
   const {blocking, notices} = partitionIssues(issues);
 
   if (blocking.length > 0) {

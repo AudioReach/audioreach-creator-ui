@@ -28,4 +28,35 @@ describe('createValidationResultSlice', () => {
       'warning',
     ]);
   });
+
+  it('removes one validation result and recomputes counts', () => {
+    const store = createTestStore();
+    store.getState().addValidationResult({
+      message: 'Error row',
+      severity: 'error',
+    });
+    store.getState().addValidationResult({
+      message: 'Warning row',
+      severity: 'warning',
+    });
+    const errorId = store.getState().validationResults[0].id;
+
+    store.getState().removeValidationResult(errorId);
+
+    expect(store.getState().validationResults).toHaveLength(1);
+    expect(store.getState().validationResults[0].message).toBe('Warning row');
+    expect(store.getState().errorCount).toBe(0);
+    expect(store.getState().warningCount).toBe(1);
+  });
+
+  it('clears row selection when the removed row was selected', () => {
+    const store = createTestStore();
+    store.getState().addValidationResult({message: 'Row', severity: 'error'});
+    const id = store.getState().validationResults[0].id;
+    store.getState().selectRow(id);
+
+    store.getState().removeValidationResult(id);
+
+    expect(store.getState().selectedRowId).toBeNull();
+  });
 });

@@ -192,25 +192,27 @@ describe('mapIssueToValidationResult', () => {
   });
 
   describe('fixOptions handling', () => {
-    it('sets canShowControls to true when fixOptions is present and non-empty', () => {
+    it('stores fix options and enables auto fix', () => {
       const issue: ApiIssue = {
-        code: 'FIX001',
+        code: 'ARC-ROUTING-SAME-GKV-CHOICE-REQUIRED',
         fixOptions: [
           {
-            commandPayload: {},
-            commandType: 'FIX_COMMAND',
-            description: 'Fix this issue',
-            id: 'fix-1',
+            commandPayload: {mode: 'KEEP_EXISTING'},
+            commandType: 'ResolveSameGkvCollisionCommand',
+            description: 'Keep existing usecase',
             requiredClientInputs: [],
+            systemId: 'collision-1-KEEP_EXISTING',
           },
         ],
-        message: 'Fixable error',
+        message: 'Choose a routing option',
         severity: 'ERROR',
       };
 
       const result = mapIssueToValidationResult(issue);
 
-      expect(result.canShowControls).toBe(true);
+      expect(result.canAutoFix).toBe(true);
+      expect(result.canShowControls).toBeUndefined();
+      expect(result.fixOptions).toEqual(issue.fixOptions);
     });
 
     it('does not set canShowControls when fixOptions is absent', () => {

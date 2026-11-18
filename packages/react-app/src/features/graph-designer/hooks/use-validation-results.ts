@@ -12,6 +12,7 @@ export function useValidationResults() {
     clearValidationResults: state.clearValidationResults,
     criticalCount: state.criticalCount,
     errorCount: state.errorCount,
+    removeValidationResult: state.removeValidationResult,
     searchQuery: state.searchQuery,
     selectedRowId: state.selectedRowId,
     selectedSeverities: state.selectedSeverities,

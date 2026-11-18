@@ -37,7 +37,8 @@ export function mapIssueToValidationResult(
   }
 
   if (issue.fixOptions && issue.fixOptions.length > 0) {
-    result.canShowControls = true;
+    result.canAutoFix = true;
+    result.fixOptions = issue.fixOptions;
   }
 
   return result;

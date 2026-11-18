@@ -12,6 +12,11 @@ import type {ApiResult} from '~shared/api/api-response.types';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api/api-result-utils';
 import {httpClient} from '~shared/api/http-client';
 
+export interface ApplyFixRequestDto {
+  commandPayload: Record<string, unknown>;
+  commandType: string;
+}
+
 /**
  * Fetch all projects.
  * Returns ApiResult<Project[]> and does not throw; callers should inspect result.success.
@@ -68,6 +73,13 @@ export async function closeProject(
   return httpClient.post<ProjectInfoResponseDto>(
     `/projects/${projectId}/disconnect`,
   );
+}
+
+export async function applyProjectFix(
+  projectId: string,
+  request: ApplyFixRequestDto,
+): Promise<ApiResult<void>> {
+  return httpClient.post<void>(`/projects/${projectId}/apply-fix`, request);
 }
 
 /**
