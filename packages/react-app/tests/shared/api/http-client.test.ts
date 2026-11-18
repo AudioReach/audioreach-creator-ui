@@ -167,6 +167,39 @@ describe('HttpClient', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
+    it('preserves backend issues from a non-OK JSON response', async () => {
+      const client = makeClient();
+      const issue = {
+        code: 'ARC-ROUTING-SAME-GKV-CHOICE-REQUIRED',
+        fixOptions: [
+          {
+            commandPayload: {mode: 'KEEP_EXISTING'},
+            commandType: 'ResolveSameGkvCollisionCommand',
+            description: 'Keep existing usecase',
+            requiredClientInputs: [],
+            systemId: 'collision-1-KEEP_EXISTING',
+          },
+        ],
+        message: 'Same-GKV collision requires a routing choice.',
+        severity: 'ERROR',
+      };
+      const resp = mockJsonResponse(
+        {
+          errorCode: 'DOMAIN_RULE_VIOLATION',
+          issues: [issue],
+          statusCode: 422,
+        },
+        {status: 422, statusText: 'Unprocessable Entity'},
+      );
+      (global.fetch as jest.Mock).mockResolvedValue(resp);
+
+      const result = await client.post('/projects/7/create-usecases', {});
+
+      expect(result.data).toBeUndefined();
+      expect(result.issues).toEqual([issue]);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
     it('retries on retryable 5xx up to maxRetries', async () => {
       const client = makeClient({
         maxRetries: 2,
@@ -219,7 +252,10 @@ describe('HttpClient', () => {
         retryBaseDelayMs: 0,
         retryJitterMs: 0,
       });
-      const resp = mockJsonResponse({}, {status: 502, statusText: 'Bad Gateway'});
+      const resp = mockJsonResponse(
+        {},
+        {status: 502, statusText: 'Bad Gateway'},
+      );
       (global.fetch as jest.Mock).mockResolvedValue(resp);
 
       await client.post('/flaky', {name: 'test'});

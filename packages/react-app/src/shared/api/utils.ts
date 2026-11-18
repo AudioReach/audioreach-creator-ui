@@ -30,6 +30,15 @@ export async function processApiResponse<T>(
   response: Response,
 ): Promise<ApiResult<T>> {
   if (!response.ok) {
+    try {
+      const body = (await response.json()) as Partial<ApiResult<T>>;
+      if (Array.isArray(body.issues) && body.issues.length > 0) {
+        return body;
+      }
+    } catch {
+      // Fall through to the synthetic transport issue below.
+    }
+
     return {
       issues: [
         createTransportIssue(

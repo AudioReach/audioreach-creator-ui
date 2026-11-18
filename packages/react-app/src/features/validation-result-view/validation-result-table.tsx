@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
 } from 'react';
 
 import {ExternalLink, Wand2} from 'lucide-react';
@@ -27,14 +28,37 @@ import {IconButton} from '@qualcomm-ui/react/button';
 import {flexRender, Table, useReactTable} from '@qualcomm-ui/react/table';
 import {Tooltip} from '@qualcomm-ui/react/tooltip';
 
-import {useValidationResults} from '~features/graph-designer';
+import {applyProjectFix} from '~entities/project';
+import {
+  mapIssueToValidationResult,
+  useValidationResults,
+} from '~features/graph-designer';
+import {
+  getIssueMessage,
+  hasBlockingIssues,
+  type ApiIssueFixOption,
+} from '~shared/api';
+import {showToast} from '~shared/controls/global-toaster';
 import type {ValidationResult} from '~shared/store/tab-store-slices/validation-result-slice';
 
+import {FixOptionDialog} from './fix-option-dialog';
 import {filterValidationResults} from './lib/filter-validation-results';
 import {getSeverityIcon} from './utils/severity-icons';
 
 // React Table column helper for type-safe column definitions
 const columnHelper = createColumnHelper<ValidationResult>();
+
+interface ValidationResultTableProps {
+  projectId: string;
+}
+
+function hasExecutableFixOption(result: ValidationResult): boolean {
+  return (
+    result.fixOptions?.some(
+      (option) => option.requiredClientInputs.length === 0,
+    ) ?? false
+  );
+}
 
 /**
  * TextCell component renders text content with overflow handling and conditional
@@ -120,15 +144,21 @@ function TextCell({
  * - action buttons
  * - Column resizing capabilities
  */
-function ValidationResultTable() {
+function ValidationResultTable({projectId}: ValidationResultTableProps) {
   const {
+    addValidationResult,
     clearRowSelection,
+    removeValidationResult,
     searchQuery,
     selectedRowId,
     selectedSeverities,
     selectRow,
     validationResults,
   } = useValidationResults();
+  const [fixingResult, setFixingResult] = useState<ValidationResult | null>(
+    null,
+  );
+  const [isSubmittingFix, setIsSubmittingFix] = useState(false);
 
   const filteredResults = useMemo(
     () =>
@@ -138,6 +168,69 @@ function ValidationResultTable() {
         searchQuery,
       ),
     [validationResults, selectedSeverities, searchQuery],
+  );
+
+  const openFixDialog = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, result: ValidationResult): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      setFixingResult(result);
+    },
+    [],
+  );
+
+  const handleCancelFix = useCallback((): void => {
+    setFixingResult(null);
+  }, []);
+
+  const handleConfirmFix = useCallback(
+    async (option: ApiIssueFixOption): Promise<void> => {
+      if (!fixingResult || isSubmittingFix) {
+        return;
+      }
+
+      setIsSubmittingFix(true);
+      try {
+        const result = await applyProjectFix(projectId, {
+          commandPayload: option.commandPayload,
+          commandType: option.commandType,
+        });
+        const returnedIssues = result.issues ?? [];
+
+        if (hasBlockingIssues(result)) {
+          for (const issue of returnedIssues) {
+            addValidationResult(mapIssueToValidationResult(issue));
+          }
+          showToast(
+            getIssueMessage(result, 'Fix could not be staged'),
+            'danger',
+          );
+          setFixingResult(null);
+          return;
+        }
+
+        removeValidationResult(fixingResult.id);
+        for (const issue of returnedIssues) {
+          addValidationResult(mapIssueToValidationResult(issue));
+        }
+        showToast('Fix staged. Click Apply to commit.', 'success');
+        setFixingResult(null);
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : 'Failed to stage fix',
+          'danger',
+        );
+      } finally {
+        setIsSubmittingFix(false);
+      }
+    },
+    [
+      addValidationResult,
+      fixingResult,
+      isSubmittingFix,
+      projectId,
+      removeValidationResult,
+    ],
   );
 
   const columns = useMemo(
@@ -195,18 +288,24 @@ function ValidationResultTable() {
         size: 380,
       }),
       columnHelper.accessor('canAutoFix', {
-        cell: (info: CellContext<ValidationResult, boolean | undefined>) => (
-          <div className="flex items-center justify-center">
-            <IconButton
-              aria-label="Auto fix"
-              disabled={!info.getValue()}
-              emphasis="neutral"
-              icon={Wand2}
-              size="sm"
-              variant="ghost"
-            />
-          </div>
-        ),
+        cell: (info: CellContext<ValidationResult, boolean | undefined>) => {
+          const result = info.row.original;
+          return (
+            <div className="flex items-center justify-center">
+              <IconButton
+                aria-label="Auto fix"
+                disabled={!info.getValue() || !hasExecutableFixOption(result)}
+                emphasis="neutral"
+                icon={Wand2}
+                onClick={(event: MouseEvent<HTMLButtonElement>) =>
+                  openFixDialog(event, result)
+                }
+                size="sm"
+                variant="ghost"
+              />
+            </div>
+          );
+        },
         header: 'Auto Fix',
         maxSize: 80,
         minSize: 50,
@@ -231,7 +330,7 @@ function ValidationResultTable() {
         size: 60,
       }),
     ],
-    [selectedRowId],
+    [openFixDialog, selectedRowId],
   );
 
   // Initialize React Table with configuration
@@ -263,7 +362,7 @@ function ValidationResultTable() {
                       ) => (
                         <Table.HeaderCell
                           key={header.id}
-                          className={`relative select-none whitespace-nowrap ${index !== 0 ? 'border-neutral-03 border-l-2' : ''}`}
+                          className={`relative whitespace-nowrap select-none ${index !== 0 ? 'border-neutral-03 border-l-2' : ''}`}
                           style={{width: header.getSize()}}
                         >
                           <div className="inline-flex w-full items-center justify-between gap-2">
@@ -342,6 +441,17 @@ function ValidationResultTable() {
           </Table.Table>
         </Table.ScrollContainer>
       </Table.Root>
+      {fixingResult && (
+        <FixOptionDialog
+          isSubmitting={isSubmittingFix}
+          onCancel={handleCancelFix}
+          onConfirm={(option) => {
+            void handleConfirmFix(option);
+          }}
+          open={Boolean(fixingResult)}
+          result={fixingResult}
+        />
+      )}
     </div>
   );
 }

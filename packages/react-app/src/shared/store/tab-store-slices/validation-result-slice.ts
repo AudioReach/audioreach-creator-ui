@@ -5,6 +5,7 @@
 
 import type {StoreApi} from 'zustand';
 
+import type {ApiIssueFixOption} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 import type {SliceStatus} from '../global-store.types';
@@ -27,6 +28,7 @@ export interface ValidationResult {
   connectionId?: string;
   errorCode?: string;
   errorDetails?: string;
+  fixOptions?: ApiIssueFixOption[];
   id: string;
   message: string;
   moduleInstanceId?: string;
@@ -40,6 +42,7 @@ export interface ValidationResultSlice {
   clearValidationResults: () => void;
   criticalCount: number;
   errorCount: number;
+  removeValidationResult: (id: string) => void;
   searchQuery: string;
   selectedRowId: string | null;
   selectedSeverities: SeverityType[];
@@ -129,6 +132,22 @@ export function createValidationResultSlice<S extends ValidationResultSlice>(
     criticalCount: 0,
 
     errorCount: 0,
+
+    removeValidationResult: (id: string) => {
+      logger.debug('validationResultSlice: removeValidationResult', {
+        action: 'removeValidationResult',
+        component: 'validationResultSlice',
+      });
+      set((state: S) => {
+        const updated = state.validationResults.filter((row) => row.id !== id);
+        return {
+          ...computeCounts(updated),
+          selectedRowId:
+            state.selectedRowId === id ? null : state.selectedRowId,
+          validationResults: updated,
+        } as Partial<S>;
+      });
+    },
 
     searchQuery: '',
 

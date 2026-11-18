@@ -55,8 +55,8 @@ export interface ApiFixOptionDto {
   commandPayload: Record<string, unknown>;
   commandType: string;
   description: string;
-  id: string;
   requiredClientInputs: ApiClientInputSpecDto[];
+  systemId: string;
 }
 
 export interface ApiIssueItem {

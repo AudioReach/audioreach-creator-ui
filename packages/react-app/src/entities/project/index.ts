@@ -1,4 +1,10 @@
-export {getProjectById, getProjects, updateProject} from './api/projects-api';
+export {
+  applyProjectFix,
+  getProjectById,
+  getProjects,
+  updateProject,
+} from './api/projects-api';
+export type {ApplyFixRequestDto} from './api/projects-api';
 export type {default as ProjectInfo} from './model/project-info.types';
 export type {
   ProjectInfoResponseDto,

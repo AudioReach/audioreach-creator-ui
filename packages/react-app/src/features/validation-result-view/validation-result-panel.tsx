@@ -8,11 +8,15 @@ import type {FC} from 'react';
 import ValidationResultTable from './validation-result-table';
 import ValidationResultToolbar from './validation-result-toolbar';
 
+interface ValidationResultPanelProps {
+  projectId: string;
+}
+
 /**
  * Combines ValidationResultToolbar and ValidationResultTable with proper styling
  * for FlexLayout integration
  */
-const ValidationResultPanel: FC = () => {
+const ValidationResultPanel: FC<ValidationResultPanelProps> = ({projectId}) => {
   return (
     <div
       style={{
@@ -33,7 +37,7 @@ const ValidationResultPanel: FC = () => {
           minHeight: '0',
         }}
       >
-        <ValidationResultTable />
+        <ValidationResultTable projectId={projectId} />
       </div>
     </div>
   );

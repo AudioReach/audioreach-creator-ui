@@ -17,7 +17,11 @@ import {
   runDiscard,
   runFinalize,
 } from '~features/graph-designer/model/apply-discard-coordinator';
-import {createTransportIssue, isTransportFailure, type ApiResult} from '~shared/api';
+import {
+  createTransportIssue,
+  isTransportFailure,
+  type ApiResult,
+} from '~shared/api';
 
 function makeIssue(overrides: Partial<ApiIssueItem> = {}): ApiIssueItem {
   return {
@@ -71,12 +75,14 @@ describe('runApplyReconcile', () => {
   });
 
   it('returns reconcileTransportIndeterminate on create-usecases transport failure', async () => {
-    const createUsecases = jest.fn().mockResolvedValue(
-      apiTransportFailure<CreateUsecasesResponseDto>(
-        'NETWORK',
-        'Network error: fetch failed',
-      ),
-    );
+    const createUsecases = jest
+      .fn()
+      .mockResolvedValue(
+        apiTransportFailure<CreateUsecasesResponseDto>(
+          'NETWORK',
+          'Network error: fetch failed',
+        ),
+      );
 
     const outcome = await runApplyReconcile(
       {createUsecases},
@@ -86,12 +92,14 @@ describe('runApplyReconcile', () => {
     expect(outcome).toEqual({kind: 'reconcileTransportIndeterminate'});
   });
 
-  it('returns reconcileFailed on a determinate create-usecases failure', async () => {
-    const createUsecases = jest.fn().mockResolvedValue(
-      apiFailure<CreateUsecasesResponseDto>(
-        'Failed to reconcile staged changes',
-      ),
-    );
+  it('returns blocked on a determinate create-usecases failure with issues', async () => {
+    const createUsecases = jest
+      .fn()
+      .mockResolvedValue(
+        apiFailure<CreateUsecasesResponseDto>(
+          'Failed to reconcile staged changes',
+        ),
+      );
 
     const outcome = await runApplyReconcile(
       {createUsecases},
@@ -99,8 +107,13 @@ describe('runApplyReconcile', () => {
     );
 
     expect(outcome).toEqual({
-      kind: 'reconcileFailed',
-      message: 'Failed to reconcile staged changes',
+      issues: [
+        makeIssue({
+          message: 'Failed to reconcile staged changes',
+          severity: 'ERROR',
+        }),
+      ],
+      kind: 'blocked',
     });
   });
 
@@ -270,12 +283,14 @@ describe('runFinalize', () => {
   });
 
   it('returns stageTransportIndeterminate and publishes no rows on stage transport failure', async () => {
-    const stageUsecases = jest.fn().mockResolvedValue(
-      apiTransportFailure<StageUsecasesResponseDto>(
-        'NETWORK',
-        'Network error: fetch failed',
-      ),
-    );
+    const stageUsecases = jest
+      .fn()
+      .mockResolvedValue(
+        apiTransportFailure<StageUsecasesResponseDto>(
+          'NETWORK',
+          'Network error: fetch failed',
+        ),
+      );
     const commitChanges = jest.fn();
     const endSession = jest.fn();
 
@@ -329,12 +344,14 @@ describe('runFinalize', () => {
         success: true,
       }),
     );
-    const commitChanges = jest.fn().mockResolvedValue(
-      apiTransportFailure<CommitChangesResponseDto>(
-        'TIMEOUT',
-        'Request timed out',
-      ),
-    );
+    const commitChanges = jest
+      .fn()
+      .mockResolvedValue(
+        apiTransportFailure<CommitChangesResponseDto>(
+          'TIMEOUT',
+          'Request timed out',
+        ),
+      );
     const endSession = jest.fn();
 
     const outcome = await runFinalize(
@@ -520,10 +537,7 @@ describe('runFinalize', () => {
     const endSession = jest
       .fn()
       .mockResolvedValueOnce(
-        apiTransportFailure<SessionResponseDto>(
-          'TIMEOUT',
-          'Request timed out',
-        ),
+        apiTransportFailure<SessionResponseDto>('TIMEOUT', 'Request timed out'),
       )
       .mockResolvedValueOnce(apiSuccess(makeSessionResponse()));
     const stageUsecases = jest.fn().mockResolvedValue(
@@ -617,12 +631,14 @@ describe('runDiscard', () => {
   });
 
   it('returns discardChangesTransportIndeterminate on discard transport failure and never calls endSession', async () => {
-    const discardChanges = jest.fn().mockResolvedValue(
-      apiTransportFailure<DiscardChangesResponseDto>(
-        'NETWORK',
-        'Network error: fetch failed',
-      ),
-    );
+    const discardChanges = jest
+      .fn()
+      .mockResolvedValue(
+        apiTransportFailure<DiscardChangesResponseDto>(
+          'NETWORK',
+          'Network error: fetch failed',
+        ),
+      );
     const endSession = jest.fn();
 
     const outcome = await runDiscard(
@@ -769,10 +785,7 @@ describe('runDiscard', () => {
         ),
       )
       .mockResolvedValueOnce(
-        apiTransportFailure<SessionResponseDto>(
-          'TIMEOUT',
-          'Request timed out',
-        ),
+        apiTransportFailure<SessionResponseDto>('TIMEOUT', 'Request timed out'),
       );
 
     const outcome = await runDiscard(
