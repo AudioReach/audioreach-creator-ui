@@ -59,6 +59,9 @@ function buildCollapseContext(
     if (sgId !== undefined) {
       containerToSubgraph.set(c.id, sgId);
       insideNodeToSubgraph.set(c.id, sgId);
+      if (c.logicalContainerId) {
+        containerToSubgraph.set(c.logicalContainerId, sgId);
+      }
     }
   }
   for (const m of level.modules ?? []) {
