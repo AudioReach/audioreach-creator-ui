@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ApiIssueItem, IssueSeverity} from '~entities/api-issues';
+import type {ApiIssue} from '~shared/api';
 import type {
   SeverityType,
   ValidationResult,
 } from '~shared/store/tab-store-slices/validation-result-slice';
 
-const SEVERITY_MAP: Record<IssueSeverity, SeverityType> = {
+const SEVERITY_MAP: Record<ApiIssue['severity'], SeverityType> = {
   ERROR: 'error',
   FATAL: 'critical',
   WARNING: 'warning',
 };
 
 export function mapIssueToValidationResult(
-  issue: ApiIssueItem,
+  issue: ApiIssue,
 ): Omit<ValidationResult, 'id'> {
   const result: Omit<ValidationResult, 'id'> = {
     errorCode: issue.code,

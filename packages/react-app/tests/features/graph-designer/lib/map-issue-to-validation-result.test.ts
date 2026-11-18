@@ -3,13 +3,34 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {ApiIssueItem} from '~entities/api-issues';
 import {mapIssueToValidationResult} from '~features/graph-designer/lib/map-issue-to-validation-result';
+import type {ApiIssue} from '~shared/api';
 
 describe('mapIssueToValidationResult', () => {
+  it('accepts shared ApiIssue and maps core fields', () => {
+    const issue: ApiIssue = {
+      code: 'OPEN_WARN_001',
+      impactedEntity: {
+        entityType: 'Subgraph',
+        systemId: 'subgraph-1',
+      },
+      message: 'Workspace opened with warnings',
+      severity: 'WARNING',
+    };
+
+    const result = mapIssueToValidationResult(issue);
+
+    expect(result).toMatchObject({
+      errorCode: 'OPEN_WARN_001',
+      message: 'Workspace opened with warnings',
+      severity: 'warning',
+      subgraphId: 'subgraph-1',
+    });
+  });
+
   describe('severity mapping', () => {
     it('maps FATAL to critical', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'ERR001',
         message: 'Fatal error',
         severity: 'FATAL',
@@ -21,7 +42,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('maps ERROR to error', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'ERR002',
         message: 'Error occurred',
         severity: 'ERROR',
@@ -33,7 +54,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('maps WARNING to warning', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'WARN001',
         message: 'Warning message',
         severity: 'WARNING',
@@ -47,7 +68,7 @@ describe('mapIssueToValidationResult', () => {
 
   describe('entity type mapping', () => {
     it('maps SpfModule entityType to moduleInstanceId', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'MOD001',
         impactedEntity: {
           displayName: 'Module A',
@@ -66,7 +87,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('maps Subgraph entityType to subgraphId', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'SG001',
         impactedEntity: {
           displayName: 'Subgraph A',
@@ -85,7 +106,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('maps DataLink entityType to connectionId', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'DL001',
         impactedEntity: {
           displayName: 'Data Link',
@@ -104,7 +125,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('maps ControlLink entityType to connectionId', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'CL001',
         impactedEntity: {
           displayName: 'Control Link',
@@ -123,7 +144,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('does not set id fields for Unknown entityType', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'UNK001',
         impactedEntity: {
           displayName: 'Unknown Entity',
@@ -142,7 +163,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('does not set id fields when impactedEntity is absent', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'NO_ENTITY',
         message: 'No entity issue',
         severity: 'ERROR',
@@ -158,7 +179,7 @@ describe('mapIssueToValidationResult', () => {
 
   describe('code to errorCode pass-through', () => {
     it('passes code through to errorCode', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'CUSTOM_ERROR_CODE',
         message: 'Some error',
         severity: 'ERROR',
@@ -172,7 +193,7 @@ describe('mapIssueToValidationResult', () => {
 
   describe('fixOptions handling', () => {
     it('sets canShowControls to true when fixOptions is present and non-empty', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'FIX001',
         fixOptions: [
           {
@@ -193,7 +214,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('does not set canShowControls when fixOptions is absent', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'NO_FIX',
         message: 'No fix available',
         severity: 'ERROR',
@@ -205,7 +226,7 @@ describe('mapIssueToValidationResult', () => {
     });
 
     it('does not set canShowControls when fixOptions is empty array', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'EMPTY_FIX',
         fixOptions: [],
         message: 'Empty fix options',
@@ -220,7 +241,7 @@ describe('mapIssueToValidationResult', () => {
 
   describe('message pass-through', () => {
     it('passes message through unchanged', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'MSG001',
         message: 'This is the exact message',
         severity: 'WARNING',
@@ -234,7 +255,7 @@ describe('mapIssueToValidationResult', () => {
 
   describe('canAutoFix', () => {
     it('does not set canAutoFix', () => {
-      const issue: ApiIssueItem = {
+      const issue: ApiIssue = {
         code: 'AUTO001',
         message: 'Auto fix test',
         severity: 'ERROR',

@@ -15,6 +15,12 @@ import type {SliceStatus} from '../global-store.types';
 
 export type SeverityType = 'critical' | 'error' | 'warning' | 'info';
 
+const DEFAULT_SELECTED_SEVERITIES: SeverityType[] = [
+  'critical',
+  'error',
+  'warning',
+];
+
 export interface ValidationResult {
   canAutoFix?: boolean;
   canShowControls?: boolean;
@@ -128,7 +134,7 @@ export function createValidationResultSlice<S extends ValidationResultSlice>(
 
     selectedRowId: null,
 
-    selectedSeverities: [],
+    selectedSeverities: [...DEFAULT_SELECTED_SEVERITIES],
 
     selectRow: (id: string) => {
       logger.debug('validationResultSlice: selectRow', {
