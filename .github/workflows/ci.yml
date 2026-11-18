@@ -1,15 +1,18 @@
-# This workflow is triggered on pull requests to main or feature branches, and can be manually triggered.
-# It runs the CI pipeline on Ubuntu latest with Node.js version 22.
-# The workflow checks out the code, sets up Node.js and pnpm, gets the pnpm store directory, and then runs the CI pipeline using pnpm.
-# The workflow is designed to ensure that code changes are tested and validated before being merged into the main branch.
-# It also allows for manual triggering of the workflow for testing purposes.
-# The workflow uses a matrix strategy to run the pipeline on different Node.js versions, ensuring compatibility across different environments.
-
 name: CI Workflow
 on:
   pull_request:
-    branches: [main, "feature/*"]
+    branches: [main, 'feature/*']
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Validation to run
+        type: choice
+        default: full
+        options:
+          - full
+          - nightly
 
 # This job only reads the repo and uploads artifacts; drop the default token
 # down to read-only.
@@ -19,7 +22,7 @@ permissions:
 # Cancel superseded runs for the same ref so a new push to a PR stops the
 # previous in-flight run instead of queueing another full pipeline.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || inputs.mode || 'full' }}
   cancel-in-progress: true
 
 jobs:
@@ -62,26 +65,50 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Lint
+        if: github.event_name != 'schedule' && inputs.mode != 'nightly'
         run: pnpm lint
 
       - name: Type Check
+        if: github.event_name != 'schedule' && inputs.mode != 'nightly'
         run: pnpm typecheck
 
       - name: Build
+        if: github.event_name != 'schedule' && inputs.mode != 'nightly'
         run: pnpm build
 
-      - name: Test (React only)
-        run: pnpm run -C packages/react-app test:ci
+      - name: Build Jest workspace dependency
+        if: github.event_name == 'schedule' || inputs.mode == 'nightly'
+        run: pnpm --filter @audioreach-creator-ui/api-utils build
 
-      - name: Upload test results
+      - name: Install XML report dependency
+        run: |
+          python3 -m venv "$RUNNER_TEMP/report-tools"
+          "$RUNNER_TEMP/report-tools/bin/python" -m pip install \
+            --disable-pip-version-check -r .github/scripts/requirements.txt
+          echo "$RUNNER_TEMP/report-tools/bin" >> "$GITHUB_PATH"
+
+      - name: Test Jest packages
+        id: test
+        run: python3 .github/scripts/run_jest_packages.py
+
+      - name: Merge Jest reports by package
+        if: always() && (steps.test.outcome == 'success' || steps.test.outcome == 'failure')
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/ui-test-artifacts
+        run: python3 .github/scripts/run_jest_packages.py --merge --output "$ARTIFACT_DIR/test-results/merged-results.xml"
+
+      - name: Merge coverage by package
+        if: always() && (steps.test.outcome == 'success' || steps.test.outcome == 'failure')
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/ui-test-artifacts
+        run: python3 .github/scripts/run_jest_packages.py --coverage --output "$ARTIFACT_DIR/coverage/clover.xml"
+
+      - name: Upload test results and coverage
         uses: actions/upload-artifact@v4
-        if: >-
-          always() &&
-          github.event.pull_request.head.repo.fork == false
+        if: always() && (steps.test.outcome == 'success' || steps.test.outcome == 'failure')
         with:
-          name: test-results-node-${{ matrix.node-version }}
-          path: |
-            coverage/**/*
-            packages/**/test-results/**/*
-            packages/**/coverage/**/*
-          retention-days: 5
+          name: ui-jest-results-${{ github.run_id }}
+          path: ${{ runner.temp }}/ui-test-artifacts
+          compression-level: 9
+          retention-days: 3
+          if-no-files-found: warn

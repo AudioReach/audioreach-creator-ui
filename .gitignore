@@ -88,6 +88,7 @@ tsconfig.*.tsbuildinfo
 # Additional test output formats
 **/results.json
 **/junit.xml
+.github/scripts/__pycache__/
 
 ###############################################################################
 # OS / editor / IDE files
