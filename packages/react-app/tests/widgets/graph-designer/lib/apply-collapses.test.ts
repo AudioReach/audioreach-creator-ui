@@ -42,7 +42,11 @@ function container(containerSystemId: number, sgId: number): ContainerNode {
   };
 }
 
-function moduleNode(id: number, containerSystemId: number, sgId: number): ModuleNode {
+function moduleNode(
+  id: number,
+  containerSystemId: number,
+  sgId: number,
+): ModuleNode {
   return {
     height: 80,
     id: `module-${id}`,
@@ -133,6 +137,45 @@ describe('applyCollapses', () => {
 
     expect(out.modules?.map((module) => module.id)).toEqual(['module-3']);
     expect(out.containers?.map((node) => node.id)).toEqual(['container-2:2']);
+  });
+
+  it('removes descendants whose parent is a split container part', () => {
+    const level = baseLevel();
+    const splitContainerPart0 = {
+      ...level.containers![0],
+      logicalContainerId: 'container-1:1:part-0',
+    };
+    const splitContainerPart1 = {
+      ...level.containers![0],
+      logicalContainerId: 'container-1:1:part-1',
+    };
+    level.containers = [
+      splitContainerPart0,
+      splitContainerPart1,
+      level.containers![1],
+    ];
+    level.modules = level.modules!.map((module) => {
+      if (module.id === 'module-1') {
+        return {...module, parentId: splitContainerPart0.logicalContainerId};
+      }
+      if (module.id === 'module-2') {
+        return {...module, parentId: splitContainerPart1.logicalContainerId};
+      }
+      return module;
+    });
+
+    const out = applyCollapses(level, new Set([1]));
+
+    expect(out.modules?.map((module) => module.id)).toEqual(['module-3']);
+    expect(out.containers?.map((node) => node.id)).toEqual(['container-2:2']);
+    expect(out.dataLinks).toEqual([]);
+    expect(out.proxyDataLinks).toEqual([
+      expect.objectContaining({
+        sourceNodeId: 'subgraph-proxy-1',
+        sourcePortId: 'proxy:1:module-2:out',
+        targetNodeId: 'module-3',
+      }),
+    ]);
   });
 
   it('drops wholly-internal edges and keeps wholly-external edges', () => {
