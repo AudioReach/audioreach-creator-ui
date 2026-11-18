@@ -19,6 +19,7 @@ import {
   Download,
   Edit,
   FileText,
+  LayoutFreeform,
   Package,
   Redo,
   Search,
@@ -761,6 +762,18 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     simplifySubsystems,
   ]);
 
+  // Side nav > View > Auto Align Graphs re-runs the layout on the active graph.
+  const handleAutoAlignGraphs = useCallback(() => {
+    const current = store.getState().levelView;
+    if (!current) {
+      return;
+    }
+    const {levelId: activeLevelId} = current;
+    setPositionOverridesByLevel((p) => ({...p, [activeLevelId]: {}}));
+    setParentSizesByLevel((p) => ({...p, [activeLevelId]: {}}));
+    void layoutLevelView(current).then(setLevelView);
+  }, [setLevelView, store]);
+
   // Effect — proactively fetch enable-parameter values so canvas enable
   // overlays reflect real state without opening a module data tab
   // (design.md §21.8). Gated on both graph data and module definitions being
@@ -1370,12 +1383,25 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         popoverContent: displayOptionsContent,
         tooltip: 'Display Options',
       },
+      {
+        disabled: !hasLoadedGraphContent,
+        group: 'View',
+        icon: LayoutFreeform,
+        id: 'auto-align-graphs',
+        label: 'Auto Align Graphs',
+      },
     ],
-    [hasSelection, canUndoRedo, displayOptionsContent],
+    [
+      hasSelection,
+      hasLoadedGraphContent,
+      canUndoRedo,
+      displayOptionsContent,
+    ],
   );
 
   const sideNavHandlers = useMemo(
     () => ({
+      'auto-align-graphs': handleAutoAlignGraphs,
       copy: () => {
         logger.info('Copy action triggered', {
           action: 'copy',
@@ -1450,7 +1476,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         showToast('Opening View/Edit Definitions', 'info');
       },
     }),
-    [openSearch],
+    [handleAutoAlignGraphs, openSearch],
   );
 
   const sideNavShortcuts = useMemo(() => {
