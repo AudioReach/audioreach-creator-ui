@@ -16,13 +16,12 @@ import {
 import {useUserPreferences} from '~shared/config/hooks';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
-import {tabFocusRegistry, VALIDATION_RESULTS_TAB_NODE_ID} from '~shared/store';
-import type {ValidationResult} from '~shared/store/tab-store-slices/validation-result-slice';
 
 import {buildCreateUsecasesRequest} from '../lib/build-create-usecases-request';
 import {isSubsystemScopedFilter} from '../lib/is-subsystem-scoped-filter';
 import {mapFinalizeErrorToValidationResults} from '../lib/map-finalize-error-to-validation-results';
 import {mapIssueToValidationResult} from '../lib/map-issue-to-validation-result';
+import {publishValidationResults} from '../lib/publish-validation-results';
 import {
   runApplyReconcile,
   runDiscard,
@@ -108,21 +107,6 @@ function logTerminal(
   }
 }
 
-function publishRows(
-  store: GraphDesignerStoreApi,
-  rows: Omit<ValidationResult, 'id'>[],
-): void {
-  const {addValidationResult, clearValidationResults} = store.getState();
-  clearValidationResults();
-  if (rows.length === 0) {
-    return;
-  }
-  for (const row of rows) {
-    addValidationResult(row);
-  }
-  tabFocusRegistry.focusTab(VALIDATION_RESULTS_TAB_NODE_ID);
-}
-
 async function settleAfterReload(
   store: GraphDesignerStoreApi,
   reload: () => Promise<void>,
@@ -185,7 +169,10 @@ async function finalize(
   switch (outcome.kind) {
     case 'stageFailed': {
       showToast('Stage failed', 'danger');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       store.getState().recordStageProcessed(outcome.processedChangeIds);
       logTerminal(actionLabel, outcome.kind, projectId, 'error');
       return;
@@ -197,13 +184,19 @@ async function finalize(
     }
     case 'commitRejected': {
       showToast('Commit rejected', 'danger');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       logTerminal(actionLabel, outcome.kind, projectId, 'error');
       return;
     }
     case 'commitPartial': {
       showToast('Partial commit — reload to reconcile', 'warning');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       logTerminal(actionLabel, outcome.kind, projectId, 'aborted');
       return;
     }
@@ -214,7 +207,10 @@ async function finalize(
     }
     case 'endSessionDeterminate': {
       showToast('End session failed', 'danger');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       logTerminal(actionLabel, outcome.kind, projectId, 'error');
       return;
     }
@@ -286,7 +282,10 @@ async function performDiscard(
     }
     case 'discardDeterminate': {
       showToast('Discard failed', 'danger');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       logTerminal('discard_changes', outcome.kind, projectId, 'error');
       return;
     }
@@ -297,7 +296,10 @@ async function performDiscard(
     }
     case 'endSessionDeterminate': {
       showToast('End session failed', 'danger');
-      publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+      publishValidationResults(
+        store,
+        mapFinalizeErrorToValidationResults(outcome),
+      );
       logTerminal('discard_changes', outcome.kind, projectId, 'error');
       return;
     }
@@ -355,12 +357,18 @@ export function useApplyDiscard(
         }
         case 'blocked': {
           showToast('Apply blocked', 'danger');
-          publishRows(store, outcome.issues.map(mapIssueToValidationResult));
+          publishValidationResults(
+            store,
+            outcome.issues.map(mapIssueToValidationResult),
+          );
           logTerminal('apply_changes', outcome.kind, projectId, 'error');
           return;
         }
         case 'emptyReconcile': {
-          publishRows(store, outcome.notices.map(mapIssueToValidationResult));
+          publishValidationResults(
+            store,
+            outcome.notices.map(mapIssueToValidationResult),
+          );
           await finalize(
             store,
             projectId,
@@ -379,12 +387,18 @@ export function useApplyDiscard(
         }
         case 'reconcileFailed': {
           showToast('Apply failed', 'danger');
-          publishRows(store, mapFinalizeErrorToValidationResults(outcome));
+          publishValidationResults(
+            store,
+            mapFinalizeErrorToValidationResults(outcome),
+          );
           logTerminal('apply_changes', outcome.kind, projectId, 'error');
           return;
         }
         case 'review': {
-          publishRows(store, outcome.notices.map(mapIssueToValidationResult));
+          publishValidationResults(
+            store,
+            outcome.notices.map(mapIssueToValidationResult),
+          );
           pendingReviewResponseRef.current = outcome.response;
           setPendingReview({response: outcome.response});
           logTerminal('apply_changes', outcome.kind, projectId, 'aborted');

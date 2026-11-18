@@ -50,6 +50,8 @@ export {
 } from './lib/delete-handlers';
 export {isSubsystemScopedFilter} from './lib/is-subsystem-scoped-filter';
 export {createLinkOperations} from './lib/link-operations';
+export {mapIssueToValidationResult} from './lib/map-issue-to-validation-result';
+export {publishValidationResults} from './lib/publish-validation-results';
 export {
   deleteSelection,
   filterCascadeRoots,

@@ -12,6 +12,8 @@ import {type ProjectInfo, ProjectService, SessionMode} from '~entities/project';
 import {
   type GraphDesignerStore,
   GraphDesignerStoreContext,
+  mapIssueToValidationResult,
+  publishValidationResults,
 } from '~features/graph-designer';
 import {LogViewPanel} from '~features/log-view';
 import {ModuleList} from '~features/module-list';
@@ -37,7 +39,7 @@ import {
   SUBSYSTEM_BROWSER_COMPONENT_NAME,
   VALIDATION_RESULTS_COMPONENT_NAME,
 } from '~shared/config/utils';
-import {getIssueMessage, hasBlockingIssues} from '~shared/api';
+import {type ApiIssue, getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {showToast} from '~shared/controls/global-toaster';
 import {logEventEmitter, logger, LogLevel} from '~shared/lib/logger';
 import {
@@ -132,7 +134,10 @@ export function useProjectOpener({
    * Common logic to handle successful project opening
    * Creates layout, loads GraphDesigner, and notifies callbacks
    */
-  const handleProjectOpenSuccess = async (project: ProjectInfo) => {
+  const handleProjectOpenSuccess = async (
+    project: ProjectInfo,
+    issues: ApiIssue[] = [],
+  ) => {
     const layoutStore = useProjectLayoutStore.getState();
     const existingGroup = layoutStore.isProjectGroupAlreadyOpen(
       project.filepath,
@@ -193,6 +198,13 @@ export function useProjectOpener({
         showToast("Couldn't resume designer mode", 'danger');
         return;
       }
+    }
+
+    if (issues.length > 0) {
+      publishValidationResults(
+        tabStore,
+        issues.map(mapIssueToValidationResult),
+      );
     }
 
     // Add to recent projects
@@ -352,7 +364,7 @@ export function useProjectOpener({
           isLoading: true,
           message: 'Loading project data...',
         });
-        await handleProjectOpenSuccess(result.project);
+        await handleProjectOpenSuccess(result.project, result.issues ?? []);
       } else {
         showToast(result.message || 'Failed to open project', 'danger');
       }
@@ -406,7 +418,7 @@ export function useProjectOpener({
           message: 'Loading project data...',
         });
 
-        await handleProjectOpenSuccess(result.project);
+        await handleProjectOpenSuccess(result.project, result.issues ?? []);
       } else {
         showToast(result.message || 'Failed to open project', 'danger');
       }

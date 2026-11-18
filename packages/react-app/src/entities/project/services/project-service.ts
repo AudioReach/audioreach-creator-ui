@@ -10,10 +10,16 @@ import {
   openWorkspaceProject,
 } from '~entities/project/api/projects-api';
 import type ProjectInfo from '~entities/project/model/project-info.types';
-import {electronApi, getIssueMessage, hasBlockingIssues} from '~shared/api';
+import {
+  type ApiIssue,
+  electronApi,
+  getIssueMessage,
+  hasBlockingIssues,
+} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 
 export interface ProjectOpenResponse {
+  issues?: ApiIssue[];
   message?: string;
   project?: ProjectInfo;
   success: boolean;
@@ -29,9 +35,7 @@ export const ProjectService = {
    * @param project - The project to open
    * @returns Promise with project open result
    */
-  async openRecentProject(
-    project: ProjectInfo,
-  ): Promise<ProjectOpenResponse> {
+  async openRecentProject(project: ProjectInfo): Promise<ProjectOpenResponse> {
     try {
       logger.verbose(`Opening recent project: ${project.name}`, {
         action: 'open_recent_project',
@@ -136,11 +140,9 @@ export const ProjectService = {
         {type: 'application/octet-stream'},
       );
 
-      const acdbFile = new File(
-        [new Uint8Array(acdbFileData)],
-        acdbFileName,
-        {type: 'application/octet-stream'},
-      );
+      const acdbFile = new File([new Uint8Array(acdbFileData)], acdbFileName, {
+        type: 'application/octet-stream',
+      });
 
       const result = await openWorkspaceProject(
         acdbFile,
@@ -172,6 +174,7 @@ export const ProjectService = {
       };
 
       return {
+        issues: result.issues,
         project,
         success: true,
       };
