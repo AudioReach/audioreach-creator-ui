@@ -27,10 +27,12 @@ import {refreshCachedModulePropertiesForContainer} from './module-properties-coo
 export function useContainerCardData({
   containerId,
   moduleIds,
+  onStagedChange,
   projectId,
 }: {
   containerId: string;
   moduleIds: string[];
+  onStagedChange?: () => void;
   projectId: string;
 }): UseSchemaCardDataResult {
   const fetchProperties = useCallback(
@@ -75,6 +77,7 @@ export function useContainerCardData({
         await refreshCachedModulePropertiesForContainer(projectId, moduleIds);
       }
     },
+    onStagedChange,
     projectId,
     saveProperty,
   });

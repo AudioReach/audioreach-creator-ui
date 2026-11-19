@@ -20,6 +20,7 @@ import {CopyableIdRow, MissingEntityAlert} from './card-fields';
 export interface SubgraphPropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
+  onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   projectId: string;
   subgraphId: string;
@@ -29,6 +30,7 @@ export function SubgraphPropertiesCard({
   graphData,
   isCollapsed,
   isEditing,
+  onSchemaPropertyStaged,
   onSubgraphNameChange,
   onToggle,
   projectId,
@@ -45,6 +47,7 @@ export function SubgraphPropertiesCard({
       isCollapsed={isCollapsed}
       isEditing={isEditing}
       name={subgraph.subgraphName}
+      onSchemaPropertyStaged={onSchemaPropertyStaged}
       onSubgraphNameChange={onSubgraphNameChange}
       onToggle={onToggle}
       projectId={projectId}
@@ -57,6 +60,7 @@ function SubgraphPropertiesCardBody({
   isCollapsed,
   isEditing,
   name,
+  onSchemaPropertyStaged,
   onSubgraphNameChange,
   onToggle,
   projectId,
@@ -65,6 +69,7 @@ function SubgraphPropertiesCardBody({
   isCollapsed?: boolean;
   isEditing: boolean;
   name: string;
+  onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onToggle?: () => void;
   projectId: string;
@@ -94,7 +99,11 @@ function SubgraphPropertiesCardBody({
     onSave: saveName,
     value: name,
   });
-  const schemaData = useSubgraphCardData({projectId, subgraphId});
+  const schemaData = useSubgraphCardData({
+    onStagedChange: onSchemaPropertyStaged,
+    projectId,
+    subgraphId,
+  });
 
   return (
     <CollapsibleCard isCollapsed={isCollapsed} onToggle={onToggle} title={name}>

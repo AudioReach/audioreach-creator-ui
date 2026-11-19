@@ -53,6 +53,7 @@ export interface PropertiesPanelProps {
     module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
+  onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onSubsystemNameChange: (id: string, name: string) => void;
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
@@ -74,6 +75,7 @@ export function PropertiesPanel({
   onModuleContainerChange,
   onModulePortCountChange,
   onNavigateToNode,
+  onSchemaPropertyStaged,
   onSubgraphNameChange,
   onSubsystemNameChange,
   onVirtualControlLinkRowDelete,
@@ -153,6 +155,7 @@ export function PropertiesPanel({
                 onModuleContainerChange,
                 onModulePortCountChange,
                 onNavigateToNode,
+                onSchemaPropertyStaged,
                 onSubgraphNameChange,
                 onSubsystemNameChange,
                 onVirtualControlLinkRowDelete,
@@ -194,6 +197,7 @@ function renderPropertyCard({
   onModuleContainerChange,
   onModulePortCountChange,
   onNavigateToNode,
+  onSchemaPropertyStaged,
   onSubgraphNameChange,
   onSubsystemNameChange,
   onVirtualControlLinkRowDelete,
@@ -222,6 +226,7 @@ function renderPropertyCard({
     module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
+  onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onSubsystemNameChange: (id: string, name: string) => void;
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
@@ -238,6 +243,7 @@ function renderPropertyCard({
           {...collapseProps}
           graphData={graphData}
           isEditing={isEditing}
+          onSchemaPropertyStaged={onSchemaPropertyStaged}
           onSubgraphNameChange={onSubgraphNameChange}
           projectId={projectId}
           subgraphId={item.systemId}
@@ -252,6 +258,7 @@ function renderPropertyCard({
           graphData={graphData}
           isEditing={isEditing}
           onContainerIdChange={onContainerIdChange}
+          onSchemaPropertyStaged={onSchemaPropertyStaged}
           projectId={projectId}
           subgraphSystemId={item.subgraphSystemId}
         />

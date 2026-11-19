@@ -29,9 +29,11 @@ const SCENARIO_PROPERTY_ID = 0x08001010;
 const VSID_PROPERTY_ID = 0x080010cc;
 
 export function useSubgraphCardData({
+  onStagedChange,
   projectId,
   subgraphId,
 }: {
+  onStagedChange?: () => void;
   projectId: string;
   subgraphId: string;
 }): UseSchemaCardDataResult {
@@ -62,6 +64,9 @@ export function useSubgraphCardData({
           subgraphId,
         );
         if (hasBlockingIssues(nextProperties) || !nextProperties.data) {
+          // The scenario change is already staged; the success path is
+          // reported by the shared hook, so only cover the failure here.
+          onStagedChange?.();
           return {
             message: getIssueMessage(
               nextProperties,
@@ -119,7 +124,7 @@ export function useSubgraphCardData({
         success: true as const,
       };
     },
-    [projectId, subgraphId],
+    [onStagedChange, projectId, subgraphId],
   );
 
   const schemaData = useSchemaCardData({
@@ -137,6 +142,7 @@ export function useSubgraphCardData({
         await loadRef.current?.();
       }
     },
+    onStagedChange,
     projectId,
     saveProperty,
   });
