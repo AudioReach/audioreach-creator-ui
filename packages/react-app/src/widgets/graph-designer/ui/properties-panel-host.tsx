@@ -28,6 +28,7 @@ export function PropertiesPanelHost({
     graphData: state.graphData,
     isEditing: state.mode === 'edit',
     isMutating: state.isMutating,
+    markDirty: state.markDirty,
     requestNodeFocus: state.requestNodeFocus,
     selectedEdges: state.selectedEdges,
     selectedNodes: state.selectedNodes,
@@ -59,6 +60,7 @@ export function PropertiesPanelHost({
       onModuleContainerChange={props.updateModuleContainerLocal}
       onModulePortCountChange={props.updateModulePortCountLocal}
       onNavigateToNode={props.requestNodeFocus}
+      onSchemaPropertyStaged={props.markDirty}
       onSubgraphNameChange={props.updateSubgraphNameLocal}
       onSubsystemNameChange={props.updateSubsystemNameLocal}
       onVirtualControlLinkRowDelete={(connectionId) =>

@@ -33,6 +33,7 @@ export interface ContainerPropertiesCardProps extends EntityCollapseProps {
     newContainerSystemId: string,
     newContainerNaturalId: number,
   ) => void;
+  onSchemaPropertyStaged?: () => void;
   projectId: string;
   subgraphSystemId?: string;
 }
@@ -43,6 +44,7 @@ export function ContainerPropertiesCard({
   isCollapsed,
   isEditing,
   onContainerIdChange,
+  onSchemaPropertyStaged,
   onToggle,
   projectId,
   subgraphSystemId,
@@ -61,6 +63,7 @@ export function ContainerPropertiesCard({
       isEditing={isEditing}
       moduleIds={container.moduleInstances ?? []}
       onContainerIdChange={onContainerIdChange}
+      onSchemaPropertyStaged={onSchemaPropertyStaged}
       onToggle={onToggle}
       projectId={projectId}
       subgraphSystemId={subgraphSystemId}
@@ -75,6 +78,7 @@ function ContainerPropertiesCardBody({
   isEditing,
   moduleIds,
   onContainerIdChange,
+  onSchemaPropertyStaged,
   onToggle,
   projectId,
   subgraphSystemId,
@@ -90,6 +94,7 @@ function ContainerPropertiesCardBody({
     newContainerSystemId: string,
     newContainerNaturalId: number,
   ) => void;
+  onSchemaPropertyStaged?: () => void;
   onToggle?: () => void;
   projectId: string;
   subgraphSystemId: string;
@@ -97,6 +102,7 @@ function ContainerPropertiesCardBody({
   const schemaData = useContainerCardData({
     containerId: containerSystemId,
     moduleIds,
+    onStagedChange: onSchemaPropertyStaged,
     projectId,
   });
   const saveContainerId = useCallback(
