@@ -42,6 +42,10 @@ const USER_PREFERENCE_PATHS = new Set([
   'visualization.viewMode',
 ]);
 
+/** Usecase key-value keys that are selected by default in every project. */
+const SELECTED_USECASE_KEYS_PATH =
+  'userPreferences.usecases.selectedUsecaseKeysByDefault';
+
 const BRANDS = Object.values(Brand) as Brand[];
 const THEMES = Object.values(Theme) as Theme[];
 
@@ -347,6 +351,31 @@ export class ConfigFileManager {
       });
       return false;
     }
+  }
+
+  /**
+   * Saves the default usecase keys, used for every project that is opened.
+   *
+   * The list is shared by all projects, so it is written to the base config
+   * and every open project's copy. Otherwise the project saved last would
+   * overwrite the list with its own older copy.
+   */
+  setSelectedUsecaseKeys(keys: string[]): void {
+    for (const config of [
+      this.configDataMap,
+      ...this.projectConfigMap.values(),
+    ]) {
+      setConfigData(config, SELECTED_USECASE_KEYS_PATH, keys, this.rootKey);
+    }
+  }
+
+  /** Gets the default usecase keys, if any were saved. */
+  getSelectedUsecaseKeys(): string[] | undefined {
+    return getConfigData(
+      this.configDataMap,
+      SELECTED_USECASE_KEYS_PATH,
+      this.rootKey,
+    );
   }
 
   /** Sets global appearance preferences together. */

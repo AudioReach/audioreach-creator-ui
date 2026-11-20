@@ -36,7 +36,9 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {
   formatUsecaseDisplay,
+  getLeafItems,
   getSystemIdsFromFormattedUsecases,
+  getUsecaseKeyValueKey,
   type UsecaseDto,
 } from '~entities/usecases';
 import {
@@ -74,6 +76,7 @@ import {
   type VisualizerContextMenuConfig,
   type XY,
 } from '~features/usecase-visualizer';
+import {ConfigFileManager} from '~shared/config/config-manager';
 import {useUserPreferences} from '~shared/config/hooks';
 import {WORKFLOW_TYPES} from '~shared/config/user-preferences-types';
 import {ArcBreadcrumbs} from '~shared/controls/arc-breadcrumbs';
@@ -81,6 +84,7 @@ import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
 import {useRegisterSideNav, useSideNav} from '~shared/lib/side-nav';
 import {useProjectLayoutStore, useProjectStoreShallow} from '~shared/store';
+import {deepEqual} from '~shared/utils/deep-equality';
 import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
 import {
   ModuleDataTab,
@@ -201,6 +205,83 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     () => getSystemIdsFromFormattedUsecases(selectedUsecases, resolvedData),
     [selectedUsecases, resolvedData],
   );
+
+  // Persist / restore the default selected usecases via the config
+  // The flag lives in the tab store, so it survives this component remounting.
+  const defaultUsecasesApplied = useGraphDesignerStoreShallow(
+    (state) => state.defaultUsecasesApplied,
+  );
+  const markDefaultUsecasesApplied = useGraphDesignerStoreShallow(
+    (state) => state.markDefaultUsecasesApplied,
+  );
+  const restoreDoneRef = useRef(false);
+  const saveArmedRef = useRef(false);
+  const syncedKeysRef = useRef<string[]>([]);
+  const isUsecaseListReady = !isWorkflowLoading && resolvedData.length > 0;
+
+  const leafUsecases = useMemo(
+    () => resolvedData.flatMap((cat) => getLeafItems(cat.items)),
+    [resolvedData],
+  );
+
+  const selectedUsecaseKeys = useMemo(() => {
+    const selected = new Set(selectedUsecases);
+    return leafUsecases
+      .filter((item) => selected.has(item.name))
+      .map(getUsecaseKeyValueKey);
+  }, [selectedUsecases, leafUsecases]);
+
+  // Restore once, as soon as the usecase list is available.
+  useEffect(() => {
+    if (restoreDoneRef.current || !isUsecaseListReady) {
+      return;
+    }
+    restoreDoneRef.current = true;
+
+    // Already restored and mounted again: keep the tab's own selection.
+    if (defaultUsecasesApplied) {
+      saveArmedRef.current = true;
+      syncedKeysRef.current = selectedUsecaseKeys;
+      return;
+    }
+    markDefaultUsecasesApplied();
+
+    const keySet = new Set(
+      ConfigFileManager.instance.getSelectedUsecaseKeys() ?? [],
+    );
+    // Defaults this project does not have are skipped.
+    const matched = leafUsecases.filter((item) =>
+      keySet.has(getUsecaseKeyValueKey(item)),
+    );
+    // Remember what was restored so it is not saved back as a user change.
+    syncedKeysRef.current = matched.map(getUsecaseKeyValueKey);
+    setSelectedUsecases(matched.map((item) => item.name));
+  }, [
+    defaultUsecasesApplied,
+    isUsecaseListReady,
+    leafUsecases,
+    markDefaultUsecasesApplied,
+    selectedUsecaseKeys,
+    setSelectedUsecases,
+  ]);
+
+  // Save the selection when the user changes it. Other open projects keep
+  // their own selection; the new default applies to projects opened later.
+  useEffect(() => {
+    if (!restoreDoneRef.current) {
+      return;
+    }
+    // Skip the initial save until the restored selection is applied.
+    if (!saveArmedRef.current) {
+      saveArmedRef.current = true;
+      return;
+    }
+    if (deepEqual(selectedUsecaseKeys, syncedKeysRef.current)) {
+      return;
+    }
+    syncedKeysRef.current = selectedUsecaseKeys;
+    ConfigFileManager.instance.setSelectedUsecaseKeys(selectedUsecaseKeys);
+  }, [selectedUsecaseKeys]);
 
   // Derived flags for UsecaseSelectionControl
   const isSystemWorkflow = workflowType === WORKFLOW_TYPES.SYSTEM;

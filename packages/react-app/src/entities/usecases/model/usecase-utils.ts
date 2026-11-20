@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
+
 import type {UsecaseCategory, UsecaseItem} from './usecase.types';
 
 /**
@@ -39,3 +41,12 @@ export const getLeafItems = (items: UsecaseItem[]): UsecaseItem[] =>
   items.flatMap((item) =>
     (item.children?.length ?? 0) > 0 ? getLeafItems(item.children!) : [item],
   );
+
+const toHexId = (id: number): string =>
+  ConvertNumberToHexString(id) ?? String(id);
+
+/** Makes an ID from the usecase key-values; it stays the same on every open. */
+export const getUsecaseKeyValueKey = (item: UsecaseItem): string =>
+  item.keyValuePairs
+    .map((kv) => `${toHexId(kv.key.naturalId)}:${toHexId(kv.value.naturalId)}`)
+    .join(',');
