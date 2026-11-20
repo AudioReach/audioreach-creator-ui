@@ -23,6 +23,12 @@ jest.mock('~entities/usecases/model/usecase.mapper', () => ({
     mockMapUsecaseDtoToCategories(...args),
 }));
 
+jest.mock('~shared/config/hooks', () => ({
+  useUserPreferences: () => ({
+    preferences: {usecases: {namePreference: 'values'}},
+  }),
+}));
+
 jest.mock('~shared/lib/logger', () => ({
   logger: {
     error: jest.fn(),
@@ -115,6 +121,7 @@ describe('useWorkflowUsecaseData', () => {
     expect(mockGetAllUsecases).toHaveBeenCalledWith(PROJECT_ID);
     expect(mockMapUsecaseDtoToCategories).toHaveBeenCalledWith(
       BASE_API_RESPONSE,
+      'values',
     );
     expect(mockGetUsecasesFilteredBySubsystem).not.toHaveBeenCalled();
     expect(result.current.resolvedData).toEqual(BASE_DATA);
@@ -155,6 +162,7 @@ describe('useWorkflowUsecaseData', () => {
 
     expect(mockMapSubsystemResultsToCategories).toHaveBeenCalledWith(
       SUBSYSTEM_API_RESPONSE,
+      'values',
     );
     const defaultCategory = result.current.resolvedData.find(
       (category) => category.name === 'Default',

@@ -35,7 +35,7 @@ import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 
 import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
 import {
-  formatUsecaseDisplay,
+  formatUsecaseName,
   getLeafItems,
   getSystemIdsFromFormattedUsecases,
   getUsecaseKeyValueKey,
@@ -191,7 +191,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     : isDetailedView
       ? preferences.display.portVisibilityMode
       : 'active';
-  const {workflowLevel, workflowType} = preferences.usecases;
+  const {namePreference, workflowLevel, workflowType} = preferences.usecases;
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
     preferences.usecases,
   );
@@ -984,17 +984,21 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   const handleAddUsecases = useCallback(
     (usecases: UsecaseDto[]) => {
-      const formatted = usecases.map(formatUsecaseDisplay);
+      const formatted = usecases.map((usecase) =>
+        formatUsecaseName(usecase, namePreference),
+      );
       setSelectedUsecases([...new Set([...selectedUsecases, ...formatted])]);
     },
-    [selectedUsecases, setSelectedUsecases],
+    [namePreference, selectedUsecases, setSelectedUsecases],
   );
 
   const handleNavigateUsecases = useCallback(
     (usecases: UsecaseDto[]) => {
-      setSelectedUsecases(usecases.map(formatUsecaseDisplay));
+      setSelectedUsecases(
+        usecases.map((usecase) => formatUsecaseName(usecase, namePreference)),
+      );
     },
-    [setSelectedUsecases],
+    [namePreference, setSelectedUsecases],
   );
 
   const handleModuleDoubleClick = useCallback(
@@ -1472,12 +1476,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         label: 'Auto Align Graphs',
       },
     ],
-    [
-      hasSelection,
-      hasLoadedGraphContent,
-      canUndoRedo,
-      displayOptionsContent,
-    ],
+    [hasSelection, hasLoadedGraphContent, canUndoRedo, displayOptionsContent],
   );
 
   const sideNavHandlers = useMemo(

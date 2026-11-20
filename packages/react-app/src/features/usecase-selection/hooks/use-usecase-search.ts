@@ -11,6 +11,7 @@ import {
   type UsecaseCategory,
 } from '~entities/usecases';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
+import {useUserPreferences} from '~shared/config/hooks';
 import {logger} from '~shared/lib/logger';
 
 import {buildUsecaseApiFilter} from '../lib/search-filter';
@@ -39,6 +40,8 @@ export function useUsecaseSearch(
   searchTerm: string,
   scopeOption: SearchScopeOption,
 ): {isSearching: boolean; searchData: UsecaseCategory[] | null} {
+  const {preferences} = useUserPreferences();
+  const namePreference = preferences.usecases.namePreference;
   const [searchData, setSearchData] = useState<UsecaseCategory[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -86,7 +89,10 @@ export function useUsecaseSearch(
             },
           );
           if (!hasBlockingIssues(result) && result.data) {
-            const categories = mapUsecaseDtoToCategories(result.data);
+            const categories = mapUsecaseDtoToCategories(
+              result.data,
+              namePreference,
+            );
             logger.info(
               `[useUsecaseSearch] mapped to ${categories.length} categories`,
               {
@@ -130,7 +136,7 @@ export function useUsecaseSearch(
       cancelled = true;
       clearTimeout(debounceTimer);
     };
-  }, [searchTerm, scopeOption, projectGroupId]);
+  }, [searchTerm, scopeOption, projectGroupId, namePreference]);
 
   return {isSearching, searchData};
 }

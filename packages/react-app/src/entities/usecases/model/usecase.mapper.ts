@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {formatUsecaseDisplay} from '../lib/usecase-format';
+import {
+  formatUsecaseDisplay,
+  formatUsecaseName,
+  type UsecaseNamePreference,
+} from '../lib/usecase-format';
 
 import type {
   SubsystemFilteredUsecasesDto,
@@ -15,11 +19,14 @@ import type {UsecaseCategory, UsecaseItem} from './usecase.types';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Converts a UsecaseIdentifier (full DTO) to a lean UsecaseItem for the UI. */
-function usecaseIdentifierToItem(uc: UsecaseIdentifier): UsecaseItem {
+function usecaseIdentifierToItem(
+  uc: UsecaseIdentifier,
+  namePreference: UsecaseNamePreference,
+): UsecaseItem {
   return {
     expanded: false,
     keyValuePairs: uc.keyValuePairs,
-    name: formatUsecaseDisplay(uc),
+    name: formatUsecaseName(uc, namePreference),
     systemId: uc.systemId,
   };
 }
@@ -51,6 +58,7 @@ function formatSubsystemGroupName(
  */
 export function mapUsecaseDtoToCategories(
   usecases: UsecaseDto[],
+  namePreference: UsecaseNamePreference,
 ): UsecaseCategory[] {
   const categoryMap = new Map<string, UsecaseDto[]>();
 
@@ -66,7 +74,9 @@ export function mapUsecaseDtoToCategories(
   categoryMap.forEach((usecases, categoryName) => {
     categories.push({
       expanded: false,
-      items: usecases.map(usecaseIdentifierToItem),
+      items: usecases.map((usecase) =>
+        usecaseIdentifierToItem(usecase, namePreference),
+      ),
       name: categoryName,
     });
   });
@@ -83,9 +93,12 @@ export function mapUsecaseDtoToCategories(
  */
 export function mapSubsystemResultsToCategories(
   results: SubsystemFilteredUsecasesDto[],
+  namePreference: UsecaseNamePreference,
 ): UsecaseCategory[] {
   const groupItems: UsecaseItem[] = results.map((result) => ({
-    children: result.usecases.map(usecaseIdentifierToItem),
+    children: result.usecases.map((usecase) =>
+      usecaseIdentifierToItem(usecase, namePreference),
+    ),
     expanded: true,
     keyValuePairs: result.filteredKv.keyValuePairs,
     // No systemId for group headers yet
