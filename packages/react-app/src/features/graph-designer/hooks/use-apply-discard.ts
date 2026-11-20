@@ -13,6 +13,7 @@ import {
   endSession,
   stageUsecases,
 } from '~entities/edit-session';
+import {formatUsecaseName} from '~entities/usecases';
 import {useUserPreferences} from '~shared/config/hooks';
 import {showToast} from '~shared/controls/global-toaster';
 import {logger} from '~shared/lib/logger';
@@ -35,9 +36,24 @@ import {
 } from '../model/graph-designer-store-context';
 
 export interface UseApplyDiscardArgs {
+  onApplyUsecaseChanges?: (args: ApplyUsecaseChangesArgs) => Promise<string[]>;
   projectId: string;
   routingTriggered: boolean;
   selectedUsecaseSystemIds: string[];
+}
+
+export interface ApplyUsecaseChangesArgs {
+  createdSystemIds: string[];
+  createdUsecases: CreatedUsecaseSelection[];
+  currentSystemIds: string[];
+  deletedSystemIds: string[];
+  navChoice: NavChoice;
+  updatedSystemIds: string[];
+}
+
+export interface CreatedUsecaseSelection {
+  displayName: string;
+  systemId: string;
 }
 
 type NavChoice = 'add' | 'keep' | 'switch';
@@ -56,19 +72,26 @@ export interface UseApplyDiscardReturn {
 
 type TerminalStatus = 'aborted' | 'error' | 'success';
 
-function computeReloadUsecases(
+export function computeReloadUsecases(
   navChoice: NavChoice,
   createdSystemIds: string[],
-  selectedUsecases: string[],
+  deletedSystemIds: string[],
+  selectedUsecaseSystemIds: string[],
+  updatedSystemIds: string[] = [],
 ): string[] {
-  if (navChoice === 'switch') {
+  if (navChoice === 'switch' && createdSystemIds.length > 0) {
     return createdSystemIds;
   }
+  const deletedIds = new Set(deletedSystemIds);
+  const retainedUsecases = [
+    ...selectedUsecaseSystemIds,
+    ...updatedSystemIds,
+  ].filter((id) => !deletedIds.has(id));
   if (navChoice === 'add') {
-    const merged = [...selectedUsecases, ...createdSystemIds];
+    const merged = [...retainedUsecases, ...createdSystemIds];
     return merged.filter((id, index) => merged.indexOf(id) === index);
   }
-  return selectedUsecases;
+  return retainedUsecases;
 }
 
 function withCallLog<A extends unknown[], R>(
@@ -134,11 +157,16 @@ async function settleAfterReload(
 async function finalize(
   store: GraphDesignerStoreApi,
   projectId: string,
+  currentSystemIds: string[],
   stageSystemIds: string[],
   navChoice: NavChoice,
+  createdUsecases: CreatedUsecaseSelection[],
   createdSystemIds: string[],
+  deletedSystemIds: string[],
+  updatedSystemIds: string[],
   actionLabel: 'apply_changes' | 'submit_review',
   filterComponentsBySubsystem: boolean,
+  onApplyUsecaseChanges: UseApplyDiscardArgs['onApplyUsecaseChanges'],
 ): Promise<void> {
   const outcome = await runFinalize(
     {
@@ -154,16 +182,28 @@ async function finalize(
   );
 
   const reload = async (): Promise<void> => {
-    await store
-      .getState()
-      .loadGraphData(
-        computeReloadUsecases(
+    const reloadUsecases = onApplyUsecaseChanges
+      ? await onApplyUsecaseChanges({
+          createdSystemIds,
+          createdUsecases,
+          currentSystemIds,
+          deletedSystemIds,
+          navChoice,
+          updatedSystemIds,
+        })
+      : computeReloadUsecases(
           navChoice,
           createdSystemIds,
-          store.getState().selectedUsecases,
-        ),
-        {filterBySubsystem: filterComponentsBySubsystem},
-      );
+          deletedSystemIds,
+          currentSystemIds,
+          updatedSystemIds,
+        );
+
+    await store
+      .getState()
+      .loadGraphData(reloadUsecases, {
+        filterBySubsystem: filterComponentsBySubsystem,
+      });
   };
 
   switch (outcome.kind) {
@@ -326,9 +366,15 @@ async function performDiscard(
 export function useApplyDiscard(
   args: UseApplyDiscardArgs,
 ): UseApplyDiscardReturn {
-  const {projectId, routingTriggered, selectedUsecaseSystemIds} = args;
+  const {
+    onApplyUsecaseChanges,
+    projectId,
+    routingTriggered,
+    selectedUsecaseSystemIds,
+  } = args;
   const store = useGraphDesignerStore();
   const {preferences} = useUserPreferences();
+  const namePreference = preferences.usecases.namePreference;
   const filterComponentsBySubsystem = isSubsystemScopedFilter(
     preferences.usecases,
   );
@@ -347,11 +393,16 @@ export function useApplyDiscard(
           await finalize(
             store,
             projectId,
+            selectedUsecaseSystemIds,
             [],
             'keep',
             [],
+            [],
+            [],
+            [],
             'apply_changes',
             filterComponentsBySubsystem,
+            onApplyUsecaseChanges,
           );
           return;
         }
@@ -372,11 +423,16 @@ export function useApplyDiscard(
           await finalize(
             store,
             projectId,
+            selectedUsecaseSystemIds,
             [],
             'keep',
             [],
+            [],
+            [],
+            [],
             'apply_changes',
             filterComponentsBySubsystem,
+            onApplyUsecaseChanges,
           );
           return;
         }
@@ -406,7 +462,13 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId, filterComponentsBySubsystem],
+    [
+      store,
+      projectId,
+      filterComponentsBySubsystem,
+      selectedUsecaseSystemIds,
+      onApplyUsecaseChanges,
+    ],
   );
 
   const apply = useCallback(async () => {
@@ -467,6 +529,28 @@ export function useApplyDiscard(
       const createdSystemIds = checkedChanges
         .filter((change) => change.operation === 'CREATE')
         .map((change) => change.systemId);
+      const createdUsecases = checkedChanges.flatMap((change) =>
+        change.operation === 'CREATE' && change.after
+          ? [
+              {
+                displayName: formatUsecaseName(
+                  {
+                    alias: change.after.alias,
+                    keyValuePairs: change.after.gkv,
+                  },
+                  namePreference,
+                ),
+                systemId: change.systemId,
+              },
+            ]
+          : [],
+      );
+      const deletedSystemIds = checkedChanges
+        .filter((change) => change.operation === 'DELETE')
+        .map((change) => change.systemId);
+      const updatedSystemIds = checkedChanges
+        .filter((change) => change.operation === 'UPDATE')
+        .map((change) => change.systemId);
       // UPDATE changes are already staged server-side.
       // only usecase additions/deletions need an explicit stage call here.
       const stageSystemIds = checkedChanges
@@ -483,11 +567,16 @@ export function useApplyDiscard(
           finalize(
             store,
             projectId,
+            selectedUsecaseSystemIds,
             stageSystemIds,
             navChoice,
+            createdUsecases,
             createdSystemIds,
+            deletedSystemIds,
+            updatedSystemIds,
             'submit_review',
             filterComponentsBySubsystem,
+            onApplyUsecaseChanges,
           ),
         );
       } catch (error) {
@@ -503,7 +592,14 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId, filterComponentsBySubsystem],
+    [
+      store,
+      projectId,
+      selectedUsecaseSystemIds,
+      filterComponentsBySubsystem,
+      onApplyUsecaseChanges,
+      namePreference,
+    ],
   );
 
   const cancelReview = useCallback(() => {

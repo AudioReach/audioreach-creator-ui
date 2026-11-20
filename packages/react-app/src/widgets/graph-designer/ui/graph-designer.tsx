@@ -39,10 +39,14 @@ import {
   getLeafItems,
   getSystemIdsFromFormattedUsecases,
   getUsecaseKeyValueKey,
+  type UsecaseCategory,
   type UsecaseDto,
+  type UsecaseItem,
 } from '~entities/usecases';
 import {
   ApplyDiscardControls,
+  type ApplyUsecaseChangesArgs,
+  computeReloadUsecases,
   createLinkOperations,
   deleteSelection,
   GraphDesignerStoreContext,
@@ -160,6 +164,60 @@ function graphDataHasContent(
   );
 }
 
+function getSelectedUsecaseNamesFromSystemIds(
+  systemIds: string[],
+  usecaseData: UsecaseCategory[],
+): {names: string[]; systemIds: string[]} {
+  const itemBySystemId = new Map<string, UsecaseItem>();
+  for (const category of usecaseData) {
+    for (const item of getLeafItems(category.items)) {
+      if (item.systemId) {
+        itemBySystemId.set(item.systemId, item);
+      }
+    }
+  }
+  const names: string[] = [];
+  const resolvedSystemIds: string[] = [];
+
+  for (const systemId of systemIds) {
+    const item = itemBySystemId.get(systemId);
+    const name = item?.name;
+    if (!name) {
+      continue;
+    }
+    names.push(name);
+    resolvedSystemIds.push(systemId);
+  }
+
+  return {names: [...new Set(names)], systemIds: resolvedSystemIds};
+}
+
+function applyUsecaseNameFallbacks(
+  usecaseData: UsecaseCategory[],
+  fallbackNamesBySystemId: Readonly<Record<string, string>>,
+): UsecaseCategory[] {
+  if (Object.keys(fallbackNamesBySystemId).length === 0) {
+    return usecaseData;
+  }
+
+  const applyFallbacksToItems = (items: UsecaseItem[]): UsecaseItem[] =>
+    items.map((item) => {
+      const fallbackName = item.systemId
+        ? fallbackNamesBySystemId[item.systemId]
+        : undefined;
+      const nextItem = {...item, name: item.name || fallbackName || ''};
+      if (item.children) {
+        nextItem.children = applyFallbacksToItems(item.children);
+      }
+      return nextItem;
+    });
+
+  return usecaseData.map((category) => ({
+    ...category,
+    items: applyFallbacksToItems(category.items),
+  }));
+}
+
 const GraphDesigner: React.FC<GraphDesignerProps> = ({
   projectId,
   screenshotRegistry,
@@ -196,14 +254,73 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     preferences.usecases,
   );
 
-  const {isLoading: isWorkflowLoading, resolvedData} = useWorkflowUsecaseData(
+  const {
+    isLoading: isWorkflowLoading,
+    refresh: refreshWorkflowUsecaseData,
+    resolvedData,
+  } = useWorkflowUsecaseData(
     projectId,
     workflowType,
     workflowLevel,
   );
+  const [usecaseNameFallbacksBySystemId, setUsecaseNameFallbacksBySystemId] =
+    useState<Record<string, string>>({});
+  const resolvedUsecaseData = useMemo(
+    () =>
+      applyUsecaseNameFallbacks(resolvedData, usecaseNameFallbacksBySystemId),
+    [resolvedData, usecaseNameFallbacksBySystemId],
+  );
   const selectedUsecaseSystemIds = useMemo(
-    () => getSystemIdsFromFormattedUsecases(selectedUsecases, resolvedData),
-    [selectedUsecases, resolvedData],
+    () =>
+      getSystemIdsFromFormattedUsecases(selectedUsecases, resolvedUsecaseData),
+    [selectedUsecases, resolvedUsecaseData],
+  );
+
+  const handleApplyUsecaseChanges = useCallback(
+    async ({
+      createdSystemIds,
+      createdUsecases,
+      currentSystemIds,
+      deletedSystemIds,
+      navChoice,
+      updatedSystemIds,
+    }: ApplyUsecaseChangesArgs): Promise<string[]> => {
+      const refreshedData = await refreshWorkflowUsecaseData();
+      const deletedIds = new Set(deletedSystemIds);
+      const nextFallbackEntries = Object.entries(
+        usecaseNameFallbacksBySystemId,
+      ).filter(([systemId]) => !deletedIds.has(systemId));
+      for (const {displayName, systemId} of createdUsecases) {
+        if (displayName) {
+          nextFallbackEntries.push([systemId, displayName]);
+        }
+      }
+      const nextFallbackNames = Object.fromEntries(nextFallbackEntries);
+      setUsecaseNameFallbacksBySystemId(nextFallbackNames);
+      const nextSystemIds = computeReloadUsecases(
+        navChoice,
+        createdSystemIds,
+        deletedSystemIds,
+        currentSystemIds,
+        updatedSystemIds,
+      );
+      const refreshedUsecaseData = applyUsecaseNameFallbacks(
+        refreshedData,
+        nextFallbackNames,
+      );
+      const resolvedSelection = getSelectedUsecaseNamesFromSystemIds(
+        nextSystemIds,
+        refreshedUsecaseData,
+      );
+
+      setSelectedUsecases(resolvedSelection.names);
+      return resolvedSelection.systemIds;
+    },
+    [
+      refreshWorkflowUsecaseData,
+      setSelectedUsecases,
+      usecaseNameFallbacksBySystemId,
+    ],
   );
 
   // Persist / restore the default selected usecases via the config
@@ -1476,7 +1593,12 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         label: 'Auto Align Graphs',
       },
     ],
-    [hasSelection, hasLoadedGraphContent, canUndoRedo, displayOptionsContent],
+    [
+      hasSelection,
+      hasLoadedGraphContent,
+      canUndoRedo,
+      displayOptionsContent,
+    ],
   );
 
   const sideNavHandlers = useMemo(
@@ -1676,10 +1798,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
               projectId={projectId}
               selectAll={isSystemWorkflow && !isWorkflowLoading}
               selectedUsecases={selectedUsecases}
-              usecaseData={resolvedData}
+              usecaseData={resolvedUsecaseData}
             />
           </div>
           <ApplyDiscardControls
+            onApplyUsecaseChanges={handleApplyUsecaseChanges}
             projectId={projectId}
             selectedUsecaseSystemIds={selectedUsecaseSystemIds}
           />

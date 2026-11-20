@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 import {
   getAllUsecases,
@@ -11,6 +11,7 @@ import {
   mapSubsystemResultsToCategories,
   mapUsecaseDtoToCategories,
   type UsecaseCategory,
+  type UsecaseNamePreference,
 } from '~entities/usecases';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {useUserPreferences} from '~shared/config/hooks';
@@ -22,6 +23,99 @@ import {
 } from '~shared/config/user-preferences-types';
 import {logger} from '~shared/lib/logger';
 
+async function fetchBaseUsecaseData(
+  projectGroupId: string,
+  namePreference: UsecaseNamePreference,
+): Promise<UsecaseCategory[]> {
+  try {
+    const result = await getAllUsecases(projectGroupId);
+
+    if (!hasBlockingIssues(result) && result.data) {
+      return mapUsecaseDtoToCategories(result.data, namePreference);
+    }
+
+    logger.error('Failed to fetch usecase data', {
+      action: 'fetch_usecase_data',
+      component: 'useWorkflowUsecaseData',
+      error: getIssueMessage(result, 'Failed to fetch usecase data'),
+      projectId: projectGroupId,
+    });
+    return [];
+  } catch (err) {
+    logger.error('Error fetching usecase data', {
+      action: 'fetch_usecase_data',
+      component: 'useWorkflowUsecaseData',
+      error: err instanceof Error ? err.message : String(err),
+      projectId: projectGroupId,
+    });
+    return [];
+  }
+}
+
+async function resolveWorkflowData(
+  baseUsecaseData: UsecaseCategory[],
+  projectGroupId: string,
+  workflowLevel: WorkflowLevel,
+  workflowType: WorkflowType,
+  namePreference: UsecaseNamePreference,
+): Promise<UsecaseCategory[]> {
+  if (
+    workflowType === WORKFLOW_TYPES.USECASE &&
+    workflowLevel === WORKFLOW_LEVELS.USECASE
+  ) {
+    return [...baseUsecaseData];
+  }
+
+  try {
+    const result = await getUsecasesFilteredBySubsystem(projectGroupId);
+    if (!hasBlockingIssues(result) && result.data) {
+      const subsystemResults = result.data.filter(
+        (dto) => dto.filteredKv.subsystems.length > 0,
+      );
+      const subsystemCategories =
+        subsystemResults.length > 0
+          ? mapSubsystemResultsToCategories(subsystemResults, namePreference)
+          : [];
+
+      if (workflowType === WORKFLOW_TYPES.SYSTEM) {
+        return [...baseUsecaseData, ...subsystemCategories];
+      }
+
+      const subsystemUsecaseIds = new Set(
+        subsystemResults.flatMap((dto) =>
+          dto.usecases.map((usecase) => usecase.systemId),
+        ),
+      );
+      const filteredBaseData = baseUsecaseData
+        .map((category) => ({
+          ...category,
+          items: category.items.filter(
+            (item) => !item.systemId || !subsystemUsecaseIds.has(item.systemId),
+          ),
+        }))
+        .filter((category) => category.items.length > 0);
+
+      return [...filteredBaseData, ...subsystemCategories];
+    }
+
+    logger.error('Failed to fetch subsystem data', {
+      action: 'fetch_subsystem_data',
+      component: 'useWorkflowUsecaseData',
+      error: getIssueMessage(result, 'Failed to fetch subsystem data'),
+      projectId: projectGroupId,
+    });
+    return baseUsecaseData;
+  } catch (err) {
+    logger.error('Error fetching subsystem data', {
+      action: 'fetch_subsystem_data',
+      component: 'useWorkflowUsecaseData',
+      error: err instanceof Error ? err.message : String(err),
+      projectId: projectGroupId,
+    });
+    return baseUsecaseData;
+  }
+}
+
 /**
  * Resolves usecase selection data for the active workflow preference.
  * @param projectGroupId - Project identifier used for API calls
@@ -32,7 +126,11 @@ export function useWorkflowUsecaseData(
   projectGroupId: string,
   workflowType: WorkflowType,
   workflowLevel: WorkflowLevel,
-): {isLoading: boolean; resolvedData: UsecaseCategory[]} {
+): {
+  isLoading: boolean;
+  refresh: () => Promise<UsecaseCategory[]>;
+  resolvedData: UsecaseCategory[];
+} {
   const {preferences} = useUserPreferences();
   const namePreference = preferences.usecases.namePreference;
   const [baseProjectId, setBaseProjectId] = useState<string | null>(null);
@@ -43,6 +141,33 @@ export function useWorkflowUsecaseData(
   const [isSubsystemLoading, setIsSubsystemLoading] = useState(false);
   const [resolvedData, setResolvedData] = useState<UsecaseCategory[]>([]);
 
+  const refresh = useCallback(async (): Promise<UsecaseCategory[]> => {
+    setIsBaseLoading(true);
+    setIsSubsystemLoading(false);
+    const nextBaseData = await fetchBaseUsecaseData(
+      projectGroupId,
+      namePreference,
+    );
+    setBaseProjectId(projectGroupId);
+    setBaseUsecaseData(nextBaseData);
+    setIsBaseLoading(false);
+
+    const needsSubsystemData =
+      workflowType !== WORKFLOW_TYPES.USECASE ||
+      workflowLevel !== WORKFLOW_LEVELS.USECASE;
+    setIsSubsystemLoading(needsSubsystemData);
+    const nextData = await resolveWorkflowData(
+      nextBaseData,
+      projectGroupId,
+      workflowLevel,
+      workflowType,
+      namePreference,
+    );
+    setResolvedData(nextData);
+    setIsSubsystemLoading(false);
+    return nextData;
+  }, [projectGroupId, workflowLevel, workflowType, namePreference]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -52,46 +177,15 @@ export function useWorkflowUsecaseData(
     setIsSubsystemLoading(false);
     setResolvedData([]);
 
-    getAllUsecases(projectGroupId)
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-
-        if (!hasBlockingIssues(result) && result.data) {
-          setBaseUsecaseData(
-            mapUsecaseDtoToCategories(result.data, namePreference),
-          );
-          return;
-        }
-
-        logger.error('Failed to fetch usecase data', {
-          action: 'fetch_usecase_data',
-          component: 'useWorkflowUsecaseData',
-          error: getIssueMessage(result, 'Failed to fetch usecase data'),
-          projectId: projectGroupId,
-        });
-        setBaseUsecaseData([]);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) {
-          return;
-        }
-
-        logger.error('Error fetching usecase data', {
-          action: 'fetch_usecase_data',
-          component: 'useWorkflowUsecaseData',
-          error: err instanceof Error ? err.message : String(err),
-          projectId: projectGroupId,
-        });
-        setBaseUsecaseData([]);
-      })
-      .finally(() => {
+    void fetchBaseUsecaseData(projectGroupId, namePreference).then(
+      (nextBaseData) => {
         if (!cancelled) {
           setBaseProjectId(projectGroupId);
+          setBaseUsecaseData(nextBaseData);
           setIsBaseLoading(false);
         }
-      });
+      },
+    );
 
     return () => {
       cancelled = true;
@@ -104,87 +198,30 @@ export function useWorkflowUsecaseData(
     }
 
     let cancelled = false;
+    const needsSubsystemData =
+      workflowType !== WORKFLOW_TYPES.USECASE ||
+      workflowLevel !== WORKFLOW_LEVELS.USECASE;
 
-    if (
-      workflowType === WORKFLOW_TYPES.USECASE &&
-      workflowLevel === WORKFLOW_LEVELS.USECASE
-    ) {
+    if (!needsSubsystemData) {
       setIsSubsystemLoading(false);
       setResolvedData([...baseUsecaseData]);
       return undefined;
     }
 
-    const isSystemWorkflow = workflowType === WORKFLOW_TYPES.SYSTEM;
-
     setIsSubsystemLoading(true);
-    getUsecasesFilteredBySubsystem(projectGroupId)
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
 
-        if (!hasBlockingIssues(result) && result.data) {
-          const subsystemResults = result.data.filter(
-            (dto) => dto.filteredKv.subsystems.length > 0,
-          );
-          const subsystemCategories =
-            subsystemResults.length > 0
-              ? mapSubsystemResultsToCategories(
-                  subsystemResults,
-                  namePreference,
-                )
-              : [];
-
-          if (isSystemWorkflow) {
-            setResolvedData([...baseUsecaseData, ...subsystemCategories]);
-            return;
-          }
-
-          const subsystemUsecaseIds = new Set(
-            subsystemResults.flatMap((dto) =>
-              dto.usecases.map((usecase) => usecase.systemId),
-            ),
-          );
-          const filteredBaseData = baseUsecaseData
-            .map((category) => ({
-              ...category,
-              items: category.items.filter(
-                (item) =>
-                  !item.systemId || !subsystemUsecaseIds.has(item.systemId),
-              ),
-            }))
-            .filter((category) => category.items.length > 0);
-
-          setResolvedData([...filteredBaseData, ...subsystemCategories]);
-          return;
-        }
-
-        logger.error('Failed to fetch subsystem data', {
-          action: 'fetch_subsystem_data',
-          component: 'useWorkflowUsecaseData',
-          error: getIssueMessage(result, 'Failed to fetch subsystem data'),
-          projectId: projectGroupId,
-        });
-        setResolvedData(baseUsecaseData);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) {
-          return;
-        }
-
-        logger.error('Error fetching subsystem data', {
-          action: 'fetch_subsystem_data',
-          component: 'useWorkflowUsecaseData',
-          error: err instanceof Error ? err.message : String(err),
-          projectId: projectGroupId,
-        });
-        setResolvedData(baseUsecaseData);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsSubsystemLoading(false);
-        }
-      });
+    void resolveWorkflowData(
+      baseUsecaseData,
+      projectGroupId,
+      workflowLevel,
+      workflowType,
+      namePreference,
+    ).then((nextData) => {
+      if (!cancelled) {
+        setResolvedData(nextData);
+        setIsSubsystemLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -200,6 +237,7 @@ export function useWorkflowUsecaseData(
 
   return {
     isLoading: isBaseLoading || isSubsystemLoading,
+    refresh,
     resolvedData,
   };
 }

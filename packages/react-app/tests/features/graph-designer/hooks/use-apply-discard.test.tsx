@@ -69,7 +69,10 @@ import {
   getSubgraphsByIds,
   getUsecaseComponents,
 } from '~entities/usecases/api/usecases-api';
-import {useApplyDiscard} from '~features/graph-designer/hooks/use-apply-discard';
+import {
+  type ApplyUsecaseChangesArgs,
+  useApplyDiscard,
+} from '~features/graph-designer/hooks/use-apply-discard';
 import * as coordinator from '~features/graph-designer/model/apply-discard-coordinator';
 import type {
   DiscardOutcome,
@@ -143,10 +146,12 @@ function renderApplyDiscard(
   store: StoreApi<GraphDesignerStore>,
   routingTriggered = true,
   selectedUsecaseSystemIds: string[] = [],
+  onApplyUsecaseChanges?: (args: ApplyUsecaseChangesArgs) => Promise<string[]>,
 ) {
   return renderHook(
     () =>
       useApplyDiscard({
+        onApplyUsecaseChanges,
         projectId: PROJECT_ID,
         routingTriggered,
         selectedUsecaseSystemIds,
@@ -393,6 +398,10 @@ describe('useApplyDiscard', () => {
     async function openReview(
       store: StoreApi<GraphDesignerStore>,
       response: CreateUsecasesResponseDto = makeReviewResponse(),
+      selectedUsecaseSystemIds: string[] = [],
+      onApplyUsecaseChanges?: (
+        args: ApplyUsecaseChangesArgs,
+      ) => Promise<string[]>,
     ) {
       store.getState().markDirty();
       mockRunApplyReconcile.mockResolvedValue({
@@ -400,7 +409,12 @@ describe('useApplyDiscard', () => {
         notices: [],
         response,
       });
-      const rendered = renderApplyDiscard(store);
+      const rendered = renderApplyDiscard(
+        store,
+        true,
+        selectedUsecaseSystemIds,
+        onApplyUsecaseChanges,
+      );
       await act(async () => {
         await rendered.result.current.apply();
       });
@@ -580,7 +594,9 @@ describe('useApplyDiscard', () => {
 
     it('endSessionPostCommitReloadNeeded keeps the session dirty and in edit mode when the reload fails', async () => {
       const store = makeStore();
-      const {result} = await openReview(store);
+      const {result} = await openReview(store, makeReviewResponse(), [
+        'uc-system-1',
+      ]);
       mockRunFinalize.mockResolvedValue({
         kind: 'endSessionPostCommitReloadNeeded',
       });
@@ -653,7 +669,9 @@ describe('useApplyDiscard', () => {
 
     it('committed keeps the session dirty and in edit mode when the reload fails', async () => {
       const store = makeStore();
-      const {result} = await openReview(store);
+      const {result} = await openReview(store, makeReviewResponse(), [
+        'uc-system-1',
+      ]);
       mockRunFinalize.mockResolvedValue({
         kind: 'committed',
         sessionMode: 'READONLY',
@@ -702,7 +720,7 @@ describe('useApplyDiscard', () => {
     it('nav choice add reloads selectedUsecases plus createdSystemIds, deduplicated', async () => {
       const store = makeStore();
       const response = makeReviewResponse();
-      const {result} = await openReview(store, response);
+      const {result} = await openReview(store, response, ['uc-existing']);
       mockRunFinalize.mockResolvedValue({
         kind: 'committed',
         sessionMode: 'READONLY',
@@ -718,6 +736,144 @@ describe('useApplyDiscard', () => {
         ['uc-existing', 'uc-new-1'],
         {filterBySubsystem: false},
       );
+      loadGraphDataSpy.mockRestore();
+    });
+
+    it('syncs created and deleted usecases before reloading after review commit', async () => {
+      const store = makeStore();
+      const [createChange] = makeReviewResponse().changes;
+      if (!createChange?.after) {
+        throw new Error('Expected CREATE change with after snapshot');
+      }
+      const response = makeReviewResponse({
+        changes: [
+          {
+            ...createChange,
+            after: {
+              ...createChange.after,
+              alias: 'Speaker',
+              gkv: [],
+            },
+          },
+          {
+            after: null,
+            before: {
+              alias: null,
+              aliasId: null,
+              categories: [],
+              controlLinks: [],
+              dataLinks: [],
+              gkv: [],
+              isEc: false,
+              subgraphSystemIds: [],
+            },
+            changeId: 'change-2',
+            operation: 'DELETE',
+            source: 'MANUAL',
+            systemId: 'uc-deleted-1',
+          },
+        ],
+      });
+      const syncUsecases = jest
+        .fn<Promise<string[]>, [ApplyUsecaseChangesArgs]>()
+        .mockResolvedValue(['uc-existing', 'uc-new-1']);
+      const {result} = await openReview(
+        store,
+        response,
+        ['uc-existing', 'uc-deleted-1'],
+        syncUsecases,
+      );
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+      const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
+
+      await act(async () => {
+        await result.current.submitReview(['change-1', 'change-2'], 'add');
+      });
+
+      expect(syncUsecases).toHaveBeenCalledWith({
+        createdSystemIds: ['uc-new-1'],
+        createdUsecases: [
+          {displayName: 'Speaker', systemId: 'uc-new-1'},
+        ],
+        currentSystemIds: ['uc-existing', 'uc-deleted-1'],
+        deletedSystemIds: ['uc-deleted-1'],
+        navChoice: 'add',
+        updatedSystemIds: [],
+      });
+      expect(loadGraphDataSpy).toHaveBeenCalledWith(
+        ['uc-existing', 'uc-new-1'],
+        {filterBySubsystem: false},
+      );
+      loadGraphDataSpy.mockRestore();
+    });
+
+    it('passes checked update system IDs for reload after review commit', async () => {
+      const store = makeStore();
+      const response = makeReviewResponse({
+        changes: [
+          {
+            after: {
+              alias: null,
+              aliasId: null,
+              categories: [],
+              controlLinks: [],
+              dataLinks: [],
+              gkv: [],
+              isEc: false,
+              subgraphSystemIds: [],
+            },
+            before: {
+              alias: null,
+              aliasId: null,
+              categories: [],
+              controlLinks: [],
+              dataLinks: [],
+              gkv: [],
+              isEc: false,
+              subgraphSystemIds: [],
+            },
+            changeId: 'change-update',
+            operation: 'UPDATE',
+            source: 'MANUAL',
+            systemId: 'uc-updated-1',
+          },
+        ],
+      });
+      const syncUsecases = jest
+        .fn<Promise<string[]>, [ApplyUsecaseChangesArgs]>()
+        .mockResolvedValue(['uc-updated-1']);
+      const {result} = await openReview(
+        store,
+        response,
+        ['Speaker • Playback'],
+        syncUsecases,
+      );
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+      const loadGraphDataSpy = jest.spyOn(store.getState(), 'loadGraphData');
+
+      await act(async () => {
+        await result.current.submitReview(['change-update'], 'keep');
+      });
+
+      expect(syncUsecases).toHaveBeenCalledWith({
+        createdSystemIds: [],
+        createdUsecases: [],
+        currentSystemIds: ['Speaker • Playback'],
+        deletedSystemIds: [],
+        navChoice: 'keep',
+        updatedSystemIds: ['uc-updated-1'],
+      });
+      expect(loadGraphDataSpy).toHaveBeenCalledWith(['uc-updated-1'], {
+        filterBySubsystem: false,
+      });
       loadGraphDataSpy.mockRestore();
     });
 
