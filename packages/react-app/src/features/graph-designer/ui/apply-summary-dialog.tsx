@@ -20,12 +20,13 @@ import type {
   CreateUsecasesResponseDto,
   UsecaseChangeDetailsDto,
 } from '~entities/edit-session';
-import {formatAsKeysValues, formatUsecaseDisplay} from '~entities/usecases';
+import {
+  formatUsecaseName,
+  type UsecaseNamePreference,
+} from '~entities/usecases';
 import {useUserPreferences} from '~shared/config/hooks';
-import type {UserPreferences} from '~shared/config/user-preferences-types';
 
 type NavChoice = 'add' | 'keep' | 'switch';
-type UsecaseNamePreference = UserPreferences['usecases']['namePreference'];
 
 interface ApplySummaryDialogProps {
   onCancel: () => void;
@@ -42,11 +43,6 @@ interface Category {
   title: string;
 }
 
-function populated(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
 function rowLabel(
   change: UsecaseChangeDetailsDto,
   namePreference: UsecaseNamePreference,
@@ -55,22 +51,11 @@ function rowLabel(
   if (!snapshot) {
     return 'Regular usecase';
   }
-  const keyValuePairs = {keyValuePairs: snapshot.gkv};
-  const aliasLabel = populated(snapshot.alias ?? '');
-  const keyValueLabel = populated(formatAsKeysValues(keyValuePairs));
-  const valueLabel = populated(formatUsecaseDisplay(keyValuePairs));
-  const preferredLabel =
-    namePreference === 'alias'
-      ? aliasLabel
-      : namePreference === 'keyvalues'
-        ? keyValueLabel
-        : valueLabel;
   return (
-    preferredLabel ??
-    valueLabel ??
-    keyValueLabel ??
-    aliasLabel ??
-    `${snapshot.isEc ? 'Ec' : 'Regular'} usecase`
+    formatUsecaseName(
+      {alias: snapshot.alias, keyValuePairs: snapshot.gkv},
+      namePreference,
+    ) || `${snapshot.isEc ? 'Ec' : 'Regular'} usecase`
   );
 }
 
@@ -276,10 +261,10 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
           {created.length > 0 && anyCreatedChecked && (
             <div className="flex flex-col gap-4">
               <Divider />
-              <h4 className="text-sm font-semibold text-neutral-primary">
+              <h4 className="text-neutral-primary text-sm font-semibold">
                 Navigation after applying changes
               </h4>
-              <p className="text-xs text-neutral-secondary">
+              <p className="text-neutral-secondary text-xs">
                 Choose how to navigate after applying the changes.
               </p>
               <RadioGroup.Root

@@ -13,6 +13,7 @@ import {
   type UsecaseCategory,
 } from '~entities/usecases';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
+import {useUserPreferences} from '~shared/config/hooks';
 import {
   WORKFLOW_LEVELS,
   WORKFLOW_TYPES,
@@ -32,6 +33,8 @@ export function useWorkflowUsecaseData(
   workflowType: WorkflowType,
   workflowLevel: WorkflowLevel,
 ): {isLoading: boolean; resolvedData: UsecaseCategory[]} {
+  const {preferences} = useUserPreferences();
+  const namePreference = preferences.usecases.namePreference;
   const [baseProjectId, setBaseProjectId] = useState<string | null>(null);
   const [baseUsecaseData, setBaseUsecaseData] = useState<
     UsecaseCategory[] | null
@@ -56,7 +59,9 @@ export function useWorkflowUsecaseData(
         }
 
         if (!hasBlockingIssues(result) && result.data) {
-          setBaseUsecaseData(mapUsecaseDtoToCategories(result.data));
+          setBaseUsecaseData(
+            mapUsecaseDtoToCategories(result.data, namePreference),
+          );
           return;
         }
 
@@ -91,7 +96,7 @@ export function useWorkflowUsecaseData(
     return () => {
       cancelled = true;
     };
-  }, [projectGroupId]);
+  }, [projectGroupId, namePreference]);
 
   useEffect(() => {
     if (baseProjectId !== projectGroupId || baseUsecaseData === null) {
@@ -124,7 +129,10 @@ export function useWorkflowUsecaseData(
           );
           const subsystemCategories =
             subsystemResults.length > 0
-              ? mapSubsystemResultsToCategories(subsystemResults)
+              ? mapSubsystemResultsToCategories(
+                  subsystemResults,
+                  namePreference,
+                )
               : [];
 
           if (isSystemWorkflow) {
@@ -187,6 +195,7 @@ export function useWorkflowUsecaseData(
     projectGroupId,
     workflowLevel,
     workflowType,
+    namePreference,
   ]);
 
   return {
