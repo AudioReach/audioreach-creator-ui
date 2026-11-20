@@ -12,18 +12,23 @@ import {Button} from '@qualcomm-ui/react/button';
 import {showToast} from '~shared/controls/global-toaster';
 import {useProjectStoreShallow} from '~shared/store';
 
-import {useApplyDiscard} from '../hooks/use-apply-discard';
+import {
+  type ApplyUsecaseChangesArgs,
+  useApplyDiscard,
+} from '../hooks/use-apply-discard';
 import {useGraphDesignerStoreShallow} from '../model/graph-designer-store-context';
 
 import {ApplySummaryDialog} from './apply-summary-dialog';
 import {DiscardConfirmDialog} from './discard-confirm-dialog';
 
 export interface ApplyDiscardControlsProps {
+  onApplyUsecaseChanges?: (args: ApplyUsecaseChangesArgs) => Promise<string[]>;
   projectId: string;
   selectedUsecaseSystemIds: string[];
 }
 
 export function ApplyDiscardControls({
+  onApplyUsecaseChanges,
   projectId,
   selectedUsecaseSystemIds,
 }: ApplyDiscardControlsProps) {
@@ -41,6 +46,7 @@ export function ApplyDiscardControls({
     (s) => s.activeExclusiveMode,
   );
   const applyDiscard = useApplyDiscard({
+    onApplyUsecaseChanges,
     projectId,
     routingTriggered,
     selectedUsecaseSystemIds,

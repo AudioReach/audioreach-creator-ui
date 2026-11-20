@@ -37,7 +37,11 @@ tabStoreRegistry.registerFactory(
   },
 );
 
-export {useApplyDiscard} from './hooks/use-apply-discard';
+export {
+  computeReloadUsecases,
+  useApplyDiscard,
+} from './hooks/use-apply-discard';
+export type {ApplyUsecaseChangesArgs} from './hooks/use-apply-discard';
 export {useGraphDesigner} from './hooks/use-graph-designer';
 export {useModuleList} from './hooks/use-module-list';
 export {useSubgraphList} from './hooks/use-subgraph-list';
