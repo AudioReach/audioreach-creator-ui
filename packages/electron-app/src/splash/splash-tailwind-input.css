@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@import '@qualcomm-ui/tailwind-plugin/qui.css';
+@import '@qualcomm-ui/qds-core/styles/components.css' layer(components);
+@import '@qualcomm-ui/qds-core/themes/qualcomm-dark.css' layer(components);

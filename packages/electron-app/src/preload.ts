@@ -8,6 +8,7 @@ import type {
   ApiResponse,
   ConfigApi,
   ConfigResult,
+  ConnectApi,
   ElectronApi,
   MruProjectInfo,
   MruStoreApi,
@@ -67,6 +68,14 @@ const projectContextApi: ProjectContextApi = {
 };
 
 contextBridge.exposeInMainWorld('projectContextApi', projectContextApi);
+
+// Connect API — reports the registration handshake outcome back to main
+const connectApi: ConnectApi = {
+  reportRegistrationResult: (success: boolean) =>
+    ipcRenderer.invoke('connect:registration-result', success) as Promise<void>,
+};
+
+contextBridge.exposeInMainWorld('connectApi', connectApi);
 
 // Save File API
 function createMenuListener(

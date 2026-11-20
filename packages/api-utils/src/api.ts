@@ -78,6 +78,35 @@ export interface ProjectContextApi {
   setProjectContext: (isActive: boolean) => Promise<void>;
 }
 
+export type SplashPhase =
+  | 'starting'
+  | 'waiting-for-config'
+  | 'waiting-for-live'
+  | 'waiting-for-ready'
+  | 'registering';
+
+export type FailureReason =
+  | 'app-data-config-missing'
+  | 'backend-binary-missing'
+  | 'spawn-failed'
+  | 'registration-failed';
+
+/** API exposed only to the splash window's preload script */
+export interface SplashApi {
+  onFailed: (
+    callback: (reason: FailureReason, message: string) => void,
+  ) => () => void;
+  onStatus: (
+    callback: (phase: SplashPhase, message: string) => void,
+  ) => () => void;
+  quit: () => Promise<void>;
+}
+
+/** API exposed to the main app renderer to report the registration handshake outcome */
+export interface ConnectApi {
+  reportRegistrationResult: (success: boolean) => Promise<void>;
+}
+
 /** Save File API exposed to renderer process */
 export interface SaveFileApi {
   onSaveAll: (callback: () => void) => () => void;
