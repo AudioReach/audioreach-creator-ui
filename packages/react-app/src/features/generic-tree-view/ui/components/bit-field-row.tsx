@@ -43,24 +43,24 @@ export function BitFieldRow({
   const currentBfNum = maskNum > 0 ? (parentNum & maskNum) >> shift : 0;
   const currentBfValueHex = `0x${currentBfNum.toString(16).toUpperCase().padStart(8, '0')}`;
 
-  const names = bf.allowedValues.map((av) => av.name);
+  const names = bf.rangeList.map((av) => av.name);
   const collection = selectCollection({items: names});
   const selectedName =
-    findOptionName(bf.allowedValues, currentBfValueHex) ||
-    (bf.allowedValues[0]?.name ?? '');
+    findOptionName(bf.rangeList, currentBfValueHex) ||
+    (bf.rangeList[0]?.name ?? '');
   const [selected, setSelected] = useState(selectedName);
   const longestName = names.reduce((a, b) => (a.length > b.length ? a : b), '');
 
   return (
-    <Tree.NodeProvider indexPath={indexPath} node={{id: bfKey, name: bf.name}}>
+    <Tree.NodeProvider indexPath={indexPath} node={{id: bfKey, name: bf.bitName}}>
       <Tree.LeafNode>
         <Tree.NodeIndicator />
         <div className="flex items-center gap-4">
           <Tree.NodeText className="wrap-break-word w-60 shrink-0">
-            {bf.name}
+            {bf.bitName}
           </Tree.NodeText>
           <Select
-            aria-label={bf.name}
+            aria-label={bf.bitName}
             clearable={false}
             collection={collection}
             disabled={disabled}
@@ -71,7 +71,7 @@ export function BitFieldRow({
               }
               setSelected(newName);
               const newOptionHex =
-                bf.allowedValues.find((av) => av.name === newName)?.value ??
+                bf.rangeList.find((av) => av.name === newName)?.value ??
                 '0x0';
               const newParentHex = computeBitfieldParentValue(
                 [bf],

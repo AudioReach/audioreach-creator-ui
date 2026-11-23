@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {BitFieldDto, NameValuePairDto} from '~entities/spf-module-data';
+import type {NameValueDto} from '~entities/spf-module-data';
 import {
   isBooleanSwitch,
   resolveBooleanPair,
@@ -13,7 +13,7 @@ jest.mock('~shared/lib/logger');
 
 describe('isBooleanSwitch', () => {
   it('recognises enable/disable pair as a switch', () => {
-    const avs: NameValuePairDto[] = [
+    const avs: NameValueDto[] = [
       {name: 'Enable', value: '0x1'},
       {name: 'Disable', value: '0x0'},
     ];
@@ -21,7 +21,7 @@ describe('isBooleanSwitch', () => {
   });
 
   it('recognises on/off pair as a switch', () => {
-    const avs: NameValuePairDto[] = [
+    const avs: NameValueDto[] = [
       {name: 'on', value: '0x1'},
       {name: 'off', value: '0x0'},
     ];
@@ -29,7 +29,7 @@ describe('isBooleanSwitch', () => {
   });
 
   it('does not treat a 3-option NameValue list as a switch', () => {
-    const avs: NameValuePairDto[] = [
+    const avs: NameValueDto[] = [
       {name: 'a', value: '0x0'},
       {name: 'b', value: '0x1'},
       {name: 'c', value: '0x2'},
@@ -38,30 +38,14 @@ describe('isBooleanSwitch', () => {
   });
 
   it('does not treat arbitrary 2-option pairs (non-boolean names) as a switch', () => {
-    const avs: NameValuePairDto[] = [
+    const avs: NameValueDto[] = [
       {name: 'log_code', value: '0x0'},
       {name: 'no_log', value: '0x1'},
     ];
     expect(isBooleanSwitch(avs)).toBe(false);
   });
 
-  it('does not treat BIT_FIELD options as a switch', () => {
-    const avs: BitFieldDto[] = [
-      {
-        allowedValues: [],
-        bitMask: '0x01',
-        name: 'bit0',
-        type: 'BIT_FIELD',
-      },
-      {
-        allowedValues: [],
-        bitMask: '0x02',
-        name: 'bit1',
-        type: 'BIT_FIELD',
-      },
-    ];
-    expect(isBooleanSwitch(avs)).toBe(false);
-  });
+
 });
 
 describe('resolveBooleanPair', () => {

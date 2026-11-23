@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {BitFieldDto, NameValueDto} from '~entities/spf-module-data';
+import type {NameValueDto} from '~entities/spf-module-data';
 
 export const BOOL_SYNONYMS = [
   ['enable', 'disable'],
@@ -15,7 +15,7 @@ export const BOOL_SYNONYMS = [
 
 /** Two-option NameValuePair → Switch only when the names look like a boolean. */
 export function isBooleanSwitch(
-  allowedValues: (NameValueDto | BitFieldDto)[],
+  allowedValues: NameValueDto[],
 ): allowedValues is [NameValueDto, NameValueDto] {
   if (allowedValues.length !== 2) {
     return false;

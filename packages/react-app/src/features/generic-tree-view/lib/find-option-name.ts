@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import type {NameValueDto} from '~entities/spf-module-data';
 import {areNumericStringsEqual} from '~shared/lib/numeric-string';
 
 export function findOptionName(
-  allowedValues: NameValueDto[],
+  allowedValues: {name: string; value: string}[],
   currentHex: string,
 ): string {
   return (

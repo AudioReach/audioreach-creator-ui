@@ -16,14 +16,12 @@ import {
   getArrayTemplateElements,
   getArrayValueElements,
   getStructValueElements,
-  type NameValueDto,
   type StructDto,
 } from '~entities/spf-module-data';
 
 import {areNumericStringsEqual} from '~shared/lib/numeric-string';
 
 import {elementKey} from '../../lib/element-key';
-import {isBitField} from '../../lib/is-bit-field';
 import {isBooleanSwitch, resolveBooleanPair} from '../../lib/is-boolean-switch';
 import {isPolicyVisible} from '../../lib/is-policy-visible';
 import {parseQFormatN} from '../../lib/parse-q-format-n';
@@ -325,15 +323,16 @@ function renderLeaf(
     );
 
   const isFile = elem.displayType === 'FILE' || elem.displayType === 'DUMP';
-  const isBitFieldElem =
-    elem.displayType === 'BIT_FIELD' &&
-    elem.allowedValues &&
-    isBitField(elem.allowedValues);
+  const visibleBitFields = elem.bitFields?.filter((bf) => !bf.isHide);
+  const resolvedBitFields: BitFieldDto[] | null = visibleBitFields?.length
+    ? visibleBitFields
+    : null;
+  const isBitFieldElem = resolvedBitFields !== null;
   const currentValue = ctx.elementValues.get(key) ?? elem.value;
   const disabled = ctx.paramReadOnly || elem.isReadOnly;
 
   if (isBitFieldElem) {
-    const bitFields = elem.allowedValues as BitFieldDto[];
+    const bitFields = resolvedBitFields;
     return (
       <Tree.NodeProvider
         key={key}
@@ -489,12 +488,8 @@ function renderControl(
     );
   }
 
-  if (
-    elem.allowedValues &&
-    elem.allowedValues.length > 0 &&
-    !('bitMask' in elem.allowedValues[0])
-  ) {
-    const options = elem.allowedValues as NameValueDto[];
+  if (elem.allowedValues && elem.allowedValues.length > 0) {
+    const options = elem.allowedValues;
     return (
       <SelectControl
         currentValue={currentValue}
