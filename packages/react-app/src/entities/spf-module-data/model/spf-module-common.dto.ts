@@ -35,11 +35,16 @@ export type ConfigElementDataType =
   | 'UInt64';
 
 export interface BitFieldDto {
-  allowedValues: NameValueDto[];
   bitMask: string;
+  bitName: string;
+  default?: string;
   description?: string;
-  name: string;
-  type: 'BIT_FIELD';
+  groups?: {group: string}[];
+  isHide?: boolean;
+  isReadOnly?: boolean;
+  max?: string;
+  min?: string;
+  rangeList: {name: string; value: string}[];
 }
 
 export interface ChangeInfoDto {
@@ -49,7 +54,8 @@ export interface ChangeInfoDto {
 }
 
 export interface ConfigElementDto {
-  allowedValues?: (BitFieldDto | NameValueDto)[];
+  allowedValues?: NameValueDto[];
+  bitFields?: BitFieldDto[];
   dataType: ConfigElementDataType;
   description?: string;
   displayType?: string;

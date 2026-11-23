@@ -237,21 +237,19 @@ describe('renderElement renderLeaf controls', () => {
     expect(ta).toHaveAttribute('readonly');
   });
 
-  it('BIT_FIELD allowedValues renders a Select per bitfield', () => {
+  it('BIT_FIELD bitFields renders a Select per bitfield', () => {
     const bfs: BitFieldDto[] = [
       {
-        allowedValues: [
+        bitMask: '0x01',
+        bitName: 'bit0',
+        rangeList: [
           {name: 'Off', value: '0x0'},
           {name: 'On', value: '0x1'},
         ],
-        bitMask: '0x01',
-        name: 'bit0',
-        type: 'BIT_FIELD',
       },
     ];
     const elem = makeConfig({
-      allowedValues: bfs,
-      displayType: 'BIT_FIELD',
+      bitFields: bfs,
       name: 'bf',
       value: '0x00000000',
     });

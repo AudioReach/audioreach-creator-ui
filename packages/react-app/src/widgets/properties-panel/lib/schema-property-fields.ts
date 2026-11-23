@@ -4,13 +4,11 @@
  */
 
 import {
-  type BitFieldDto,
   type ConfigElementDto,
   getArrayTemplateElements,
   getArrayValueElements,
   getElementList,
   getStructValueElements,
-  type NameValueDto,
 } from '~entities/spf-module-data';
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
 import type {PropertyDto, PropertyElement} from '~shared/lib/property.dto';
@@ -32,10 +30,6 @@ export function collectConfigElements(
       ...collectConfigElements(getArrayValueElements(element)),
     ];
   });
-}
-
-function isNameValue(value: BitFieldDto | NameValueDto): value is NameValueDto {
-  return !('bitMask' in value);
 }
 
 export function dirtyItemsHaveConfigName(
@@ -98,7 +92,7 @@ export function propertyDtosHaveConfigName(
 export function toNameValueOptions(
   element: ConfigElementDto | null,
 ): Array<{label: string; value: string}> {
-  return (element?.allowedValues ?? []).filter(isNameValue).map((value) => ({
+  return (element?.allowedValues ?? []).map((value) => ({
     label: value.name,
     value: value.value,
   }));

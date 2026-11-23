@@ -52,7 +52,10 @@ function collectBranchKeys(
   const keys: string[] = [];
   for (const elem of elems) {
     if (elem.type === 'ConfigElement') {
-      if (elem.displayType === 'BIT_FIELD' && elem.allowedValues?.length) {
+      if (
+        (elem.displayType === 'BIT_FIELD' && elem.allowedValues?.length) ||
+        elem.bitFields?.length
+      ) {
         keys.push(elementKey(itemId, ...prefix, elem.name));
       }
     } else if (elem.type === 'Struct') {
