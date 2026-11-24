@@ -41,10 +41,18 @@ export interface ProcessorInfo {
   systemId: string;
 }
 
+export interface ModuleTypeInfo {
+  buildType?: string;
+  islandFriendly?: boolean;
+  majorModuleType?: string;
+  mdfModuleType?: string;
+}
+
 export interface ModuleInfo {
   containerTypeInfo: ContainerTypeInfo[];
   dynamicIntents: IntentInfo[];
   inputDataPortInfo: DataPortInfo;
+  moduleTypeInfo?: ModuleTypeInfo;
   outputDataPortInfo: DataPortInfo;
   pidFramework: number;
   stackSize?: number;

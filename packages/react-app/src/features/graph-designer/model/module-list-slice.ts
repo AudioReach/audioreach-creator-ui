@@ -107,7 +107,7 @@ function toModuleDefinition(
 
   return {
     builtIn: dto.builtIn,
-    category: '',
+    category: dto.moduleInfo.moduleTypeInfo?.majorModuleType ?? '',
     description: dto.description,
     dspType: dto.processorInfo?.name ?? '',
     inputPorts,
