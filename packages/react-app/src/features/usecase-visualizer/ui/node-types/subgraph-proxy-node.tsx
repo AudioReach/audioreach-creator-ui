@@ -74,7 +74,10 @@ export function SubgraphProxyNode({
         <PortHandles node={node} />
       </div>
 
-      <div className="absolute inset-x-0 top-full mt-2 flex min-w-0 flex-col items-center text-center">
+      <div
+        className="absolute inset-x-0 top-full mt-2 flex min-w-0 flex-col items-center text-center"
+        data-testid="subgraph-node-metadata"
+      >
         <Tooltip
           positioning={{placement: 'bottom', strategy: 'fixed'}}
           trigger={
@@ -86,7 +89,7 @@ export function SubgraphProxyNode({
           {node.label}
         </Tooltip>
         {showSubgraphId ? (
-          <span className="text-secondary text-xxs">
+          <span className="text-secondary text-xxs" data-testid="subgraph-id">
             {`SGID: ${ConvertNumberToHexString(node.subgraphId) ?? node.subgraphId}`}
           </span>
         ) : null}
