@@ -8,6 +8,7 @@ import type {StoreApi} from 'zustand';
 import {PORT_IO_TYPE, type PortIoType} from '~entities/graph';
 import {
   getAllSpfModuleDefinitions,
+  type MajorModuleType,
   type SpfModuleDefinitionResponseDto,
 } from '~entities/module-definitions';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
@@ -27,7 +28,7 @@ export interface Port {
 
 export interface ModuleDefinition {
   builtIn: boolean;
-  category: string;
+  category: MajorModuleType | '';
   description: string;
   dspType: string;
   inputPorts: Port[];

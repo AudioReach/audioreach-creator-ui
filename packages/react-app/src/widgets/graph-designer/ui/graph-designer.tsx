@@ -34,6 +34,7 @@ import {createPortal} from 'react-dom';
 import {ProgressRing} from '@qualcomm-ui/react/progress-ring';
 
 import {type LevelView, NODE_KIND, type NodeKind} from '~entities/graph';
+import {MAJOR_MODULE_TYPE} from '~entities/module-definitions';
 import {
   formatUsecaseDisplay,
   getLeafItems,
@@ -525,7 +526,9 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       return EMPTY_STRING_SET;
     }
     return new Set(
-      moduleList.filter((m) => m.category === 'PP').map((m) => m.moduleId),
+      moduleList
+        .filter((m) => m.category === MAJOR_MODULE_TYPE.PP)
+        .map((m) => m.moduleDefinitionSystemId),
     );
   }, [highlightPPModules, moduleList]);
 

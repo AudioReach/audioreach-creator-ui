@@ -41,10 +41,25 @@ export interface ProcessorInfo {
   systemId: string;
 }
 
+export const MAJOR_MODULE_TYPE = {
+  CONVERTER: 'CONVERTER',
+  DECODER: 'DECODER',
+  DEPACKETIZER: 'DEPACKETIZER',
+  DETECTOR: 'DETECTOR',
+  ENCODER: 'ENCODER',
+  END_POINT: 'END_POINT',
+  GENERATOR: 'GENERATOR',
+  GENERIC: 'GENERIC',
+  PACKETIZER: 'PACKETIZER',
+  PP: 'PP',
+} as const;
+export type MajorModuleType =
+  (typeof MAJOR_MODULE_TYPE)[keyof typeof MAJOR_MODULE_TYPE];
+
 export interface ModuleTypeInfo {
   buildType?: string;
   islandFriendly?: boolean;
-  majorModuleType?: string;
+  majorModuleType?: MajorModuleType;
   mdfModuleType?: string;
 }
 

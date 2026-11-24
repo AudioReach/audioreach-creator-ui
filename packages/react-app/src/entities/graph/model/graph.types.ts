@@ -104,6 +104,7 @@ export interface ModuleNode extends NodeBase {
   alias?: string;
   icon?: string;
   isPpModule?: boolean;
+  moduleDefinitionSystemId?: string;
   moduleId: number;
   moduleType: string;
   nodeKind: 'module';

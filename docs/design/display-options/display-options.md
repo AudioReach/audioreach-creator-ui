@@ -398,14 +398,14 @@ intended, since this feature hides links, not ports.
 `MajorModuleType` enum and `docs/swagger-api.json`). Already reaches
 `ModuleDefinition.category` in the `moduleList` slice; no DTO change needed.
 
-**`applyPpHighlight(level, ppModuleIds)`.** Returns `level` unchanged when
-`ppModuleIds` is empty; otherwise stamps `isPpModule: true` on modules whose
-id is in the set.
+**`applyPpHighlight(level, ppModuleDefinitionIds)`.** Returns `level` unchanged
+when `ppModuleDefinitionIds` is empty; otherwise stamps `isPpModule: true` on
+modules whose `moduleDefinitionSystemId` is in the set.
 
 Runs **post-layout**, in the `graph` useMemo after `applyPositionOverrides`
 — it's purely visual and must never re-trigger ELK.
 
-**Pipeline wiring:** `graph-designer.tsx` derives `ppModuleIds` from the
+**Pipeline wiring:** `graph-designer.tsx` derives the PP definition ids from the
 `moduleList` slice, memoized on `highlightPPModules` and `moduleList`.
 Since `moduleList` is normally lazy-loaded only when the module palette
 opens, an effect eager-loads it as soon as the preference turns on.
