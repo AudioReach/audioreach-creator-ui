@@ -270,7 +270,7 @@ describe('createGraphDataSlice — moduleType resolution', () => {
     const store = makeStore([
       {
         builtIn: false,
-        category: 'WR_SHARED_MEM_EP',
+        category: 'END_POINT',
         description: '',
         dspType: 'ADSP',
         inputPorts: [],
@@ -314,7 +314,7 @@ describe('createGraphDataSlice — moduleType resolution', () => {
     const store = makeStore([
       {
         builtIn: false,
-        category: 'SINK_MODULE',
+        category: 'GENERIC',
         description: '',
         dspType: 'ADSP',
         inputPorts: [],

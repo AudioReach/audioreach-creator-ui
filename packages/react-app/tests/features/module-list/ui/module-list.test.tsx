@@ -76,7 +76,7 @@ const modules: ModuleDefinition[] = [
   },
   {
     builtIn: true,
-    category: 'SISO',
+    category: 'GENERIC',
     description: '',
     dspType: 'ADSP',
     inputPorts: [],

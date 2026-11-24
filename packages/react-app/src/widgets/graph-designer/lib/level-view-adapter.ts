@@ -182,6 +182,7 @@ export function buildLevelViewFromGraphData(
       id: m.systemId,
       label: m.displayName,
       meta: {systemId: m.systemId},
+      moduleDefinitionSystemId: m.moduleDefinitionSystemId,
       moduleId: m.naturalId,
       moduleType: m.moduleType,
       nodeKind: NODE_KIND.MODULE,

@@ -6,11 +6,12 @@
 import type {LevelView, ModuleNode} from '~entities/graph';
 import {applyPpHighlight} from '~widgets/graph-designer/lib/apply-pp-highlight';
 
-function moduleNode(id: string, moduleId: number): ModuleNode {
+function moduleNode(id: string, moduleId: number, def: string): ModuleNode {
   return {
     height: 80,
     id,
     label: id,
+    moduleDefinitionSystemId: def,
     moduleId,
     moduleType: 'Mod',
     nodeKind: 'module',
@@ -34,20 +35,23 @@ function baseLevel(): LevelView {
       },
     ],
     levelId: 'top',
-    modules: [moduleNode('module-1', 1), moduleNode('module-2', 2)],
+    modules: [
+      moduleNode('module-1', 0x403d, 'def-pp'),
+      moduleNode('module-2', 2, 'def-other'),
+    ],
   };
 }
 
 describe('applyPpHighlight', () => {
   // Empty set: nothing to highlight, no-op — same LevelView reference returned
-  it('returns the same reference when ppModuleIds is empty', () => {
+  it('returns the same reference when ppModuleDefinitionIds is empty', () => {
     const level = baseLevel();
     expect(applyPpHighlight(level, new Set())).toBe(level);
   });
 
-  // A module whose moduleId (as string) is in the set gets isPpModule: true
-  it('stamps isPpModule: true on modules whose moduleId is in the set', () => {
-    const out = applyPpHighlight(baseLevel(), new Set(['1']));
+  // Matches on definition system id; instance id (IID 0x403d) is irrelevant
+  it('stamps isPpModule: true on modules whose definition is in the set', () => {
+    const out = applyPpHighlight(baseLevel(), new Set(['def-pp']));
 
     const m1 = out.modules?.find((m) => m.id === 'module-1');
     const m2 = out.modules?.find((m) => m.id === 'module-2');
@@ -61,7 +65,7 @@ describe('applyPpHighlight', () => {
     const level = baseLevel();
     const originalM2 = level.modules?.find((m) => m.id === 'module-2');
 
-    const out = applyPpHighlight(level, new Set(['1']));
+    const out = applyPpHighlight(level, new Set(['def-pp']));
     const m2 = out.modules?.find((m) => m.id === 'module-2');
 
     expect(m2).toBe(originalM2);
@@ -70,9 +74,15 @@ describe('applyPpHighlight', () => {
   // Non-module fields must pass through untouched
   it('leaves dataLinks and other non-module fields untouched', () => {
     const level = baseLevel();
-    const out = applyPpHighlight(level, new Set(['1']));
+    const out = applyPpHighlight(level, new Set(['def-pp']));
 
     expect(out.dataLinks).toBe(level.dataLinks);
     expect(out.levelId).toBe('top');
+  });
+
+  // An instance id equal to a set member must not match: ids are different
+  it('does not match on instance id', () => {
+    const out = applyPpHighlight(baseLevel(), new Set(['16445']));
+    expect(out.modules?.some((m) => m.isPpModule)).toBe(false);
   });
 });
