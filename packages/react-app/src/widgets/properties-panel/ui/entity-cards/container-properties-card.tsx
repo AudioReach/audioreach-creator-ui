@@ -157,9 +157,9 @@ function ContainerPropertiesCardBody({
         isEditing={isEditing}
         isSaving={idSave.isSaving}
         label="Container ID"
-        mode="number"
+        mode="text"
         onChange={(value) => idSave.saveText(Number(value))}
-        value={idSave.value}
+        value={formatDisplayId(String(idSave.value))}
       />
       {containerTypeOptions.length > 0 ? (
         <ContainerTypePreview

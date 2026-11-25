@@ -97,7 +97,7 @@ export interface Subgraph {
   diffState?: DiffState;
   /** Read-only SGKV snapshot populated by the subgraph-detail request. */
   kvVectors: KvSelection[];
-  naturalId?: number;
+  naturalId: number;
   subgraphName: string;
   subgraphType: string;
   systemId: string;
@@ -276,7 +276,7 @@ function deriveContainersAndSubgraphs(
 
     if (!(m.subgraphSystemId in subgraphs)) {
       const existing = existingSubgraphs?.[m.subgraphSystemId];
-      const sg: Subgraph = {
+      const sg = {
         containers: [],
         kvVectors: existing?.kvVectors ?? [],
         naturalId: existing?.naturalId,
@@ -284,7 +284,7 @@ function deriveContainersAndSubgraphs(
           existing?.subgraphName ?? `Subgraph ${m.subgraphSystemId}`,
         subgraphType: existing?.subgraphType ?? '',
         systemId: m.subgraphSystemId,
-      };
+      } as Subgraph;
       subgraphs[m.subgraphSystemId] = sg;
       if (!existing) {
         newSubgraphs[m.subgraphSystemId] = sg;
@@ -420,6 +420,18 @@ async function applySubgraphDetails(
       applySubgraphDetailDto(sg, dto);
     }
   }
+}
+
+function requireSubgraphNaturalIds(
+  subgraphs: Record<string, Subgraph>,
+): Record<string, Subgraph> {
+  for (const [systemId, subgraph] of Object.entries(subgraphs)) {
+    if (subgraph.naturalId === undefined) {
+      throw new Error(`Subgraph ${systemId} is missing its natural ID`);
+    }
+  }
+
+  return subgraphs;
 }
 
 /** Projects the Graph Data snapshot into the Edit Session reconciliation input. */
@@ -1227,6 +1239,7 @@ export function createGraphDataSlice<
         await applySubgraphDetails(projectId, newSubgraphs, get());
         await hydrateContainerNaturalIds(projectId, containers);
         await hydrateModuleCkvsAndTags(projectId, moduleInstances);
+        const hydratedSubgraphs = requireSubgraphNaturalIds(subgraphs);
 
         const subsystemIdToChildSubsystemIds = new Map<string, string[]>();
         for (const ss of subsystemDtos) {
@@ -1270,7 +1283,7 @@ export function createGraphDataSlice<
           containers,
           moduleInstances,
           selectedUsecases: usecases,
-          subgraphs,
+          subgraphs: hydratedSubgraphs,
           subsystems,
         };
 
@@ -1374,8 +1387,13 @@ export function createGraphDataSlice<
       }
 
       await hydrateContainerNaturalIds(projectId, containers);
+      const hydratedSubgraphs = requireSubgraphNaturalIds(subgraphs);
 
-      const nextGraphData = {...graphData, containers, subgraphs};
+      const nextGraphData = {
+        ...graphData,
+        containers,
+        subgraphs: hydratedSubgraphs,
+      };
       set({
         graphData: nextGraphData,
       } as unknown as Partial<S>);

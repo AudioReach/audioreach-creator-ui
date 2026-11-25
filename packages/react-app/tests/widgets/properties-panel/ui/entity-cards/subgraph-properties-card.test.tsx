@@ -68,4 +68,24 @@ describe('SubgraphPropertiesCard', () => {
       }),
     );
   });
+
+  it('displays the subgraph natural ID', async () => {
+    const graphData = makeGraphData();
+    graphData.subgraphs['sg-1'].naturalId = 0xb000002f;
+
+    render(
+      <SubgraphPropertiesCard
+        graphData={graphData}
+        isEditing
+        onSubgraphNameChange={jest.fn()}
+        projectId="proj-1"
+        subgraphId="sg-1"
+      />,
+    );
+
+    expect(screen.getByText('0xB000002F')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument(),
+    );
+  });
 });

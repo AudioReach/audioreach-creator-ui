@@ -64,7 +64,24 @@ beforeEach(() => {
     success: true,
   });
   mockGetSubgraphsByIds.mockResolvedValue({
-    data: [],
+    data: [
+      {
+        name: 'Subgraph sg-1',
+        naturalId: 1,
+        relatedEndPointLinks: [],
+        SGKV: [],
+        subGraphSharedType: '',
+        systemId: 'sg-1',
+      },
+      {
+        name: 'Subgraph 2',
+        naturalId: 2,
+        relatedEndPointLinks: [],
+        SGKV: [],
+        subGraphSharedType: '',
+        systemId: '2',
+      },
+    ],
     message: undefined as never,
     success: true,
   });

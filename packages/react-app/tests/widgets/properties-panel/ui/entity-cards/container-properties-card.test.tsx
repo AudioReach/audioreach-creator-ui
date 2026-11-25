@@ -95,7 +95,7 @@ describe('ContainerPropertiesCard', () => {
     await waitFor(() =>
       expect(fetchContainerProperties).toHaveBeenCalledWith('proj-1', 'cnt-1'),
     );
-    expect(screen.getByDisplayValue('1')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0x1')).toBeInTheDocument();
     expect(screen.getAllByText('Container Type')).not.toHaveLength(0);
     expect(screen.getByTestId('q-select')).toBeInTheDocument();
   });
@@ -126,7 +126,7 @@ describe('ContainerPropertiesCard', () => {
       expect(fetchContainerProperties).toHaveBeenCalledWith('proj-1', '100'),
     );
     expect(screen.getByText('0x64')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('100')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0x64')).toBeInTheDocument();
   });
 
   it('updates a container ID through the subgraph endpoint DTO contract', async () => {

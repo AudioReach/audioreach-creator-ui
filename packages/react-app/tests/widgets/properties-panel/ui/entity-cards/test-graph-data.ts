@@ -163,6 +163,7 @@ export function makeGraphData(): UsecaseGraphData {
     subgraphs: {
       'sg-1': {
         containers: ['cnt-1'],
+        naturalId: 0xb000002f,
         subgraphName: 'Main Subgraph',
         subgraphType: 'offload',
         systemId: 'sg-1',
