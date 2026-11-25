@@ -11,6 +11,7 @@ jest.mock('~entities/spf-modules', () => ({
 let latestPropertiesPanelProps: MockPropertiesPanelProps | null = null;
 
 interface MockPropertiesPanelProps {
+  moduleDefinitionsBySystemId: unknown;
   onNavigateToNode: (nodeId: string) => void;
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
   onVirtualDataLinkRowDelete: (realDataLinkId: string) => void;
@@ -121,6 +122,30 @@ describe('PropertiesPanelHost', () => {
       expect.objectContaining({
         virtualControlLinks: [expect.objectContaining({id: 'proxy-cl-1'})],
         virtualDataLinks: [expect.objectContaining({id: 'proxy-dl-1'})],
+      }),
+    );
+  });
+
+  it('passes module definitions into the properties panel', () => {
+    const store = createGraphDesignerStore('tab-1', PROJECT_ID);
+    store.setState({
+      graphData: makeGraphData(),
+      moduleDefinitionsBySystemId: {
+        'mod-def-1': {naturalId: 0x07001017} as never,
+      },
+    });
+
+    render(
+      <GraphDesignerStoreContext.Provider value={store}>
+        <PropertiesPanelHost projectId={PROJECT_ID} />
+      </GraphDesignerStoreContext.Provider>,
+    );
+
+    expect(latestPropertiesPanelProps).toEqual(
+      expect.objectContaining({
+        moduleDefinitionsBySystemId: {
+          'mod-def-1': expect.objectContaining({naturalId: 0x07001017}),
+        },
       }),
     );
   });

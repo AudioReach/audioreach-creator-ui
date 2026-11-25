@@ -58,6 +58,7 @@ export interface Port {
 }
 
 export interface ModuleInstance {
+  alias?: string;
   ckvs?: CkvDto[];
   containerSystemId: string;
   diffChangedFields?: string[];
@@ -545,6 +546,7 @@ function toModuleInstance(
       totalLinksAtPort: p.totalLinksAtPort,
     }));
   return {
+    alias: m.alias,
     ckvs: m.ckvs ?? existing?.ckvs,
     containerSystemId: m.containerSystemId,
     displayName: m.alias || m.name,
@@ -1470,7 +1472,11 @@ export function createGraphDataSlice<
           ...graphData,
           moduleInstances: {
             ...graphData.moduleInstances,
-            [moduleSystemId]: {...current, displayName: alias},
+            [moduleSystemId]: {
+              ...current,
+              alias,
+              displayName: alias || current.moduleName,
+            },
           },
         },
       } as unknown as Partial<S>);

@@ -29,6 +29,7 @@ export function PropertiesPanelHost({
     isEditing: state.mode === 'edit',
     isMutating: state.isMutating,
     markDirty: state.markDirty,
+    moduleDefinitionsBySystemId: state.moduleDefinitionsBySystemId,
     requestNodeFocus: state.requestNodeFocus,
     selectedEdges: state.selectedEdges,
     selectedNodes: state.selectedNodes,
@@ -55,6 +56,7 @@ export function PropertiesPanelHost({
       graphData={props.graphData}
       isEditing={props.isEditing}
       isMutating={props.isMutating}
+      moduleDefinitionsBySystemId={props.moduleDefinitionsBySystemId}
       onContainerIdChange={props.updateContainerIdLocal}
       onModuleAliasChange={props.updateModuleAliasLocal}
       onModuleContainerChange={props.updateModuleContainerLocal}

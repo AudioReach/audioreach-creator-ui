@@ -302,6 +302,21 @@ describe('createGraphDataSlice — moduleType resolution', () => {
     expect(instance?.moduleType).toBe('SOURCE');
   });
 
+  it('preserves an empty alias while using the module name for display', async () => {
+    const store = makeStore();
+    mockGetUsecaseComponents.mockResolvedValueOnce({
+      data: minimalDto as never,
+      message: undefined,
+      success: true,
+    });
+
+    await store.getState().loadGraphData(['uc-1']);
+
+    const instance = store.getState().graphData?.moduleInstances['sys-mod-1'];
+    expect(instance?.alias).toBe('');
+    expect(instance?.displayName).toBe('AudioDecoder');
+  });
+
   it('falls back to empty string when no matching module definition exists', async () => {
     const store = makeStore([]);
 
@@ -1962,6 +1977,16 @@ describe('createGraphDataSlice - store-only property updates', () => {
     expect(
       store.getState().graphData?.moduleInstances['mod-1'].displayName,
     ).toBe('New Alias');
+    expect(store.getState().graphData?.moduleInstances['mod-1'].alias).toBe(
+      'New Alias',
+    );
+
+    store.getState().updateModuleAliasLocal('mod-1', '');
+
+    expect(
+      store.getState().graphData?.moduleInstances['mod-1'].displayName,
+    ).toBe('Module 1');
+    expect(store.getState().graphData?.moduleInstances['mod-1'].alias).toBe('');
     expect(mockPatchSpfModule).not.toHaveBeenCalled();
     expect(store.getState().isDirty).toBe(true);
   });
