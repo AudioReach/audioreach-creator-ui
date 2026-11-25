@@ -37,7 +37,7 @@ import type {GraphDesignerStore} from '../model/graph-designer-store';
 import type {InnerActionOptions} from './module-operations';
 
 export type MoveDestination =
-  {createNew: true; name: string} | {subsystemId: string} | string | null;
+  {createNew: true} | {subsystemId: string} | string | null;
 
 export interface SubsystemOperations {
   deleteSubsystem: (
@@ -237,12 +237,31 @@ export function createSubsystemOperations(
 
   function isNewSubsystemDestination(
     destination: MoveDestination,
-  ): destination is {createNew: true; name: string} {
+  ): destination is {createNew: true} {
     return (
       destination !== null &&
       typeof destination !== 'string' &&
       'createNew' in destination
     );
+  }
+
+  // Parent for the new subsystem so it sits beside the node's current one.
+  function siblingParentIdFor(
+    get: () => GraphDesignerStore,
+    nodeId: string,
+  ): string | undefined {
+    const {graphData} = get();
+    if (!graphData) {
+      return undefined;
+    }
+    const node = graphData.subsystems[nodeId];
+    if (node) {
+      return node.parentSubsystemId ?? undefined;
+    }
+    const container = Object.values(graphData.subsystems).find((subsystem) =>
+      subsystem.subgraphs.includes(nodeId),
+    );
+    return container?.parentSubsystemId ?? undefined;
   }
 
   function withMovedMembership(
@@ -464,8 +483,9 @@ export function createSubsystemOperations(
           );
         }
 
+        const parentSystemId = siblingParentIdFor(get, nodeId);
         const createResult = await createSubsystem(projectId, {
-          name: destination.name,
+          ...(parentSystemId && {parentSystemId}),
         });
         if (hasBlockingIssues(createResult) || !createResult.data) {
           showToast(
@@ -476,23 +496,40 @@ export function createSubsystemOperations(
         }
 
         const newSubsystem = createResult.data;
-        set((s) => ({
-          graphData: s.graphData && {
-            ...s.graphData,
-            subsystems: {
-              ...s.graphData.subsystems,
-              [newSubsystem.systemId]: {
-                childSubsystemIds: [],
-                controlPorts: [],
-                dataPorts: [],
-                parentSubsystemId: newSubsystem.parentSystemId,
-                subgraphs: [],
-                subsystemId: newSubsystem.systemId,
-                subsystemName: newSubsystem.name,
+        set((s) => {
+          if (!s.graphData) {
+            return {};
+          }
+          const parent = newSubsystem.parentSystemId
+            ? s.graphData.subsystems[newSubsystem.parentSystemId]
+            : undefined;
+          return {
+            graphData: {
+              ...s.graphData,
+              subsystems: {
+                ...s.graphData.subsystems,
+                ...(parent && {
+                  [parent.subsystemId]: {
+                    ...parent,
+                    childSubsystemIds: [
+                      ...parent.childSubsystemIds,
+                      newSubsystem.systemId,
+                    ],
+                  },
+                }),
+                [newSubsystem.systemId]: {
+                  childSubsystemIds: [],
+                  controlPorts: [],
+                  dataPorts: [],
+                  parentSubsystemId: newSubsystem.parentSystemId,
+                  subgraphs: [],
+                  subsystemId: newSubsystem.systemId,
+                  subsystemName: newSubsystem.name,
+                },
               },
             },
-          },
-        }));
+          };
+        });
         get().markDirty();
 
         return moveWithRequest(
