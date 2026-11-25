@@ -1,5 +1,6 @@
 {
   "name": "@audioreach-creator-ui/api-utils",
+  "private": true,
   "version": "0.0.1",
   "description": "Type definitions and shared utilities for the serverside API in the Electron package.",
   "main": "dist/index.js",
