@@ -6,6 +6,7 @@
 import {useMemo, useState} from 'react';
 
 import type {ProxyControlLink, ProxyDataLink} from '~entities/graph';
+import type {SpfModuleDefinitionResponseDto} from '~entities/module-definitions';
 import type {SpfModuleDto} from '~entities/usecases';
 import type {
   SelectedEdgeRef,
@@ -38,6 +39,7 @@ export interface PropertiesPanelProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
   isMutating?: boolean;
+  moduleDefinitionsBySystemId?: Record<string, SpfModuleDefinitionResponseDto>;
   onContainerIdChange: (
     subgraphSystemId: string,
     containerSystemId: string,
@@ -70,6 +72,7 @@ export function PropertiesPanel({
   graphData,
   isEditing,
   isMutating,
+  moduleDefinitionsBySystemId = {},
   onContainerIdChange,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -150,6 +153,7 @@ export function PropertiesPanel({
                 isEditing,
                 isMutating,
                 item,
+                moduleDefinitionsBySystemId,
                 onContainerIdChange,
                 onModuleAliasChange,
                 onModuleContainerChange,
@@ -192,6 +196,7 @@ function renderPropertyCard({
   isEditing,
   isMutating,
   item,
+  moduleDefinitionsBySystemId,
   onContainerIdChange,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -211,6 +216,7 @@ function renderPropertyCard({
   isEditing: boolean;
   isMutating?: boolean;
   item: PropertyGroupItem;
+  moduleDefinitionsBySystemId: Record<string, SpfModuleDefinitionResponseDto>;
   onContainerIdChange: (
     subgraphSystemId: string,
     containerSystemId: string,
@@ -263,7 +269,8 @@ function renderPropertyCard({
           subgraphSystemId={item.subgraphSystemId}
         />
       );
-    case 'modules':
+    case 'modules': {
+      const module = graphData.moduleInstances[item.systemId];
       return (
         <ModulePropertiesCard
           key={`${type}:${item.systemId}`}
@@ -271,6 +278,10 @@ function renderPropertyCard({
           graphData={graphData}
           isEditing={isEditing}
           isMutating={isMutating}
+          moduleDefinitionNaturalId={
+            moduleDefinitionsBySystemId[module?.moduleDefinitionSystemId ?? '']
+              ?.naturalId
+          }
           moduleId={item.systemId}
           onModuleAliasChange={onModuleAliasChange}
           onModuleContainerChange={onModuleContainerChange}
@@ -279,6 +290,7 @@ function renderPropertyCard({
           runMutation={runMutation}
         />
       );
+    }
     case 'subsystems':
       return (
         <SubsystemPropertiesCard

@@ -17,6 +17,7 @@ export interface PropertyOption {
 }
 
 export interface PropertyRowProps {
+  controlClassName?: string;
   error?: string | null;
   isEditing: boolean;
   isSaving?: boolean;
@@ -30,6 +31,7 @@ export interface PropertyRowProps {
 }
 
 export function PropertyRow({
+  controlClassName,
   error,
   isEditing,
   isSaving,
@@ -48,7 +50,7 @@ export function PropertyRow({
       <span className="pt-1 text-sm font-medium">{label}</span>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="min-w-0 flex-1">
+          <div className={`min-w-0 ${controlClassName ?? 'flex-1'}`}>
             <PropertyRowControl
               disabled={disabled}
               label={label}

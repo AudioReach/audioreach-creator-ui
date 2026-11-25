@@ -48,13 +48,13 @@ describe('ModulePropertiesCard', () => {
 
   it('renders static fields, dynamic port editability, and schema data', async () => {
     const graphData = makeGraphData();
-    graphData.moduleInstances['mod-1'].containerSystemId = '1';
     graphData.moduleInstances['mod-1'].maxInputPorts = 0xffffffff;
 
     render(
       <ModulePropertiesCard
         graphData={graphData}
         isEditing
+        moduleDefinitionNaturalId={100}
         moduleId="mod-1"
         onModuleAliasChange={jest.fn()}
         onModuleContainerChange={jest.fn()}
@@ -65,9 +65,17 @@ describe('ModulePropertiesCard', () => {
 
     expect(screen.getByText('Alias')).toBeInTheDocument();
     expect(screen.getByText('0x0064')).toBeInTheDocument();
-    expect(screen.getByText('mod-1')).toBeInTheDocument();
+    expect(screen.getByText('0x00000064')).toBeInTheDocument();
     expect(screen.getByDisplayValue('0x1')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Copy System ID'})).toBeEnabled();
+    expect(screen.getByRole('button', {name: 'Copy Module ID'})).toBeEnabled();
+    expect(
+      screen.queryByRole('button', {name: 'Copy Container ID'}),
+    ).toBeNull();
+    expect(screen.getByLabelText('Alias').closest('.w-48')).not.toBeNull();
+    expect(screen.getByDisplayValue('0x1').closest('.w-40')).not.toBeNull();
+    expect(screen.getByDisplayValue('3').closest('.w-24')).not.toBeNull();
+    expect(screen.getByDisplayValue('4').closest('.w-24')).not.toBeNull();
+    expect(screen.getByDisplayValue('1').closest('.w-24')).not.toBeNull();
     expect(
       screen.getByRole('button', {name: 'Copy Instance ID'}),
     ).toBeEnabled();
@@ -81,6 +89,67 @@ describe('ModulePropertiesCard', () => {
       ]),
     );
     expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument();
+  });
+
+  it('preserves an empty alias and updates the container natural ID', async () => {
+    const graphData = makeGraphData();
+    const module = graphData.moduleInstances['mod-1'];
+    const onModuleContainerChange = jest.fn();
+    module.alias = '';
+    graphData.containers['cnt-1'].naturalId = 0xe000001c;
+    graphData.containers['cnt-2'] = {
+      moduleInstances: [],
+      naturalId: 0xe000001d,
+      subgraphSystemId: 'sg-1',
+      systemId: 'cnt-2',
+    };
+    module.maxControlPorts = 0;
+    module.maxInputPorts = 1;
+    module.maxOutputPorts = 1;
+    module.naturalId = 0x408c;
+    mockPatchSpfModule.mockResolvedValue({
+      data: {containerSystemId: 'cnt-2'} as never,
+      message: 'ok',
+      success: true,
+    });
+
+    render(
+      <ModulePropertiesCard
+        graphData={graphData}
+        isEditing
+        moduleDefinitionNaturalId={0x07001017}
+        moduleId="mod-1"
+        onModuleAliasChange={jest.fn()}
+        onModuleContainerChange={onModuleContainerChange}
+        onModulePortCountChange={jest.fn()}
+        projectId="proj-1"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(fetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+        'mod-1',
+      ]),
+    );
+
+    expect(screen.getByDisplayValue('')).toBeInTheDocument();
+    expect(screen.getByText('0x07001017')).toBeInTheDocument();
+    expect(screen.getByText('0x408C')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0xE000001C')).toBeInTheDocument();
+    expect(screen.getAllByDisplayValue('1')).toHaveLength(2);
+    expect(screen.getByDisplayValue('0')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Copy Module ID'})).toBeEnabled();
+    fireEvent.change(screen.getByDisplayValue('0xE000001C'), {
+      target: {value: '0xE000001D'},
+    });
+    await waitFor(() =>
+      expect(mockPatchSpfModule).toHaveBeenCalledWith('proj-1', 'mod-1', {
+        containerSystemId: 'cnt-2',
+      }),
+    );
+    expect(onModuleContainerChange).toHaveBeenCalledWith('mod-1', 'cnt-2');
+    expect(screen.getByDisplayValue('0xE000001D')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Copy System ID'})).toBeNull();
   });
 
   it('makes control port count read-only when control ports are static', async () => {

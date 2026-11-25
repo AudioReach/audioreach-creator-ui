@@ -4,6 +4,7 @@
  */
 
 import {formatModuleInstanceId} from '~shared/utils/format-module-instance-id';
+import {ConvertNumberToHexString} from '~shared/utils/converter-utils';
 
 import {useCallback} from 'react';
 
@@ -35,6 +36,7 @@ export interface ModulePropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
   isMutating?: boolean;
+  moduleDefinitionNaturalId?: number;
   moduleId: string;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
@@ -53,6 +55,7 @@ export function ModulePropertiesCard({
   isCollapsed,
   isEditing,
   isMutating = false,
+  moduleDefinitionNaturalId,
   moduleId,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -69,10 +72,16 @@ export function ModulePropertiesCard({
 
   return (
     <ModulePropertiesCardBody
+      containerId={displayContainerId(
+        graphData.containers,
+        module.containerSystemId,
+      )}
+      containers={graphData.containers}
       isCollapsed={isCollapsed}
       isEditing={isEditing}
       isMutating={isMutating}
       module={module}
+      moduleDefinitionNaturalId={moduleDefinitionNaturalId}
       moduleId={moduleId}
       onModuleAliasChange={onModuleAliasChange}
       onModuleContainerChange={onModuleContainerChange}
@@ -85,10 +94,13 @@ export function ModulePropertiesCard({
 }
 
 function ModulePropertiesCardBody({
+  containerId,
+  containers,
   isCollapsed,
   isEditing,
   isMutating,
   module,
+  moduleDefinitionNaturalId,
   moduleId,
   onModuleAliasChange,
   onModuleContainerChange,
@@ -97,10 +109,13 @@ function ModulePropertiesCardBody({
   projectId,
   runMutation,
 }: {
+  containerId: string;
+  containers: UsecaseGraphData['containers'];
   isCollapsed?: boolean;
   isEditing: boolean;
   isMutating: boolean;
   module: ModuleInstance;
+  moduleDefinitionNaturalId?: number;
   moduleId: string;
   onModuleAliasChange: (moduleId: string, alias: string) => void;
   onModuleContainerChange: (moduleId: string, newContainerId: string) => void;
@@ -133,12 +148,20 @@ function ModulePropertiesCardBody({
       },
       [moduleId, onModuleAliasChange, projectId],
     ),
-    value: module.displayName,
+    value: module.alias ?? '',
   });
   const containerSave = useStaticFieldSave({
     delayMs: 300,
     onSave: useCallback(
-      async (containerSystemId: string) => {
+      async (nextContainerId: string) => {
+        const containerSystemId = findContainerSystemId(
+          containers,
+          nextContainerId,
+        );
+        if (!containerSystemId) {
+          return {message: 'Container ID does not exist', ok: false};
+        }
+
         const result = await patchSpfModule(projectId, moduleId, {
           containerSystemId,
         });
@@ -154,11 +177,14 @@ function ModulePropertiesCardBody({
             ? result.data.containerSystemId
             : containerSystemId;
         onModuleContainerChange(moduleId, committedContainerId);
-        return {ok: true, value: committedContainerId};
+        return {
+          ok: true,
+          value: displayContainerId(containers, committedContainerId),
+        };
       },
-      [moduleId, onModuleContainerChange, projectId],
+      [containers, moduleId, onModuleContainerChange, projectId],
     ),
-    value: module.containerSystemId,
+    value: containerId,
   });
   const inputCountSave = usePortCountSave({
     field: 'maxInputPorts',
@@ -202,6 +228,7 @@ function ModulePropertiesCardBody({
       title={module.displayName}
     >
       <PropertyRow
+        controlClassName="w-48"
         error={aliasSave.error}
         isEditing={isEditing}
         isSaving={aliasSave.isSaving}
@@ -210,22 +237,33 @@ function ModulePropertiesCardBody({
         onChange={(value) => aliasSave.saveText(String(value))}
         value={aliasSave.value}
       />
-      <CopyableIdRow label="System ID" value={module.systemId} />
+      <CopyableIdRow
+        label="Module ID"
+        preserveFormat
+        value={
+          moduleDefinitionNaturalId === undefined
+            ? 'Unavailable'
+            : (ConvertNumberToHexString(moduleDefinitionNaturalId) ??
+              'Unavailable')
+        }
+      />
       <CopyableIdRow
         label="Instance ID"
         preserveFormat
         value={formatModuleInstanceId(module.naturalId)}
       />
       <PropertyRow
+        controlClassName="w-40"
         error={containerSave.error}
         isEditing={isEditing}
         isSaving={containerSave.isSaving}
         label="Container ID"
         mode="text"
         onChange={(value) => containerSave.saveText(String(value))}
-        value={formatDisplayId(String(containerSave.value))}
+        value={containerSave.value}
       />
       <PropertyRow
+        controlClassName="w-24"
         error={inputCountSave.error}
         isEditing={isEditing}
         isSaving={inputCountSave.isSaving}
@@ -237,6 +275,7 @@ function ModulePropertiesCardBody({
         value={inputCountSave.value}
       />
       <PropertyRow
+        controlClassName="w-24"
         error={outputCountSave.error}
         isEditing={isEditing}
         isSaving={outputCountSave.isSaving}
@@ -248,6 +287,7 @@ function ModulePropertiesCardBody({
         value={outputCountSave.value}
       />
       <PropertyRow
+        controlClassName="w-24"
         error={controlCountSave.error}
         isEditing={isEditing}
         isSaving={controlCountSave.isSaving}
@@ -272,6 +312,29 @@ function ModulePropertiesCardBody({
       />
     </CollapsibleCard>
   );
+}
+
+function displayContainerId(
+  containers: UsecaseGraphData['containers'],
+  containerSystemId: string,
+): string {
+  const naturalId = containers[containerSystemId]?.naturalId;
+  return naturalId === undefined
+    ? containerSystemId
+    : formatDisplayId(String(naturalId));
+}
+
+function findContainerSystemId(
+  containers: UsecaseGraphData['containers'],
+  value: string,
+): string | undefined {
+  const formattedValue = formatDisplayId(value);
+  return Object.values(containers).find(
+    (container) =>
+      container.systemId === value ||
+      (container.naturalId !== undefined &&
+        formatDisplayId(String(container.naturalId)) === formattedValue),
+  )?.systemId;
 }
 
 function hasDynamicDataPort(ports: Port[]): boolean {
