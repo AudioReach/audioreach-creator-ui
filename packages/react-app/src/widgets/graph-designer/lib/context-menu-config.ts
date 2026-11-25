@@ -115,11 +115,64 @@ function buildSubsystemPlacementItems(
   ];
 }
 
-function isPairLink(store: GraphDesignerStore, connectionId: string): boolean {
-  return Object.values(store.pairLinksById).some((pair) =>
-    [...pair.dataLinks, ...pair.controlLinks].some(
-      (link) => link.systemId === connectionId,
-    ),
+function isExcludableSubgraph(
+  store: GraphDesignerStore,
+  subgraphId: string,
+): boolean {
+  const provenance = store.subgraphProvenanceById[subgraphId];
+  return Boolean(
+    store.graphData?.subgraphs[subgraphId] &&
+    !store.excludedSubgraphSystemIds.includes(subgraphId) &&
+    (provenance === 'pre-loaded' || provenance === 'palette-placed'),
+  );
+}
+
+function buildExcludeSubgraphItems(
+  store: GraphDesignerStore,
+  subgraphId: string,
+): ContextMenuItem[] {
+  return isExcludableSubgraph(store, subgraphId)
+    ? [{id: 'exclude-subgraph', label: 'Exclude Subgraph'}]
+    : [];
+}
+
+function isExcludedLink(
+  store: GraphDesignerStore,
+  connectionId: string,
+): boolean {
+  return store.excludedLinks.some((link) => link.systemId === connectionId);
+}
+
+function isExcludableInterSubgraphLink(
+  store: GraphDesignerStore,
+  connectionId: string,
+): boolean {
+  if (!store.excludableLinkSystemIds.includes(connectionId)) {
+    return false;
+  }
+  if (isExcludedLink(store, connectionId)) {
+    return false;
+  }
+
+  const graphData = store.graphData;
+  const connection = graphData?.connections.find(
+    (candidate) => candidate.systemId === connectionId,
+  );
+  if (!graphData || !connection) {
+    return false;
+  }
+
+  const sourceSubgraphId =
+    graphData.moduleInstances[connection.sourceSystemId]?.subgraphSystemId;
+  const destinationSubgraphId =
+    graphData.moduleInstances[connection.destinationSystemId]?.subgraphSystemId;
+
+  return Boolean(
+    sourceSubgraphId &&
+    destinationSubgraphId &&
+    sourceSubgraphId !== destinationSubgraphId &&
+    graphData.subgraphs[sourceSubgraphId] &&
+    graphData.subgraphs[destinationSubgraphId],
   );
 }
 
@@ -225,11 +278,19 @@ export function buildContextMenuConfig(
         case 'subgraph-proxy':
           return [
             {icon: Trash2, id: 'delete', label: 'Delete'},
+            ...buildExcludeSubgraphItems(
+              store,
+              resolveContextMenuNodeId(target),
+            ),
             ...MANUAL_USECASE_ITEMS,
           ];
         case 'subgraph':
           return [
             {icon: Trash2, id: 'delete', label: 'Delete'},
+            ...buildExcludeSubgraphItems(
+              store,
+              resolveContextMenuNodeId(target),
+            ),
             ...MANUAL_USECASE_ITEMS,
             ...buildSubsystemPlacementItems(
               options,
@@ -271,7 +332,7 @@ export function buildContextMenuConfig(
         case 'proxy-data-link':
           return [
             {icon: Trash2, id: 'delete', label: 'Delete'},
-            ...(isPairLink(store, target.edge.id)
+            ...(isExcludableInterSubgraphLink(store, target.edge.id)
               ? [{id: 'exclude-link', label: 'Exclude Link'}]
               : []),
           ];
@@ -302,6 +363,13 @@ export function buildContextMenuConfig(
               ? options.onAddToManualUsecase
               : options.onRemoveFromManualUsecase;
           handler(target.node.subgraphId);
+          return;
+        }
+        if (
+          (target.kind === 'subgraph' || target.kind === 'subgraph-proxy') &&
+          actionId === 'exclude-subgraph'
+        ) {
+          store.excludeSubgraph(get, nodeId);
           return;
         }
         if (actionId === 'delete') {

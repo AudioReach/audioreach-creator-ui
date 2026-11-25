@@ -69,6 +69,7 @@ export interface SubgraphOperations {
     options?: InnerActionOptions,
   ) => Promise<boolean>;
   excludeLink: (get: () => GraphDesignerStore, connectionId: string) => void;
+  excludeSubgraph: (get: () => GraphDesignerStore, subgraphId: string) => void;
   placeSubgraphFromPalette: (
     get: () => GraphDesignerStore,
     subgraphId: string,
@@ -95,6 +96,36 @@ export function createSubgraphOperations(
       sourcePortSystemId: connection.sourcePortSystemId,
       sourceSystemId: connection.sourceSystemId,
     };
+  }
+
+  function isInterSubgraphConnection(
+    graphData: NonNullable<GraphDesignerStore['graphData']>,
+    connection: GraphDesignerStore['excludedLinks'][number],
+  ): boolean {
+    const sourceSubgraphId =
+      graphData.moduleInstances[connection.sourceSystemId]?.subgraphSystemId;
+    const destinationSubgraphId =
+      graphData.moduleInstances[connection.destinationSystemId]
+        ?.subgraphSystemId;
+
+    return Boolean(
+      sourceSubgraphId &&
+      destinationSubgraphId &&
+      sourceSubgraphId !== destinationSubgraphId,
+    );
+  }
+
+  function dedupeConnections(
+    connections: GraphDesignerStore['excludedLinks'],
+  ): GraphDesignerStore['excludedLinks'] {
+    const seenConnectionIds = new Set<string>();
+    return connections.filter((connection) => {
+      if (seenConnectionIds.has(connection.systemId)) {
+        return false;
+      }
+      seenConnectionIds.add(connection.systemId);
+      return true;
+    });
   }
 
   function removeSubgraphFromUiCacheOnly(
@@ -191,6 +222,7 @@ export function createSubgraphOperations(
     let connections = graphData.connections;
     const pairLinksById = {...get().pairLinksById};
     const addedLinks: Array<ControlLinkDto | DataLinkDto> = [];
+    const excludableLinkSystemIds = new Set(get().excludableLinkSystemIds);
 
     const fetchedPairLinksById: Record<string, SubgraphPairResponseDto> = {};
 
@@ -276,14 +308,17 @@ export function createSubgraphOperations(
       for (const link of pair.dataLinks) {
         connections = upsertLink(connections, link, 'data');
         addedLinks.push(link);
+        excludableLinkSystemIds.add(link.systemId);
       }
       for (const link of pair.controlLinks) {
         connections = upsertLink(connections, link, 'control');
         addedLinks.push(link);
+        excludableLinkSystemIds.add(link.systemId);
       }
     }
 
     set((s) => ({
+      excludableLinkSystemIds: [...excludableLinkSystemIds],
       graphData: s.graphData && {...s.graphData, connections},
       pairLinksById,
     }));
@@ -354,6 +389,105 @@ export function createSubgraphOperations(
           ),
         },
       }));
+      get().markDirty();
+    },
+
+    excludeSubgraph: (get, subgraphId) => {
+      const {
+        excludableLinkSystemIds,
+        excludedSubgraphSystemIds,
+        graphData,
+        subgraphProvenanceById,
+      } = get();
+      const provenance = subgraphProvenanceById[subgraphId];
+      if (
+        !graphData ||
+        !graphData.subgraphs[subgraphId] ||
+        excludedSubgraphSystemIds.includes(subgraphId) ||
+        (provenance !== 'pre-loaded' && provenance !== 'palette-placed')
+      ) {
+        return;
+      }
+
+      const moduleIds = new Set(
+        Object.values(graphData.moduleInstances)
+          .filter((module) => module.subgraphSystemId === subgraphId)
+          .map((module) => module.systemId),
+      );
+      const removedConnections = graphData.connections.filter(
+        (connection) =>
+          moduleIds.has(connection.sourceSystemId) ||
+          moduleIds.has(connection.destinationSystemId),
+      );
+      const excludableIds = new Set(excludableLinkSystemIds);
+      const excludedConnections = removedConnections.filter(
+        (connection) =>
+          excludableIds.has(connection.systemId) &&
+          isInterSubgraphConnection(graphData, connection),
+      );
+      const removedConnectionIds = new Set(
+        removedConnections.map((connection) => connection.systemId),
+      );
+
+      const moduleInstances: typeof graphData.moduleInstances = {};
+      for (const [id, module] of Object.entries(graphData.moduleInstances)) {
+        if (!moduleIds.has(id)) {
+          moduleInstances[id] = module;
+        }
+      }
+
+      const containers: typeof graphData.containers = {};
+      for (const [id, container] of Object.entries(graphData.containers)) {
+        if (container.subgraphSystemId !== subgraphId) {
+          containers[id] = container;
+        }
+      }
+
+      const {[subgraphId]: _removedSubgraph, ...subgraphs} =
+        graphData.subgraphs;
+      const currentKvSelectionsById = get().kvSelectionsById;
+      const {[subgraphId]: _removedKv, ...kvSelectionsById} =
+        currentKvSelectionsById;
+      const {[subgraphId]: _removedProvenance, ...nextProvenance} =
+        subgraphProvenanceById;
+      const currentPairLinksById = get().pairLinksById;
+      const pairLinksById: typeof currentPairLinksById = {};
+      for (const [pairKey, pair] of Object.entries(currentPairLinksById)) {
+        if (
+          pair.sourceSubgraphSystemId !== subgraphId &&
+          pair.destinationSubgraphSystemId !== subgraphId
+        ) {
+          pairLinksById[pairKey] = pair;
+        }
+      }
+
+      set((state) => ({
+        excludedLinks: dedupeConnections([
+          ...state.excludedLinks,
+          ...excludedConnections,
+        ]),
+        excludedSubgraphSystemIds: [
+          ...state.excludedSubgraphSystemIds,
+          subgraphId,
+        ],
+        graphData: state.graphData && {
+          ...state.graphData,
+          connections: state.graphData.connections.filter(
+            (connection) => !removedConnectionIds.has(connection.systemId),
+          ),
+          containers,
+          moduleInstances,
+          subgraphs,
+        },
+        kvSelectionsById,
+        pairLinksById,
+        subgraphProvenanceById: nextProvenance,
+      }));
+
+      get().adjustSurvivingPortCounts(
+        [],
+        removedConnections.map(connectionToLinkEndpoints),
+      );
       get().markDirty();
     },
 

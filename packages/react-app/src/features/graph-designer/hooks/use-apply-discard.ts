@@ -480,6 +480,7 @@ export function useApplyDiscard(
         const request = buildCreateUsecasesRequest({
           allLinks: state.graphData?.connections ?? [],
           excludedLinks: state.excludedLinks,
+          excludedSubgraphSystemIds: state.excludedSubgraphSystemIds,
           kvSelectionsById: state.kvSelectionsById,
           usecaseSystemIds: selectedUsecaseSystemIds,
         });

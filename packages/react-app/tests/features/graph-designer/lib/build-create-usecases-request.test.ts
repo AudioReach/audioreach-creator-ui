@@ -39,6 +39,7 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks: [],
       excludedLinks: [],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById: {},
       usecaseSystemIds: [],
     });
@@ -74,6 +75,7 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks: [],
       excludedLinks: [],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById,
       usecaseSystemIds: ['uc1'],
     });
@@ -102,6 +104,7 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks: [],
       excludedLinks: [],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById,
       usecaseSystemIds: [],
     });
@@ -123,6 +126,7 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks,
       excludedLinks: [],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById: {},
       usecaseSystemIds: [],
     });
@@ -141,6 +145,7 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks,
       excludedLinks: [makeConnection('conn1', 'data')],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById: {},
       usecaseSystemIds: [],
     });
@@ -155,11 +160,71 @@ describe('buildCreateUsecasesRequest', () => {
     const result = buildCreateUsecasesRequest({
       allLinks,
       excludedLinks: [],
+      excludedSubgraphSystemIds: [],
       kvSelectionsById: {},
       usecaseSystemIds: [],
     });
 
     expect(result.includedDataLinkSystemIds).toEqual(['conn1']);
     expect(result.includedControlLinkSystemIds).toEqual([]);
+  });
+
+  it('uses excluded links only to calculate included link ids', () => {
+    const allLinks: Connection[] = [
+      makeConnection('data-1', 'data'),
+      makeConnection('data-2', 'data'),
+      makeConnection('control-1', 'control'),
+      makeConnection('control-2', 'control'),
+    ];
+
+    const result = buildCreateUsecasesRequest({
+      allLinks,
+      excludedLinks: [
+        makeConnection('data-1', 'data'),
+        makeConnection('control-1', 'control'),
+      ],
+      excludedSubgraphSystemIds: [],
+      kvSelectionsById: {},
+      usecaseSystemIds: [],
+    });
+
+    expect(result).not.toHaveProperty('excludedDataLinkSystemIds');
+    expect(result).not.toHaveProperty('excludedControlLinkSystemIds');
+    expect(result.includedDataLinkSystemIds).toEqual(['data-2']);
+    expect(result.includedControlLinkSystemIds).toEqual(['control-2']);
+  });
+
+  it('filters excluded subgraphs out of activeSubgraphs', () => {
+    const kv1 = makeKeyValue(1, 'vs1');
+
+    const result = buildCreateUsecasesRequest({
+      allLinks: [],
+      excludedLinks: [],
+      excludedSubgraphSystemIds: ['sg-1'],
+      kvSelectionsById: {
+        'sg-1': [
+          {
+            isEc: false,
+            keyValuePairs: [kv1],
+            selected: true,
+            systemId: 'sel-1',
+          },
+        ],
+        'sg-2': [
+          {
+            isEc: false,
+            keyValuePairs: [kv1],
+            selected: true,
+            systemId: 'sel-2',
+          },
+        ],
+      },
+      usecaseSystemIds: [],
+    });
+
+    expect(result).not.toHaveProperty('excludedSubgraphSystemIds');
+    expect(result.activeSubgraphs).toEqual([
+      {systemId: 'sg-2', valueSystemIds: [['vs1']]},
+    ]);
   });
 });
