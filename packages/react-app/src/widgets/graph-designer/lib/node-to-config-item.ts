@@ -39,11 +39,11 @@ export function mapSelectedNodesToConfigurationItems(
       }
       case NODE_KIND.SUBGRAPH: {
         const subgraph = graphData.subgraphs[node.systemId];
-        if (!subgraph) {
+        if (!subgraph || subgraph.naturalId === undefined) {
           continue;
         }
         items.push({
-          id: Number(subgraph.systemId),
+          id: subgraph.naturalId,
           name: subgraph.subgraphName,
           systemId: node.systemId,
           type: ConfigurationItemType.SUBGRAPH,
@@ -52,11 +52,11 @@ export function mapSelectedNodesToConfigurationItems(
       }
       case NODE_KIND.SUBGRAPH_PROXY: {
         const subgraph = graphData.subgraphs[node.systemId];
-        if (!subgraph) {
+        if (!subgraph || subgraph.naturalId === undefined) {
           continue;
         }
         items.push({
-          id: Number(subgraph.systemId),
+          id: subgraph.naturalId,
           name: subgraph.subgraphName,
           systemId: node.systemId,
           type: ConfigurationItemType.SUBGRAPH,

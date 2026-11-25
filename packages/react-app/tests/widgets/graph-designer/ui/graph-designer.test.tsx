@@ -721,6 +721,7 @@ describe('GraphDesigner - key configurator selection sync', () => {
         subgraphs: {
           '1': {
             containers: [],
+            naturalId: 0xb000002f,
             subgraphName: 'Subgraph 1',
             subgraphType: '',
             systemId: '1',
@@ -755,7 +756,7 @@ describe('GraphDesigner - key configurator selection sync', () => {
       keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
     ).toEqual([
       {
-        id: 1,
+        id: 0xb000002f,
         name: 'Subgraph 1',
         systemId: '1',
         type: ConfigurationItemType.SUBGRAPH,
@@ -785,7 +786,7 @@ describe('GraphDesigner - key configurator selection sync', () => {
       keyConfiguratorStoreManager.getStore(PROJECT_ID).getState().selectedItems,
     ).toEqual([
       {
-        id: 1,
+        id: 0xb000002f,
         name: 'Subgraph 1',
         systemId: '1',
         type: ConfigurationItemType.SUBGRAPH,

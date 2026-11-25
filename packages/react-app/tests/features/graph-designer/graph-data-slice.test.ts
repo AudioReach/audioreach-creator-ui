@@ -73,11 +73,18 @@ beforeEach(() => {
     message: undefined as never,
     success: true,
   });
-  mockGetSubgraphsByIds.mockResolvedValue({
-    data: [],
+  mockGetSubgraphsByIds.mockImplementation(async (_projectId, systemIds) => ({
+    data: systemIds.map((systemId, index) => ({
+      name: `Subgraph ${systemId}`,
+      naturalId: index + 1,
+      relatedEndPointLinks: [],
+      SGKV: [],
+      subGraphSharedType: '',
+      systemId,
+    })),
     message: undefined as never,
     success: true,
-  });
+  }));
   mockGetModulesBySystemIds.mockResolvedValue({
     data: [],
     message: undefined as never,
@@ -514,8 +521,8 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
     mockGetSubgraphsByIds.mockResolvedValueOnce({
       data: [
         {
-          id: 1,
           name: 'RealSubgraphName',
+          naturalId: 1,
           relatedEndPointLinks: [],
           SGKV: [
             {
@@ -565,8 +572,8 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
     mockGetSubgraphsByIds.mockResolvedValueOnce({
       data: [
         {
-          id: 1,
           name: 'RealSubgraphName',
+          naturalId: 1,
           relatedEndPointLinks: [],
           SGKV: [
             {
@@ -641,7 +648,7 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
     expect(subgraph?.subgraphType).toBe('AUDIO_PLAYBACK');
   });
 
-  it('leaves the placeholder subgraph name in place when getSubgraphsByIds fails', async () => {
+  it('reports a graph data error when subgraph details cannot be loaded', async () => {
     const store = makeStore([]);
     mockGetUsecaseComponents.mockResolvedValueOnce({
       data: minimalDto as never,
@@ -655,8 +662,11 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
 
     await store.getState().loadGraphData(['uc-1']);
 
-    const subgraph = store.getState().graphData?.subgraphs['sys-sg-1'];
-    expect(subgraph?.subgraphName).toBe('Subgraph sys-sg-1');
+    expect(store.getState().graphData).toBeNull();
+    expect(store.getState().graphDataStatus).toBe('error');
+    expect(store.getState().graphDataError).toBe(
+      'Subgraph sys-sg-1 is missing its natural ID',
+    );
   });
 
   it('carries forward a real subgraph name across an incremental recompute rather than resetting to the placeholder', () => {
@@ -684,6 +694,7 @@ describe('createGraphDataSlice — subgraph name enrichment', () => {
           'sys-sg-1': {
             containers: [],
             kvVectors: [],
+            naturalId: 1,
             subgraphName: 'RealSubgraphName',
             subgraphType: 'AUDIO_PLAYBACK',
             systemId: 'sys-sg-1',
@@ -1601,6 +1612,7 @@ describe('recomputeContainersAndSubgraphs', () => {
           'subgraph-existing': {
             containers: ['container-1'],
             kvVectors: [],
+            naturalId: 1,
             subgraphName: 'Existing Subgraph',
             subgraphType: 'AUDIO_RECORD',
             systemId: 'subgraph-existing',
@@ -2413,6 +2425,7 @@ describe('applyComponentCollection', () => {
           'subgraph-1': {
             containers: ['container-10'],
             kvVectors: [],
+            naturalId: 1,
             subgraphName: 'Existing Subgraph',
             subgraphType: 'AUDIO_RECORD',
             systemId: 'subgraph-1',
@@ -2452,6 +2465,7 @@ describe('applyComponentCollection', () => {
     expect(state.graphData!.subgraphs['subgraph-1']).toEqual({
       containers: ['container-10'],
       kvVectors: [],
+      naturalId: 1,
       subgraphName: 'Existing Subgraph',
       subgraphType: 'AUDIO_RECORD',
       systemId: 'subgraph-1',

@@ -251,7 +251,7 @@ export function buildLevelViewFromGraphData(
       } satisfies SubgraphNodeMeta,
       nodeKind: NODE_KIND.SUBGRAPH,
       parentId: subgraphToSubsystemId.get(sg.systemId),
-      subgraphId: sg.naturalId!,
+      subgraphId: sg.naturalId,
       width: 0,
       x: 0,
       y: 0,

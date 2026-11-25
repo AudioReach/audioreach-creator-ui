@@ -111,7 +111,16 @@ beforeEach(() => {
     success: true,
   });
   mockGetSubgraphsByIds.mockResolvedValue({
-    data: [],
+    data: [
+      {
+        name: 'Subgraph sg-1',
+        naturalId: 1,
+        relatedEndPointLinks: [],
+        SGKV: [],
+        subGraphSharedType: '',
+        systemId: 'sg-1',
+      },
+    ],
     message: undefined as never,
     success: true,
   });
@@ -549,9 +558,11 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         subgraphs: {
           'sg-2': {
             containers: ['cnt-2'],
+            kvVectors: [],
+            naturalId: 2,
             subgraphName: 'SG2',
-            subgraphSystemId: 'sg-2',
             subgraphType: '',
+            systemId: 'sg-2',
           },
         },
       },
@@ -668,9 +679,11 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
         subgraphs: {
           'sg-2': {
             containers: ['cnt-2'],
+            kvVectors: [],
+            naturalId: 2,
             subgraphName: 'SG2',
-            subgraphSystemId: 'sg-2',
             subgraphType: '',
+            systemId: 'sg-2',
           },
         },
       },

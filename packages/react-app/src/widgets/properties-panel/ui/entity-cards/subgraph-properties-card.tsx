@@ -52,6 +52,7 @@ export function SubgraphPropertiesCard({
       onToggle={onToggle}
       projectId={projectId}
       subgraphId={subgraphId}
+      subgraphNaturalId={subgraph.naturalId}
     />
   );
 }
@@ -65,6 +66,7 @@ function SubgraphPropertiesCardBody({
   onToggle,
   projectId,
   subgraphId,
+  subgraphNaturalId,
 }: {
   isCollapsed?: boolean;
   isEditing: boolean;
@@ -74,6 +76,7 @@ function SubgraphPropertiesCardBody({
   onToggle?: () => void;
   projectId: string;
   subgraphId: string;
+  subgraphNaturalId: number;
 }) {
   const saveName = useCallback(
     async (nextName: string) => {
@@ -116,7 +119,10 @@ function SubgraphPropertiesCardBody({
         onChange={(value) => nameSave.saveText(String(value))}
         value={nameSave.value}
       />
-      <CopyableIdRow label="Subgraph ID" value={subgraphId} />
+      <CopyableIdRow
+        label="Subgraph ID"
+        value={String(subgraphNaturalId)}
+      />
       <SchemaPropertiesTree
         data={schemaData.data}
         error={schemaData.error}
