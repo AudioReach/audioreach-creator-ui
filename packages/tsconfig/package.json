@@ -1,5 +1,6 @@
 {
   "name": "@audioreach-creator-ui/tsconfig",
+  "private": true,
   "version": "1.0.0",
   "files": [
     "tsconfig.*.json"
