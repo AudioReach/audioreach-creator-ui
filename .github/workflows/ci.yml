@@ -68,6 +68,10 @@ jobs:
         if: github.event_name != 'schedule' && inputs.mode != 'nightly'
         run: pnpm lint
 
+      - name: Format Check
+        if: github.event_name != 'schedule' && inputs.mode != 'nightly'
+        run: pnpm format:check
+
       - name: Type Check
         if: github.event_name != 'schedule' && inputs.mode != 'nightly'
         run: pnpm typecheck
