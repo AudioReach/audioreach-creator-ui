@@ -1,8 +1,7 @@
 ---
 name: commit
-description: "Generates, validates, and executes Conventional Commits-format git commit messages with atomicity checking and author identity resolution. Use when the user is writing, drafting, or reviewing a git commit message, when asked to commit changes, when a PR reviewer flags a commit message, or when the user is unsure about title length, body format, Signed-off-by placement, or commit atomicity."
+description: 'Generates, validates, and executes Conventional Commits-format git commit messages with atomicity checking and author identity resolution. Use when the user is writing, drafting, or reviewing a git commit message, when asked to commit changes, when a PR reviewer flags a commit message, or when the user is unsure about title length, body format, Signed-off-by placement, or commit atomicity.'
 ---
-
 
 ## Procedure
 
@@ -20,7 +19,8 @@ git commands to gather context.** If both (a) and (b) are present, proceed direc
 to drafting.
 
 If either is missing, ask:
-> *"What changed, and why was this change needed?"*
+
+> _"What changed, and why was this change needed?"_
 
 Do not invent or assume details. Do not proceed until you have both.
 
@@ -42,7 +42,8 @@ function across 50 files is still one logical change. A bug fix touching 3 lines
 that also reformats whitespace is two changes.
 
 If the changes span unrelated concerns (e.g., bug fix + refactor + dependency bump), say:
-> *"These changes cover more than one concern. Which should this commit describe?"*
+
+> _"These changes cover more than one concern. Which should this commit describe?"_
 
 Do not silently bundle unrelated changes.
 
@@ -56,7 +57,7 @@ Draft following the format and rules below, then check every item before present
 - [ ] Subject ≤50 characters (not counting `type(scope): `)
 - [ ] Subject uses imperative mood, lowercase first letter, no period
 - [ ] Blank line between subject and body
-- [ ] Body explains *why* (motivation, contrast with previous behavior) — not just *what*
+- [ ] Body explains _why_ (motivation, contrast with previous behavior) — not just _what_
 - [ ] Body is prose — complete sentences in flowing paragraphs, no bullet points, no numbered lists, no sentence-per-line fragments
 - [ ] Lines wrap at 72 columns
 - [ ] `Signed-off-by:` present with real name and email, after the body
@@ -123,3 +124,4 @@ Signed-off-by: Jane Developer <jane@example.com>
 git commit -m "feat(react): add graph search with prefix syntax" \
            -m "Body text here." \
            -m "Signed-off-by: Jane Developer <jane@example.com>"
+```

@@ -796,9 +796,7 @@ describe('useApplyDiscard', () => {
 
       expect(syncUsecases).toHaveBeenCalledWith({
         createdSystemIds: ['uc-new-1'],
-        createdUsecases: [
-          {displayName: 'Speaker', systemId: 'uc-new-1'},
-        ],
+        createdUsecases: [{displayName: 'Speaker', systemId: 'uc-new-1'}],
         currentSystemIds: ['uc-existing', 'uc-deleted-1'],
         deletedSystemIds: ['uc-deleted-1'],
         navChoice: 'add',

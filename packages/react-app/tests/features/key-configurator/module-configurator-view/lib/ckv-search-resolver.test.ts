@@ -80,10 +80,7 @@ describe('getCkvSearchSuggestions', () => {
   });
 
   it('returns every value whose name or key name matches a partial prefix', () => {
-    const suggestions = getCkvSearchSuggestions(
-      calibrationKeys,
-      'val_',
-    );
+    const suggestions = getCkvSearchSuggestions(calibrationKeys, 'val_');
 
     // 5 value matches: val_1, val_2, val_3, and val_4 under both key_b and
     // key_d, each surfaced as its own candidate since neither is dropped.
@@ -106,10 +103,7 @@ describe('getCkvSearchSuggestions', () => {
   });
 
   it('returns an empty array when a token matches nothing', () => {
-    const suggestions = getCkvSearchSuggestions(
-      calibrationKeys,
-      'nonexistent',
-    );
+    const suggestions = getCkvSearchSuggestions(calibrationKeys, 'nonexistent');
 
     expect(suggestions).toEqual([]);
   });
@@ -117,10 +111,7 @@ describe('getCkvSearchSuggestions', () => {
 
 describe('resolveCkvSearchInput', () => {
   it('resolves unambiguous tokens with no diagnostics', () => {
-    const result = resolveCkvSearchInput(calibrationKeys, [
-      'val_1',
-      'val_3',
-    ]);
+    const result = resolveCkvSearchInput(calibrationKeys, ['val_1', 'val_3']);
 
     expect(result.diagnostics).toEqual([]);
     expect(result.resolved).toEqual([
@@ -197,10 +188,7 @@ describe('resolveCkvSearchInput', () => {
   it('auto-resolves a shared value by key priority once another token forces the choice', () => {
     // 'val_3' only exists under key_b, forcing 'val_4' onto key_d even
     // though 'val_4' alone would be ambiguous between key_b and key_d.
-    const result = resolveCkvSearchInput(calibrationKeys, [
-      'val_3',
-      'val_4',
-    ]);
+    const result = resolveCkvSearchInput(calibrationKeys, ['val_3', 'val_4']);
 
     expect(result.resolved).toEqual([
       {

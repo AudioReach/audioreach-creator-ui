@@ -244,8 +244,8 @@ describe('useProjectSaver', () => {
       expect(
         (editSessionApi.commitChanges as jest.Mock).mock.invocationCallOrder[0],
       ).toBeLessThan(
-        (projectsApi.downloadProjectFiles as jest.Mock)
-          .mock.invocationCallOrder[0],
+        (projectsApi.downloadProjectFiles as jest.Mock).mock
+          .invocationCallOrder[0],
       );
     });
 

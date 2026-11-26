@@ -193,10 +193,18 @@ QUI's own visibility handling:
 <Tabs.Root defaultValue="calibration" size="xl">
   <Tabs.List>...</Tabs.List>
   <Tabs.Panel value="calibration">
-    <CalibrationKeysConfigPanel instanceId={instanceId} isEditable={isEditable} moduleId={moduleId} />
+    <CalibrationKeysConfigPanel
+      instanceId={instanceId}
+      isEditable={isEditable}
+      moduleId={moduleId}
+    />
   </Tabs.Panel>
   <Tabs.Panel value="module-tag">
-    <ModuleTagKeysConfigPanel instanceId={instanceId} isEditable={isEditable} moduleId={moduleId} />
+    <ModuleTagKeysConfigPanel
+      instanceId={instanceId}
+      isEditable={isEditable}
+      moduleId={moduleId}
+    />
   </Tabs.Panel>
 </Tabs.Root>
 ```
@@ -219,9 +227,11 @@ Data once the backend call succeeds:
 
 ```typescript
 interface CalibrationKeyConfigSlice {
-  calibrationKeys: Record<string, GraphKey>;  // definitions, fetched once per tab
+  calibrationKeys: Record<string, GraphKey>; // definitions, fetched once per tab
 
-  initializeCalibrationKeyConfiguration: (projectId: string) => Promise<boolean>;
+  initializeCalibrationKeyConfiguration: (
+    projectId: string,
+  ) => Promise<boolean>;
   resetCalibrationKeyConfiguration: () => void;
 
   addCkvs: (
@@ -229,12 +239,18 @@ interface CalibrationKeyConfigSlice {
     valueSystemIdCombinations: string[][],
     parameterSystemIds: string[],
   ) => Promise<boolean>;
-  deleteCkvs: (instanceSystemId: string, ckvSystemIds: string[]) => Promise<boolean>;
+  deleteCkvs: (
+    instanceSystemId: string,
+    ckvSystemIds: string[],
+  ) => Promise<boolean>;
   updateCkvParametersOnly: (
     instanceSystemId: string,
     parameterSystemIds: string[],
   ) => Promise<boolean>;
-  updateConfiguredCkvs: (instanceSystemId: string, ckvs: ConfiguredCkv[]) => void;
+  updateConfiguredCkvs: (
+    instanceSystemId: string,
+    ckvs: ConfiguredCkv[],
+  ) => void;
 }
 ```
 
@@ -634,7 +650,7 @@ Two directions call `resolveCkvSearchInput`/`formatCkvEntry`:
   as the live query and leave selection untouched. If it no longer starts
   with that prefix, re-derive the confirmed pairs by splitting on the
   mode's separator and matching each token to a known `{key, value}` pair
-  across *all* available keys (not one locked group, unlike TKV),
+  across _all_ available keys (not one locked group, unlike TKV),
   deselecting anything that no longer matches. A `value-only` token
   matching more than one key's value resolves to the lowest key `id` and
   returns `kind: 'ambiguous'` with a diagnostic hint, same as SGKV's
@@ -707,11 +723,11 @@ Writing CKVs, however, now goes through real endpoints
 `CalibrationKeyConfigSlice`'s mutation actions rather than through a
 separate save step:
 
-| Endpoint | Method | Called by |
-| --- | --- | --- |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs` | `POST` (`createCkvs`) | `addCkvs` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs` | `DELETE` (`deleteCkvs`) | `deleteCkvs` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckv-parameters` | `POST` (`createCkvParameters`) | `addCkvs`, `updateCkvParametersOnly` |
+| Endpoint                                                               | Method                           | Called by                                              |
+| ---------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------ |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs`           | `POST` (`createCkvs`)            | `addCkvs`                                              |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckvs`           | `DELETE` (`deleteCkvs`)          | `deleteCkvs`                                           |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckv-parameters` | `POST` (`createCkvParameters`)   | `addCkvs`, `updateCkvParametersOnly`                   |
 | `/projects/{projectId}/spf-modules/{spfModuleSystemId}/ckv-parameters` | `DELETE` (`deleteCkvParameters`) | none — defined, not currently called by any CKV action |
 
 `createCkvs` returns `AddCkvsResponseDto {addedCkvs: CkvDto[]; removedCkvSystemIds: string[]}`,
@@ -766,8 +782,7 @@ populated on failure, and logs via `~shared/lib/logger`. It does not know
 about `keyConfigStatus` — that stays owned by `KeyConfigSlice`'s
 `initializeConfiguration`, which awaits both the TKV and CKV booleans and
 sets `keyConfigStatus` to `'error'` if either fails, `'ready'` only if both
-succeed. Apply-time input validation (duplicate-entry check, requirement
-10) and delete confirmations stay entirely inside the presentational
+succeed. Apply-time input validation (duplicate-entry check, requirement 10) and delete confirmations stay entirely inside the presentational
 panel's existing logic — unchanged.
 
 `addCkvs`, `deleteCkvs`, and `updateCkvParametersOnly` each wrap their

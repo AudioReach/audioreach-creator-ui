@@ -195,27 +195,30 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @param projectId The ID of the project
    * @returns n/a
    */
-  const removeFromRecentAsync = useCallback(async (projectId: string) => {
-    if (!window.mruStoreApi) {
-      logger.error('MRU Store API not available', {
-        component: 'useArcRecentProjects',
-      });
-      return;
-    }
+  const removeFromRecentAsync = useCallback(
+    async (projectId: string) => {
+      if (!window.mruStoreApi) {
+        logger.error('MRU Store API not available', {
+          component: 'useArcRecentProjects',
+        });
+        return;
+      }
 
-    try {
-      await window.mruStoreApi.removeProject(projectId);
+      try {
+        await window.mruStoreApi.removeProject(projectId);
 
-      // Update local state
-      const updatedProjects = await getRecentConfig();
-      setRecentProjects(updatedProjects);
-    } catch (error) {
-      logger.error('Error removing project from MRU', {
-        component: 'useArcRecentProjects',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }, [getRecentConfig]);
+        // Update local state
+        const updatedProjects = await getRecentConfig();
+        setRecentProjects(updatedProjects);
+      } catch (error) {
+        logger.error('Error removing project from MRU', {
+          component: 'useArcRecentProjects',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [getRecentConfig],
+  );
 
   const removeFromRecent = useCallback(
     (projectId: string): void => void removeFromRecentAsync(projectId),
@@ -228,67 +231,73 @@ export default function useArcRecentProjects(): ArcRecentProjectsApi {
    * @param project The project to add to the recent files list
    * @returns n/a
    */
-  const addToRecentAsync = useCallback(async (project: ProjectInfo) => {
-    if (!window.mruStoreApi) {
-      logger.error('MRU Store API not available', {
-        component: 'useArcRecentProjects',
-      });
-      return;
-    }
+  const addToRecentAsync = useCallback(
+    async (project: ProjectInfo) => {
+      if (!window.mruStoreApi) {
+        logger.error('MRU Store API not available', {
+          component: 'useArcRecentProjects',
+        });
+        return;
+      }
 
-    try {
-      // Convert ProjectInfo to MruProjectInfo
-      const mruProject: MruProjectInfo = {
-        description: project.description,
-        filepath: project.filepath,
-        id: project.id,
-        image: project.image,
-        lastModifiedDate: project.lastModifiedDate?.toISOString(),
-        name: project.name,
-      };
+      try {
+        // Convert ProjectInfo to MruProjectInfo
+        const mruProject: MruProjectInfo = {
+          description: project.description,
+          filepath: project.filepath,
+          id: project.id,
+          image: project.image,
+          lastModifiedDate: project.lastModifiedDate?.toISOString(),
+          name: project.name,
+        };
 
-      await window.mruStoreApi.addProject(mruProject);
+        await window.mruStoreApi.addProject(mruProject);
 
-      // Update local state
-      const updatedProjects = await getRecentConfig();
-      setRecentProjects(updatedProjects);
-    } catch (error) {
-      logger.error('Error adding project to MRU', {
-        component: 'useArcRecentProjects',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }, [getRecentConfig]);
+        // Update local state
+        const updatedProjects = await getRecentConfig();
+        setRecentProjects(updatedProjects);
+      } catch (error) {
+        logger.error('Error adding project to MRU', {
+          component: 'useArcRecentProjects',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [getRecentConfig],
+  );
 
   const addToRecent = useCallback(
     (project: ProjectInfo): void => void addToRecentAsync(project),
     [addToRecentAsync],
   );
 
-  const updateImageAsync = useCallback(async (projectId: string, htmlElem: HTMLElement) => {
-    if (!window.mruStoreApi) {
-      logger.error('MRU Store API not available', {
-        component: 'useArcRecentProjects',
-      });
-      return;
-    }
+  const updateImageAsync = useCallback(
+    async (projectId: string, htmlElem: HTMLElement) => {
+      if (!window.mruStoreApi) {
+        logger.error('MRU Store API not available', {
+          component: 'useArcRecentProjects',
+        });
+        return;
+      }
 
-    try {
-      // Convert the html element to a base64 encoded png string
-      const imageData = await toPng(htmlElem);
+      try {
+        // Convert the html element to a base64 encoded png string
+        const imageData = await toPng(htmlElem);
 
-      await window.mruStoreApi.updateProjectImage(projectId, imageData);
+        await window.mruStoreApi.updateProjectImage(projectId, imageData);
 
-      // Update local state
-      const updatedProjects = await getRecentConfig();
-      setRecentProjects(updatedProjects);
-    } catch (error) {
-      logger.error('Error updating project image in MRU', {
-        component: 'useArcRecentProjects',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }, [getRecentConfig]);
+        // Update local state
+        const updatedProjects = await getRecentConfig();
+        setRecentProjects(updatedProjects);
+      } catch (error) {
+        logger.error('Error updating project image in MRU', {
+          component: 'useArcRecentProjects',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [getRecentConfig],
+  );
 
   const updateImage = useCallback(
     (projectId: string, htmlElem: HTMLElement): void =>

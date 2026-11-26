@@ -48,11 +48,11 @@ This feature does not cover:
 
 ## 2. Definitions
 
-| Term | Definition |
-|------|------------|
-| Session mode | The current mode of a project's session (e.g. read-only, tuning, design, and other modes not relevant to this feature). |
-| Edit session | The period during which a project's session is in an editable mode, started by the Edit action and ended by Apply or Discard. |
-| Edit-active state | Whether an edit session is currently active for a project. This is what other panels read to decide their own editable/read-only behaviour. |
+| Term               | Definition                                                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session mode       | The current mode of a project's session (e.g. read-only, tuning, design, and other modes not relevant to this feature).                                                                            |
+| Edit session       | The period during which a project's session is in an editable mode, started by the Edit action and ended by Apply or Discard.                                                                      |
+| Edit-active state  | Whether an edit session is currently active for a project. This is what other panels read to decide their own editable/read-only behaviour.                                                        |
 | Exclusive workflow | Any session-level workflow that must not run concurrently with another (e.g. usecase edit, diff/merge, discovery wizard, or any other such workflow). At most one is active per project at a time. |
 
 ---
@@ -61,46 +61,46 @@ This feature does not cover:
 
 ### 3.1 Edit availability
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                                 |
+| ----- | ----------------------------------------------------------- |
 | FR-01 | Edit is clickable only when the exclusive workflow is none. |
 
 ### 3.2 Entering edit mode
 
-| ID | Requirement |
-|----|-------------|
-| FR-02 | Triggering Edit sets the exclusive workflow to usecase-edit and starts a session in designer mode. |
-| FR-03 | If entry succeeds, the edit-active state is set to active. |
+| ID    | Requirement                                                                                                                                                                                                                                                                                                                                               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-02 | Triggering Edit sets the exclusive workflow to usecase-edit and starts a session in designer mode.                                                                                                                                                                                                                                                        |
+| FR-03 | If entry succeeds, the edit-active state is set to active.                                                                                                                                                                                                                                                                                                |
 | FR-04 | If entry fails because ending the prior session failed, the frontend checks whether that end had already taken effect by querying the project's current session mode. If confirmed, entry continues as if ending had succeeded. Otherwise — including if that check itself fails — the edit-active state remains inactive and the user is shown an error. |
 
 ### 3.3 Edit-active state propagation
 
-| ID | Requirement |
-|----|-------------|
-| FR-05 | The edit-active state must be readable by any interested part of the application independently — without being called or invoked by this feature. |
+| ID    | Requirement                                                                                                                                                                                                                                                  |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FR-05 | The edit-active state must be readable by any interested part of the application independently — without being called or invoked by this feature.                                                                                                            |
 | FR-06 | Key configurator, module list, subgraph list, properties view, and graph designer each read the edit-active state to determine their own editable/read-only behaviour. Implementing that behaviour in each panel is out of scope for this feature (see 1.2). |
-| FR-07 | Adding or removing a consumer of the edit-active state requires no change within this feature. |
+| FR-07 | Adding or removing a consumer of the edit-active state requires no change within this feature.                                                                                                                                                               |
 
 ### 3.4 Exiting edit mode
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                                                                                                                                                                                                                                                                         |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FR-08 | When Apply or Discard complete successfully (their own staging, commit, or discard behaviour, including ending the edit session, is outside this feature's scope), this feature starts a tuning-mode session, sets the exclusive workflow to none, and sets the edit-active state back to inactive. |
-| FR-09 | If starting that tuning-mode session fails, the exclusive workflow stays set to usecase-edit and the edit-active state remains active; the user is shown an error. Apply or Discard's own success is not affected or reversed by this failure. |
+| FR-09 | If starting that tuning-mode session fails, the exclusive workflow stays set to usecase-edit and the edit-active state remains active; the user is shown an error. Apply or Discard's own success is not affected or reversed by this failure.                                                      |
 
 ---
 
 ## 4. Invariants
 
-| ID | Invariant |
-|----|-----------|
-| I1 | The edit-active state is active if and only if an edit session is currently held for the project. |
-| I2 | At most one exclusive workflow (e.g. usecase edit, diff/merge, discovery wizard) is active per project at any time — none of them being active is also a valid state. |
+| ID  | Invariant                                                                                                                                                             |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I1  | The edit-active state is active if and only if an edit session is currently held for the project.                                                                     |
+| I2  | At most one exclusive workflow (e.g. usecase edit, diff/merge, discovery wizard) is active per project at any time — none of them being active is also a valid state. |
 
 ---
 
 ## 5. Non-Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
+| ID     | Requirement                                                                                                 |
+| ------ | ----------------------------------------------------------------------------------------------------------- |
 | NFR-01 | The number of consumers of the edit-active state is not a performance concern at current or expected scale. |

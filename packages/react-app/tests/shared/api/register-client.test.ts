@@ -59,9 +59,7 @@ describe('ensureRegistered', () => {
       {clientName: 'audioreach-creator-ui'},
       {skipAuth: true},
     );
-    expect(mockStore.setRegistrationStatus).toHaveBeenCalledWith(
-      'registering',
-    );
+    expect(mockStore.setRegistrationStatus).toHaveBeenCalledWith('registering');
     expect(mockHttpClient.setAuthToken).toHaveBeenCalledWith('token-123');
     expect(logger.setClientId).toHaveBeenCalledWith('client-1');
     expect(mockStore.setRegistrationStatus).toHaveBeenCalledWith('registered');

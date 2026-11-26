@@ -11,7 +11,9 @@ export const openAbout: CommandFactory<void, void> = () => ({
   execute: async (context) => {
     await expect(context.pages.sideNav.aboutButton).toBeVisible();
     await context.pages.sideNav.aboutButton.click();
-    await expect(context.page.getByText('About AudioReach Creator')).toBeVisible({
+    await expect(
+      context.page.getByText('About AudioReach Creator'),
+    ).toBeVisible({
       timeout: 3000,
     });
   },

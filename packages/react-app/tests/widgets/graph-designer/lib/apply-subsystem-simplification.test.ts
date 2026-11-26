@@ -220,9 +220,7 @@ describe('applySubsystemSimplification', () => {
     const outbound = applySubsystemSimplification(
       makeLevel({
         boundarySubsystem: makeSubsystemNode('boundary-a'),
-        dataLinks: [
-          makeDataLink({id: 'data-out', sourceNodeId: 'boundary-a'}),
-        ],
+        dataLinks: [makeDataLink({id: 'data-out', sourceNodeId: 'boundary-a'})],
       }),
     );
     expect(outbound.boundarySubsystem?.ports).toEqual([

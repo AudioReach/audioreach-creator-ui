@@ -533,5 +533,4 @@ describe('CalibrationKeysConfigPanel', () => {
       screen.getByLabelText('Select parameter PARAM_ID_HW_EP_FRAME_SIZE'),
     ).not.toBeChecked();
   });
-
 });

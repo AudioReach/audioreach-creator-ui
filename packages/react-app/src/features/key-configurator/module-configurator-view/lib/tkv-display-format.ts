@@ -20,7 +20,5 @@ export function formatConfiguredTkvLabel(tkv: ConfiguredTkv): string {
   if (tkv.keyValuePairs.length === 0) {
     return `[${tkv.tagGroup}]`;
   }
-  return tkv.keyValuePairs
-    .map((pair) => formatTkvKeyValuePair(pair))
-    .join(' ');
+  return tkv.keyValuePairs.map((pair) => formatTkvKeyValuePair(pair)).join(' ');
 }

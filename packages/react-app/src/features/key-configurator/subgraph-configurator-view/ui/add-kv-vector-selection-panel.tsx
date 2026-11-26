@@ -45,8 +45,8 @@ type SortColumn = 'id' | 'name';
 type SortOrder = 'asc' | 'desc';
 
 function compareBySort(
-  first: {name: string; naturalId: number;},
-  second: {name: string; naturalId: number;},
+  first: {name: string; naturalId: number},
+  second: {name: string; naturalId: number},
   column: SortColumn,
   order: SortOrder,
 ): number {

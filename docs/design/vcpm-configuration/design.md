@@ -142,27 +142,43 @@ export interface VcpmCalDataEntry {
   invalidPaths: Set<string>;
   isSaving?: boolean;
   parameters: VcpmParameterSummary[];
-  selectedCkvSystemId?: string;        // subgraph-wide "Calibration data index" — shared across every parameter, persists across parameter switches
+  selectedCkvSystemId?: string; // subgraph-wide "Calibration data index" — shared across every parameter, persists across parameter switches
   status: SliceStatus;
-  uiState?: GenericTreeViewUiState;    // selectedIds (multi-select), panelSplitPct, etc. — reuse shape from shared/lib/tree-view-ui-state.ts
+  uiState?: GenericTreeViewUiState; // selectedIds (multi-select), panelSplitPct, etc. — reuse shape from shared/lib/tree-view-ui-state.ts
 }
 
 export interface VcpmDataSlice {
   clearVcpmData: (subgraphSystemId: string) => void;
-  queryVcpmData: (subgraphSystemId: string, subgraphName: string) => Promise<boolean>;
+  queryVcpmData: (
+    subgraphSystemId: string,
+    subgraphName: string,
+  ) => Promise<boolean>;
   selectVcpmCalIndex: (subgraphSystemId: string, ckvSystemId: string) => void;
-  setVcpmCalData: (subgraphSystemId: string, parameterSystemId: string, body: UpdateVcpmCalDataRequestDto) => Promise<boolean>;
+  setVcpmCalData: (
+    subgraphSystemId: string,
+    parameterSystemId: string,
+    body: UpdateVcpmCalDataRequestDto,
+  ) => Promise<boolean>;
   setVcpmOpenTab: (subgraphSystemId: string, tabId: string | null) => void;
-  setVcpmUiState: (subgraphSystemId: string, patch: Partial<GenericTreeViewUiState>) => void;
+  setVcpmUiState: (
+    subgraphSystemId: string,
+    patch: Partial<GenericTreeViewUiState>,
+  ) => void;
   vcpmDataBySubgraphId: Record<string, VcpmCalDataEntry>;
   vcpmOpenTabs: Record<string, string | null>;
 }
 
 // vcpm-key-config-slice.ts
 export interface VcpmKeyConfigSlice {
-  addVcpmCkvs: (subgraphSystemId: string, valueSystemIdCombinations: string[][]) => Promise<boolean>;
+  addVcpmCkvs: (
+    subgraphSystemId: string,
+    valueSystemIdCombinations: string[][],
+  ) => Promise<boolean>;
   configuredVcpmCkvsBySubgraphId: Record<string, ConfiguredCkv[]>; // one canonical list per subgraph, applies to every parameter uniformly — reuses ConfiguredCkv as-is, no VCPM-specific extension needed
-  deleteVcpmCkv: (subgraphSystemId: string, ckvSystemId: string) => Promise<boolean>;
+  deleteVcpmCkv: (
+    subgraphSystemId: string,
+    ckvSystemId: string,
+  ) => Promise<boolean>;
 }
 ```
 
@@ -174,7 +190,7 @@ slices today. Cross-slice calls go through `get()`, the same pattern
 **Data flow — one canonical CKV list, consumed directly, no per-parameter
 filter.** Because the backend confirmed Add broadcasts to every parameter
 (requirements.md Assumptions), `configuredVcpmCkvsBySubgraphId[subgraphId]`
-*is* the dropdown's option list — there is no per-parameter subset to
+_is_ the dropdown's option list — there is no per-parameter subset to
 derive, and therefore no `selectCalIndexOptions`-style selector at all.
 This also sidesteps the module tab's known `IndexSelect` sync gap (there,
 the CKV list and the dropdown's cached `availableCalIndices` are two
@@ -243,12 +259,12 @@ persisted to disk or IndexedDB).
 API surface consumed (all under
 `/arc-api/v1/projects/{projectId}/subgraphs/{subgraphSystemId}/vcpm-ckv`):
 
-| Verb          | Path suffix       | Body                                | Response                                            |
-| ------------- | ------------------ | ------------------------------------ | ---------------------------------------------------- |
-| GET           | *(none)*           | —                                    | `{ckv: VcpmCkvDto[]}`                                |
-| POST          | *(none)*           | `{ckv: [{valueSystemIds: [...]}]}`   | `{addedCkvs, removedCkvSystemIds}` (assumed)         |
-| DELETE        | `/{ckvSystemId}`   | —                                    | 204, no body — success/failure via HTTP status only  |
-| PUT           | `/{ckvSystemId}/cal-data` | `{elements, systemId, name}`  | `VcpmParameterCalDataDto`                            |
+| Verb   | Path suffix               | Body                               | Response                                            |
+| ------ | ------------------------- | ---------------------------------- | --------------------------------------------------- |
+| GET    | _(none)_                  | —                                  | `{ckv: VcpmCkvDto[]}`                               |
+| POST   | _(none)_                  | `{ckv: [{valueSystemIds: [...]}]}` | `{addedCkvs, removedCkvSystemIds}` (assumed)        |
+| DELETE | `/{ckvSystemId}`          | —                                  | 204, no body — success/failure via HTTP status only |
+| PUT    | `/{ckvSystemId}/cal-data` | `{elements, systemId, name}`       | `VcpmParameterCalDataDto`                           |
 
 ```ts
 // entities/vcpm/model/vcpm.dto.ts
@@ -257,7 +273,9 @@ export interface VcpmCkvDto {
   systemId: string;
   // No association field — every CKV applies to every parameter (confirmed).
 }
-export interface VcpmCkvListResponseDto { ckv: VcpmCkvDto[]; }
+export interface VcpmCkvListResponseDto {
+  ckv: VcpmCkvDto[];
+}
 
 export interface CreateVcpmCkvsRequestDto {
   ckv: Array<{valueSystemIds: string[]}>;
@@ -283,10 +301,26 @@ export interface VcpmParameterCalDataDto {
 
 ```ts
 // entities/vcpm/api/vcpm-api.ts — plain positional args, httpClient wrapper, mirrors spf-module-api.ts
-export async function getVcpmCkvs(projectId: string, subgraphId: string): Promise<ApiResult<VcpmCkvListResponseDto>>;
-export async function createVcpmCkvs(projectId: string, subgraphId: string, body: CreateVcpmCkvsRequestDto): Promise<ApiResult<AddVcpmCkvsResponseDto>>;
-export async function deleteVcpmCkv(projectId: string, subgraphId: string, ckvSystemId: string): Promise<ApiResult<void>>;
-export async function updateVcpmCalData(projectId: string, subgraphId: string, ckvSystemId: string, body: UpdateVcpmCalDataRequestDto): Promise<ApiResult<VcpmParameterCalDataDto>>;
+export async function getVcpmCkvs(
+  projectId: string,
+  subgraphId: string,
+): Promise<ApiResult<VcpmCkvListResponseDto>>;
+export async function createVcpmCkvs(
+  projectId: string,
+  subgraphId: string,
+  body: CreateVcpmCkvsRequestDto,
+): Promise<ApiResult<AddVcpmCkvsResponseDto>>;
+export async function deleteVcpmCkv(
+  projectId: string,
+  subgraphId: string,
+  ckvSystemId: string,
+): Promise<ApiResult<void>>;
+export async function updateVcpmCalData(
+  projectId: string,
+  subgraphId: string,
+  ckvSystemId: string,
+  body: UpdateVcpmCalDataRequestDto,
+): Promise<ApiResult<VcpmParameterCalDataDto>>;
 ```
 
 ### Error Handling
@@ -365,7 +399,7 @@ a failure.
   mechanics — these tests confirm wiring, not re-test the engine);
   Set-button enablement, Get/Search/Collapse/Expand wiring, unsaved-changes
   dialog on CKV-index switch only (toggling a parameter's checkbox does
-  *not* trigger the dialog — regression guard); Key Configurator button
+  _not_ trigger the dialog — regression guard); Key Configurator button
   disabled when `mode !== 'edit'`, and an already-open panel closes
   immediately when `mode` transitions away from `'edit'` (requirement 22);
   `vcpm-key-configurator-panel.test.tsx` — plain-text empty state,

@@ -413,12 +413,7 @@ export const UsecaseSelectionControl: React.FC<
         );
       }
     },
-    [
-      draftSelectedUsecases,
-      lockedUsecases,
-      panelLeafItemsByName,
-      projectId,
-    ],
+    [draftSelectedUsecases, lockedUsecases, panelLeafItemsByName, projectId],
   );
 
   const handleSelectCategory = useCallback(
@@ -471,8 +466,7 @@ export const UsecaseSelectionControl: React.FC<
       // Remove only visible usecases; keep selections outside the filter.
       setDraftSelectedUsecases(
         draftSelectedUsecases.filter(
-          (name) =>
-            !filteredUsecaseNames.has(name) || lockedUsecases.has(name),
+          (name) => !filteredUsecaseNames.has(name) || lockedUsecases.has(name),
         ),
       );
     }

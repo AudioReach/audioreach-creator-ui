@@ -53,7 +53,10 @@ export async function installOpenProjectFileSeam(
   const seamId = nextSeamId++;
 
   await app.evaluate(
-    ({ipcMain}, {openProjectFileResponse, requestType, seamId: requestedSeamId}) => {
+    (
+      {ipcMain},
+      {openProjectFileResponse, requestType, seamId: requestedSeamId},
+    ) => {
       const channel = 'ipc::message';
       const invokeHandlers = Reflect.get(ipcMain, '_invokeHandlers');
       const previousHandler =
@@ -61,10 +64,10 @@ export async function installOpenProjectFileSeam(
         typeof invokeHandlers.get(channel) === 'function'
           ? (invokeHandlers.get(channel) as IpcHandler)
           : undefined;
-      const state =
-        (Reflect.get(globalThis, '__audioreachOpenProjectFileSeam') as
-          | SeamState
-          | undefined) ?? {entries: [], nextId: 0};
+      const state = (Reflect.get(
+        globalThis,
+        '__audioreachOpenProjectFileSeam',
+      ) as SeamState | undefined) ?? {entries: [], nextId: 0};
       const id = requestedSeamId ?? state.nextId++;
       const wrapper: IpcHandler = (_event, request) => {
         if (request.requestType !== requestType) {
@@ -95,7 +98,6 @@ export async function installOpenProjectFileSeam(
       Reflect.set(globalThis, '__audioreachOpenProjectFileSeam', state);
       ipcMain.removeHandler(channel);
       ipcMain.handle(channel, wrapper);
-
     },
     {
       openProjectFileResponse: serialized,
@@ -111,34 +113,39 @@ export async function installOpenProjectFileSeam(
     }
     disposed = true;
 
-    await app.evaluate(({ipcMain}, {seamId: requestedSeamId}) => {
-      const stateKey = '__audioreachOpenProjectFileSeam';
-      const state = Reflect.get(globalThis, stateKey) as SeamState | undefined;
-      const entryIndex = state?.entries.findIndex(
-        (candidate) => candidate.id === requestedSeamId,
-      ) ?? -1;
-      const entry = entryIndex >= 0 ? state?.entries[entryIndex] : undefined;
-      if (!entry) {
-        return;
-      }
-
-      const handlers = Reflect.get(ipcMain, '_invokeHandlers');
-      const currentHandler =
-        handlers instanceof Map ? handlers.get('ipc::message') : undefined;
-      for (const candidate of state.entries) {
-        if (candidate.previousHandler === entry.wrapper) {
-          candidate.previousHandler = entry.previousHandler;
+    await app.evaluate(
+      ({ipcMain}, {seamId: requestedSeamId}) => {
+        const stateKey = '__audioreachOpenProjectFileSeam';
+        const state = Reflect.get(globalThis, stateKey) as
+          SeamState | undefined;
+        const entryIndex =
+          state?.entries.findIndex(
+            (candidate) => candidate.id === requestedSeamId,
+          ) ?? -1;
+        const entry = entryIndex >= 0 ? state?.entries[entryIndex] : undefined;
+        if (!entry) {
+          return;
         }
-      }
-      state.entries.splice(entryIndex, 1);
-      if (currentHandler !== entry.wrapper) {
-        return;
-      }
 
-      ipcMain.removeHandler('ipc::message');
-      if (entry.previousHandler) {
-        ipcMain.handle('ipc::message', entry.previousHandler);
-      }
-    }, {seamId});
+        const handlers = Reflect.get(ipcMain, '_invokeHandlers');
+        const currentHandler =
+          handlers instanceof Map ? handlers.get('ipc::message') : undefined;
+        for (const candidate of state.entries) {
+          if (candidate.previousHandler === entry.wrapper) {
+            candidate.previousHandler = entry.previousHandler;
+          }
+        }
+        state.entries.splice(entryIndex, 1);
+        if (currentHandler !== entry.wrapper) {
+          return;
+        }
+
+        ipcMain.removeHandler('ipc::message');
+        if (entry.previousHandler) {
+          ipcMain.handle('ipc::message', entry.previousHandler);
+        }
+      },
+      {seamId},
+    );
   };
 }

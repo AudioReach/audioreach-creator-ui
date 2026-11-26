@@ -59,18 +59,12 @@ function PopoverLeafItem({
     >
       <SideNav.NodeIndicator />
       {node.icon ? <SideNav.NodeIcon icon={node.icon} /> : null}
-      {isNavExpanded ? (
-        <SideNav.NodeText>{node.label}</SideNav.NodeText>
-      ) : null}
+      {isNavExpanded ? <SideNav.NodeText>{node.label}</SideNav.NodeText> : null}
     </SideNav.LeafNode>
   );
 
   return (
-    <Popover.Root
-      lazyMount
-      positioning={{placement: 'right'}}
-      unmountOnExit
-    >
+    <Popover.Root lazyMount positioning={{placement: 'right'}} unmountOnExit>
       <Popover.Anchor>
         {isNavExpanded ? (
           <Popover.Trigger>{triggerLeaf}</Popover.Trigger>

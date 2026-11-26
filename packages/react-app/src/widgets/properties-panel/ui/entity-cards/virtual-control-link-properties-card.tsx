@@ -7,7 +7,10 @@ import type {ProxyControlLink} from '~entities/graph';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 
 import {findPropertyConfigElement} from '../../lib/property-tree-adapter';
-import {buildVirtualControlLinkRows,type VirtualControlLinkRowModel} from '../../lib/virtual-link-row-models';
+import {
+  buildVirtualControlLinkRows,
+  type VirtualControlLinkRowModel,
+} from '../../lib/virtual-link-row-models';
 
 import {useControlLinkCardData} from '../../model/use-control-link-card-data';
 import {CollapsibleCard} from '../shared/collapsible-card';

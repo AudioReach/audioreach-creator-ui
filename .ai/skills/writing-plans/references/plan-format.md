@@ -1,7 +1,8 @@
 /*
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause
- */
+
+- Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+- SPDX-License-Identifier: BSD-3-Clause
+  */
 
 # Plan Output Format
 
@@ -45,11 +46,13 @@ include this section.]
 ### Task N: [Component Name]
 
 **Files:**
+
 - Create: `packages/react-app/src/[exact/path/to/file.tsx]`
 - Modify: `packages/react-app/src/[exact/path/to/existing.ts]:[line range if relevant]`
 - Test: `packages/react-app/tests/[exact/path/to/test.test.ts]`
 
 **Interfaces:**
+
 - Consumes: [what this task uses from earlier tasks — exact signatures]
 - Produces: [what later tasks rely on — exact function names, parameter
   and return types. A task's implementer sees only their own task; this
@@ -104,6 +107,7 @@ Expected: PASS
 ## Bite-Sized Task Granularity
 
 **Each step is one action (2-5 minutes):**
+
 - "Write the failing test" — step
 - "Run it to make sure it fails" — step
 - "Implement the minimal code to make the test pass" — step
@@ -116,13 +120,13 @@ Not all tasks require the same level of code detail. Use the right level — wri
 more than needed inflates plans, and on Path B it also causes API timeouts in
 subagents.
 
-| Task type | Required level |
-|---|---|
-| DTO/type definition, pure utility function (`lib/`) | Full complete TypeScript — small and self-contained |
-| Zustand store with a handful of actions | Full complete TypeScript — stores are declarative and short |
-| Simple component (single render path, no branching) | Full complete TSX |
-| **Complex component** (2+ states/branches, 80+ lines, or non-trivial hook logic) | **Skeleton only** — see below |
-| Test file with complex fixture/mock setup | **Skeleton only** — see below |
+| Task type                                                                        | Required level                                              |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| DTO/type definition, pure utility function (`lib/`)                              | Full complete TypeScript — small and self-contained         |
+| Zustand store with a handful of actions                                          | Full complete TypeScript — stores are declarative and short |
+| Simple component (single render path, no branching)                              | Full complete TSX                                           |
+| **Complex component** (2+ states/branches, 80+ lines, or non-trivial hook logic) | **Skeleton only** — see below                               |
+| Test file with complex fixture/mock setup                                        | **Skeleton only** — see below                               |
 
 ## Skeleton Format for Complex Components and Tests
 
@@ -132,6 +136,7 @@ full code. A good skeleton tells an engineer exactly what to implement; it is no
 a placeholder.
 
 The skeleton must include:
+
 - Props/hook signature with full types
 - Store selectors or hooks consumed
 - Numbered steps with spec section references
@@ -166,6 +171,7 @@ engineer reading the skeleton knows what to implement without guessing.
 
 Every step must contain the actual content an engineer needs. These are **plan
 failures** — never write them:
+
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
@@ -173,7 +179,7 @@ failures** — never write them:
 - Steps that describe what to do without showing how (code blocks required for code steps)
 - References to types, functions, or methods not defined in any task
 
-The skeleton format above is *not* a placeholder — it is a detailed contract for
+The skeleton format above is _not_ a placeholder — it is a detailed contract for
 complex cases that lists every dependency, branch, and return shape.
 
 ## Execution Handoff
@@ -192,9 +198,11 @@ batch execution with checkpoints
 **Which approach?"**
 
 **If Subagent-Driven chosen:**
+
 - **REQUIRED SUB-SKILL:** Use subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution chosen:**
+
 - **REQUIRED SUB-SKILL:** Use executing-plans
 - Batch execution with checkpoints for review

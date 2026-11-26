@@ -54,7 +54,10 @@ export function useSubgraphCardData({
         );
         if (hasBlockingIssues(result) || !result.data) {
           return {
-            message: getIssueMessage(result, 'Failed to save schema properties'),
+            message: getIssueMessage(
+              result,
+              'Failed to save schema properties',
+            ),
             success: false as const,
           };
         }
@@ -90,7 +93,10 @@ export function useSubgraphCardData({
         const result = await patchSubgraphVsid(projectId, subgraphId, request);
         if (hasBlockingIssues(result) || !result.data) {
           return {
-            message: getIssueMessage(result, 'Failed to save schema properties'),
+            message: getIssueMessage(
+              result,
+              'Failed to save schema properties',
+            ),
             success: false as const,
           };
         }

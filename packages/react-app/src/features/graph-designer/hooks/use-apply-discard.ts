@@ -199,11 +199,9 @@ async function finalize(
           updatedSystemIds,
         );
 
-    await store
-      .getState()
-      .loadGraphData(reloadUsecases, {
-        filterBySubsystem: filterComponentsBySubsystem,
-      });
+    await store.getState().loadGraphData(reloadUsecases, {
+      filterBySubsystem: filterComponentsBySubsystem,
+    });
   };
 
   switch (outcome.kind) {

@@ -221,20 +221,25 @@ Signed-off-by: Satya Krishna Pindiproli <satya@example.com>
 The following are enforced during code review in addition to general correctness:
 
 **UI / keyboard interactions**
+
 - Interactive components must implement standard keyboard conventions for their type. For search bars: `Enter` → next match, `Shift+Enter` → previous match, `Escape` → close. Omitting standard shortcuts is a defect, not a "nice to have"
 
 **QUI components**
+
 - Flag any native HTML element that has a QUI equivalent. Use the `qui-react` MCP server to verify available components before accepting a native element
 
 **Styling**
+
 - Flag inline `style` props that should be Tailwind classes
 - Flag hardcoded hex/RGB color values — all colors must come from QUI design token CSS variables
 
 **Code reuse**
+
 - If the same logic pattern appears across multiple files in the same diff, flag it for extraction into a shared utility in `lib/`
 - If two functions are structurally identical except for a type cast, they should be merged or abstracted
 
 **Comments**
+
 - Flag any comment that restates what the code already says
 - Flag section-header comments that provide no information beyond what the code structure already shows
 

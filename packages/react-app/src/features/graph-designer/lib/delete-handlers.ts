@@ -52,12 +52,16 @@ export function resolveGraphDesignerNodeId(target: {node: AnyNode}): string {
   }
   switch (target.node.nodeKind) {
     case NODE_KIND.CONTAINER:
-      return optionalString(target.node.meta?.containerSystemId) ?? target.node.id;
+      return (
+        optionalString(target.node.meta?.containerSystemId) ?? target.node.id
+      );
     case NODE_KIND.MODULE:
       return target.node.id;
     case NODE_KIND.SUBGRAPH:
     case NODE_KIND.SUBGRAPH_PROXY:
-      return optionalString(target.node.meta?.subgraphSystemId) ?? target.node.id;
+      return (
+        optionalString(target.node.meta?.subgraphSystemId) ?? target.node.id
+      );
     case NODE_KIND.SUBSYSTEM:
       return target.node.subsystemId;
   }

@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: "Produces comprehensive, TDD-driven implementation plans from specs or requirements, with exact file paths, complete code in every step, and commit checkpoints. Use when the user has a spec or requirements document for a multi-step task and needs a structured plan before touching code."
+description: 'Produces comprehensive, TDD-driven implementation plans from specs or requirements, with exact file paths, complete code in every step, and commit checkpoints. Use when the user has a spec or requirements document for a multi-step task and needs a structured plan before touching code.'
 ---
 
 # Writing Plans
@@ -16,6 +16,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Context:** If working in an isolated worktree, it should have been created via the `using-git-worktrees` skill at execution time.
 
 **Save plans to:** `docs/plans/<feature-name>/plan.md`
+
 - (User preferences for plan location override this default)
 
 ## Choose a Path

@@ -263,9 +263,7 @@ type TestCommand<TOutput> = {
   readonly execute: (context: TestContext) => Promise<TOutput>;
 };
 
-type CommandFactory<TInput, TOutput> = (
-  input: TInput,
-) => TestCommand<TOutput>;
+type CommandFactory<TInput, TOutput> = (input: TInput) => TestCommand<TOutput>;
 ```
 
 The concrete names may follow existing repository conventions, but the
@@ -661,9 +659,9 @@ if the HTTP layer is moved to the main process.
 responses via `processApiResponse`: a non-OK HTTP status (>= 400) becomes
 `success: false`, but a 2xx response returns the backend's JSON body verbatim —
 so a rejection can also arrive as **HTTP 200 with `success: false` in the body**.
-Tests must therefore treat failure as *either* a status `>= 400` *or* a parsed
+Tests must therefore treat failure as _either_ a status `>= 400` _or_ a parsed
 body with `success === false`, and must not rely on `response.ok()` alone.
-Correspondingly, success requires *both* a 2xx status and `success === true` in
+Correspondingly, success requires _both_ a 2xx status and `success === true` in
 the body.
 
 The `openFile` command must surface a backend rejection as the `ok: false`
@@ -677,7 +675,7 @@ rather than as a framework error.
 **EX-1b: Confirm a backend-rejected open is handled as a failure.**
 
 The negative counterpart to EX-1 for a rejection that reaches the backend, and
-the reference example for author-written negative tests. Inject a *readable*
+the reference example for author-written negative tests. Inject a _readable_
 fixture file that the backend refuses (well-formed enough to be read from disk,
 invalid enough that the backend rejects it). Because the file is readable, the
 upload request **is** issued, so the test asserts:
@@ -686,7 +684,7 @@ upload request **is** issued, so the test asserts:
   above (status `>= 400`, or a 2xx body with `success === false`) — not merely
   `!response.ok()`.
 - The failure toast appears and the loading overlay clears (`showToast(...,
-  'danger')` in the opener hook).
+'danger')` in the opener hook).
 
 This is case 1 of the Decision 6 policy on the failure path. The test **passes
 because the open was rejected as expected.** The negative pattern is the one
@@ -696,7 +694,7 @@ the failure. Asserting the rejection signal gives a definitive, non-flaky pass.
 **EX-1c: Confirm an OS-read failure issues no backend request.**
 
 A distinct failure mode from EX-1b, kept separate because the open flow reads
-the selected files *before* issuing any HTTP request. In the current code the
+the selected files _before_ issuing any HTTP request. In the current code the
 dialog and file read happen together in the Electron main process behind a
 single IPC request (`ProjectService.openWorkspaceProjectFromFile` →
 `electronApi.send({requestType: OpenProjectFile})`); the renderer only issues
@@ -741,7 +739,7 @@ first available option keeps the assertion robust without hardcoding a value.
 Extends EX-3 by typing a use-case string from `TestContext` into the combobox
 to drive its type-to-filter affordance, then selecting the filtered result.
 This exemplar exists specifically to show how an existing test/pattern is
-*extended* (pick-first becomes type-to-filter-then-select) using the same
+_extended_ (pick-first becomes type-to-filter-then-select) using the same
 reusable command surface.
 
 **EX-5: Open file, select a use case, then select a module node by identity.**
@@ -1001,7 +999,7 @@ Two rules make the common mistakes explicit:
 - **The observed HTTP response is the authoritative signal (cases 1 and 2).**
   Note that a rejection is not always a non-OK status: the client maps an HTTP
   error to `success: false`, but a backend may also return HTTP 200 with a body
-  of `success: false`. Assert failure as *either* a status `>= 400` *or* a
+  of `success: false`. Assert failure as _either_ a status `>= 400` _or_ a
   parsed body with `success === false` — do not rely on `response.ok()` alone.
 - **The UI signal is per-flow — read your flow's code before asserting on it.**
   Some flows show a toast, some only log, some update state silently, some
@@ -1267,7 +1265,7 @@ Claims to verify, with where they were read:
    open flow is a single IPC round-trip
    (`packages/react-app/src/entities/project/services/project-service.ts`,
    `openWorkspaceProjectFromFile` → `electronApi.send({requestType:
-   OpenProjectFile})`); the main process runs the dialog and reads the files,
+OpenProjectFile})`); the main process runs the dialog and reads the files,
    returning file data to the renderer, which only then builds `File` objects
    and issues the upload POST
    (`packages/react-app/src/entities/project/api/projects-api.ts`). So a
@@ -1282,11 +1280,11 @@ Claims to verify, with where they were read:
    defines `ProjectInfoResponseDto` with a **`projectId`** field (no `id`, no
    `defaultModuleName`). Verify the field name before wiring the typed
    `OpenFileResult` handoff.
-6. **Open-failure UI signal is flow-specific and mode-specific.** On a *backend*
+6. **Open-failure UI signal is flow-specific and mode-specific.** On a _backend_
    rejection the open flow surfaces a danger toast
    (`packages/react-app/src/widgets/start-page/use-project-opener.tsx`,
    `showToast(..., 'danger')`) — the observable signal for EX-1b. But a
-   *read/selection* failure is reported as `'File selection cancelled'` and
+   _read/selection_ failure is reported as `'File selection cancelled'` and
    handled as silent user cancellation with **no toast**
    (`packages/react-app/src/entities/project/services/project-service.ts` and
    `packages/react-app/src/widgets/start-page/use-project-opener.tsx`) — hence EX-1c

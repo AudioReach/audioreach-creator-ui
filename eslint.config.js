@@ -36,7 +36,10 @@ const eslintConfig = defineConfig([
   },
   // TS
   {
-    extends: [quiEslintTs.configs.recommended, quiEslintTs.configs.strictExports],
+    extends: [
+      quiEslintTs.configs.recommended,
+      quiEslintTs.configs.strictExports,
+    ],
     // recommendation: scope these to your source files in your package(s).
     files: ['**/*.ts'],
     languageOptions: tsLanguageOptions,

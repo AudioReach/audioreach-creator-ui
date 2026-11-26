@@ -38,9 +38,7 @@ export function BoundaryAwareConnectionLine({
   toX,
   toY,
 }: ConnectionLineComponentProps) {
-  const isDataConnection = (fromHandle.id ?? '').startsWith(
-    DATA_HANDLE_PREFIX,
-  );
+  const isDataConnection = (fromHandle.id ?? '').startsWith(DATA_HANDLE_PREFIX);
   const sourceIsBoundary = isDataConnection && isBoundaryNode(fromNode);
   const targetIsBoundary =
     isDataConnection && toHandle !== null && isBoundaryNode(toNode);

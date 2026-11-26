@@ -25,12 +25,7 @@ export type JsonObject = {
 };
 
 export type JsonValue =
-  | boolean
-  | JsonObject
-  | JsonValue[]
-  | null
-  | number
-  | string;
+  boolean | JsonObject | JsonValue[] | null | number | string;
 
 export interface PageObjects {
   readonly graph: GraphPage;

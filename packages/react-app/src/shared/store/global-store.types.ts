@@ -8,10 +8,7 @@ export type SliceStatus = 'uninitialized' | 'loading' | 'ready' | 'error';
 export type TabType = 'graph-designer';
 
 export type RegistrationStatus =
-  | 'unregistered'
-  | 'registering'
-  | 'registered'
-  | 'error';
+  'unregistered' | 'registering' | 'registered' | 'error';
 
 export interface Preferences {
   maxOpenProjects: number;

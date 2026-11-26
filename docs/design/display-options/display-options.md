@@ -4,12 +4,12 @@
 
 ## Revision History
 
-| Version | Date | Summary of changes |
-| --- | --- | --- |
-| 1.0 | 2026-07-27 | Initial merge of `display-options.md`, `port-visibility.md`, and the `expand-collapse-subgraphs` design into one doc. |
-| 1.1 | 2026-07-30 | Expand Subgraphs checkbox now reads and writes `visualization.expandSubgraphs` directly via `savePreference`; `subgraph-collapse.ts` keeps only `allSubgraphIds` and `collapseSetForLevel`. Also adds a progress overlay — a blurred backdrop with a QUI `ProgressRing` and an "Expanding Subgraphs"/"Collapsing Subgraphs" label — shown while `graph-designer.tsx` applies a checkbox click. |
-| 1.2 | 2026-08-03 | Wires up Show Control Links, Show InterUsecase Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isInterUsecase` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/interUsecase link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
-| 1.3 | 2026-09-07 | Wires Detailed View ID preferences through `nodeDisplayConfig`; adds Container ID rendering and ensures Compact View hides subgraph, container, and module instance IDs regardless of checkbox state. |
+| Version | Date       | Summary of changes                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-07-27 | Initial merge of `display-options.md`, `port-visibility.md`, and the `expand-collapse-subgraphs` design into one doc.                                                                                                                                                                                                                                                                                 |
+| 1.1     | 2026-07-30 | Expand Subgraphs checkbox now reads and writes `visualization.expandSubgraphs` directly via `savePreference`; `subgraph-collapse.ts` keeps only `allSubgraphIds` and `collapseSetForLevel`. Also adds a progress overlay — a blurred backdrop with a QUI `ProgressRing` and an "Expanding Subgraphs"/"Collapsing Subgraphs" label — shown while `graph-designer.tsx` applies a checkbox click.        |
+| 1.2     | 2026-08-03 | Wires up Show Control Links, Show InterUsecase Links, and Highlight PP Modules — the three remaining Graph View checkboxes that shipped as no-ops. Threads `isInterUsecase` from the backend DTOs through to rendered `DataLink`/`ControlLink`; adds `applyLinkVisibility` (control/interUsecase link filter, runs post-layout) and `applyPpHighlight` (PP-module highlight stamp, runs post-layout). |
+| 1.3     | 2026-09-07 | Wires Detailed View ID preferences through `nodeDisplayConfig`; adds Container ID rendering and ensures Compact View hides subgraph, container, and module instance IDs regardless of checkbox state.                                                                                                                                                                                                 |
 
 ## Feature Overview and Strategic Fit
 
@@ -25,25 +25,25 @@ for any other tab.
 Two of these controls — **Show all ports** and **Expand Subgraphs** — ship in
 the popover from day one but start as no-op checkboxes: they write their
 preference but nothing reads it yet. Wiring each one up to actually drive
-rendering is documented in its own subsection below (see *Port Visibility*
-and *Expand/Collapse All Subgraphs*), since each is a self-contained slice of
+rendering is documented in its own subsection below (see _Port Visibility_
+and _Expand/Collapse All Subgraphs_), since each is a self-contained slice of
 this same Display Options design rather than an independent feature.
 
 Three more controls — **Show Control Links**, **Show InterUsecase Links**, and
 **Highlight PP Modules** — ship the same way: the checkboxes and their
 preferences already exist and persist correctly, but nothing downstream
-reads them. See *Link Visibility and PP Highlight* below.
+reads them. See _Link Visibility and PP Highlight_ below.
 
 ### Port Visibility
 
 The "Show all ports" checkbox is bound to `display.portVisibilityMode`
 (`'all'` | `'active'`, default `'active'`), only visible in Detailed View.
 Wiring it up filters module instance ports down to only _active_ ports by
-default — see the *active port definition* in Requirements below for the
+default — see the _active port definition_ in Requirements below for the
 exact rule — decluttering graphs with many unused ports, with the option to
 see all ports on demand. While edit mode is active, all ports are always
-shown, and the checkbox is checked and disabled. Implementation: see *Port
-Visibility Design* under Component Design.
+shown, and the checkbox is checked and disabled. Implementation: see _Port
+Visibility Design_ under Component Design.
 
 ### Expand/Collapse All Subgraphs
 
@@ -63,7 +63,7 @@ collapsing removes a subgraph from `LevelView.subgraphs[]` (moving it to
 `subgraphProxies[]` instead), the complete list of a level's subgraph ids
 only ever lives on the **raw** `levelView`, never on the post-`applyCollapses`
 graph — a distinction this design calls back to by name wherever it matters.
-Implementation: see *Expand/Collapse Design* under Component Design.
+Implementation: see _Expand/Collapse Design_ under Component Design.
 
 ### Link Visibility and PP Highlight
 
@@ -78,14 +78,14 @@ data or control — regardless of the control-link toggle. A normal
 Neither the backend's `isInterUsecase` flag nor a link's control/data kind
 previously reached the rendered graph in a form these checkboxes could act
 on — wiring this up threads `isInterUsecase` from the DTO through to the
-rendered `DataLink`/`ControlLink`. See *Link Visibility Design* under
+rendered `DataLink`/`ControlLink`. See _Link Visibility Design_ under
 Component Design.
 
 **Highlight PP Modules** wires up a purely visual toggle: when checked,
 every module whose type is `'PP'` (post-processing, per the backend's
 `majorModuleType` field) is drawn with a distinct background/border. It has
-no effect on layout — toggling it never re-triggers ELK. See *PP Highlight
-Design* under Component Design.
+no effect on layout — toggling it never re-triggers ELK. See _PP Highlight
+Design_ under Component Design.
 
 ---
 
@@ -106,7 +106,7 @@ Design* under Component Design.
 - `display-options-popover.tsx` — new component containing checkboxes and
   RadioGroup controls for all visualization preferences. Does not call
   `useUserPreferences` itself; takes `preferences`, `projectId`, and
-  `updatePreference` as props from its parent (see *Component Design*
+  `updatePreference` as props from its parent (see _Component Design_
   below).
 - `graph-designer.tsx` connects to the user preferences system and registers
   the Display Options item in the side nav using the `SlidersHorizontal`
@@ -115,10 +115,10 @@ Design* under Component Design.
   inside Effect B, before `layoutLevelView`. Applies
   `preferences.visualization.expandSubgraphs` to the current level's
   collapse state whenever the level or the preference changes (see
-  *Expand/Collapse Design* below).
+  _Expand/Collapse Design_ below).
 - `widgets/graph-designer/lib/subgraph-collapse.ts` — new file holding the
   two pure functions this feature needs: `allSubgraphIds` and
-  `collapseSetForLevel`. See *Expand/Collapse Design* below.
+  `collapseSetForLevel`. See _Expand/Collapse Design_ below.
 - `widgets/graph-designer/lib/apply-port-visibility.ts` — new file. Pure
   function `applyPortVisibility(level, effectiveMode)` that filters each
   module's `ports` array.
@@ -174,54 +174,54 @@ for the active project (`shared/config/user-preferences-types.ts`). If
 preferences have not loaded yet on first render, every control falls back to
 its value here (see Error Handling below).
 
-| Preference (dot-notation path) | Default | Control |
-| --- | --- | --- |
-| `visualization.highlightPPModules` | `false` | Highlight PP Modules checkbox |
-| `visualization.showControlLinks` | `true` | Show Control Links checkbox |
-| `visualization.showInterUsecaseLinks` | `true` | Show InterUsecase Links checkbox |
-| `usecases.workflowType` | `'usecase-workflow'` | Workflow radio (Usecase Workflow / System Workflow) |
-| `usecases.workflowLevel` | `'usecase-level'` | Nested Subsystem level / Usecase level radio |
-| `display.portVisibilityMode` | `'active'` | Show all ports checkbox |
-| `visualization.viewMode` | `'compact'` | Compact View / Detailed View radio |
-| `visualization.showSubgraphIds` | `false` | Show Subgraph IDs checkbox |
-| `visualization.showContainerIds` | `false` | Show Container IDs checkbox |
-| `visualization.showModuleInstanceIds` | `false` | Show Module Instance IDs checkbox |
-| `visualization.expandSubgraphs` | `false` | Expand Subgraphs checkbox |
-| `visualization.simplifySubsystems` | `false` | Simplified Subsystems checkbox |
-| `visualization.showMdfModules` | `false` | Show MDF Modules checkbox |
-| `usecases.namePreference` | `'alias'` | Usecase Name radio (Alias / Key Value(s) / Value(s)) |
+| Preference (dot-notation path)        | Default              | Control                                              |
+| ------------------------------------- | -------------------- | ---------------------------------------------------- |
+| `visualization.highlightPPModules`    | `false`              | Highlight PP Modules checkbox                        |
+| `visualization.showControlLinks`      | `true`               | Show Control Links checkbox                          |
+| `visualization.showInterUsecaseLinks` | `true`               | Show InterUsecase Links checkbox                     |
+| `usecases.workflowType`               | `'usecase-workflow'` | Workflow radio (Usecase Workflow / System Workflow)  |
+| `usecases.workflowLevel`              | `'usecase-level'`    | Nested Subsystem level / Usecase level radio         |
+| `display.portVisibilityMode`          | `'active'`           | Show all ports checkbox                              |
+| `visualization.viewMode`              | `'compact'`          | Compact View / Detailed View radio                   |
+| `visualization.showSubgraphIds`       | `false`              | Show Subgraph IDs checkbox                           |
+| `visualization.showContainerIds`      | `false`              | Show Container IDs checkbox                          |
+| `visualization.showModuleInstanceIds` | `false`              | Show Module Instance IDs checkbox                    |
+| `visualization.expandSubgraphs`       | `false`              | Expand Subgraphs checkbox                            |
+| `visualization.simplifySubsystems`    | `false`              | Simplified Subsystems checkbox                       |
+| `visualization.showMdfModules`        | `false`              | Show MDF Modules checkbox                            |
+| `usecases.namePreference`             | `'alias'`            | Usecase Name radio (Alias / Key Value(s) / Value(s)) |
 
 ---
 
 ## Requirements
 
-| Title | Requirement | Importance | Type |
-| --- | --- | --- | --- |
-| Display Options entry | As a user, I want a single Display Options entry in the side nav | Must Have | Functional |
-| Popover opens on click | As a user, I want to click Display Options to open a Popover | Must Have | Functional |
-| Show Control Links checkbox | As a user, I want to check or uncheck Show Control Links from the Popover | Must Have | Functional |
-| Show InterUsecase Links checkbox | As a user, I want to check or uncheck Show InterUsecase Links from the Popover | Must Have | Functional |
-| Highlight PP Modules checkbox | As a user, I want to check or uncheck Highlight PP Modules from the Popover | Must Have | Functional |
-| Link Visibility — filter rule | A link is visible only if `(isInterUsecase ? showInterUsecaseLinks : true) && (isControlLink ? showControlLinks : true)`. Show Control Links hides every control link when off, regardless of interUsecase state. Show InterUsecase Links hides any interUsecase link — data or control — when off, regardless of the control-link toggle. A non-interUsecase data link is never hidden by either. | Must Have | Functional |
-| Link Visibility — interUsecase data threading | `isInterUsecase` from `DataLinkDto`/`ControlLinkDto` is threaded through `Connection` and into the rendered `DataLink`/`ControlLink` so the filter above has data to act on. | Must Have | Functional |
-| Link Visibility — resize and live update on toggle | Toggling either checkbox re-filters the `LevelView` immediately. Runs post-layout (same stage as PP Highlight) — it is purely visual and never re-triggers ELK. | Must Have | Functional |
-| PP Highlight — module match rule | A module is highlighted when its module definition's `moduleInfo.moduleTypeInfo.majorModuleType === 'PP'`. | Must Have | Functional |
-| PP Highlight — no relayout on toggle | Toggling Highlight PP Modules is purely visual — it never re-triggers ELK layout. | Must Have | Functional |
-| Port Visibility — active port definition | A module port is active if its id appears as `sourcePortId`/`targetPortId` in `dataLinks`, `controlLinks`, `proxyDataLinks`, or `proxyControlLinks`. Applies to input, output, and control ports. `SubsystemNode`/`SubgraphProxyNode` ports have no active/non-active distinction — all are treated as active. | Must Have | Functional |
-| Port Visibility — reuse existing control | The existing "Show all ports" checkbox and `display.portVisibilityMode` preference drive this feature. No new control or preference. Only visible under Detailed View. | Must Have | Functional |
-| Port Visibility — effective visibility rule | Effective mode = `isEditable ? 'all' : (viewMode === 'detailed' ? portVisibilityMode : 'active')`. Edit mode always shows all ports; otherwise Compact View forces active-only and Detailed View honors the saved preference. | Must Have | Functional |
-| Port Visibility — resize and live update on toggle | Toggling re-filters the `LevelView` and re-runs ELK layout immediately (filter before layout, not after) — module, container, and subgraph boxes resize/repack to the true visible-port count, with no usecase reselect or reload needed. | Must Have | Functional |
-| Expand Subgraphs — wire the control | The existing checkbox drives rendering, scoped to the currently-viewed `levelId`: checking expands all subgraphs at that level (collapse set → empty); unchecking collapses all to proxy nodes (collapse set → all subgraph ids at that level, from the **raw** `levelView`). No new control or preference key. | Must Have | Functional |
-| Expand Subgraphs — individual toggles overridden | Per-subgraph header buttons still work, but any change to the `expandSubgraphs` preference re-applies to every subgraph at the current level, overriding whatever those buttons had set there. | Must Have | Functional |
-| Expand Subgraphs — progress overlay | As a user, when I click Expand Subgraphs and the recompute takes a visible moment, I want a blurred overlay with a progress ring and an "Expanding Subgraphs"/"Collapsing Subgraphs" label over the graph canvas, so the screen doesn't look frozen. | Must Have | Functional |
-| Simplified Subsystems checkbox | As a user, I want to check or uncheck Simplified Subsystems from the Popover. It is disabled only for the default combination — Usecase Workflow + Usecase level. It is enabled for Usecase Workflow + Subsystem level, and for System Workflow at either level. Enabling or disabling it never changes its checked value — it always shows whatever the user last checked or unchecked it to. | Must Have | Functional |
-| Show MDF Modules checkbox | As a user, I want to check or uncheck Show MDF Modules from the Popover | Must Have | Functional |
-| Compact View / Detailed View radio | As a user, I want to switch between Compact View and Detailed View from the Popover. **Compact View:** Nodes show names only — module/container/subgraph IDs are hidden for a smaller, denser, easier-to-read graph. **Detailed View:** Nodes show their full IDs (module instance, container, subgraph) alongside names, giving a complete view of each module. | Must Have | Functional |
-| Workflow radio | As a user, I want to switch between Usecase Workflow and System Workflow from the Popover | Must Have | Functional |
-| Usecase Name Preference radio | As a user, I want to switch between Alias, Key Value(s), and Value(s) name display from the Popover | Must Have | Functional |
-| Preference persistence | As a user, I want my display choices to persist after I change them. Each change writes to the in-memory preferences store immediately, then a debounced (300ms) write flushes the full config to disk via `ConfigFileManager.save`; if the Popover closes before the debounce fires, the pending write flushes immediately on unmount instead of being dropped. | Must Have | Functional |
-| Close on outside click | As a user, I want the Popover to close when I click outside it | Must Have | Functional |
-| Graph Designer scope | As a user, I only want Display Options visible when I am in the Graph Designer tab | Must Have | Functional |
+| Title                                              | Requirement                                                                                                                                                                                                                                                                                                                                                                                        | Importance | Type       |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------- |
+| Display Options entry                              | As a user, I want a single Display Options entry in the side nav                                                                                                                                                                                                                                                                                                                                   | Must Have  | Functional |
+| Popover opens on click                             | As a user, I want to click Display Options to open a Popover                                                                                                                                                                                                                                                                                                                                       | Must Have  | Functional |
+| Show Control Links checkbox                        | As a user, I want to check or uncheck Show Control Links from the Popover                                                                                                                                                                                                                                                                                                                          | Must Have  | Functional |
+| Show InterUsecase Links checkbox                   | As a user, I want to check or uncheck Show InterUsecase Links from the Popover                                                                                                                                                                                                                                                                                                                     | Must Have  | Functional |
+| Highlight PP Modules checkbox                      | As a user, I want to check or uncheck Highlight PP Modules from the Popover                                                                                                                                                                                                                                                                                                                        | Must Have  | Functional |
+| Link Visibility — filter rule                      | A link is visible only if `(isInterUsecase ? showInterUsecaseLinks : true) && (isControlLink ? showControlLinks : true)`. Show Control Links hides every control link when off, regardless of interUsecase state. Show InterUsecase Links hides any interUsecase link — data or control — when off, regardless of the control-link toggle. A non-interUsecase data link is never hidden by either. | Must Have  | Functional |
+| Link Visibility — interUsecase data threading      | `isInterUsecase` from `DataLinkDto`/`ControlLinkDto` is threaded through `Connection` and into the rendered `DataLink`/`ControlLink` so the filter above has data to act on.                                                                                                                                                                                                                       | Must Have  | Functional |
+| Link Visibility — resize and live update on toggle | Toggling either checkbox re-filters the `LevelView` immediately. Runs post-layout (same stage as PP Highlight) — it is purely visual and never re-triggers ELK.                                                                                                                                                                                                                                    | Must Have  | Functional |
+| PP Highlight — module match rule                   | A module is highlighted when its module definition's `moduleInfo.moduleTypeInfo.majorModuleType === 'PP'`.                                                                                                                                                                                                                                                                                         | Must Have  | Functional |
+| PP Highlight — no relayout on toggle               | Toggling Highlight PP Modules is purely visual — it never re-triggers ELK layout.                                                                                                                                                                                                                                                                                                                  | Must Have  | Functional |
+| Port Visibility — active port definition           | A module port is active if its id appears as `sourcePortId`/`targetPortId` in `dataLinks`, `controlLinks`, `proxyDataLinks`, or `proxyControlLinks`. Applies to input, output, and control ports. `SubsystemNode`/`SubgraphProxyNode` ports have no active/non-active distinction — all are treated as active.                                                                                     | Must Have  | Functional |
+| Port Visibility — reuse existing control           | The existing "Show all ports" checkbox and `display.portVisibilityMode` preference drive this feature. No new control or preference. Only visible under Detailed View.                                                                                                                                                                                                                             | Must Have  | Functional |
+| Port Visibility — effective visibility rule        | Effective mode = `isEditable ? 'all' : (viewMode === 'detailed' ? portVisibilityMode : 'active')`. Edit mode always shows all ports; otherwise Compact View forces active-only and Detailed View honors the saved preference.                                                                                                                                                                      | Must Have  | Functional |
+| Port Visibility — resize and live update on toggle | Toggling re-filters the `LevelView` and re-runs ELK layout immediately (filter before layout, not after) — module, container, and subgraph boxes resize/repack to the true visible-port count, with no usecase reselect or reload needed.                                                                                                                                                          | Must Have  | Functional |
+| Expand Subgraphs — wire the control                | The existing checkbox drives rendering, scoped to the currently-viewed `levelId`: checking expands all subgraphs at that level (collapse set → empty); unchecking collapses all to proxy nodes (collapse set → all subgraph ids at that level, from the **raw** `levelView`). No new control or preference key.                                                                                    | Must Have  | Functional |
+| Expand Subgraphs — individual toggles overridden   | Per-subgraph header buttons still work, but any change to the `expandSubgraphs` preference re-applies to every subgraph at the current level, overriding whatever those buttons had set there.                                                                                                                                                                                                     | Must Have  | Functional |
+| Expand Subgraphs — progress overlay                | As a user, when I click Expand Subgraphs and the recompute takes a visible moment, I want a blurred overlay with a progress ring and an "Expanding Subgraphs"/"Collapsing Subgraphs" label over the graph canvas, so the screen doesn't look frozen.                                                                                                                                               | Must Have  | Functional |
+| Simplified Subsystems checkbox                     | As a user, I want to check or uncheck Simplified Subsystems from the Popover. It is disabled only for the default combination — Usecase Workflow + Usecase level. It is enabled for Usecase Workflow + Subsystem level, and for System Workflow at either level. Enabling or disabling it never changes its checked value — it always shows whatever the user last checked or unchecked it to.     | Must Have  | Functional |
+| Show MDF Modules checkbox                          | As a user, I want to check or uncheck Show MDF Modules from the Popover                                                                                                                                                                                                                                                                                                                            | Must Have  | Functional |
+| Compact View / Detailed View radio                 | As a user, I want to switch between Compact View and Detailed View from the Popover. **Compact View:** Nodes show names only — module/container/subgraph IDs are hidden for a smaller, denser, easier-to-read graph. **Detailed View:** Nodes show their full IDs (module instance, container, subgraph) alongside names, giving a complete view of each module.                                   | Must Have  | Functional |
+| Workflow radio                                     | As a user, I want to switch between Usecase Workflow and System Workflow from the Popover                                                                                                                                                                                                                                                                                                          | Must Have  | Functional |
+| Usecase Name Preference radio                      | As a user, I want to switch between Alias, Key Value(s), and Value(s) name display from the Popover                                                                                                                                                                                                                                                                                                | Must Have  | Functional |
+| Preference persistence                             | As a user, I want my display choices to persist after I change them. Each change writes to the in-memory preferences store immediately, then a debounced (300ms) write flushes the full config to disk via `ConfigFileManager.save`; if the Popover closes before the debounce fires, the pending write flushes immediately on unmount instead of being dropped.                                   | Must Have  | Functional |
+| Close on outside click                             | As a user, I want the Popover to close when I click outside it                                                                                                                                                                                                                                                                                                                                     | Must Have  | Functional |
+| Graph Designer scope                               | As a user, I only want Display Options visible when I am in the Graph Designer tab                                                                                                                                                                                                                                                                                                                 | Must Have  | Functional |
 
 ### Out of Scope
 
@@ -254,10 +254,11 @@ its value here (see Error Handling below).
 - While `graph-designer.tsx` applies a checkbox-triggered Expand Subgraphs
   change, a blurred overlay with a QUI `ProgressRing` and an "Expanding
   Subgraphs"/"Collapsing Subgraphs" label covers the graph canvas (see
-  *Expand/Collapse Design* below)
+  _Expand/Collapse Design_ below)
 
 **Popover UI (default state — Usecase Workflow / Usecase level / Compact
 View):**
+
 ```
 ┌───────────────────────────────────────┐
 │ GRAPH VIEW                             │
@@ -284,6 +285,7 @@ View):**
 │ ○ Value(s)                             │
 └───────────────────────────────────────┘
 ```
+
 (Expand Subgraphs shows unchecked by default — `expandSubgraphs` defaults to
 `false`, so a fresh project's first load has every subgraph collapsed.)
 
@@ -325,34 +327,37 @@ the new value in the same pass — no context or event-emitter is needed,
 since the two already share a parent.
 
 **Graph View** — three Checkboxes:
+
 - Highlight PP Modules
 - Show Control Links
 - Show InterUsecase Links
 
-See *Link Visibility Design* and *PP Highlight Design* below for how
+See _Link Visibility Design_ and _PP Highlight Design_ below for how
 `graph-designer.tsx` applies these three.
 
 **Workflow** — a single `RadioGroup` with `Usecase Workflow` / `System Workflow`:
+
 - When `Usecase Workflow` is selected, a nested `RadioGroup` (`Subsystem
-  level` / `Usecase level`) renders indented directly beneath it
+level` / `Usecase level`) renders indented directly beneath it
 - When `System Workflow` is selected, the nested `RadioGroup` is not
   rendered
 
 **Graph Display**:
+
 - Compact View / Detailed View — RadioGroup with two options
 - When Detailed View is selected: Show Subgraph IDs, Show Container IDs,
   Show Module Instance IDs, and Show all ports — four additional
   Checkboxes, indented under the Detailed View option. Show all ports maps
   to `display.portVisibilityMode` (`'all'` when checked, `'active'` when
   unchecked); while edit mode is active, it is checked and disabled and all
-  ports are shown regardless of the saved preference or view mode. See *Port
-  Visibility Design* below for how the effective mode is computed and
+  ports are shown regardless of the saved preference or view mode. See _Port
+  Visibility Design_ below for how the effective mode is computed and
   applied.
 - **Expand Subgraphs** — Checkbox, always visible. `checked` reads
   `visualization.expandSubgraphs` directly; `onCheckedChange` calls
   `savePreference('visualization.expandSubgraphs', checked)` — the same
-  pattern as every other checkbox in this popover. See *Expand/Collapse
-  Design* below for how `graph-designer.tsx` applies the change.
+  pattern as every other checkbox in this popover. See _Expand/Collapse
+  Design_ below for how `graph-designer.tsx` applies the change.
 - Simplified Subsystems — Checkbox. `disabled` follows the Workflow
   type/level rule in Requirements above; checked value is preserved across
   all transitions (same row). While disabled, a QUI Tooltip wraps the
@@ -361,6 +366,7 @@ See *Link Visibility Design* and *PP Highlight Design* below for how
 - Show MDF Modules — Checkbox
 
 **Usecase Name** — RadioGroup with three options:
+
 - Alias
 - Key Value(s)
 - Value(s)
@@ -466,7 +472,7 @@ export function applyPortVisibility(
 - Runs on the **unpositioned** `LevelView`, before `layoutLevelView`/ELK, so
   `calculateModuleHeight` sizes each module from its true visible port
   count — toggling the checkbox therefore genuinely resizes and repacks
-  boxes, not a cosmetic post-layout filter (see *Pipeline wiring* below for
+  boxes, not a cosmetic post-layout filter (see _Pipeline wiring_ below for
   exactly where this runs). At this point in the pipeline no subgraph has
   been collapsed yet, so `proxyDataLinks`/`proxyControlLinks` are always
   empty — the proxy-link scan is defensive for any future or alternate call
@@ -479,12 +485,11 @@ export function applyPortVisibility(
 Effective mode is computed once in `GraphDesigner`:
 
 ```ts
-const effectivePortVisibilityMode =
-  isEditable
-    ? 'all'
-    : preferences.visualization.viewMode === 'detailed'
-      ? preferences.display.portVisibilityMode
-      : 'active';
+const effectivePortVisibilityMode = isEditable
+  ? 'all'
+  : preferences.visualization.viewMode === 'detailed'
+    ? preferences.display.portVisibilityMode
+    : 'active';
 ```
 
 `isEditable` is true while the graph is in edit mode. Edit mode takes
@@ -502,7 +507,10 @@ useEffect(() => {
   if (graphDataStatus !== 'ready' || !graphData) return;
   const levelId = selectedUsecases.join(',');
   const unpositioned = buildLevelViewFromGraphData(graphData, levelId);
-  const filtered = applyPortVisibility(unpositioned, effectivePortVisibilityMode);
+  const filtered = applyPortVisibility(
+    unpositioned,
+    effectivePortVisibilityMode,
+  );
   void layoutLevelView(filtered).then((lv) => setLevelView(lv));
 }, [
   graphDataStatus,

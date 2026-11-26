@@ -154,8 +154,6 @@ describe('applyLinkVisibility', () => {
     expect(out.proxyControlLinks?.map((l) => l.id)).toEqual([
       'proxy-control-normal',
     ]);
-    expect(out.proxyDataLinks?.map((l) => l.id)).toEqual([
-      'proxy-data-normal',
-    ]);
+    expect(out.proxyDataLinks?.map((l) => l.id)).toEqual(['proxy-data-normal']);
   });
 });

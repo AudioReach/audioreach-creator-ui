@@ -42,9 +42,10 @@ export function createGraphPage(page: Page): GraphPage {
 
   function nodeByIdentity(identity: GraphNodeIdentity): Locator {
     const nodes = nodesByLabel(identity);
-    return (identity.nodeInstanceId
-      ? nodes.filter({hasText: `IID: ${identity.nodeInstanceId}`})
-      : nodes
+    return (
+      identity.nodeInstanceId
+        ? nodes.filter({hasText: `IID: ${identity.nodeInstanceId}`})
+        : nodes
     ).describe(`Graph node ${identity.projectId}/${identity.nodeLabel}`);
   }
 
@@ -69,9 +70,10 @@ export function createGraphPage(page: Page): GraphPage {
         ? `IID: ${identity.nodeInstanceId}`
         : undefined;
       const selectedNode = selectedNodes.filter({hasText: identity.nodeLabel});
-      return (instanceText
-        ? selectedNode.filter({hasText: instanceText})
-        : selectedNode
+      return (
+        instanceText
+          ? selectedNode.filter({hasText: instanceText})
+          : selectedNode
       ).describe(
         `Selected graph node ${identity.projectId}/${identity.nodeLabel}`,
       );

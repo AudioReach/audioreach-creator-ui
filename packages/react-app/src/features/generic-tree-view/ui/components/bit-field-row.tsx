@@ -52,11 +52,14 @@ export function BitFieldRow({
   const longestName = names.reduce((a, b) => (a.length > b.length ? a : b), '');
 
   return (
-    <Tree.NodeProvider indexPath={indexPath} node={{id: bfKey, name: bf.bitName}}>
+    <Tree.NodeProvider
+      indexPath={indexPath}
+      node={{id: bfKey, name: bf.bitName}}
+    >
       <Tree.LeafNode>
         <Tree.NodeIndicator />
         <div className="flex items-center gap-4">
-          <Tree.NodeText className="wrap-break-word w-60 shrink-0">
+          <Tree.NodeText className="w-60 shrink-0 wrap-break-word">
             {bf.bitName}
           </Tree.NodeText>
           <Select
@@ -71,8 +74,7 @@ export function BitFieldRow({
               }
               setSelected(newName);
               const newOptionHex =
-                bf.rangeList.find((av) => av.name === newName)?.value ??
-                '0x0';
+                bf.rangeList.find((av) => av.name === newName)?.value ?? '0x0';
               const newParentHex = computeBitfieldParentValue(
                 [bf],
                 bf.bitMask,

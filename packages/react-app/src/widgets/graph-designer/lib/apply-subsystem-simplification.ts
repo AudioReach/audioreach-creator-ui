@@ -87,7 +87,10 @@ export function applySubsystemSimplification(level: LevelView): LevelView {
   // ports already use. Generated data ports must be pre-inverted here so the
   // rendered handle type still lines up with the edge. Control ports aren't
   // flipped by that component, so their role is left alone.
-  const boundaryDataRole = (nodeId: string, naturalRole: PortRole): PortRole => {
+  const boundaryDataRole = (
+    nodeId: string,
+    naturalRole: PortRole,
+  ): PortRole => {
     if (nodeId !== boundarySubsystemId) {
       return naturalRole;
     }

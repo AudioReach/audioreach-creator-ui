@@ -113,8 +113,16 @@ function nearestOpenPosition(desired: XY, size: Size, occupied: Rect[]): XY {
   // the best distance found so far, every later candidate in it is worse too.
   let best: XY | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
-  for (let dy = 0; dy <= SEARCH_LIMIT && dy * dy < bestDistance; dy += SEARCH_STEP) {
-    for (let dx = 0; dx <= SEARCH_LIMIT && dx * dx < bestDistance; dx += SEARCH_STEP) {
+  for (
+    let dy = 0;
+    dy <= SEARCH_LIMIT && dy * dy < bestDistance;
+    dy += SEARCH_STEP
+  ) {
+    for (
+      let dx = 0;
+      dx <= SEARCH_LIMIT && dx * dx < bestDistance;
+      dx += SEARCH_STEP
+    ) {
       const candidate = {x: desired.x + dx, y: desired.y + dy};
       const candidateRect = {...candidate, ...size};
       if (hasCollision(candidateRect, occupied)) {

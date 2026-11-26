@@ -36,39 +36,39 @@ and Discard.
 
 ## 2. Definitions
 
-| Term | Definition |
-|------|------------|
-| Edit-session | Backend state holding uncommitted changes. Ended only by `end-session` → READONLY. This feature never starts one. |
-| Routing-trigger flag | Frontend boolean (mirrors legacy `IsRoutingTriggered`, A5), set true by out-of-scope edit code when a *routing-relevant edit* — one that can create/change usecases (module add/remove, link add/remove, etc.) — occurs. Selects the Apply branch (FR-AD-02): true → reconcile/review pipeline; false → commit the auto-staged edits and end. Distinct from `isDirty`, which tracks whether *any* edit (routing or not) is unsaved and gates Apply availability (FR-AD-01) and the discard confirmation (FR-AD-13). |
-| Non-routing edit | An edit that changes a property without affecting routing (e.g. module alias change, subgraph name change); does not set the routing-trigger flag. |
-| Summary dialog | "Graph Modification Summary" — checkbox lists of created / updated / deleted usecases, populated from the `create-usecases` response. Checked selection = the staging set. |
-| Staging set | Usecases the user leaves checked → staged (by `changeId`) → committed. Unchecked → cleared by `end-session`. |
-| Navigation choice | Post-Apply canvas-view update (keep / add / switch), affecting `loadGraphData` inputs only, never staging (FR-AD-06). |
-| READONLY | The implicit "no active session" state. Not a startable mode — a project begins here and returns here when its session ends. |
-| Issue severity | `create-usecases` issue category: `BLOCKING`, `NON_BLOCKING`, or `DATA_LOSS`. |
+| Term                 | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Edit-session         | Backend state holding uncommitted changes. Ended only by `end-session` → READONLY. This feature never starts one.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Routing-trigger flag | Frontend boolean (mirrors legacy `IsRoutingTriggered`, A5), set true by out-of-scope edit code when a _routing-relevant edit_ — one that can create/change usecases (module add/remove, link add/remove, etc.) — occurs. Selects the Apply branch (FR-AD-02): true → reconcile/review pipeline; false → commit the auto-staged edits and end. Distinct from `isDirty`, which tracks whether _any_ edit (routing or not) is unsaved and gates Apply availability (FR-AD-01) and the discard confirmation (FR-AD-13). |
+| Non-routing edit     | An edit that changes a property without affecting routing (e.g. module alias change, subgraph name change); does not set the routing-trigger flag.                                                                                                                                                                                                                                                                                                                                                                  |
+| Summary dialog       | "Graph Modification Summary" — checkbox lists of created / updated / deleted usecases, populated from the `create-usecases` response. Checked selection = the staging set.                                                                                                                                                                                                                                                                                                                                          |
+| Staging set          | Usecases the user leaves checked → staged (by `changeId`) → committed. Unchecked → cleared by `end-session`.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Navigation choice    | Post-Apply canvas-view update (keep / add / switch), affecting `loadGraphData` inputs only, never staging (FR-AD-06).                                                                                                                                                                                                                                                                                                                                                                                               |
+| READONLY             | The implicit "no active session" state. Not a startable mode — a project begins here and returns here when its session ends.                                                                                                                                                                                                                                                                                                                                                                                        |
+| Issue severity       | `create-usecases` issue category: `BLOCKING`, `NON_BLOCKING`, or `DATA_LOSS`.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ---
 
 ## 3. Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
-| FR-AD-01 | Apply is available only while a session is active with unsaved changes; otherwise disabled. |
-| FR-AD-02 | On Apply, the routing-trigger flag selects the branch: routing-relevant edits (flag true) run the reconcile/review pipeline; non-routing-only edits (flag false) skip review and finalize by committing the auto-staged edits, then ending the session. |
-| FR-AD-03 | The reconcile step validates the edits and returns the set of usecase changes to review. |
-| FR-AD-04 | Issues that are blocking (`category` BLOCKING, or `severity` FATAL/ERROR) abort Apply; non-blocking and backend-acknowledged data-loss issues are shown but the user may proceed. |
-| FR-AD-05 | The review dialog lists created/updated/deleted usecases, all selected by default; empty categories are hidden. Deleted usecases are always selected and cannot be deselected — a pending deletion cannot be partially applied. |
-| FR-AD-06 | When new usecases are created, the user chooses how the canvas selection updates (keep / add / switch); hidden when there are no created usecases, or when the user has unchecked every created row. |
+| ID       | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-AD-01 | Apply is available only while a session is active with unsaved changes; otherwise disabled.                                                                                                                                                                                                                                                                                                                                  |
+| FR-AD-02 | On Apply, the routing-trigger flag selects the branch: routing-relevant edits (flag true) run the reconcile/review pipeline; non-routing-only edits (flag false) skip review and finalize by committing the auto-staged edits, then ending the session.                                                                                                                                                                      |
+| FR-AD-03 | The reconcile step validates the edits and returns the set of usecase changes to review.                                                                                                                                                                                                                                                                                                                                     |
+| FR-AD-04 | Issues that are blocking (`category` BLOCKING, or `severity` FATAL/ERROR) abort Apply; non-blocking and backend-acknowledged data-loss issues are shown but the user may proceed.                                                                                                                                                                                                                                            |
+| FR-AD-05 | The review dialog lists created/updated/deleted usecases, all selected by default; empty categories are hidden. Deleted usecases are always selected and cannot be deselected — a pending deletion cannot be partially applied.                                                                                                                                                                                              |
+| FR-AD-06 | When new usecases are created, the user chooses how the canvas selection updates (keep / add / switch); hidden when there are no created usecases, or when the user has unchecked every created row.                                                                                                                                                                                                                         |
 | FR-AD-07 | Confirming stages the selected usecases, commits all staged changes (with validation enforced), and ends the session; cancelling returns to editing unchanged. Confirming with no usecases selected still attempts the commit/end-session — the backend may reject it (e.g. modules added but attached to no committed usecase), which surfaces as a reportable error and leaves the session active for the user to correct. |
-| FR-AD-08 | When reconciliation yields no usecase changes, Apply skips the review dialog and finalizes by committing the auto-staged edits, then ending the session. |
-| FR-AD-09 | A reportable finalize-call business error — from Apply's `stage-changes` / `commit-changes` / `end-session`, or Discard's `discard-changes` / `end-session` — keeps the session active with the pending changes intact; the user may correct the cause and retry, or discard. |
-| FR-AD-10 | An indeterminate finalize failure — a transport failure on a mutating call, where no response is received — leaves the outcome unknown: stay in edit mode, assert nothing, let the user reload to see actual state. |
-| FR-AD-11 | Any other pipeline failure surfaces the error and leaves the session active and dirty. |
-| FR-AD-12 | Discard is available whenever a session is active, regardless of unsaved changes; it is the guaranteed path back to READONLY. |
-| FR-AD-13 | Discard requires a danger confirmation only when unsaved changes exist; a clean session ends without confirmation. Once confirmed, discard is unconditional. |
-| FR-AD-14 | Discard drops all pending changes and ends the session, returning to READONLY. |
-| FR-AD-15 | After a successful Apply or Discard, the graph reloads and dirty state clears; Apply honors the user's navigation choice. |
-| FR-AD-16 | Backend-reported issues (from `create-usecases`) and reportable finalize-call business errors — Apply's `stage-changes` / `commit-changes` / `end-session` and Discard's `discard-changes` / `end-session` — are presented in the validation-result-view, and that tab is brought into focus; terminal operation status is surfaced via toast. |
+| FR-AD-08 | When reconciliation yields no usecase changes, Apply skips the review dialog and finalizes by committing the auto-staged edits, then ending the session.                                                                                                                                                                                                                                                                     |
+| FR-AD-09 | A reportable finalize-call business error — from Apply's `stage-changes` / `commit-changes` / `end-session`, or Discard's `discard-changes` / `end-session` — keeps the session active with the pending changes intact; the user may correct the cause and retry, or discard.                                                                                                                                                |
+| FR-AD-10 | An indeterminate finalize failure — a transport failure on a mutating call, where no response is received — leaves the outcome unknown: stay in edit mode, assert nothing, let the user reload to see actual state.                                                                                                                                                                                                          |
+| FR-AD-11 | Any other pipeline failure surfaces the error and leaves the session active and dirty.                                                                                                                                                                                                                                                                                                                                       |
+| FR-AD-12 | Discard is available whenever a session is active, regardless of unsaved changes; it is the guaranteed path back to READONLY.                                                                                                                                                                                                                                                                                                |
+| FR-AD-13 | Discard requires a danger confirmation only when unsaved changes exist; a clean session ends without confirmation. Once confirmed, discard is unconditional.                                                                                                                                                                                                                                                                 |
+| FR-AD-14 | Discard drops all pending changes and ends the session, returning to READONLY.                                                                                                                                                                                                                                                                                                                                               |
+| FR-AD-15 | After a successful Apply or Discard, the graph reloads and dirty state clears; Apply honors the user's navigation choice.                                                                                                                                                                                                                                                                                                    |
+| FR-AD-16 | Backend-reported issues (from `create-usecases`) and reportable finalize-call business errors — Apply's `stage-changes` / `commit-changes` / `end-session` and Discard's `discard-changes` / `end-session` — are presented in the validation-result-view, and that tab is brought into focus; terminal operation status is surfaced via toast.                                                                               |
 
 ---
 
@@ -77,7 +77,7 @@ and Discard.
 **I1 — No misrepresented state (pre-commit vs post-commit).** The frontend never claims
 an outcome it cannot confirm, and it never lands in a state it silently hides.
 
-*Pre-commit (nothing applied).* On a determinate failure that commits nothing — a
+_Pre-commit (nothing applied)._ On a determinate failure that commits nothing — a
 `create-usecases` BLOCKING issue, a `stage-changes` failure/partial (which stops before
 commit), or a `commit-changes` **rejection** (`400` invalid input / missing dependencies,
 or `422` validation failure, where no change is applied) — the session remains active and
@@ -85,7 +85,7 @@ the graph is unmodified from the user's perspective. A rejected `commit-changes`
 its changes staged (the backend does not auto-roll-back a rejected commit); the user
 retries or discards.
 
-*Partial commit (some applied).* A `commit-changes` that returns `success: true` with a
+_Partial commit (some applied)._ A `commit-changes` that returns `success: true` with a
 non-empty `failedChangeIds` (or otherwise reports a partial result) has **already durably
 committed** its `processedChangeIds` while the `failedChangeIds` remain staged. This is
 **not** "graph unmodified": part of the user's edit is live. The frontend treats it as a
@@ -94,12 +94,12 @@ stop before `end-session` (the still-staged set would `422`), does **not** call
 retry the remainder, discard, or reload to reconcile according to the reported state. I2
 still holds — each change is either committed or staged, never both.
 
-*Post-commit (all applied).* A *fully successful* `commit-changes` is durable and drains
+_Post-commit (all applied)._ A _fully successful_ `commit-changes` is durable and drains
 the staged set, so the following `end-session` can no longer `422 STAGED_CHANGES_EXIST` on
-the normal path (a `422` there can only follow a *partial* commit, handled above). The one
+the normal path (a `422` there can only follow a _partial_ commit, handled above). The one
 window that remains is a **transport failure on `end-session` after a successful commit**:
 the changes are committed but the READONLY transition is unconfirmed — a real
-*committed-but-session-active* state. The frontend does not treat this as lost work or as
+_committed-but-session-active_ state. The frontend does not treat this as lost work or as
 ended-but-not-committed; it retries `end-session`, and because the original call may
 already have ended the session, it treats a retry `200 READONLY` as success and a retry
 `400 no active session` (or any other contradictory determinate state) as a cue to
@@ -137,7 +137,7 @@ overlapping invocation regardless of render timing.
 Settled for design purposes but resting on assumptions or on state produced by
 out-of-scope code. Each names the seam this design consumes.
 
-- **A1 — `discard-changes` removes staged *and* unstaged changes.** Discard-all (no
+- **A1 — `discard-changes` removes staged _and_ unstaged changes.** Discard-all (no
   `changeIds`) clears everything uncommitted, staged included, and cascades to
   dependents. The subsequent `end-session`
   therefore sees nothing staged and returns to READONLY without a `422`.
@@ -187,7 +187,7 @@ out-of-scope code. Each names the seam this design consumes.
   re-sending the whole checked set; until then the coordinator tracks `processedChangeIds`
   so the retry set is unambiguous.
 - **A10 — "Commit all / discard all" is expressed by omission, never `[]`.** The
-  `commit-changes` and `discard-changes` swagger treat `changeIds` *not provided or empty*
+  `commit-changes` and `discard-changes` swagger treat `changeIds` _not provided or empty_
   as "all". This design expresses "all" solely by **omitting** `changeIds` (passed as
   `undefined`, dropped from the JSON body by `JSON.stringify`) and never intentionally
   sends `[]`. The frontend invariant holds regardless of the backend's empty-array
@@ -211,7 +211,7 @@ out-of-scope code. Each names the seam this design consumes.
 - Closing a project tab (or the app) while a session is active with unsaved changes.
   That path should prompt for confirmation and take appropriate action, but it is
   owned by the tab-close flow, not this feature — this task scopes only what happens
-  *after* Apply or Discard is clicked.
+  _after_ Apply or Discard is clicked.
 
 ---
 
@@ -238,10 +238,10 @@ and are now closed.
   `422 STAGED_CHANGES_EXIST` / `400`) keeps the session active with the pending changes
   intact for the user to correct and retry (FR-AD-09, I1). A rejected commit leaves all its
   changes staged (no auto-rollback); a partial commit durably commits `processedChangeIds`
-  and leaves only `failedChangeIds` staged. An *indeterminate* failure — a transport failure on a
+  and leaves only `failedChangeIds` staged. An _indeterminate_ failure — a transport failure on a
   mutating call, where no response is received — leaves backend state unknown; the frontend
   asserts neither outcome and defers to a user-driven reload (FR-AD-10, A6). The one
-  refinement is a transport failure on `end-session` *after* a successful commit: the
+  refinement is a transport failure on `end-session` _after_ a successful commit: the
   commit is durable, so the frontend retries `end-session` and treats a retry
   `400 no active session` as a cue to reload/reconcile — not proof the session is still
   active (I1 post-commit). No session-status endpoint exists to reconcile automatically.
@@ -266,11 +266,11 @@ and are now closed.
   (e.g. modules added but attached to no committed usecase); that reportable error keeps
   the session active so the user can remove the orphan modules or reopen Apply and check
   a usecase (FR-AD-07).
-- **Discard gating** — Discard is available whenever a session is active, *not*
+- **Discard gating** — Discard is available whenever a session is active, _not_
   gated on `isDirty` (FR-AD-12). An earlier revision gated Discard on `isDirty`
   just like Apply. That was a dead end: the buttons form a swap — `Edit` starts
   the session and is replaced by `Apply`/`Discard` for its duration, so those two
-  are the *only* controls visible while a session is active. Gating both on
+  are the _only_ controls visible while a session is active. Gating both on
   `isDirty` leaves a clean session (started but not yet edited) with no enabled
   exit, trapping the user. Discard must therefore stay enabled whenever a session
   is active; a clean discard ends the session without a confirmation prompt

@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {type ApiIssue,
+import {
+  type ApiIssue,
   createTransportIssue,
   getIssueMessage,
   hasBlockingIssues,
   hasIssues,
   isTransportFailure,
 } from '~shared/api';
-
-
 
 describe('api result utils', () => {
   const warning: ApiIssue = {

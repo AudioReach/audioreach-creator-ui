@@ -181,10 +181,7 @@ export function createModuleOperations(
     const result = await deleteSpfModule(projectId, moduleInstanceId);
     if (hasBlockingIssues(result) || !result.data) {
       if (!options?.suppressToast) {
-        showToast(
-          getIssueMessage(result, 'Failed to delete module'),
-          'danger',
-        );
+        showToast(getIssueMessage(result, 'Failed to delete module'), 'danger');
       }
       return false;
     }
@@ -278,7 +275,10 @@ export function createModuleOperations(
           alias: newAlias,
         });
         if (hasBlockingIssues(result) || !result.data) {
-          showToast(getIssueMessage(result, 'Failed to rename module'), 'danger');
+          showToast(
+            getIssueMessage(result, 'Failed to rename module'),
+            'danger',
+          );
           return;
         }
         if (result.data.systemId !== moduleInstanceId) {

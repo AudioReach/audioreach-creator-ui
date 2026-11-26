@@ -1,4 +1,4 @@
-(function() {
+(function () {
   const MIN_RECONNECT_MS = 500;
   const MAX_RECONNECT_MS = 30000;
   const TOMBSTONE_AFTER_MS = 15000; // show the "paused" overlay after this long disconnected
@@ -8,7 +8,12 @@
     return Math.min(current * 2, max);
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { nextReconnectDelay, MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS };
+    module.exports = {
+      nextReconnectDelay,
+      MIN_RECONNECT_MS,
+      MAX_RECONNECT_MS,
+      TOMBSTONE_AFTER_MS,
+    };
   }
 
   // Everything below is browser-only; bail out when loaded in Node (tests).
@@ -24,7 +29,10 @@
 
   function sessionKey() {
     try {
-      return window.sessionStorage && window.sessionStorage.getItem('brainstorm-session-key');
+      return (
+        window.sessionStorage &&
+        window.sessionStorage.getItem('brainstorm-session-key')
+      );
     } catch (e) {}
     return null;
   }
@@ -35,7 +43,11 @@
     // ws:// is only used when the page itself loaded over plain HTTP (e.g. local dev);
     // wss:// is used automatically whenever the page loaded over HTTPS.
     const scheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    return scheme + window.location.host + (key ? '/?key=' + encodeURIComponent(key) : '');
+    return (
+      scheme +
+      window.location.host +
+      (key ? '/?key=' + encodeURIComponent(key) : '')
+    );
   }
 
   function reloadAfterRecovery() {
@@ -52,10 +64,10 @@
     const el = document.querySelector('.status');
     if (!el) return;
     const map = {
-      connecting:   ['Connecting…',   'var(--text-tertiary)'],
-      connected:    ['Connected',     'var(--success)'],
+      connecting: ['Connecting…', 'var(--text-tertiary)'],
+      connected: ['Connected', 'var(--success)'],
       reconnecting: ['Reconnecting…', 'var(--warning)'],
-      disconnected: ['Disconnected',  'var(--error)']
+      disconnected: ['Disconnected', 'var(--error)'],
     };
     const [text, color] = map[state] || map.disconnected;
     el.textContent = text;
@@ -68,10 +80,12 @@
     tombstoneShown = true;
     const el = document.createElement('div');
     el.id = 'bs-tombstone';
-    el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;' +
+    el.style.cssText =
+      'position:fixed;inset:0;z-index:99999;display:flex;' +
       'align-items:center;justify-content:center;padding:2rem;text-align:center;' +
       'background:rgba(20,20,22,0.92);color:#f5f5f7;font-family:system-ui,sans-serif';
-    el.innerHTML = '<div style="max-width:480px">' +
+    el.innerHTML =
+      '<div style="max-width:480px">' +
       '<h2 style="margin:0 0 .5rem;font-weight:600">Companion paused</h2>' +
       '<p style="margin:0;opacity:.85">This brainstorm companion has stopped. ' +
       'Ask your coding agent to bring it back — this page reconnects automatically.</p></div>';
@@ -79,7 +93,10 @@
   }
 
   function connect() {
-    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     setStatus(everConnected ? 'reconnecting' : 'connecting');
     ws = new WebSocket(websocketUrl());
 
@@ -90,7 +107,7 @@
       reconnectDelay = MIN_RECONNECT_MS;
       tombstoneShown = false;
       setStatus('connected');
-      eventQueue.forEach(e => ws.send(JSON.stringify(e)));
+      eventQueue.forEach((e) => ws.send(JSON.stringify(e)));
       eventQueue = [];
       // Recovered from a tombstoned outage (e.g. the server restarted on the same
       // port) — reload through the keyed bootstrap when possible so the cookie is
@@ -100,7 +117,11 @@
 
     ws.onmessage = (msg) => {
       let data;
-      try { data = JSON.parse(msg.data); } catch (e) { return; }
+      try {
+        data = JSON.parse(msg.data);
+      } catch (e) {
+        return;
+      }
       if (data.type === 'reload') window.location.reload();
     };
 
@@ -118,7 +139,11 @@
     };
 
     // Let onclose own reconnection so we don't schedule it twice.
-    ws.onerror = () => { try { ws.close(); } catch (e) {} };
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch (e) {}
+    };
   }
 
   function sendEvent(event) {
@@ -139,19 +164,20 @@
       type: 'click',
       text: target.textContent.trim(),
       choice: target.dataset.choice,
-      id: target.id || null
+      id: target.id || null,
     });
-
   });
 
   // Frame UI: selection tracking
   window.selectedChoice = null;
 
-  window.toggleSelect = function(el) {
+  window.toggleSelect = function (el) {
     const container = el.closest('.options') || el.closest('.cards');
     const multi = container && container.dataset.multiselect !== undefined;
     if (container && !multi) {
-      container.querySelectorAll('.option, .card').forEach(o => o.classList.remove('selected'));
+      container
+        .querySelectorAll('.option, .card')
+        .forEach((o) => o.classList.remove('selected'));
     }
     if (multi) {
       el.classList.toggle('selected');
@@ -164,7 +190,8 @@
   // Expose API for explicit use
   window.brainstorm = {
     send: sendEvent,
-    choice: (value, metadata = {}) => sendEvent({ type: 'choice', value, ...metadata })
+    choice: (value, metadata = {}) =>
+      sendEvent({type: 'choice', value, ...metadata}),
   };
 
   connect();

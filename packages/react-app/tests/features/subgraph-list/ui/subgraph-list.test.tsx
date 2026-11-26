@@ -164,9 +164,11 @@ function renderSubgraphList(options: {
       usecases: {
         ...DEFAULT_USER_PREFERENCES.usecases,
         workflowLevel:
-          options.workflowLevel ?? DEFAULT_USER_PREFERENCES.usecases.workflowLevel,
+          options.workflowLevel ??
+          DEFAULT_USER_PREFERENCES.usecases.workflowLevel,
         workflowType:
-          options.workflowType ?? DEFAULT_USER_PREFERENCES.usecases.workflowType,
+          options.workflowType ??
+          DEFAULT_USER_PREFERENCES.usecases.workflowType,
       },
     },
   });
@@ -243,9 +245,9 @@ describe('SubgraphList drag source', () => {
       },
     ]);
 
-    expect(graphDesignerStore.getState().subgraphDetailsById['sg-2']?.name).toBe(
-      'Fetched Subgraph',
-    );
+    expect(
+      graphDesignerStore.getState().subgraphDetailsById['sg-2']?.name,
+    ).toBe('Fetched Subgraph');
     expect(graphDesignerStore.getState().subgraphList).toContainEqual(
       expect.objectContaining({
         subgraphName: 'Fetched Subgraph',
@@ -269,9 +271,9 @@ describe('SubgraphList drag source', () => {
 
     graphDesignerStore.getState().updateCachedSubgraphName('sg-3', 'New');
 
-    expect(graphDesignerStore.getState().subgraphDetailsById['sg-3']?.name).toBe(
-      'New',
-    );
+    expect(
+      graphDesignerStore.getState().subgraphDetailsById['sg-3']?.name,
+    ).toBe('New');
     expect(graphDesignerStore.getState().subgraphList).toContainEqual(
       expect.objectContaining({subgraphName: 'New', systemId: 'sg-3'}),
     );

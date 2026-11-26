@@ -83,9 +83,7 @@ import {
   createGraphDesignerStore,
   type GraphDesignerStore,
 } from '~features/graph-designer/model/graph-designer-store';
-import {
-  GraphDesignerStoreContext,
-} from '~features/graph-designer/model/graph-designer-store-context';
+import {GraphDesignerStoreContext} from '~features/graph-designer/model/graph-designer-store-context';
 import {ApplyDiscardControls} from '~features/graph-designer/ui/apply-discard-controls';
 import {
   createProjectStore,

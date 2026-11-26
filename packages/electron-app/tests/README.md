@@ -236,10 +236,10 @@ both a network response and UI state for every flow:
    make a distinct, reliable transition. Do not add a weak or incidental UI
    assertion just to duplicate the response check.
 3. **No request or client-side failure:** assert the UI or client signal only.
-    EX-1c is this case: the cancelled `OpenProjectFile` response means no
-    upload request is issued, the command returns
-    `{ok: false, message: 'File selection cancelled'}`, and no danger toast is
-    shown. It does not require backend availability.
+   EX-1c is this case: the cancelled `OpenProjectFile` response means no
+   upload request is issued, the command returns
+   `{ok: false, message: 'File selection cancelled'}`, and no danger toast is
+   shown. It does not require backend availability.
 
 **Example of case 2 (request with no UI transition):** If the application
 issues a backend request to update a setting but does not show a toast or

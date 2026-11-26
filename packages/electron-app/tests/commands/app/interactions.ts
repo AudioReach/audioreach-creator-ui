@@ -18,7 +18,9 @@ export type InteractionTargetInput = {
 type ValueInput = InteractionTargetInput & {readonly value: string};
 type KeyInput = InteractionTargetInput & {readonly key: string};
 type AttributeInput = InteractionTargetInput & {readonly name: string};
-type WaitInput = InteractionTargetInput & {readonly state: WaitForSelectorState};
+type WaitInput = InteractionTargetInput & {
+  readonly state: WaitForSelectorState;
+};
 type CustomSelectInput = {
   readonly option: InteractionTargetInput;
   readonly target: InteractionTargetInput;
@@ -31,10 +33,7 @@ type DragAndDropInput = {
   readonly target: InteractionTargetInput;
 };
 
-function locate(
-  context: TestContext,
-  input: InteractionTargetInput,
-): Locator {
+function locate(context: TestContext, input: InteractionTargetInput): Locator {
   return input.target(context).describe(input.targetDescription);
 }
 
@@ -88,7 +87,9 @@ export const check: CommandFactory<InteractionTargetInput, void> = (input) => ({
   metadata: {target: input.targetDescription},
 });
 
-export const uncheck: CommandFactory<InteractionTargetInput, void> = (input) => ({
+export const uncheck: CommandFactory<InteractionTargetInput, void> = (
+  input,
+) => ({
   execute: async (context) => {
     await locate(context, input).uncheck();
   },
@@ -104,7 +105,9 @@ export const select: CommandFactory<ValueInput, void> = (input) => ({
   metadata: {target: input.targetDescription},
 });
 
-export const selectCustom: CommandFactory<CustomSelectInput, void> = (input) => ({
+export const selectCustom: CommandFactory<CustomSelectInput, void> = (
+  input,
+) => ({
   execute: async (context) => {
     await locate(context, input.target).click();
     await locate(context, input.option).click();
@@ -173,7 +176,9 @@ export const getAttribute: CommandFactory<AttributeInput, string | null> = (
   metadata: {target: input.targetDescription},
 });
 
-export const getText: CommandFactory<InteractionTargetInput, string> = (input) => ({
+export const getText: CommandFactory<InteractionTargetInput, string> = (
+  input,
+) => ({
   execute: (context) => locate(context, input).innerText(),
   id: 'app.get-text',
   metadata: {target: input.targetDescription},

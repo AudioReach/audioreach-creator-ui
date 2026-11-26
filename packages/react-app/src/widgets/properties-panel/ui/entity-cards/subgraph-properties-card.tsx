@@ -119,10 +119,7 @@ function SubgraphPropertiesCardBody({
         onChange={(value) => nameSave.saveText(String(value))}
         value={nameSave.value}
       />
-      <CopyableIdRow
-        label="Subgraph ID"
-        value={String(subgraphNaturalId)}
-      />
+      <CopyableIdRow label="Subgraph ID" value={String(subgraphNaturalId)} />
       <SchemaPropertiesTree
         data={schemaData.data}
         error={schemaData.error}

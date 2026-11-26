@@ -583,7 +583,9 @@ describe('ModuleTagKeysConfigPanel', () => {
     expect(instanceSystemIdArg).toBe(INSTANCE_SYSTEM_ID);
     expect(tagGroupIdArg).toBe(TAG3_ID);
     expect(paramsArg).toEqual(['PARAM_SYS_MODULE_TAG_1']);
-    expect(new Set(combinationsArg.map((c: string[]) => [...c].sort().join('+')))).toEqual(
+    expect(
+      new Set(combinationsArg.map((c: string[]) => [...c].sort().join('+'))),
+    ).toEqual(
       new Set([
         ['VAL_SYS_INSTANCE_1', 'VAL_SYS_LEVEL_0'].sort().join('+'),
         ['VAL_SYS_INSTANCE_1', 'VAL_SYS_LEVEL_1'].sort().join('+'),
@@ -1051,7 +1053,9 @@ describe('ModuleTagKeysConfigPanel', () => {
     expect(tagGroupIdArg).toBe(TAG_MUTE_ID);
     expect(
       new Set(combinationsArg.map((c: string[]) => [...c].sort().join('+'))),
-    ).toEqual(new Set([['VAL_SYS_MUTE_OFF'].join('+'), ['VAL_SYS_MUTE_ON'].join('+')]));
+    ).toEqual(
+      new Set([['VAL_SYS_MUTE_OFF'].join('+'), ['VAL_SYS_MUTE_ON'].join('+')]),
+    );
   });
 
   it('keeps an earlier confirmed value and selects the new one when a "+"-joined suggestion is clicked for a different key (regression)', async () => {

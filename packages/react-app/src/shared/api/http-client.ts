@@ -272,7 +272,10 @@ export class HttpClient {
           store.incrementFail(message);
         }
 
-        if (shouldRetryResponse(response, options.method) && attempt < retries) {
+        if (
+          shouldRetryResponse(response, options.method) &&
+          attempt < retries
+        ) {
           const delay = backoffDelay(
             attempt,
             options.retryBaseDelayMs ?? this.retryBaseDelayMs,

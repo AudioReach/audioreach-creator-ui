@@ -117,10 +117,9 @@ This keeps the sequencing testable without React.
 
 **New — session DTO in the existing project entity (`packages/react-app/src/entities/project/`):**
 
-| File                    | Responsibility                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| `model/session.dto.ts`  | `SessionResponseDto`, `SessionMode` — shared session contract (replaces the previous lowercase-string `SessionMode` enum in `project.dto.ts`) |
-
+| File                   | Responsibility                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model/session.dto.ts` | `SessionResponseDto`, `SessionMode` — shared session contract (replaces the previous lowercase-string `SessionMode` enum in `project.dto.ts`) |
 
 **New — shared issue entity (`packages/react-app/src/entities/api-issues/`):**
 
@@ -524,9 +523,7 @@ const apply = useCallback(
       setIsBusy(false);
     }
   },
-  [
-    /* deps */
-  ],
+  [/* deps */],
 );
 ```
 
@@ -1065,12 +1062,12 @@ state by `buildCreateUsecasesRequest` (§5.1), not imported.
 
 **Owned by the shared `project` entity** (declared in `entities/project/model`):
 
-| DTO                                  | Source                    |
-| ------------------------------------ | ------------------------- |
-| `SessionResponseDto` / `SessionMode` | end-session (response)    |
+| DTO                                  | Source                 |
+| ------------------------------------ | ---------------------- |
+| `SessionResponseDto` / `SessionMode` | end-session (response) |
 
 `SessionMode` / `SessionResponseDto` are cross-cutting session vocabulary (used by
-`ProjectInfoResponseDto` for the READONLY/DIFF_MERGE/… project status *and* by
+`ProjectInfoResponseDto` for the READONLY/DIFF_MERGE/… project status _and_ by
 end-session's response), so they live in the shared `project` entity, not in the
 apply/discard feature slice. `SessionMode` is exported as an **`as const` object
 plus a matching type** (`SessionMode.DiffMerge` → `'DIFF_MERGE'`), so callers

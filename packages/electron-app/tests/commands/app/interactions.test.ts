@@ -49,10 +49,10 @@ function createCalls(): Calls {
       dragTo: () => Promise.resolve(calls.push('drag-to')),
       fill: (value: string) => Promise.resolve(calls.push(`fill:${value}`)),
       focus: () => Promise.resolve(calls.push('focus')),
-       getAttribute: (name: string) => {
-         calls.push(`attribute:${name}`);
-         return Promise.resolve(name === 'aria-selected' ? 'true' : 'value');
-       },
+      getAttribute: (name: string) => {
+        calls.push(`attribute:${name}`);
+        return Promise.resolve(name === 'aria-selected' ? 'true' : 'value');
+      },
       hover: () => Promise.resolve(calls.push('hover')),
       innerText: () => Promise.resolve(calls.push('text') && 'visible text'),
       isChecked: () => Promise.resolve(calls.push('checked') && true),
@@ -137,8 +137,8 @@ test('interaction commands use stable IDs, descriptions, and operations', async 
     'focus',
     'describe:control',
     'enabled',
-     'describe:control',
-     'attribute:aria-selected',
+    'describe:control',
+    'attribute:aria-selected',
     'describe:control',
     'checked',
     'describe:control',
@@ -155,23 +155,25 @@ test('interaction commands use stable IDs, descriptions, and operations', async 
     'drag-to',
   ]);
 
-  expect([
-    click(target),
-    doubleClick(target),
-    fill({...target, value: 'value'}),
-    clear(target),
-    press({...target, key: 'Enter'}),
-    check(target),
-    uncheck(target),
-    select({...target, value: 'one'}),
-    selectCustom({option, target}),
-    radio(target),
-    hover(target),
-    focus(target),
-    wait({...target, state: 'visible'}),
-    fileChooser({...target, files: ['workspace.arc']}),
-    dragAndDrop({source: target, target: option}),
-  ].map(({id}) => id)).toEqual([
+  expect(
+    [
+      click(target),
+      doubleClick(target),
+      fill({...target, value: 'value'}),
+      clear(target),
+      press({...target, key: 'Enter'}),
+      check(target),
+      uncheck(target),
+      select({...target, value: 'one'}),
+      selectCustom({option, target}),
+      radio(target),
+      hover(target),
+      focus(target),
+      wait({...target, state: 'visible'}),
+      fileChooser({...target, files: ['workspace.arc']}),
+      dragAndDrop({source: target, target: option}),
+    ].map(({id}) => id),
+  ).toEqual([
     'app.click',
     'app.double-click',
     'app.fill',
