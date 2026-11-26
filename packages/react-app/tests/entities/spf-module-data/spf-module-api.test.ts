@@ -53,7 +53,13 @@ describe('spf-module-api — putCalData', () => {
   });
 
   it('omits the query string when paramSystemIds is an empty array', async () => {
-    await putCalData(PROJECT_ID, MODULE_ID, CKV_SYSTEM_ID, {parameters: []}, []);
+    await putCalData(
+      PROJECT_ID,
+      MODULE_ID,
+      CKV_SYSTEM_ID,
+      {parameters: []},
+      [],
+    );
 
     expect(mockPut).toHaveBeenCalledWith(
       `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/cal-data/${CKV_SYSTEM_ID}`,
@@ -70,13 +76,9 @@ describe('spf-module-api — putTagData', () => {
   });
 
   it('PUTs Swagger parameters without an absent uiPersistence value', async () => {
-    await putTagData(
-      PROJECT_ID,
-      MODULE_ID,
-      TAG_SYSTEM_ID,
-      TKV_SYSTEM_ID,
-      {parameters: []},
-    );
+    await putTagData(PROJECT_ID, MODULE_ID, TAG_SYSTEM_ID, TKV_SYSTEM_ID, {
+      parameters: [],
+    });
 
     expect(mockPut).toHaveBeenCalledWith(
       `/projects/${PROJECT_ID}/spf-modules/${MODULE_ID}/tag-data/${TAG_SYSTEM_ID}/${TKV_SYSTEM_ID}`,

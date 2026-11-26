@@ -501,10 +501,7 @@ describe('ApplySummaryDialog', () => {
         onOK={onOK}
         open
         response={buildResponse({
-          changes: [
-            createdRow,
-            {...updatedRow, operation: 'UPDATE'},
-          ],
+          changes: [createdRow, {...updatedRow, operation: 'UPDATE'}],
         })}
       />,
     );

@@ -40,7 +40,8 @@ const APP_DATA_NAME = 'audioreach-creator-ui';
 app.setName(APP_DATA_NAME);
 app.setPath(
   'userData',
-  process.env.ARC_E2E_USER_DATA_DIR ?? join(app.getPath('appData'), APP_DATA_NAME),
+  process.env.ARC_E2E_USER_DATA_DIR ??
+    join(app.getPath('appData'), APP_DATA_NAME),
 );
 
 let hasActiveProject = false;

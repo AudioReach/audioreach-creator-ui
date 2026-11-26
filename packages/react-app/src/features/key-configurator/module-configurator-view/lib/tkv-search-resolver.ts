@@ -158,8 +158,10 @@ export function resolveTkvSearchInput(
       }
       pairs.push(resolution.pair);
       effectiveLockedTagGroupId =
-        resolveTagGroupIdForKey(availableModuleTagsInfo, resolution.pair.key.id) ??
-        effectiveLockedTagGroupId;
+        resolveTagGroupIdForKey(
+          availableModuleTagsInfo,
+          resolution.pair.key.id,
+        ) ?? effectiveLockedTagGroupId;
       lastDiagnostic = resolution.diagnostic ?? lastDiagnostic;
       continue;
     }
@@ -184,8 +186,10 @@ export function resolveTkvSearchInput(
     }
     pairs.push(resolution.pair);
     effectiveLockedTagGroupId =
-      resolveTagGroupIdForKey(availableModuleTagsInfo, resolution.pair.key.id) ??
-      effectiveLockedTagGroupId;
+      resolveTagGroupIdForKey(
+        availableModuleTagsInfo,
+        resolution.pair.key.id,
+      ) ?? effectiveLockedTagGroupId;
     lastDiagnostic = resolution.diagnostic ?? lastDiagnostic;
   }
 

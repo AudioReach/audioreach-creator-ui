@@ -14,8 +14,7 @@ import {
 test('installs the exact open-project-file response and reconstructs bytes', async () => {
   const calls: unknown[][] = [];
   let handler:
-    | ((event: unknown, request: {requestType: string}) => unknown)
-    | undefined;
+    ((event: unknown, request: {requestType: string}) => unknown) | undefined;
   const ipcMain = {
     handle: (_channel: string, callback: typeof handler) => {
       handler = callback;
@@ -26,7 +25,10 @@ test('installs the exact open-project-file response and reconstructs bytes', asy
     calls.push(args);
     const callback = args[0] as (
       electron: {ipcMain: typeof ipcMain},
-      data: {openProjectFileResponse: OpenProjectFileResponse; requestType: string},
+      data: {
+        openProjectFileResponse: OpenProjectFileResponse;
+        requestType: string;
+      },
     ) => void;
     callback(
       {ipcMain},
@@ -82,17 +84,31 @@ test('installs the exact open-project-file response and reconstructs bytes', asy
 test('does not turn unknown IPC requests into successful responses', async () => {
   const calls: unknown[][] = [];
   let handler:
-    | ((event: unknown, request: {requestType: string}) => unknown)
-    | undefined;
+    ((event: unknown, request: {requestType: string}) => unknown) | undefined;
   const app = {
     evaluate: (...args: unknown[]) => {
       calls.push(args);
       const callback = args[0] as (
-        electron: {ipcMain: {handle: (_channel: string, callback: typeof handler) => void; removeHandler: () => void}},
-        data: {openProjectFileResponse: OpenProjectFileResponse; requestType: string},
+        electron: {
+          ipcMain: {
+            handle: (_channel: string, callback: typeof handler) => void;
+            removeHandler: () => void;
+          };
+        },
+        data: {
+          openProjectFileResponse: OpenProjectFileResponse;
+          requestType: string;
+        },
       ) => void;
       callback(
-        {ipcMain: {handle: (_channel, installedHandler) => { handler = installedHandler; }, removeHandler: () => undefined}},
+        {
+          ipcMain: {
+            handle: (_channel, installedHandler) => {
+              handler = installedHandler;
+            },
+            removeHandler: () => undefined,
+          },
+        },
         {
           ...(args[1] as {
             openProjectFileResponse: OpenProjectFileResponse;
@@ -116,17 +132,20 @@ test('does not turn unknown IPC requests into successful responses', async () =>
 test('delegates unrelated IPC requests to the existing handler', async () => {
   const delegatedRequest = {requestType: 'existing-request'};
   const existingHandler = () => ({requestType: delegatedRequest.requestType});
-  const handlers = new Map<string, (event: unknown, request: {requestType: string}) => unknown>([
-    ['ipc::message', existingHandler],
-  ]);
+  const handlers = new Map<
+    string,
+    (event: unknown, request: {requestType: string}) => unknown
+  >([['ipc::message', existingHandler]]);
   let installedHandler:
-    | ((event: unknown, request: {requestType: string}) => unknown)
-    | undefined;
+    ((event: unknown, request: {requestType: string}) => unknown) | undefined;
   const app = {
     evaluate: (...args: unknown[]) => {
       const callback = args[0] as (
         electron: {ipcMain: unknown},
-        data: {openProjectFileResponse: OpenProjectFileResponse; requestType: string},
+        data: {
+          openProjectFileResponse: OpenProjectFileResponse;
+          requestType: string;
+        },
       ) => void;
       const ipcMain = {
         handle: (_channel: string, handler: typeof installedHandler) => {
@@ -159,7 +178,9 @@ test('delegates unrelated IPC requests to the existing handler', async () => {
 
 test('disposes seams by identity and restores the original handler out of order', async () => {
   const existingHandler = () => ({requestType: 'existing-request'});
-  const handlers = new Map<string, unknown>([['ipc::message', existingHandler]]);
+  const handlers = new Map<string, unknown>([
+    ['ipc::message', existingHandler],
+  ]);
   const app = {
     evaluate: (...args: unknown[]) => {
       const callback = args[0] as (
@@ -185,7 +206,9 @@ test('disposes seams by identity and restores the original handler out of order'
 
   const firstDispose = await installOpenProjectFileSeam(app, {cancelled: true});
   const firstHandler = handlers.get('ipc::message');
-  const secondDispose = await installOpenProjectFileSeam(app, {cancelled: true});
+  const secondDispose = await installOpenProjectFileSeam(app, {
+    cancelled: true,
+  });
   const secondHandler = handlers.get('ipc::message');
 
   await firstDispose();
@@ -201,11 +224,23 @@ test('disposes the test-scoped IPC handler', async () => {
   const app = {
     evaluate: (...args: unknown[]) => {
       const callback = args[0] as (
-        electron: {ipcMain: {handle: () => void; removeHandler: (channel: string) => void}},
+        electron: {
+          ipcMain: {
+            handle: () => void;
+            removeHandler: (channel: string) => void;
+          };
+        },
         data: unknown,
       ) => void;
       callback(
-        {ipcMain: {handle: () => undefined, removeHandler: (channel) => { removedChannel = channel; }}},
+        {
+          ipcMain: {
+            handle: () => undefined,
+            removeHandler: (channel) => {
+              removedChannel = channel;
+            },
+          },
+        },
         {seamId: 3},
       );
       return Promise.resolve();

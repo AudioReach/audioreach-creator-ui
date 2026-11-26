@@ -184,7 +184,9 @@ describe('useSubgraphKvMetadataRefresh', () => {
       ),
     });
 
-    await waitFor(() => expect(mockResolveSubgraphKvMetadata).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockResolveSubgraphKvMetadata).toHaveBeenCalledTimes(2),
+    );
     act(() => {
       store.setState({selectedNodes: [...store.getState().selectedNodes]});
     });

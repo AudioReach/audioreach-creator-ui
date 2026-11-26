@@ -301,9 +301,7 @@ export default function ArcStartPage({
 
       <div>
         {/* Top Navigation Bar */}
-        <div
-          className="border-neutral-02 flex gap-2 border-b p-2.5"
-        >
+        <div className="border-neutral-02 flex gap-2 border-b p-2.5">
           <Button
             emphasis={showProjects ? 'primary' : 'neutral'}
             onClick={() => {

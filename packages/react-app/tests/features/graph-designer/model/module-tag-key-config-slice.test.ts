@@ -168,9 +168,7 @@ describe('createModuleTagKeyConfigSlice', () => {
         issues: [],
       });
       mockedCreateTkvs.mockResolvedValue({
-        data: [
-          {keyValuePairs: [], supportedParameters: [], systemId: 'tkv-1'},
-        ],
+        data: [{keyValuePairs: [], supportedParameters: [], systemId: 'tkv-1'}],
         issues: [],
       });
       mockedCreateTkvParameters.mockResolvedValue({
@@ -201,9 +199,13 @@ describe('createModuleTagKeyConfigSlice', () => {
         'tag-1',
         {tkvs: [{valueSystemIds: ['v10']}]},
       );
-      expect(mockedCreateTkvParameters).toHaveBeenCalledWith('proj-1', 'mod-1', {
-        updates: [{parameterSystemIds: ['p5'], tkvSystemId: 'tkv-1'}],
-      });
+      expect(mockedCreateTkvParameters).toHaveBeenCalledWith(
+        'proj-1',
+        'mod-1',
+        {
+          updates: [{parameterSystemIds: ['p5'], tkvSystemId: 'tkv-1'}],
+        },
+      );
       expect(get().graphData.moduleInstances['mod-1'].tags).toEqual([
         {
           naturalId: 100,
@@ -241,9 +243,7 @@ describe('createModuleTagKeyConfigSlice', () => {
 
     it('reuses an existing tag instead of calling createTags again', async () => {
       mockedCreateTkvs.mockResolvedValue({
-        data: [
-          {keyValuePairs: [], supportedParameters: [], systemId: 'tkv-2'},
-        ],
+        data: [{keyValuePairs: [], supportedParameters: [], systemId: 'tkv-2'}],
         issues: [],
       });
       const {get, set} = makeHarness();
@@ -399,12 +399,17 @@ describe('createModuleTagKeyConfigSlice', () => {
       ]);
 
       expect(result).toBe(true);
-      expect(mockedDeleteTkvs).toHaveBeenCalledWith('proj-1', 'mod-1', 'tag-1', {
-        tkvSystemIds: ['tkv-1'],
-      });
-      expect(
-        get().graphData.moduleInstances['mod-1'].tags[0].tkvs,
-      ).toEqual([{keyValuePairs: [], supportedParameters: [], systemId: 'tkv-2'}]);
+      expect(mockedDeleteTkvs).toHaveBeenCalledWith(
+        'proj-1',
+        'mod-1',
+        'tag-1',
+        {
+          tkvSystemIds: ['tkv-1'],
+        },
+      );
+      expect(get().graphData.moduleInstances['mod-1'].tags[0].tkvs).toEqual([
+        {keyValuePairs: [], supportedParameters: [], systemId: 'tkv-2'},
+      ]);
     });
 
     it('returns false and shows a toast when a delete call has a blocking issue', async () => {
@@ -462,7 +467,12 @@ describe('createModuleTagKeyConfigSlice', () => {
                   {
                     keyValuePairs: [],
                     supportedParameters: [
-                      {description: '', name: 'A', naturalId: 1, systemId: 'p1'},
+                      {
+                        description: '',
+                        name: 'A',
+                        naturalId: 1,
+                        systemId: 'p1',
+                      },
                     ],
                     systemId: 'tkv-1',
                   },
@@ -498,9 +508,13 @@ describe('createModuleTagKeyConfigSlice', () => {
       ]);
 
       expect(result).toBe(true);
-      expect(mockedCreateTkvParameters).toHaveBeenCalledWith('proj-1', 'mod-1', {
-        updates: [{parameterSystemIds: ['p2'], tkvSystemId: 'tkv-1'}],
-      });
+      expect(mockedCreateTkvParameters).toHaveBeenCalledWith(
+        'proj-1',
+        'mod-1',
+        {
+          updates: [{parameterSystemIds: ['p2'], tkvSystemId: 'tkv-1'}],
+        },
+      );
       expect(mockedDeleteTkvParameters).not.toHaveBeenCalled();
       expect(
         get().graphData.moduleInstances['mod-1'].tags[0].tkvs[0]
@@ -525,9 +539,13 @@ describe('createModuleTagKeyConfigSlice', () => {
 
       expect(result).toBe(true);
       expect(mockedCreateTkvParameters).not.toHaveBeenCalled();
-      expect(mockedDeleteTkvParameters).toHaveBeenCalledWith('proj-1', 'mod-1', {
-        updates: [{parameterSystemIds: ['p1'], tkvSystemId: 'tkv-1'}],
-      });
+      expect(mockedDeleteTkvParameters).toHaveBeenCalledWith(
+        'proj-1',
+        'mod-1',
+        {
+          updates: [{parameterSystemIds: ['p1'], tkvSystemId: 'tkv-1'}],
+        },
+      );
       expect(
         get().graphData.moduleInstances['mod-1'].tags[0].tkvs[0]
           .supportedParameters,
@@ -538,7 +556,9 @@ describe('createModuleTagKeyConfigSlice', () => {
       const {get, set} = makeHarness();
       set(baseTags());
 
-      const result = await get().updateTkvParameters('mod-1', 'missing', ['p1']);
+      const result = await get().updateTkvParameters('mod-1', 'missing', [
+        'p1',
+      ]);
 
       expect(result).toBe(false);
       expect(mockedCreateTkvParameters).not.toHaveBeenCalled();

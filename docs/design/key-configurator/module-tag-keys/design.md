@@ -172,7 +172,10 @@ interface ModuleTagKeyConfigSlice {
     valueSystemIdCombinations: string[][],
     parameterSystemIds: string[],
   ) => Promise<boolean>;
-  deleteTagGroup: (instanceSystemId: string, tagGroupId: number) => Promise<boolean>;
+  deleteTagGroup: (
+    instanceSystemId: string,
+    tagGroupId: number,
+  ) => Promise<boolean>;
   deleteTkvs: (
     instanceSystemId: string,
     targets: Array<{tagGroupId: number; tkvSystemId: string}>,
@@ -749,14 +752,14 @@ Writing TKVs, however, now goes through real endpoints
 `ModuleTagKeyConfigSlice`'s mutation actions rather than through a
 separate save step:
 
-| Endpoint | Method | Called by |
-| --- | --- | --- |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags` | `POST` (`createTags`) | `addTkvs` (only when the parent tag doesn't exist yet) |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags` | `DELETE` (`deleteTags`) | `deleteTagGroup` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `POST` (`createTkvs`) | `addTkvs` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `DELETE` (`deleteTkvs`) | `deleteTkvs` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters` | `POST` (`createTkvParameters`) | `addTkvs`, `updateTkvParameters` |
-| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters` | `DELETE` (`deleteTkvParameters`) | `updateTkvParameters` |
+| Endpoint                                                                        | Method                           | Called by                                              |
+| ------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------ |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags`                    | `POST` (`createTags`)            | `addTkvs` (only when the parent tag doesn't exist yet) |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags`                    | `DELETE` (`deleteTags`)          | `deleteTagGroup`                                       |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `POST` (`createTkvs`)            | `addTkvs`                                              |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tags/{tagSystemId}/tkvs` | `DELETE` (`deleteTkvs`)          | `deleteTkvs`                                           |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters`          | `POST` (`createTkvParameters`)   | `addTkvs`, `updateTkvParameters`                       |
+| `/projects/{projectId}/spf-modules/{spfModuleSystemId}/tkv-parameters`          | `DELETE` (`deleteTkvParameters`) | `updateTkvParameters`                                  |
 
 `createTkvs` returns `TkvDto[]` directly, giving every newly-created entry
 a real, backend-assigned `systemId` (see TKV Identity above). Persistence
@@ -820,7 +823,7 @@ section, so the user can retry without re-entering their selection.
 succeeds."** It processes its batch of targets one owning tag at a time;
 if a later tag's `deleteTkvsApi` call fails after an earlier tag's call
 already succeeded, it calls `updateModuleTagsLocal` with the
-already-applied partial result *before* returning `false` — so Graph Data
+already-applied partial result _before_ returning `false` — so Graph Data
 reflects whichever tag groups' deletions actually completed on the
 backend, not a full rollback to the pre-Apply state. `addTkvs`,
 `deleteTagGroup`, and `updateTkvParameters` do not have this partial-write

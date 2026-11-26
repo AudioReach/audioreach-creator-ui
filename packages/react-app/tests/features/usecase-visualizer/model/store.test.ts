@@ -221,31 +221,36 @@ describe('createVisualizerStore — setEventHandlers', () => {
 
 describe('createVisualizerStore — two-click edge modes', () => {
   it.each([
-    [
-      'input',
-      "Can't connect two input ports. Connect an input to an output.",
-    ],
+    ['input', "Can't connect two input ports. Connect an input to an output."],
     [
       'output',
       "Can't connect two output ports. Connect an input to an output.",
     ],
-  ] as const)('shows a warning for same-direction %s ports', (portIoType, message) => {
-    const store = createVisualizerStore();
-    const onEdgeConnected = jest.fn();
-    const role = portIoType === 'input' ? 'target' : 'source';
-    store.getState().setEventHandlers({onEdgeConnected});
+  ] as const)(
+    'shows a warning for same-direction %s ports',
+    (portIoType, message) => {
+      const store = createVisualizerStore();
+      const onEdgeConnected = jest.fn();
+      const role = portIoType === 'input' ? 'target' : 'source';
+      store.getState().setEventHandlers({onEdgeConnected});
 
-    store
-      .getState()
-      .startConnection('source', {id: 'source-port', portIoType}, 'normal', role);
-    store
-      .getState()
-      .completeConnection('target', {id: 'target-port', portIoType}, role);
+      store
+        .getState()
+        .startConnection(
+          'source',
+          {id: 'source-port', portIoType},
+          'normal',
+          role,
+        );
+      store
+        .getState()
+        .completeConnection('target', {id: 'target-port', portIoType}, role);
 
-    expect(showToast).toHaveBeenCalledWith(message, 'warning');
-    expect(onEdgeConnected).not.toHaveBeenCalled();
-    expect(store.getState().connectionInProgress).toBeNull();
-  });
+      expect(showToast).toHaveBeenCalledWith(message, 'warning');
+      expect(onEdgeConnected).not.toHaveBeenCalled();
+      expect(store.getState().connectionInProgress).toBeNull();
+    },
+  );
 
   it('preserves the selected data edge mode in the edge payload', () => {
     const store = createVisualizerStore();

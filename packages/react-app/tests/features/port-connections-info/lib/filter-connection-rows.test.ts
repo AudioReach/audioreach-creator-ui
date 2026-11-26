@@ -40,7 +40,10 @@ describe('filterConnectionRows', () => {
   it('"interUsecase" returns only rows where isInterUsecase is true', () => {
     const sgRow = makeRow({isInterUsecase: false, systemId: 'link-1'});
     const interUsecaseRow = makeRow({isInterUsecase: true, systemId: 'link-2'});
-    const result = filterConnectionRows([sgRow, interUsecaseRow], 'interUsecase');
+    const result = filterConnectionRows(
+      [sgRow, interUsecaseRow],
+      'interUsecase',
+    );
     expect(result).toEqual([interUsecaseRow]);
   });
 

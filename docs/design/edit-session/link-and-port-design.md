@@ -52,13 +52,13 @@ planned; see
 It does **not** own:
 
 - Context menu item definitions/wiring (which items appear, in what order)
-  — Canvas UI Mechanics; this doc owns only the *handlers* those items
+  — Canvas UI Mechanics; this doc owns only the _handlers_ those items
   dispatch to ([§4](#4-port-context-menu)).
 - The Expanded/Virtual display-mode **rendering** transform for
   cross-DSP bridge modules (FR-MDF-02) — this doc guarantees the backend's
   full bridge-module response is reconciled into `graphData`
   ([§2.3](#23-cross-subsystem-and-cross-dsp-bridging-req-026-027-055)); how
-  bridge modules are *drawn* (expanded vs. collapsed into one logical edge)
+  bridge modules are _drawn_ (expanded vs. collapsed into one logical edge)
   is a rendering concern for Canvas UI Mechanics, the same category as port
   coloring.
 - Node/subgraph/subsystem CRUD — Node Operations. This doc reuses Node
@@ -82,23 +82,31 @@ export function createLinkOperations(
   async function connectPorts(
     get: () => GraphDesignerStore,
     /* §2.1's remaining params */
-  ): Promise<boolean> { /* ... */ }
+  ): Promise<boolean> {
+    /* ... */
+  }
 
   async function updatePortCount(
     get: () => GraphDesignerStore,
     /* §3's remaining params */
-  ): Promise<void> { /* ... */ }
+  ): Promise<void> {
+    /* ... */
+  }
 
   async function deleteLink(
     get: () => GraphDesignerStore,
     /* §5's remaining params */
-  ): Promise<boolean> { /* ... */ }
+  ): Promise<boolean> {
+    /* ... */
+  }
 
   async function deleteLinkInner(
     get: () => GraphDesignerStore,
     /* §5's remaining params */
     options?: InnerActionOptions,
-  ): Promise<boolean> { /* ... */ }
+  ): Promise<boolean> {
+    /* ... */
+  }
 }
 ```
 
@@ -157,7 +165,7 @@ async function connectPorts(
   targetPortId: string,
   edgeKind: 'control' | 'data',
   edgeMode: 'normal' | 'EC' | 'interUsecase',
-): Promise<boolean>
+): Promise<boolean>;
 ```
 
 - **Drag-connect** — `UsecaseVisualizer`'s existing `handleConnect` already
@@ -281,7 +289,7 @@ target union.
 3. `withMutationLock(get, async () => {...})` wraps steps 4–6.
 4. Backend call with the resolved endpoint.
 5. On success: `get().applyComponentCollection({added: result.data, deleted:
-   EMPTY_DELETED_COLLECTION, updated: EMPTY_COLLECTION})`. **This is
+EMPTY_DELETED_COLLECTION, updated: EMPTY_COLLECTION})`. **This is
    what makes FR-LINK-04's cross-subsystem auto-bridging work with no special
    frontend logic**: when the user connects a module inside Subsystem A to
    a module inside Subsystem B, the backend's response already contains
@@ -415,10 +423,9 @@ async function deleteLinkInner(
   linkType: 'data' | 'control',
   options?: InnerActionOptions,
 ): Promise<boolean> {
-  const result = await (linkType === 'data' ? deleteDataLink : deleteControlLink)(
-    projectId,
-    connectionId,
-  );
+  const result = await (
+    linkType === 'data' ? deleteDataLink : deleteControlLink
+  )(projectId, connectionId);
   if (!result.success || !result.data) {
     if (!options?.suppressToast) {
       showToast(result.message ?? 'Failed to delete connection', 'danger');
@@ -442,7 +449,9 @@ async function deleteLink(
   connectionId: string,
   linkType: 'data' | 'control',
 ): Promise<boolean> {
-  return withMutationLock(get, () => deleteLinkInner(get, connectionId, linkType));
+  return withMutationLock(get, () =>
+    deleteLinkInner(get, connectionId, linkType),
+  );
 }
 ```
 
@@ -468,16 +477,16 @@ reused here unchanged for its port-count fields. All confirmed
 against the current backend swagger, per
 [design.md §7.1](design.md#71-confirmed-endpoints)/[§7.3](design.md#73-non-cascading-narrow-response-endpoints).
 
-| Function | Method | Path | Request | Response |
-| --- | --- | --- | --- | --- |
-| `createDataLink` | POST | `/data-links` | `CreateDataLinkRequest` | `ComponentCollectionDto` |
-| `createControlLink` | POST | `/control-links` | `CreateControlLinkRequest` | `ComponentCollectionDto` |
-| `createDataLinkWithSubsystems` | POST | `/data-links/with-subsystems` | `CreateDataLinkRequest` | `ComponentCollectionDto` |
-| `createControlLinkWithSubsystems` | POST | `/control-links/with-subsystems` | `CreateControlLinkRequest` | `ComponentCollectionDto` |
-| `deleteDataLink` | DELETE | `/data-links/{dataLinkSystemId}` | — | Deleted link's own DTO |
-| `deleteControlLink` | DELETE | `/control-links/{controlLinkSystemId}` | — | Deleted link's own DTO |
-| `patchSpfModule` (port-count fields) | PATCH | `/spf-modules/{id}` | `{maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}` | `SpfModuleDto` |
-| `patchSubsystem` (port-count fields) | PATCH | `/subsystems/{id}` | `{maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}` | `SubsystemDto` |
+| Function                             | Method | Path                                   | Request                                                                                  | Response                 |
+| ------------------------------------ | ------ | -------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ |
+| `createDataLink`                     | POST   | `/data-links`                          | `CreateDataLinkRequest`                                                                  | `ComponentCollectionDto` |
+| `createControlLink`                  | POST   | `/control-links`                       | `CreateControlLinkRequest`                                                               | `ComponentCollectionDto` |
+| `createDataLinkWithSubsystems`       | POST   | `/data-links/with-subsystems`          | `CreateDataLinkRequest`                                                                  | `ComponentCollectionDto` |
+| `createControlLinkWithSubsystems`    | POST   | `/control-links/with-subsystems`       | `CreateControlLinkRequest`                                                               | `ComponentCollectionDto` |
+| `deleteDataLink`                     | DELETE | `/data-links/{dataLinkSystemId}`       | —                                                                                        | Deleted link's own DTO   |
+| `deleteControlLink`                  | DELETE | `/control-links/{controlLinkSystemId}` | —                                                                                        | Deleted link's own DTO   |
+| `patchSpfModule` (port-count fields) | PATCH  | `/spf-modules/{id}`                    | `{maxInputPortsSupported?, maxOutputPortsSupported?, maxControlPortsSupported?}`         | `SpfModuleDto`           |
+| `patchSubsystem` (port-count fields) | PATCH  | `/subsystems/{id}`                     | `{maxInputDataPortsSupported?, maxOutputDataPortsSupported?, maxControlPortsSupported?}` | `SubsystemDto`           |
 
 ### 6.1 Request shapes
 

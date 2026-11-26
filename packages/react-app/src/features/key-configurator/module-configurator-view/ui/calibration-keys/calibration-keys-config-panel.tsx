@@ -118,10 +118,7 @@ const matchesSearchTerm = (
  * gets folded into the token being matched against key/value names.
  */
 const getActiveSearchToken = (text: string): string => {
-  const separatorIndex = Math.max(
-    text.lastIndexOf(' '),
-    text.lastIndexOf('+'),
-  );
+  const separatorIndex = Math.max(text.lastIndexOf(' '), text.lastIndexOf('+'));
   return separatorIndex < 0
     ? text.trim()
     : text.slice(separatorIndex + 1).trim();
@@ -616,8 +613,7 @@ export function CalibrationKeysConfigPanel({
                   parseInt(valueIdStr, 10),
                 );
                 return (
-                  resolved?.value.name.toLowerCase() !==
-                  valueName.toLowerCase()
+                  resolved?.value.name.toLowerCase() !== valueName.toLowerCase()
                 );
               },
             ),
@@ -738,7 +734,11 @@ export function CalibrationKeysConfigPanel({
 
   const handleSuggestionCommit = useCallback(
     (suggestion: CkvSearchSuggestion) => {
-      selectValue(suggestion.key.id, suggestion.value.id, suggestion.value.name);
+      selectValue(
+        suggestion.key.id,
+        suggestion.value.id,
+        suggestion.value.name,
+      );
     },
     [selectValue],
   );
@@ -756,17 +756,8 @@ export function CalibrationKeysConfigPanel({
               searchNumber,
             ),
           );
-    const sorted = sortKeys(
-      keys,
-      calibrationKeys,
-      sortColumn,
-      sortOrder,
-    );
-    return partitionKeysBySelection(
-      sorted,
-      calibrationKeys,
-      selectedKeyValues,
-    );
+    const sorted = sortKeys(keys, calibrationKeys, sortColumn, sortOrder);
+    return partitionKeysBySelection(sorted, calibrationKeys, selectedKeyValues);
   }, [
     calibrationKeys,
     pickerFilterText,
@@ -776,9 +767,7 @@ export function CalibrationKeysConfigPanel({
   ]);
 
   const handleExpandAll = useCallback(() => {
-    setExpandedKeys(
-      filteredKeyNames.map((name) => calibrationKeys[name].id),
-    );
+    setExpandedKeys(filteredKeyNames.map((name) => calibrationKeys[name].id));
   }, [filteredKeyNames, calibrationKeys]);
 
   const handleCollapseAll = useCallback(() => {
@@ -985,11 +974,7 @@ export function CalibrationKeysConfigPanel({
 
       const resolvedPairs = combo
         .map((pair) =>
-          resolveGraphKeyAndValue(
-            calibrationKeys,
-            pair.key.id,
-            pair.value.id,
-          ),
+          resolveGraphKeyAndValue(calibrationKeys, pair.key.id, pair.value.id),
         )
         .filter(
           (pair): pair is {key: CalibrationKey; value: KeyValue} =>

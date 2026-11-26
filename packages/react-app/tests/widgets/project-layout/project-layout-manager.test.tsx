@@ -442,13 +442,11 @@ describe('ProjectLayoutManager — group colors', () => {
     expect(tabs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          className:
-            'group-label-tab !bg-brand-primary',
+          className: 'group-label-tab !bg-brand-primary',
           id: 'app-group-label-default-app-group',
         }),
         expect.objectContaining({
-          className:
-            'border-t-2 border-brand-primary',
+          className: 'border-t-2 border-brand-primary',
           id: 'start-tab',
         }),
         expect.objectContaining({

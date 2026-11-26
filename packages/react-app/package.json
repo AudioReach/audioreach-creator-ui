@@ -10,7 +10,7 @@
     "dev": "run-p dev:site dev:ts",
     "build": "tsc -b tsconfig.lib.json --force && vite build",
     "typecheck": "tsc -b tsconfig.lib.json --force --noEmit",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.{js,mjs,ts}\" --quiet",
+    "lint": "node ../../node_modules/eslint/bin/eslint.js \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.{js,mjs,ts}\" --quiet",
     "preview": "vite preview -c vite.config.ts",
     "watch": "tsc -p tsconfig.lib.json -w --preserveWatchOutput --force",
     "test": "jest --config ./jest.config.mjs",
@@ -18,7 +18,7 @@
     "test:watch": "jest --config ./jest.config.mjs --watch",
     "test:ci": "jest --config ./jest.config.mjs --ci --coverage --watchAll=false",
     "clean": "shx rm -rf dist",
-    "format": "prettier --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
+    "format": "node ../../node_modules/prettier/bin/prettier.cjs --write \"**/*.{js,ts,json,md,jsx,tsx}\" --ignore-path ../../.prettierignore"
   },
   "dependencies": {
     "@audioreach-creator-ui/api-utils": "workspace:*",

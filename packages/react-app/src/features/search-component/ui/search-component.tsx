@@ -287,9 +287,9 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                   },
                   {example: 'cnt:0xE0000023', label: 'Search containers'},
                 ].map(({example, label}) => (
-                  <div key={label} className="mb-2 text-neutral-primary">
+                  <div key={label} className="text-neutral-primary mb-2">
                     <div className="mb-1">{label}</div>
-                    <code className="block rounded bg-neutral-03 px-1.5 py-0.5 text-neutral-primary">
+                    <code className="bg-neutral-03 text-neutral-primary block rounded px-1.5 py-0.5">
                       {example}
                     </code>
                   </div>
@@ -318,7 +318,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
         {/* ── History dropdown ── */}
         {isHistoryOpen && (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+1px)] z-[200] max-h-60 overflow-y-auto border border-neutral-02 bg-secondary"
+            className="border-neutral-02 bg-secondary absolute top-[calc(100%+1px)] right-0 left-0 z-[200] max-h-60 overflow-y-auto border"
             role="listbox"
           >
             {history.length > 0 ? (
@@ -329,7 +329,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                     historyItemRefs.current[index] = el;
                   }}
                   aria-selected={focusedHistoryIndex === index}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-neutral-primary hover:bg-neutral-03 focus:bg-neutral-03 focus:outline-none"
+                  className="text-neutral-primary hover:bg-neutral-03 focus:bg-neutral-03 flex cursor-pointer items-center gap-2 px-3 py-2 text-sm focus:outline-none"
                   onClick={() => handleHistorySelect(term)}
                   onKeyDown={(e) => handleHistoryItemKeyDown(e, index, term)}
                   role="option"
@@ -352,7 +352,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
                 </div>
               ))
             ) : (
-              <div className="select-none p-3 text-center text-sm text-neutral-primary">
+              <div className="text-neutral-primary p-3 text-center text-sm select-none">
                 No search history
               </div>
             )}
@@ -362,7 +362,7 @@ export const SearchComponent: FC<SearchComponentProps> = ({
 
       {/* ── Match counter ── */}
       {showCounter && (
-        <span className="min-w-[52px] select-none whitespace-nowrap px-1 text-center text-xs text-neutral-primary">
+        <span className="text-neutral-primary min-w-[52px] px-1 text-center text-xs whitespace-nowrap select-none">
           {`${hasMatches ? (currentMatch ?? 0) : 0} / ${totalMatches ?? 0}`}
         </span>
       )}

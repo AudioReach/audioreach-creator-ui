@@ -325,9 +325,7 @@ describe('SubgraphKeyVectorConfigPanel', () => {
   it('shows neutral feedback while selected and EC metadata is loading', () => {
     renderPanel({isMetadataPending: true});
 
-    expect(
-      screen.getByText('Loading...'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
     expect(screen.queryByLabelText('Select [DeviceTX:A2B_Mic]')).toBeNull();
   });
 

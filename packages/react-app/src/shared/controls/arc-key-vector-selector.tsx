@@ -10,11 +10,10 @@ import './arc-key-vector-selector.css';
 
 // Types for the component props - inherit from ArcCombobox and add
 // key-vector specific props
-export interface ArcKeyVectorSelectorProps
-  extends Omit<
-    ArcComboboxProps<string>,
-    'onChange' | 'options' | 'value' | 'label'
-  > {
+export interface ArcKeyVectorSelectorProps extends Omit<
+  ArcComboboxProps<string>,
+  'onChange' | 'options' | 'value' | 'label'
+> {
   error?: boolean | string;
   fullWidth?: boolean;
   hint?: string;

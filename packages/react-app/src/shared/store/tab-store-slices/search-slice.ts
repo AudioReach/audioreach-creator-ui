@@ -22,9 +22,7 @@ export interface SearchSlice {
 
 type SetState<T> = StoreApi<T>['setState'];
 
-export function createSearchSlice(
-  set: SetState<SearchSlice>,
-): SearchSlice {
+export function createSearchSlice(set: SetState<SearchSlice>): SearchSlice {
   const setSlice = set;
   return {
     addToHistory: (term: string) => {

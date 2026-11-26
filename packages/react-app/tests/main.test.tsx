@@ -98,7 +98,9 @@ describe('AppBootstrap', () => {
 
   it('retries registration and mounts the editor after recovery', async () => {
     const user = userEvent.setup();
-    mockEnsureRegistered.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    mockEnsureRegistered
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
 
     render(<AppBootstrap />);
     await user.click(await screen.findByRole('button', {name: 'Retry'}));

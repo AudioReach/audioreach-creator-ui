@@ -164,7 +164,11 @@ export function createCalibrationKeyConfigSlice<
         ]
           .filter((ckv) => !removedSystemIds.has(ckv.systemId))
           .map((ckv) => ({...ckv, pidConfig}));
-        get().updateConfiguredCkvs(instanceSystemId, merged, paramInfoByNaturalId);
+        get().updateConfiguredCkvs(
+          instanceSystemId,
+          merged,
+          paramInfoByNaturalId,
+        );
         return true;
       } catch (error) {
         logger.error(`Error adding CKVs for ${instanceSystemId}`, {

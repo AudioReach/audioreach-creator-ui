@@ -81,7 +81,10 @@ function baselineElkResult(): MockElkNode {
   return mockSubgraph('test', [
     mockContainer(
       'container-1:1',
-      [mockModule('mod-a', CP, CH + CP), mockModule('mod-b', 200 + CP, CH + CP)],
+      [
+        mockModule('mod-a', CP, CH + CP),
+        mockModule('mod-b', 200 + CP, CH + CP),
+      ],
       SP,
       SH + SP,
     ),
@@ -393,9 +396,9 @@ describe('layoutLevelView', () => {
       expect(mockELKLayout).toHaveBeenCalledTimes(1);
       const elkArg = mockELKLayout.mock.calls[0][0];
       expect(elkArg.children).toHaveLength(1);
-      expect(elkArg.children[0].children.map((n: {id: string}) => n.id)).toEqual(
-        expect.arrayContaining(['mod-a', 'mod-b']),
-      );
+      expect(
+        elkArg.children[0].children.map((n: {id: string}) => n.id),
+      ).toEqual(expect.arrayContaining(['mod-a', 'mod-b']));
     });
 
     it('uses only dataLinks as ELK edges and ignores controlLinks', async () => {

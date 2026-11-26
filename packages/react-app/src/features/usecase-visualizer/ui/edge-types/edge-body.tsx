@@ -61,7 +61,7 @@ export function EdgeBody({
       ? 'var(--color-border-support-success)'
       : isEcLink
         ? 'var(--color-category-purple-strong)'
-      : 'var(--color-border-neutral-10)';
+        : 'var(--color-border-neutral-10)';
 
   const showLabel = label != null && label !== '' && !labelHidden;
 

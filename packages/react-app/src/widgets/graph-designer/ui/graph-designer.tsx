@@ -259,11 +259,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
     isLoading: isWorkflowLoading,
     refresh: refreshWorkflowUsecaseData,
     resolvedData,
-  } = useWorkflowUsecaseData(
-    projectId,
-    workflowType,
-    workflowLevel,
-  );
+  } = useWorkflowUsecaseData(projectId, workflowType, workflowLevel);
   const [usecaseNameFallbacksBySystemId, setUsecaseNameFallbacksBySystemId] =
     useState<Record<string, string>>({});
   const resolvedUsecaseData = useMemo(
@@ -1596,12 +1592,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         label: 'Auto Align Graphs',
       },
     ],
-    [
-      hasSelection,
-      hasLoadedGraphContent,
-      canUndoRedo,
-      displayOptionsContent,
-    ],
+    [hasSelection, hasLoadedGraphContent, canUndoRedo, displayOptionsContent],
   );
 
   const sideNavHandlers = useMemo(

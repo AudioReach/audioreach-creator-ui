@@ -121,17 +121,20 @@ Read the requirements guide for the full question set and document structure:
 **Ask one question at a time.** After each answer, decide whether to follow up on that topic or move to the next gap. Never batch questions.
 
 **Sizing decision** — decide before writing:
+
 - Substantial feature (multiple entities, state machines, 6+ FRs, cross-cutting concerns) → **separate file**: `docs/design/<feature>/requirements.md`
 - Small feature (handful of simple requirements, self-contained) → **inline section** in the design doc (requirements section at the top)
 
 **Freeze gate** — once you have enough to write complete requirements, write them, then present them conversationally:
+
 > "Here are the requirements as I understand them: [summary]. Does this look right? Any changes before we move to design?"
 
 Wait for explicit approval. If they want changes, update and ask again. Only start design once the user says requirements are good.
 
 **Handling user refusal to engage with requirements:**
 If the user says "just skip to design" or "just do it":
-- Acknowledge: *"Understood — I'll proceed with the following assumed requirements: [list them explicitly]."*
+
+- Acknowledge: _"Understood — I'll proceed with the following assumed requirements: [list them explicitly]."_
 - Write those assumptions as requirements and mark them clearly as assumed.
 - Continue to design with those assumptions documented.
 
@@ -156,7 +159,7 @@ If the user says "just skip to design" or "just do it":
 
 When a design choice implies adding, removing, or modifying a requirement — pause and handle it before continuing:
 
-1. Flag it explicitly: *"This design choice affects [requirement ID or description] — [explain how]."*
+1. Flag it explicitly: _"This design choice affects [requirement ID or description] — [explain how]."_
 2. Propose the updated requirement.
 3. Check for contradictions: does this conflict with any other FR, invariant, or Out of Scope item? (Use the contradiction detection guide in `references/requirements-guide.md`.)
 4. Get user confirmation before updating.
@@ -235,6 +238,7 @@ Wait for the user's response. If they request changes, make them, re-run the ali
 **Completion:**
 
 The brainstorming phase is complete when:
+
 1. Requirements are frozen and approved.
 2. The design is approved and aligned with requirements.
 3. The spec has passed the self-review checklist.
@@ -245,10 +249,12 @@ The brainstorming phase is complete when:
 Decide which path to use based on the size of the spec you just wrote:
 
 **Small spec** (fewer than 5 implementation chapters OR spec under ~400 lines):
+
 - Invoke writing-plans directly: `"Use the writing-plans skill on <spec path>."`
 - No handoff file needed.
 
 **Large spec** (5 or more implementation chapters AND spec over ~400 lines):
+
 - Before writing anything, tell the user:
   > "This spec has [N] implementation chapters and is large enough that writing-plans would timeout if run directly. I recommend writing a plan handoff file first so the plan generation is split across subagents. Shall I proceed that way?"
 - Wait for explicit confirmation.
@@ -267,12 +273,14 @@ After the user approves the spec, partition the design into implementation chapt
 **How to partition the design into chapters:**
 
 A chapter is a set of files that can be built, tested, and committed independently. Use these rules:
+
 - One chapter per FSD layer that has new files: entities, features, widgets, shared utilities
 - One chapter per test layer: unit, integration
 - Merge two adjacent chapters if either has fewer than 3 tasks
 - If a chapter has more than ~8 tasks, split it into two — complex components with multiple states count as 2–3 tasks each, so a chapter with 3 stateful components is already near the limit
 
 **Batch grouping rules (dependency order):**
+
 - Entities & DTOs → can be parallel (no cross-dependency)
 - Shared utilities → can be parallel with entities (pure functions, no store imports)
 - Zustand stores → depends on entity types from batch above; run after entities
@@ -294,20 +302,25 @@ Save to: `docs/plans/<feature>/<topic>-plan-handoff.md`
 ## Batches
 
 ### Batch 1 (parallel)
+
 - **<Chapter name>** | Sections <X.Y–X.Z> | Start task 1
 - **<Chapter name>** | Sections <X.Y–X.Z> | Start task <N>
 
 ### Batch 2 (parallel, after batch 1)
+
 - **<Chapter name>** | Sections <X.Y–X.Z> | Start task <N>
 
 ### Batch 3 (sequential, after batch 2)
+
 - **<Chapter name>** | Sections <X.Y–X.Z> | Start task <N>
 
 ### Batch 4 (parallel, after batch 3)
+
 - **<Chapter name>** | Sections <X.Y–X.Z> | Start task <N>
 ```
 
 **Task start number estimation** (rough — writing-plans adjusts as needed):
+
 - Each new file: ~2–3 tasks
 - Each component with 2–3 states/branches: ~4–6 tasks
 - Store addition: ~2 tasks
@@ -339,12 +352,14 @@ That single line is the entire invocation. Writing-plans reads its reference fil
 
 A browser-based companion for showing mockups, diagrams, and visual options. Available as a tool — not a mode — for questions where seeing beats reading.
 
-**Offering the companion (just-in-time):** Do NOT offer it upfront. Wait until a question would genuinely be clearer shown than told — a real mockup / layout / diagram question, not merely a UI *topic*. The first time that happens, offer it then, as its own message:
+**Offering the companion (just-in-time):** Do NOT offer it upfront. Wait until a question would genuinely be clearer shown than told — a real mockup / layout / diagram question, not merely a UI _topic_. The first time that happens, offer it then, as its own message:
+
 > "This next part might be easier if I show you — I can put together mockups, diagrams, and comparisons in a browser tab as we go. It's still new and can be token-intensive. Want me to? I'll open it for you."
 
 **This offer MUST be its own message.** Only the offer — no clarifying question, summary, or other content. Wait for the user's response. If they accept, start the server with `--open` so their browser opens to the first screen automatically. If they decline, continue text-only and don't offer again unless they raise it.
 
 **Per-question decision:** Even after the user accepts, decide FOR EACH QUESTION whether to use the browser:
+
 - **Use the browser** — mockups, wireframes, layout comparisons, architecture diagrams
 - **Use the terminal** — requirements questions, conceptual choices, tradeoff lists, scope decisions
 

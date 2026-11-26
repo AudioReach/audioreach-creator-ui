@@ -129,6 +129,7 @@ lock, `Edit` is disabled — including the case where an edit session is
 already active, since starting one holds `usecase-edit`.
 
 **Edit:** `onClick` calls `enterEditMode`.
+
 - On `true`: no further action — `editModeState` is now `'edit'`.
 - On `false`: show a generic error toast ("Couldn't start edit mode").
   `editModeState` was left untouched.
@@ -137,6 +138,7 @@ already active, since starting one holds `usecase-edit`.
 sequence (out of scope here, see requirements §1.2) reports success,
 `features/graph-designer/hooks/use-apply-discard.ts` calls `exitEditMode`,
 awaiting it now that it is asynchronous.
+
 - On `true`: no further action — `editModeState` is now `'view'`.
 - On `false`: show a generic error toast ("Couldn't exit edit mode"), in
   addition to whatever success toast Apply/Discard's own sequence already
@@ -196,7 +198,7 @@ An `endSession` failure inside `enterEditMode` is not immediately shown
 as an error — the `getProjectById` fallback (section 3) may resolve it
 as an already-completed transition, in which case entry proceeds
 normally with no toast for that intermediate failure. Only a fallback
-that confirms the session did *not* end (or a failed `getProjectById`
+that confirms the session did _not_ end (or a failed `getProjectById`
 call itself) produces the generic error toast.
 
 Exiting runs only after Apply or Discard already succeeded, so a failed

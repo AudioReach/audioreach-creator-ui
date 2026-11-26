@@ -10,10 +10,7 @@
  */
 jest.mock('~entities/usecases');
 
-import {
-  getAllUsecases,
-  getUsecaseComponents,
-} from '~entities/usecases';
+import {getAllUsecases, getUsecaseComponents} from '~entities/usecases';
 import {loadSubgraphKvUsecaseSources} from '~features/key-configurator/subgraph-configurator-view/lib/load-subgraph-kv-usecase-sources';
 
 const mockGetAllUsecases = jest.mocked(getAllUsecases);

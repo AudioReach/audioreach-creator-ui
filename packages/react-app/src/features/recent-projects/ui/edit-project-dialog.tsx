@@ -29,7 +29,7 @@ export function EditProjectDialog({
 }: EditProjectDialogProps) {
   return (
     <Dialog.Root
-        closeOnInteractOutside={false}
+      closeOnInteractOutside={false}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
           onClose();

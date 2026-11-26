@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: "Executes written implementation plans by loading the plan, reviewing it critically, running each task in sequence with CI verification, and enforcing a commit gate at every git write operation. Use when the user has a written implementation plan ready to execute in a dedicated session with human review checkpoints."
+description: 'Executes written implementation plans by loading the plan, reviewing it critically, running each task in sequence with CI verification, and enforcing a commit gate at every git write operation. Use when the user has a written implementation plan ready to execute in a dedicated session with human review checkpoints.'
 ---
 
 # Executing Plans
@@ -19,7 +19,7 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ### Step 1: Load and Review Plan
 
-1. **Find the plan file.** Plans live at `docs/plans/<feature>/plan.md`. Glob `docs/plans/*/*.md`, exclude any file whose name ends in `-plan-handoff.md` (those are inputs to writing-plans, not plans), and pick the most recent by modification time. If no plan file is found, or if multiple candidates exist and you cannot determine which the user intends, ask: *"Please provide the path to the implementation plan file."* Do not proceed without a confirmed plan file.
+1. **Find the plan file.** Plans live at `docs/plans/<feature>/plan.md`. Glob `docs/plans/*/*.md`, exclude any file whose name ends in `-plan-handoff.md` (those are inputs to writing-plans, not plans), and pick the most recent by modification time. If no plan file is found, or if multiple candidates exist and you cannot determine which the user intends, ask: _"Please provide the path to the implementation plan file."_ Do not proceed without a confirmed plan file.
 2. Read the plan file in full.
 3. Review critically - identify any questions or concerns about the plan
 4. If concerns: Raise them with your human partner before starting
@@ -28,6 +28,7 @@ Load plan, review critically, execute all tasks, report when complete.
 ### Step 2: Execute Tasks
 
 For each task:
+
 1. Mark as in_progress
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
@@ -65,6 +66,7 @@ This gate applies even when auto-approve is enabled for other tool uses.
 ## When to Stop and Ask for Help
 
 **STOP executing immediately when:**
+
 - Hit a blocker (missing dependency, test fails, instruction unclear)
 - Plan has critical gaps preventing starting
 - You don't understand an instruction
@@ -75,12 +77,14 @@ This gate applies even when auto-approve is enabled for other tool uses.
 ## When to Revisit Earlier Steps
 
 **Return to Review (Step 1) when:**
+
 - Partner updates the plan based on your feedback
 - Fundamental approach needs rethinking
 
 **Don't force through blockers** - stop and ask.
 
 ## Remember
+
 - Review plan critically first
 - Follow plan steps exactly
 - Don't skip verifications

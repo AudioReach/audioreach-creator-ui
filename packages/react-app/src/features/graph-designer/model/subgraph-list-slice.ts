@@ -134,8 +134,9 @@ export function createSubgraphListSlice(
             subgraphs.map((s) => s.subgraphType).filter(isSubgraphType),
           ),
         ].sort();
-        const cachedSubgraphTypes =
-          subgraphFilterCache.get(projectId)?.filter(isSubgraphType);
+        const cachedSubgraphTypes = subgraphFilterCache
+          .get(projectId)
+          ?.filter(isSubgraphType);
 
         setSlice({
           selectedSubgraphTypes: cachedSubgraphTypes ?? allSubgraphTypes,

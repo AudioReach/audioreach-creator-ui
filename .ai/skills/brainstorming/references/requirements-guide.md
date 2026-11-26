@@ -17,46 +17,55 @@ Ask **one question at a time**. After each answer, decide whether you need a fol
 Work through these in roughly this order, skipping what's already clear and digging into what's vague:
 
 **Scope and purpose**
+
 - What problem does this solve? Who benefits?
 - Where does this feature start and stop — what's explicitly not part of it?
 - What does it build on (existing components, stores, other in-progress features)?
 
 **Entities and state**
+
 - What are the key data shapes/entities involved?
 - What are their relationships and ownership rules?
 - What state is local to a component vs. lives in a Zustand store?
 
 **Operations**
+
 - What can users create, read, update, delete, or trigger?
 - For each operation: who can do it, under what conditions, what does success look like?
 - Are there multi-step workflows or state machines?
 
 **API design** (if applicable)
+
 - Does this call an existing backend endpoint or need a new one?
 - What request inputs and response shapes are expected?
 - Are there existing DTOs (`packages/api-utils`) to reuse vs. new ones needed?
 
 **Validation and error cases**
+
 - What inputs are invalid and what happens when submitted?
 - What concurrent operation conflicts are possible?
 - What happens when dependencies (related entities, in-flight requests) are removed or cancelled?
 
 **Integration points**
+
 - What other features/widgets does this touch?
 - What data does it read from or write to that others depend on?
 - What ordering or sequencing constraints exist with other operations?
 
 **Lifecycle and persistence**
+
 - When is state written vs. lazily computed/derived?
 - What cleanup or reset behaviour is needed (e.g. on project switch, unmount)?
 - Are there any transactional or multi-step boundaries?
 
 **Performance and scale**
+
 - What are the scale expectations (node/item counts, frequency of updates)?
 - Are there rendering or interaction latency requirements?
 - Is there a fast path for the common case?
 
 **Out of scope**
+
 - What related things are explicitly NOT included?
 - What is deferred to future work?
 
@@ -66,13 +75,13 @@ Work through these in roughly this order, skipping what's already clear and digg
 
 Decide before writing:
 
-| Write a **separate `requirements.md`** when... | Keep as an **inline section** when... |
-|---|---|
-| More than ~6-7 functional requirements | A handful of simple requirements |
-| Multiple entities with ownership/lifecycle rules | Single entity or simple operation |
-| State machines or multi-step workflows | Straightforward CRUD or display logic |
-| Multiple integration points across features | Self-contained, no cross-cutting concerns |
-| Non-trivial performance or scale constraints | Standard constraints, no special cases |
+| Write a **separate `requirements.md`** when...   | Keep as an **inline section** when...     |
+| ------------------------------------------------ | ----------------------------------------- |
+| More than ~6-7 functional requirements           | A handful of simple requirements          |
+| Multiple entities with ownership/lifecycle rules | Single entity or simple operation         |
+| State machines or multi-step workflows           | Straightforward CRUD or display logic     |
+| Multiple integration points across features      | Self-contained, no cross-cutting concerns |
+| Non-trivial performance or scale constraints     | Standard constraints, no special cases    |
 
 When in doubt: inline keeps things together, separate keeps things clean. Either works — pick one and commit.
 
@@ -210,4 +219,4 @@ When requirements change (during design or review), check for conflicts:
 3. **Behavioural conflicts** — do two FRs describe different outcomes for the same input/state?
 4. **Ownership conflicts** — do two FRs assign conflicting ownership or permission rules to the same entity?
 
-If a conflict is found, surface it explicitly: *"FR-03 and FR-07 conflict — FR-03 says X, FR-07 implies not-X when Y. Which should take precedence?"* Don't silently resolve it.
+If a conflict is found, surface it explicitly: _"FR-03 and FR-07 conflict — FR-03 says X, FR-07 implies not-X when Y. Which should take precedence?"_ Don't silently resolve it.

@@ -40,11 +40,11 @@ test('command factories preserve input and output types', () => {
 
 test('test data is stable and JSON serializable', () => {
   const testData: TestData = {
-      customInputs: {},
-      rejectedProjectPath: '/tmp/rejected-project',
-      useCaseQuery: 'voice call',
-      validOpenProjectPath: '/tmp/valid-open-project',
-      workspacePath: '/tmp/workspace',
+    customInputs: {},
+    rejectedProjectPath: '/tmp/rejected-project',
+    useCaseQuery: 'voice call',
+    validOpenProjectPath: '/tmp/valid-open-project',
+    workspacePath: '/tmp/workspace',
   };
 
   expect(JSON.parse(JSON.stringify(testData))).toEqual(testData);

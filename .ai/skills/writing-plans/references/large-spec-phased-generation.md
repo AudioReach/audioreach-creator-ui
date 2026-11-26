@@ -1,7 +1,8 @@
 /*
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause
- */
+
+- Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+- SPDX-License-Identifier: BSD-3-Clause
+  */
 
 # Large Spec Phased Generation (Path B)
 
@@ -12,6 +13,7 @@ The purpose of this path is to avoid filling the main session with spec text, co
 ## What the handoff file contains
 
 The handoff file (written by the brainstorming skill at step 10) contains:
+
 - Spec file path
 - Plan output path
 - Scope note (e.g. which sections are in scope)
@@ -22,6 +24,7 @@ The handoff file (written by the brainstorming skill at step 10) contains:
 **Allowed before first Agent call:** one Read of the handoff file. Nothing else.
 
 **Not allowed before first Agent call:**
+
 - Reading the spec
 - Reading the codebase
 - Running Explore agents
@@ -66,13 +69,13 @@ Send 2–3 independent chapters as parallel calls in a single message. Wait for 
 
 **Typical dependency order for an FSD feature** (mirrors the batch-grouping rules in `brainstorming/SKILL.md` Step 10):
 
-| Batch | Chapters | Can be parallel |
-|---|---|---|
-| 1 | Entities & DTOs, Shared utilities (`lib/`) | Yes |
-| 2 | Zustand stores | No — depends on entity types from batch 1 |
-| 3 | Feature components | No — depends on stores from batch 2 |
-| 4 | Widgets | No — depends on feature components from batch 3 |
-| 5 | Unit tests, Integration tests | Yes (after batch 4) |
+| Batch | Chapters                                   | Can be parallel                                 |
+| ----- | ------------------------------------------ | ----------------------------------------------- |
+| 1     | Entities & DTOs, Shared utilities (`lib/`) | Yes                                             |
+| 2     | Zustand stores                             | No — depends on entity types from batch 1       |
+| 3     | Feature components                         | No — depends on stores from batch 2             |
+| 4     | Widgets                                    | No — depends on feature components from batch 3 |
+| 5     | Unit tests, Integration tests              | Yes (after batch 4)                             |
 
 Merge adjacent chapters if either has fewer than 3 tasks.
 

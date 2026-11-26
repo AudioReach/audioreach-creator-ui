@@ -114,11 +114,16 @@ export function createModuleTagKeyConfigSlice<
           return true;
         }
 
-        const tkvsResult = await createTkvs(projectId, instanceSystemId, tag.systemId, {
-          tkvs: valueSystemIdCombinations.map((valueSystemIds) => ({
-            valueSystemIds,
-          })),
-        });
+        const tkvsResult = await createTkvs(
+          projectId,
+          instanceSystemId,
+          tag.systemId,
+          {
+            tkvs: valueSystemIdCombinations.map((valueSystemIds) => ({
+              valueSystemIds,
+            })),
+          },
+        );
         if (hasBlockingIssues(tkvsResult) || !tkvsResult.data) {
           showToast(
             getIssueMessage(tkvsResult, 'Failed to add TKVs'),
@@ -129,12 +134,16 @@ export function createModuleTagKeyConfigSlice<
 
         let newTkvs = tkvsResult.data;
         if (parameterSystemIds.length > 0) {
-          const paramsResult = await createTkvParameters(projectId, instanceSystemId, {
-            updates: newTkvs.map((tkv) => ({
-              parameterSystemIds,
-              tkvSystemId: tkv.systemId,
-            })),
-          });
+          const paramsResult = await createTkvParameters(
+            projectId,
+            instanceSystemId,
+            {
+              updates: newTkvs.map((tkv) => ({
+                parameterSystemIds,
+                tkvSystemId: tkv.systemId,
+              })),
+            },
+          );
           if (hasBlockingIssues(paramsResult)) {
             showToast(
               getIssueMessage(paramsResult, 'Failed to set TKV parameters'),
@@ -332,9 +341,13 @@ export function createModuleTagKeyConfigSlice<
         let supportedParameters = tkv.supportedParameters;
 
         if (toAdd.length > 0) {
-          const result = await createTkvParameters(projectId, instanceSystemId, {
-            updates: [{parameterSystemIds: toAdd, tkvSystemId}],
-          });
+          const result = await createTkvParameters(
+            projectId,
+            instanceSystemId,
+            {
+              updates: [{parameterSystemIds: toAdd, tkvSystemId}],
+            },
+          );
           if (hasBlockingIssues(result)) {
             showToast(
               getIssueMessage(result, 'Failed to update TKV parameters'),
@@ -349,9 +362,13 @@ export function createModuleTagKeyConfigSlice<
         }
 
         if (toRemove.length > 0) {
-          const result = await deleteTkvParameters(projectId, instanceSystemId, {
-            updates: [{parameterSystemIds: toRemove, tkvSystemId}],
-          });
+          const result = await deleteTkvParameters(
+            projectId,
+            instanceSystemId,
+            {
+              updates: [{parameterSystemIds: toRemove, tkvSystemId}],
+            },
+          );
           if (hasBlockingIssues(result)) {
             showToast(
               getIssueMessage(result, 'Failed to update TKV parameters'),
@@ -360,8 +377,9 @@ export function createModuleTagKeyConfigSlice<
             return false;
           }
           const removedSystemIds = new Set(
-            result.data?.updates.find((item) => item.tkvSystemId === tkvSystemId)
-              ?.removedParameterSystemIds ?? toRemove,
+            result.data?.updates.find(
+              (item) => item.tkvSystemId === tkvSystemId,
+            )?.removedParameterSystemIds ?? toRemove,
           );
           supportedParameters = supportedParameters.filter(
             (param) => !removedSystemIds.has(param.systemId),
