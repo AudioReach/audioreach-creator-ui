@@ -19,6 +19,7 @@ import type {Connection} from '../model/graph-data-slice';
 export interface BuildCreateUsecasesRequestInput {
   allLinks: Connection[];
   excludedLinks: Connection[];
+  excludedSubgraphSystemIds: string[];
   kvSelectionsById: Record<string, KvSelection[]>;
   usecaseSystemIds: string[];
 }
@@ -27,16 +28,25 @@ export interface BuildCreateUsecasesRequestInput {
 export function buildCreateUsecasesRequest(
   input: BuildCreateUsecasesRequestInput,
 ): CreateUsecasesRequestDto {
-  const {allLinks, excludedLinks, kvSelectionsById, usecaseSystemIds} = input;
+  const {
+    allLinks,
+    excludedLinks,
+    excludedSubgraphSystemIds,
+    kvSelectionsById,
+    usecaseSystemIds,
+  } = input;
+  const excludedSubgraphIdSet = new Set(excludedSubgraphSystemIds);
 
   const activeSubgraphs: SubgraphKvSelectionDto[] = Object.entries(
     kvSelectionsById,
-  ).map(([subgraphId, selections]) => ({
-    systemId: subgraphId,
-    valueSystemIds: selections
-      .filter((s) => s.selected)
-      .map((s) => s.keyValuePairs.map((kv) => kv.valueInfo.valueSystemId)),
-  }));
+  )
+    .filter(([subgraphId]) => !excludedSubgraphIdSet.has(subgraphId))
+    .map(([subgraphId, selections]) => ({
+      systemId: subgraphId,
+      valueSystemIds: selections
+        .filter((s) => s.selected)
+        .map((s) => s.keyValuePairs.map((kv) => kv.valueInfo.valueSystemId)),
+    }));
 
   const excludedSystemIds = new Set(excludedLinks.map((l) => l.systemId));
   const isIncluded = (l: Connection): boolean =>

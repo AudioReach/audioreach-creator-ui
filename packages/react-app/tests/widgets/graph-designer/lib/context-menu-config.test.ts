@@ -24,7 +24,9 @@ function makeStore(
     deleteModuleInstance: jest.fn().mockResolvedValue(true),
     deleteSubgraph: jest.fn().mockResolvedValue(true),
     deleteSubsystem: jest.fn().mockResolvedValue(true),
+    excludableLinkSystemIds: [],
     excludedLinks: [],
+    excludedSubgraphSystemIds: [],
     excludeLink: jest.fn(),
     expandSubsystem: jest.fn().mockResolvedValue(true),
     graphData: {
@@ -40,6 +42,7 @@ function makeStore(
     pairLinksById: {},
     renameSubgraph: jest.fn().mockResolvedValue(undefined),
     renameSubsystemNode: jest.fn().mockResolvedValue(undefined),
+    subgraphProvenanceById: {},
     ...overrides,
   } as unknown as GraphDesignerStore;
 }
@@ -58,6 +61,72 @@ function makeOptions(
 
 function configFor(store: GraphDesignerStore, options = makeOptions()) {
   return buildContextMenuConfig(() => store, options);
+}
+
+function makeInterSubgraphLinkStore(
+  excludableLinkSystemIds: string[],
+): GraphDesignerStore {
+  return makeStore({
+    excludableLinkSystemIds,
+    graphData: {
+      connections: [
+        {
+          destinationPortSystemId: 'p2',
+          destinationSystemId: 'mod-2',
+          linkKind: 'data',
+          linkType: 'NORMAL',
+          sourcePortSystemId: 'p1',
+          sourceSystemId: 'mod-1',
+          systemId: 'link-1',
+        },
+      ],
+      containers: {},
+      moduleInstances: {
+        'mod-1': {
+          containerSystemId: 'cnt-1',
+          displayName: 'Mod 1',
+          inputPorts: [],
+          moduleDefinitionSystemId: 'def-1',
+          moduleName: 'Mod 1',
+          moduleType: '',
+          outputPorts: [],
+          position: {x: 0, y: 0},
+          subgraphSystemId: 'sg-1',
+          systemId: 'mod-1',
+        },
+        'mod-2': {
+          containerSystemId: 'cnt-2',
+          displayName: 'Mod 2',
+          inputPorts: [],
+          moduleDefinitionSystemId: 'def-2',
+          moduleName: 'Mod 2',
+          moduleType: '',
+          outputPorts: [],
+          position: {x: 0, y: 0},
+          subgraphSystemId: 'sg-2',
+          systemId: 'mod-2',
+        },
+      },
+      selectedUsecases: [],
+      subgraphs: {
+        'sg-1': {
+          containers: [],
+          kvVectors: [],
+          subgraphName: 'SG1',
+          subgraphType: '',
+          systemId: 'sg-1',
+        },
+        'sg-2': {
+          containers: [],
+          kvVectors: [],
+          subgraphName: 'SG2',
+          subgraphType: '',
+          systemId: 'sg-2',
+        },
+      },
+      subsystems: {},
+    },
+  });
 }
 
 describe('context-menu-config', () => {
@@ -171,15 +240,8 @@ describe('context-menu-config', () => {
     expect(config.onAction(actionId, target)).toEqual(command);
   });
 
-  it('shows exclude-link only for pair-tracked edges', () => {
-    const store = makeStore({
-      pairLinksById: {
-        pair: {
-          controlLinks: [],
-          dataLinks: [{systemId: 'link-1'}],
-        },
-      },
-    } as Partial<GraphDesignerStore>);
+  it('shows exclude-link for excludable inter-subgraph edges', () => {
+    const store = makeInterSubgraphLinkStore(['link-1']);
     const config = configFor(store);
     const items = config.getItems({
       edge: {
@@ -193,6 +255,134 @@ describe('context-menu-config', () => {
       kind: 'data-link',
     });
     expect(items.map((item) => item.id)).toEqual(['delete', 'exclude-link']);
+  });
+
+  it('hides exclude-link for inter-subgraph edges outside the eligibility list', () => {
+    const store = makeInterSubgraphLinkStore([]);
+    const config = configFor(store);
+
+    const items = config.getItems({
+      edge: {
+        edgeKind: 'data',
+        id: 'link-1',
+        sourceNodeId: 'mod-1',
+        sourcePortId: 'p1',
+        targetNodeId: 'mod-2',
+        targetPortId: 'p2',
+      },
+      kind: 'data-link',
+    });
+
+    expect(items.map((item) => item.id)).toEqual(['delete']);
+  });
+
+  it('shows exclude-subgraph for eligible pre-loaded subgraphs', () => {
+    const store = makeStore({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {
+          'sg-1': {
+            containers: [],
+            kvVectors: [],
+            subgraphName: 'SG1',
+            subgraphType: '',
+            systemId: 'sg-1',
+          },
+        },
+        subsystems: {},
+      },
+      subgraphProvenanceById: {'sg-1': 'pre-loaded'},
+    });
+    const config = configFor(store);
+
+    const items = config.getItems({
+      kind: 'subgraph',
+      node: {
+        height: 1,
+        id: 'sg-1',
+        label: 'SG1',
+        meta: {subgraphSystemId: 'sg-1', systemId: 'sg-1'},
+        nodeKind: NODE_KIND.SUBGRAPH,
+        ports: [],
+        subgraphId: 1,
+        width: 1,
+        x: 0,
+        y: 0,
+      },
+    });
+
+    expect(items.map((item) => item.id)).toContain('exclude-subgraph');
+  });
+
+  it('hides exclude-subgraph for newly-created subgraphs', () => {
+    const store = makeStore({
+      graphData: {
+        connections: [],
+        containers: {},
+        moduleInstances: {},
+        selectedUsecases: [],
+        subgraphs: {
+          'sg-1': {
+            containers: [],
+            kvVectors: [],
+            subgraphName: 'SG1',
+            subgraphType: '',
+            systemId: 'sg-1',
+          },
+        },
+        subsystems: {},
+      },
+      subgraphProvenanceById: {'sg-1': 'newly-created'},
+    });
+    const config = configFor(store);
+
+    const items = config.getItems({
+      kind: 'subgraph',
+      node: {
+        height: 1,
+        id: 'sg-1',
+        label: 'SG1',
+        meta: {subgraphSystemId: 'sg-1', systemId: 'sg-1'},
+        nodeKind: NODE_KIND.SUBGRAPH,
+        ports: [],
+        subgraphId: 1,
+        width: 1,
+        x: 0,
+        y: 0,
+      },
+    });
+
+    expect(items.map((item) => item.id)).not.toContain('exclude-subgraph');
+  });
+
+  it('dispatches exclude-subgraph to the graph designer store', () => {
+    const store = makeStore({excludeSubgraph: jest.fn()});
+    const config = configFor(store);
+    const target = {
+      kind: 'subgraph',
+      node: {
+        height: 1,
+        id: 'sg-1',
+        label: 'SG1',
+        meta: {subgraphSystemId: 'sg-1', systemId: 'sg-1'},
+        nodeKind: NODE_KIND.SUBGRAPH,
+        ports: [],
+        subgraphId: 1,
+        width: 1,
+        x: 0,
+        y: 0,
+      },
+    } as const;
+
+    config.onAction('exclude-subgraph', target);
+
+    expect(store.excludeSubgraph).toHaveBeenCalledWith(
+      expect.any(Function),
+      'sg-1',
+    );
   });
 
   it('suppresses structural actions only for the active boundary subsystem', () => {

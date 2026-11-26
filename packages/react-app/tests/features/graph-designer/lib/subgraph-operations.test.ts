@@ -736,6 +736,10 @@ describe('createSubgraphOperations — placeSubgraphFromPalette', () => {
       .graphData!.connections.map((c) => c.systemId);
     expect(systemIds).toContain('pair-link-1');
     expect(systemIds).not.toContain('pair-link-2');
+    expect(store.getState().excludableLinkSystemIds).toContain('pair-link-1');
+    expect(store.getState().excludableLinkSystemIds).not.toContain(
+      'pair-link-2',
+    );
     expect(store.getState().pairLinksById['sg-1:sg-2']).toBeDefined();
     expect(
       store.getState().graphData!.moduleInstances['mod-2'].inputPorts[0]
@@ -771,6 +775,140 @@ describe('createSubgraphOperations — excludeLink / reincludeLink', () => {
     expect(store.getState().graphData!.connections).toEqual([connection]);
     expect(store.getState().excludedLinks).toEqual([]);
     expect(store.getState().isDirty).toBe(true);
+  });
+});
+
+describe('createSubgraphOperations — excludeSubgraph', () => {
+  it('removes an eligible subgraph and records touching inter-subgraph links', () => {
+    const {get, store, subgraphOperations} = makeTestStore();
+    const touchingConnection = {
+      destinationPortSystemId: 'port-2',
+      destinationSystemId: 'mod-2',
+      linkKind: 'data' as const,
+      linkType: 'NORMAL' as const,
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'link-1',
+    };
+    const internalConnection = {
+      destinationPortSystemId: 'port-3',
+      destinationSystemId: 'mod-3',
+      linkKind: 'data' as const,
+      linkType: 'NORMAL' as const,
+      sourcePortSystemId: 'port-1',
+      sourceSystemId: 'mod-1',
+      systemId: 'internal-link',
+    };
+
+    store.setState({
+      excludableLinkSystemIds: ['link-1', 'internal-link'],
+      graphData: {
+        ...EMPTY_GRAPH_DATA,
+        connections: [touchingConnection, internalConnection],
+        containers: {
+          'cnt-1': {
+            moduleInstances: ['mod-1', 'mod-3'],
+            subgraphSystemId: 'sg-1',
+            systemId: 'cnt-1',
+          },
+          'cnt-2': {
+            moduleInstances: ['mod-2'],
+            subgraphSystemId: 'sg-2',
+            systemId: 'cnt-2',
+          },
+        },
+        moduleInstances: {
+          'mod-1': makeModuleInstance({
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
+          }),
+          'mod-2': makeModuleInstance({
+            containerSystemId: 'cnt-2',
+            subgraphSystemId: 'sg-2',
+            systemId: 'mod-2',
+          }),
+          'mod-3': makeModuleInstance({
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-3',
+          }),
+        },
+        subgraphs: {
+          'sg-1': {
+            containers: ['cnt-1'],
+            kvVectors: [],
+            subgraphName: 'SG1',
+            subgraphType: '',
+            systemId: 'sg-1',
+          },
+          'sg-2': {
+            containers: ['cnt-2'],
+            kvVectors: [],
+            subgraphName: 'SG2',
+            subgraphType: '',
+            systemId: 'sg-2',
+          },
+        },
+      },
+      kvSelectionsById: {'sg-1': []},
+      pairLinksById: {
+        pair: {
+          controlLinks: [],
+          dataLinks: [makeDataLinkDto({systemId: 'link-1'})],
+          destinationSubgraphSystemId: 'sg-2',
+          sourceSubgraphSystemId: 'sg-1',
+        },
+      },
+      subgraphProvenanceById: {'sg-1': 'pre-loaded', 'sg-2': 'pre-loaded'},
+    });
+
+    subgraphOperations.excludeSubgraph(get, 'sg-1');
+
+    expect(store.getState().excludedSubgraphSystemIds).toEqual(['sg-1']);
+    expect(store.getState().excludedLinks).toEqual([touchingConnection]);
+    expect(store.getState().graphData!.connections).toEqual([]);
+    expect(store.getState().graphData!.subgraphs).toEqual({
+      'sg-2': expect.objectContaining({systemId: 'sg-2'}),
+    });
+    expect(store.getState().graphData!.moduleInstances).toEqual({
+      'mod-2': expect.objectContaining({subgraphSystemId: 'sg-2'}),
+    });
+    expect(store.getState().graphData!.containers).toEqual({
+      'cnt-2': expect.objectContaining({subgraphSystemId: 'sg-2'}),
+    });
+    expect(store.getState().subgraphProvenanceById).toEqual({
+      'sg-2': 'pre-loaded',
+    });
+    expect(store.getState().kvSelectionsById).toEqual({});
+    expect(store.getState().pairLinksById).toEqual({});
+    expect(mockDeleteSpfModule).not.toHaveBeenCalled();
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('does not exclude newly-created subgraphs', () => {
+    const {get, store, subgraphOperations} = makeTestStore();
+    store.setState({
+      graphData: {
+        ...EMPTY_GRAPH_DATA,
+        subgraphs: {
+          'sg-1': {
+            containers: [],
+            kvVectors: [],
+            subgraphName: 'SG1',
+            subgraphType: '',
+            systemId: 'sg-1',
+          },
+        },
+      },
+      subgraphProvenanceById: {'sg-1': 'newly-created'},
+    });
+
+    subgraphOperations.excludeSubgraph(get, 'sg-1');
+
+    expect(store.getState().excludedSubgraphSystemIds).toEqual([]);
+    expect(store.getState().graphData!.subgraphs).toHaveProperty('sg-1');
+    expect(store.getState().isDirty).toBe(false);
   });
 });
 

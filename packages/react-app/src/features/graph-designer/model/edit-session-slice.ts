@@ -51,7 +51,9 @@ export interface EditSessionSlice {
    * session — this seeds local Edit state without an end/start round trip.
    */
   enterEditMode: (options?: {resume?: boolean}) => Promise<boolean>;
+  excludableLinkSystemIds: string[];
   excludedLinks: Connection[];
+  excludedSubgraphSystemIds: string[];
   exitEditMode: () => Promise<boolean>;
   isMutating: boolean;
   kvSelectionsById: Record<string, KvSelection[]>;
@@ -88,7 +90,9 @@ const LOCK_OWNER = 'usecase-edit';
 
 const INITIAL_SESSION_LOCAL_STATE = {
   availableGraphKeys: null as KeyDefinitionResponseDto[] | null,
+  excludableLinkSystemIds: [] as string[],
   excludedLinks: [] as Connection[],
+  excludedSubgraphSystemIds: [] as string[],
   kvSelectionsById: {} as Record<string, KvSelection[]>,
   pairLinksById: {} as Record<string, SubgraphPairResponseDto>,
   stagedProcessedChangeIds: [] as string[],
@@ -266,11 +270,14 @@ export function createEditSessionSlice<
       }
 
       // Record current graph membership before mutations can add palette items.
-      const subgraphs = get().graphData?.subgraphs ?? {};
+      const graphData = get().graphData;
+      const subgraphs = graphData?.subgraphs ?? {};
       const subgraphProvenanceById: Record<string, SubgraphProvenance> = {};
       for (const subgraphId of Object.keys(subgraphs)) {
         subgraphProvenanceById[subgraphId] = 'pre-loaded';
       }
+      const excludableLinkSystemIds =
+        graphData?.connections.map((connection) => connection.systemId) ?? [];
 
       // A resumed session is already running in Designer mode on the
       // backend — skip the end/start round trip that would otherwise
@@ -334,6 +341,7 @@ export function createEditSessionSlice<
 
       setSlice({
         availableGraphKeys,
+        excludableLinkSystemIds,
         mode: 'edit',
         subgraphProvenanceById,
         usesSubsystemVariant: USES_SUBSYSTEM_VARIANT_STUB,

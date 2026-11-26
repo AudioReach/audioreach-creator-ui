@@ -105,7 +105,9 @@ describe('GraphDesignerStore — EditSessionSlice composition', () => {
     expect(state.isMutating).toBe(false);
     expect(state.usesSubsystemVariant).toBe(false);
     expect(state.kvSelectionsById).toEqual({});
+    expect(state.excludableLinkSystemIds).toEqual([]);
     expect(state.excludedLinks).toEqual([]);
+    expect(state.excludedSubgraphSystemIds).toEqual([]);
     expect(state.pairLinksById).toEqual({});
     expect(state.subgraphProvenanceById).toEqual({});
 

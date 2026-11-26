@@ -382,6 +382,7 @@ describe('EditSessionSlice', () => {
           values: [],
         },
       ],
+      excludableLinkSystemIds: ['c1'],
       excludedLinks: [
         {
           destinationPortSystemId: 'p2',
@@ -393,6 +394,7 @@ describe('EditSessionSlice', () => {
           systemId: 'c1',
         },
       ],
+      excludedSubgraphSystemIds: ['sg-excluded'],
       kvSelectionsById: {
         sg1: [{isEc: false, keyValuePairs: [], selected: true, systemId: 's1'}],
       },
@@ -413,7 +415,9 @@ describe('EditSessionSlice', () => {
     expect(state.availableGraphKeys).toBeNull();
     expect(state.mode).toBe('view');
     expect(state.kvSelectionsById).toEqual({});
+    expect(state.excludableLinkSystemIds).toEqual([]);
     expect(state.excludedLinks).toEqual([]);
+    expect(state.excludedSubgraphSystemIds).toEqual([]);
     expect(state.pairLinksById).toEqual({});
     expect(state.subgraphProvenanceById).toEqual({});
   });
@@ -497,9 +501,15 @@ describe('EditSessionSlice', () => {
       const {store} = createTestStore();
 
       store.getState().recordStageProcessed(['a', 'b']);
+      store.setState({
+        excludableLinkSystemIds: ['link-1'],
+        excludedSubgraphSystemIds: ['sg-1'],
+      });
       store.getState().resetSessionLocalMaps();
 
       expect(store.getState().stagedProcessedChangeIds).toEqual([]);
+      expect(store.getState().excludableLinkSystemIds).toEqual([]);
+      expect(store.getState().excludedSubgraphSystemIds).toEqual([]);
     });
 
     it('exitEditMode clears stagedProcessedChangeIds', async () => {
