@@ -85,7 +85,9 @@ test('readFixture rejects multiple sibling acdb files clearly', async () => {
   }
 });
 
-test('openFile lets an explicit seam bypass fixture loading', async ({page}) => {
+test('openFile lets an explicit seam bypass fixture loading', async ({
+  page,
+}) => {
   await page.setContent('<button>Open File</button>');
   const response = {cancelled: true} as const;
   const context = {
@@ -96,12 +98,14 @@ test('openFile lets an explicit seam bypass fixture loading', async ({page}) => 
     getOpenProjectFileResponse: () => response,
     hasOpenProjectFileSeam: () => true,
     page,
-    pages: {home: {openFileButton: page.getByRole('button', {name: 'Open File'})}},
+    pages: {
+      home: {openFileButton: page.getByRole('button', {name: 'Open File'})},
+    },
   } as unknown as TestContext;
 
-  const result = await openFile({workspacePath: '/missing/workspace.awsp'}).execute(
-    context,
-  );
+  const result = await openFile({
+    workspacePath: '/missing/workspace.awsp',
+  }).execute(context);
 
   expect(result).toEqual({message: 'File selection cancelled', ok: false});
 });

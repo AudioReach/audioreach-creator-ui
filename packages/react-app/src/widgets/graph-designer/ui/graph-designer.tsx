@@ -1472,12 +1472,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         label: 'Auto Align Graphs',
       },
     ],
-    [
-      hasSelection,
-      hasLoadedGraphContent,
-      canUndoRedo,
-      displayOptionsContent,
-    ],
+    [hasSelection, hasLoadedGraphContent, canUndoRedo, displayOptionsContent],
   );
 
   const sideNavHandlers = useMemo(

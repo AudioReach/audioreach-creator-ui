@@ -25,7 +25,4 @@ export {
   uncheck,
   wait,
 } from './interactions';
-export type {
-  InteractionTarget,
-  InteractionTargetInput,
-} from './interactions';
+export type {InteractionTarget, InteractionTargetInput} from './interactions';

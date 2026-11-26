@@ -23,13 +23,7 @@ export const getSeverityIcon = (severity: string) => {
         />
       );
     case SeverityType.Error:
-      return (
-        <Icon
-          className="text-icon-support-danger"
-          icon={X}
-          size="xs"
-        />
-      );
+      return <Icon className="text-icon-support-danger" icon={X} size="xs" />;
     case SeverityType.Warning:
       return (
         <Icon
@@ -40,11 +34,7 @@ export const getSeverityIcon = (severity: string) => {
       );
     default:
       return (
-        <Icon
-          className="text-icon-neutral-secondary"
-          icon={Info}
-          size="xs"
-        />
+        <Icon className="text-icon-neutral-secondary" icon={Info} size="xs" />
       );
   }
 };

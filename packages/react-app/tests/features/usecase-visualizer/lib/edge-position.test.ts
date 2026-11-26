@@ -78,9 +78,8 @@ describe('getBoundaryAwareBezierPath', () => {
       targetX: 100,
       targetY: 100,
     };
-    const [expectedPath, expectedLabelX, expectedLabelY] = getBezierPath(
-      params,
-    );
+    const [expectedPath, expectedLabelX, expectedLabelY] =
+      getBezierPath(params);
     expect(getBoundaryAwareBezierPath(params)).toEqual([
       expectedPath,
       expectedLabelX,

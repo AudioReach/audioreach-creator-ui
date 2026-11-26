@@ -301,14 +301,10 @@ describe('SubsystemConfigPanel', () => {
     const applyButton = screen.getByText('Apply');
     fireEvent.click(applyButton);
 
-    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
-      1,
-      'ss-1',
-      [
-        ...mockConfiguredKeys,
-        {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
-      ],
-    );
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1', [
+      ...mockConfiguredKeys,
+      {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
+    ]);
 
     await waitFor(() => {
       expect(screen.queryByTestId('search-bar')).not.toBeInTheDocument();
@@ -325,14 +321,10 @@ describe('SubsystemConfigPanel', () => {
     fireEvent.click(screen.getByText('Apply'));
 
     await waitFor(() => {
-      expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
-        1,
-        'ss-1',
-        [
-          ...mockConfiguredKeys,
-          {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
-        ],
-      );
+      expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1', [
+        ...mockConfiguredKeys,
+        {id: 0xb1000000, name: 'StreamTx', systemId: 'key-tx'},
+      ]);
     });
 
     expect(screen.getByTestId('search-bar')).toBeInTheDocument();
@@ -340,9 +332,7 @@ describe('SubsystemConfigPanel', () => {
   });
 
   it('keeps the list open when the graph mutation lock is unavailable', async () => {
-    const rejectLock = async <T,>(
-      _action: () => Promise<T>,
-    ): Promise<T> => {
+    const rejectLock = async <T,>(_action: () => Promise<T>): Promise<T> => {
       throw new Error('A graph mutation is already active');
     };
     renderPanel(false, rejectLock);
@@ -472,11 +462,7 @@ describe('SubsystemConfigPanel', () => {
     const deleteButton = screen.getByText(`Delete ${0xa1000000}`);
     fireEvent.click(deleteButton);
 
-    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(
-      1,
-      'ss-1',
-      [],
-    );
+    expect(mockStoreState.saveFilteredKeys).toHaveBeenCalledWith(1, 'ss-1', []);
   });
 
   it('disables Apply button when no keys are selected', () => {

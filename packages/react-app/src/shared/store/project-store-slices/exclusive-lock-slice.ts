@@ -6,10 +6,7 @@
 import {logger} from '~shared/lib/logger';
 
 export type ExclusiveSessionMode =
-  | 'diff-merge'
-  | 'discovery-wizard'
-  | 'none'
-  | 'usecase-edit';
+  'diff-merge' | 'discovery-wizard' | 'none' | 'usecase-edit';
 
 export interface ExclusiveLockSlice {
   activeExclusiveMode: ExclusiveSessionMode;

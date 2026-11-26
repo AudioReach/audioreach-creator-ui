@@ -21,10 +21,7 @@ export function getGraphTestInputs(testData: TestData): GraphTestInputs {
   if (typeof moduleLabel !== 'string' || moduleLabel.trim() === '') {
     throw new Error('Graph test inputs require a non-empty moduleLabel');
   }
-  if (
-    moduleInstanceId !== undefined &&
-    typeof moduleInstanceId !== 'string'
-  ) {
+  if (moduleInstanceId !== undefined && typeof moduleInstanceId !== 'string') {
     throw new Error('Graph test input moduleInstanceId must be a string');
   }
 

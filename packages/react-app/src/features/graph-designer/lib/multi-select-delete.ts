@@ -162,13 +162,15 @@ export async function deleteSelection(
   );
 
   const successfulRoots = results.flatMap((result) =>
-    result.status === 'fulfilled' && result.value.succeeded &&
+    result.status === 'fulfilled' &&
+    result.value.succeeded &&
     result.value.kind === 'node'
       ? [result.value.id]
       : [],
   );
   const successfulEdges = results.flatMap((result) =>
-    result.status === 'fulfilled' && result.value.succeeded &&
+    result.status === 'fulfilled' &&
+    result.value.succeeded &&
     result.value.kind === 'edge'
       ? [result.value.id]
       : [],

@@ -30,15 +30,16 @@ import {fileURLToPath} from 'node:url';
 test('launchTestApp preserves launch failures', async () => {
   const cause = new Error('launch failed');
 
-  await expect(
-    launchTestApp(() => Promise.reject(cause)),
-  ).rejects.toBe(cause);
+  await expect(launchTestApp(() => Promise.reject(cause))).rejects.toBe(cause);
 });
 
 test('getTestData resolves the repository workspace fixture path', () => {
   expect(getTestData({}).validOpenProjectPath).toBe(
     fileURLToPath(
-      new URL('../fixtures/valid-open-project/workspaceFileXml.awsp', import.meta.url),
+      new URL(
+        '../fixtures/valid-open-project/workspaceFileXml.awsp',
+        import.meta.url,
+      ),
     ),
   );
 });
@@ -50,7 +51,10 @@ test('getTestData default path does not depend on process CWD', () => {
     process.chdir(tmpdir());
     expect(getTestData({}).validOpenProjectPath).toBe(
       fileURLToPath(
-        new URL('../fixtures/valid-open-project/workspaceFileXml.awsp', import.meta.url),
+        new URL(
+          '../fixtures/valid-open-project/workspaceFileXml.awsp',
+          import.meta.url,
+        ),
       ),
     );
   } finally {
@@ -69,9 +73,9 @@ test('getTestData preserves a workspace override', () => {
 test('getTestData preserves a rejected-project override', () => {
   const override = 'portable-temp/rejected-workspace.awsp';
 
-  expect(
-    getTestData({rejectedProjectPath: override}).rejectedProjectPath,
-  ).toBe(override);
+  expect(getTestData({rejectedProjectPath: override}).rejectedProjectPath).toBe(
+    override,
+  );
 });
 
 test('getFirstWindow rejects missing application windows', async () => {
@@ -157,10 +161,14 @@ test('CommandRunner names the step and attaches safe command metadata', async ()
     },
     testInfo,
   };
-  const runnerWithContext = new CommandRunner(testInfo, context, async (name, body) => {
-    stepName = name;
-    return test.step(name, body);
-  });
+  const runnerWithContext = new CommandRunner(
+    testInfo,
+    context,
+    async (name, body) => {
+      stepName = name;
+      return test.step(name, body);
+    },
+  );
 
   let error: unknown;
 
@@ -244,8 +252,5 @@ test('CommandRunner preserves native locator action timeout diagnostics', async 
 
   expect(error).not.toBeInstanceOf(CommandError);
   expect(error).toHaveProperty('name', 'TimeoutError');
-  expect(error).toHaveProperty(
-    'message',
-    expect.stringContaining('Missing'),
-  );
+  expect(error).toHaveProperty('message', expect.stringContaining('Missing'));
 });

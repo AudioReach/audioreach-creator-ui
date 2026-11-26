@@ -75,7 +75,10 @@ function SubsystemPropertiesCardBody({
       });
 
       if (hasBlockingIssues(result)) {
-        return {message: getIssueMessage(result, 'Failed to save subsystem'), ok: false};
+        return {
+          message: getIssueMessage(result, 'Failed to save subsystem'),
+          ok: false,
+        };
       }
 
       const committedName = result.data?.name ?? nextName;

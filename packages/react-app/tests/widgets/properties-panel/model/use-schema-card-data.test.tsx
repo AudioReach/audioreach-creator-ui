@@ -312,9 +312,7 @@ describe('useSchemaCardData', () => {
       await commit(
         jest
           .fn()
-          .mockResolvedValue(
-            saveResult({property, type: 'replaceProperty'}),
-          ),
+          .mockResolvedValue(saveResult({property, type: 'replaceProperty'})),
         onStagedChange,
       );
       expect(onStagedChange).toHaveBeenCalledTimes(1);

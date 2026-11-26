@@ -44,8 +44,6 @@ describe('isBooleanSwitch', () => {
     ];
     expect(isBooleanSwitch(avs)).toBe(false);
   });
-
-
 });
 
 describe('resolveBooleanPair', () => {

@@ -52,14 +52,14 @@ function parseOverrides(
     if (!['customInputs', ...pathKeys, 'useCaseQuery'].includes(key)) {
       throw new Error(`Unknown test input "${key}"`);
     }
-    if (
-      key === 'customInputs' &&
-      input !== undefined &&
-      !isJsonObject(input)
-    ) {
+    if (key === 'customInputs' && input !== undefined && !isJsonObject(input)) {
       throw new Error('Test input "customInputs" must be a JSON object');
     }
-    if (key !== 'customInputs' && input !== undefined && typeof input !== 'string') {
+    if (
+      key !== 'customInputs' &&
+      input !== undefined &&
+      typeof input !== 'string'
+    ) {
       throw new Error(`Test input "${key}" must be a string`);
     }
   }
@@ -82,10 +82,7 @@ export function parseTestInputs(value: unknown): TestInputs {
 
   const cases: Record<string, TestInputOverrides> = {};
   for (const [caseId, input] of Object.entries(rawCases ?? {})) {
-    cases[caseId] = parseOverrides(
-      input,
-      `Test input case "${caseId}"`,
-    );
+    cases[caseId] = parseOverrides(input, `Test input case "${caseId}"`);
   }
 
   return {cases, defaults};
@@ -128,10 +125,7 @@ function resolveOverrides(
   return resolved;
 }
 
-function mergeJsonObjects(
-  base: JsonObject,
-  override: JsonObject,
-): JsonObject {
+function mergeJsonObjects(base: JsonObject, override: JsonObject): JsonObject {
   const merged: Record<string, JsonValue> = {...base};
   for (const [key, value] of Object.entries(override)) {
     const baseValue = merged[key];

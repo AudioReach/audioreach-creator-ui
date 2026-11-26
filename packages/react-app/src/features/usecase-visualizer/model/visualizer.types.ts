@@ -210,13 +210,13 @@ export interface VisualizerEventHandlers {
   onViewportChange?: (viewport: ViewportState) => void;
   // group: authoring — only active when mode === VISUALIZER_MODE.EDIT
   onEdgeConnected?: (payload: EdgeConnectPayload) => void;
-  onEdgesDeleted?: (
-    payload: {edgeIds: string[]},
-  ) => Promise<DeleteSelectionResult | void> | void;
+  onEdgesDeleted?: (payload: {
+    edgeIds: string[];
+  }) => Promise<DeleteSelectionResult | void> | void;
   onNodeDropped?: (payload: NodeDropPayload) => void;
-  onNodesDeleted?: (
-    payload: {nodeIds: string[]},
-  ) => Promise<DeleteSelectionResult | void> | void;
+  onNodesDeleted?: (payload: {
+    nodeIds: string[];
+  }) => Promise<DeleteSelectionResult | void> | void;
 }
 
 // ── Top-level component props ─────────────────────────────────────────────────

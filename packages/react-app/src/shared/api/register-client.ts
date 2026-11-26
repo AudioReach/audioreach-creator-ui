@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {
-  getIssueMessage,
-  hasBlockingIssues,
-  type ApiResult,
-} from '~shared/api';
+import {getIssueMessage, hasBlockingIssues, type ApiResult} from '~shared/api';
 import {logger} from '~shared/lib/logger';
 import {useGlobalStore} from '~shared/store/global-store';
 

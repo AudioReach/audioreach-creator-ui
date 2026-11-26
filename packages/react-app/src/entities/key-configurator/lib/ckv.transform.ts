@@ -45,12 +45,13 @@ export function transformKeyDefinitionsToCalibrationKeys(
 export function buildKeyDefinitionLookup(
   calibrationKeys: Record<string, GraphKey>,
 ): Record<number, GraphKey> {
-  return Object.values(calibrationKeys).reduce<
-    Record<number, GraphKey>
-  >((acc, key) => {
-    acc[key.id] = key;
-    return acc;
-  }, {});
+  return Object.values(calibrationKeys).reduce<Record<number, GraphKey>>(
+    (acc, key) => {
+      acc[key.id] = key;
+      return acc;
+    },
+    {},
+  );
 }
 
 export function transformCkvsToConfiguredCkvs(

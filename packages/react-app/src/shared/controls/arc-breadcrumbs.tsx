@@ -106,12 +106,8 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
       [],
     );
 
-    const renderBreadcrumbItem = (
-      item: ArcBreadcrumbItem,
-      index: number,
-    ) => {
-      const hasDropdown =
-        item.dropdownItems && item.dropdownItems.length > 0;
+    const renderBreadcrumbItem = (item: ArcBreadcrumbItem, index: number) => {
+      const hasDropdown = item.dropdownItems && item.dropdownItems.length > 0;
 
       return (
         <Breadcrumbs.Item key={index}>
@@ -155,9 +151,7 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                       {...triggerProps}
                       aria-label={`Show children of ${item.label}`}
                       className="text-neutral-secondary hover:bg-secondary hover:text-neutral-primary focus:outline-primary inline-flex cursor-pointer items-center rounded p-1 transition-colors focus:outline-2 focus:outline-offset-2"
-                      onClick={(
-                        event: React.MouseEvent<HTMLButtonElement>,
-                      ) => {
+                      onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                         event.stopPropagation();
                         setOpenDropdownIndex(
                           openDropdownIndex === index ? null : index,
@@ -177,39 +171,35 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                   data-dropdown-index={index}
                 >
                   <div className="flex flex-col gap-1">
-                    {item.dropdownItems!.map(
-                      (dropdownItem, dropdownIndex) => (
-                        <div
-                          key={`dropdown-${dropdownIndex}`}
-                          className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
-                            dropdownItem.disabled
-                              ? 'text-neutral-secondary cursor-not-allowed opacity-50'
-                              : 'text-neutral-primary hover:bg-secondary cursor-pointer'
-                          }`}
-                          onClick={(
-                            event: React.MouseEvent<HTMLDivElement>,
-                          ) => {
-                            if (!dropdownItem.disabled) {
-                              handleDropdownItemClick(event, dropdownItem);
-                            }
-                          }}
-                          onKeyDown={(
-                            event: React.KeyboardEvent<HTMLDivElement>,
-                          ) => {
-                            handleDropdownKeyDown(event);
-                          }}
-                          role="menuitem"
-                          tabIndex={dropdownItem.disabled ? -1 : 0}
-                        >
-                          {dropdownItem.icon && (
-                            <span className="mr-2 text-base">
-                              {dropdownItem.icon}
-                            </span>
-                          )}
-                          <span className="flex-1">{dropdownItem.label}</span>
-                        </div>
-                      ),
-                    )}
+                    {item.dropdownItems!.map((dropdownItem, dropdownIndex) => (
+                      <div
+                        key={`dropdown-${dropdownIndex}`}
+                        className={`font-body-sm focus:outline-primary flex w-full items-center justify-start rounded px-3 py-2 transition-colors focus:outline-2 focus:-outline-offset-2 ${
+                          dropdownItem.disabled
+                            ? 'text-neutral-secondary cursor-not-allowed opacity-50'
+                            : 'text-neutral-primary hover:bg-secondary cursor-pointer'
+                        }`}
+                        onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+                          if (!dropdownItem.disabled) {
+                            handleDropdownItemClick(event, dropdownItem);
+                          }
+                        }}
+                        onKeyDown={(
+                          event: React.KeyboardEvent<HTMLDivElement>,
+                        ) => {
+                          handleDropdownKeyDown(event);
+                        }}
+                        role="menuitem"
+                        tabIndex={dropdownItem.disabled ? -1 : 0}
+                      >
+                        {dropdownItem.icon && (
+                          <span className="mr-2 text-base">
+                            {dropdownItem.icon}
+                          </span>
+                        )}
+                        <span className="flex-1">{dropdownItem.label}</span>
+                      </div>
+                    ))}
                   </div>
                 </Popover.Content>
               </Popover.Positioner>
@@ -270,7 +260,10 @@ export const ArcBreadcrumbs = forwardRef<HTMLElement, ArcBreadcrumbsProps>(
                     );
                   })}
                 </Breadcrumbs.OverflowItem>
-                {renderBreadcrumbItem(items[items.length - 1], items.length - 1)}
+                {renderBreadcrumbItem(
+                  items[items.length - 1],
+                  items.length - 1,
+                )}
               </>
             ) : (
               items.map(renderBreadcrumbItem)

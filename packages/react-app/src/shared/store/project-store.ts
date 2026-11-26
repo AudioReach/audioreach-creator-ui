@@ -12,9 +12,7 @@ import {createLogsSlice} from './project-store-slices/logs-slice';
 import {createProjectMetaDataSlice} from './project-store-slices/project-metadata-slice';
 import {createTabsSlice} from './project-store-slices/tabs-slice';
 import {createUserPreferencesSlice} from './project-store-slices/user-preferences-slice';
-import type {
-  ProjectStore,
-} from './project-store.types';
+import type {ProjectStore} from './project-store.types';
 
 export type {ProjectStore};
 

@@ -59,16 +59,16 @@ type TerminalStatus = 'aborted' | 'error' | 'success';
 function computeReloadUsecases(
   navChoice: NavChoice,
   createdSystemIds: string[],
-  selectedUsecases: string[],
+  selectedSystemIds: string[],
 ): string[] {
   if (navChoice === 'switch') {
     return createdSystemIds;
   }
   if (navChoice === 'add') {
-    const merged = [...selectedUsecases, ...createdSystemIds];
+    const merged = [...selectedSystemIds, ...createdSystemIds];
     return merged.filter((id, index) => merged.indexOf(id) === index);
   }
-  return selectedUsecases;
+  return selectedSystemIds;
 }
 
 function withCallLog<A extends unknown[], R>(
@@ -137,6 +137,7 @@ async function finalize(
   stageSystemIds: string[],
   navChoice: NavChoice,
   createdSystemIds: string[],
+  selectedUsecaseSystemIds: string[],
   actionLabel: 'apply_changes' | 'submit_review',
   filterComponentsBySubsystem: boolean,
 ): Promise<void> {
@@ -160,7 +161,7 @@ async function finalize(
         computeReloadUsecases(
           navChoice,
           createdSystemIds,
-          store.getState().selectedUsecases,
+          selectedUsecaseSystemIds,
         ),
         {filterBySubsystem: filterComponentsBySubsystem},
       );
@@ -350,6 +351,7 @@ export function useApplyDiscard(
             [],
             'keep',
             [],
+            selectedUsecaseSystemIds,
             'apply_changes',
             filterComponentsBySubsystem,
           );
@@ -375,6 +377,7 @@ export function useApplyDiscard(
             [],
             'keep',
             [],
+            selectedUsecaseSystemIds,
             'apply_changes',
             filterComponentsBySubsystem,
           );
@@ -406,7 +409,7 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId, filterComponentsBySubsystem],
+    [store, projectId, selectedUsecaseSystemIds, filterComponentsBySubsystem],
   );
 
   const apply = useCallback(async () => {
@@ -486,6 +489,7 @@ export function useApplyDiscard(
             stageSystemIds,
             navChoice,
             createdSystemIds,
+            selectedUsecaseSystemIds,
             'submit_review',
             filterComponentsBySubsystem,
           ),
@@ -503,7 +507,7 @@ export function useApplyDiscard(
         }
       }
     },
-    [store, projectId, filterComponentsBySubsystem],
+    [store, projectId, selectedUsecaseSystemIds, filterComponentsBySubsystem],
   );
 
   const cancelReview = useCallback(() => {

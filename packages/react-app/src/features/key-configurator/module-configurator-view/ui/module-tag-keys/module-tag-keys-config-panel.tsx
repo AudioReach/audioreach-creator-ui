@@ -526,12 +526,7 @@ export function ModuleTagKeysConfigPanel({
   // extending it with a new "+"-joined term, the earlier term is left alone
   // and only the new value is merged in.
   const selectValue = useCallback(
-    (
-      keyId: number,
-      valueId: number,
-      valueName: string,
-      tagGroupId: number,
-    ) => {
+    (keyId: number, valueId: number, valueName: string, tagGroupId: number) => {
       const isAppendingConfirmedTerm =
         Boolean(confirmedSelectionText) &&
         availableSearchTerm.startsWith(confirmedSelectionText);
@@ -754,7 +749,8 @@ export function ModuleTagKeysConfigPanel({
   const handleDeleteItem = useCallback(
     async (id: string) => {
       const tkv = configuredTkvs.find(
-        (candidate) => buildTkvId(candidate.tagGroupId, candidate.keyValuePairs) === id,
+        (candidate) =>
+          buildTkvId(candidate.tagGroupId, candidate.keyValuePairs) === id,
       );
       if (!tkv) {
         return;
@@ -893,7 +889,10 @@ export function ModuleTagKeysConfigPanel({
           return true;
         });
         if (uniqueCombinations.length === 0) {
-          showToast('This tag key combination is already configured', 'warning');
+          showToast(
+            'This tag key combination is already configured',
+            'warning',
+          );
           return;
         }
 
@@ -995,12 +994,9 @@ export function ModuleTagKeysConfigPanel({
     await deleteTkvs(instanceSystemId, targets);
   }, [filteredGroupedTkvs, deleteTkvs, instanceSystemId]);
 
-  const copyEntry = useCallback(
-    (tkv: ConfiguredTkv) => {
-      void copyTkvEntry(formatConfiguredTkvLabel(tkv));
-    },
-    [],
-  );
+  const copyEntry = useCallback((tkv: ConfiguredTkv) => {
+    void copyTkvEntry(formatConfiguredTkvLabel(tkv));
+  }, []);
 
   const editingTkv =
     activeOperation.type === 'editing'
@@ -1222,177 +1218,175 @@ export function ModuleTagKeysConfigPanel({
 
                 <div className="max-h-[35vh] overflow-y-auto">
                   {filteredAndSortedTagGroups.map((tagGroupName) => {
-                      const tagGroup = moduleTagKeys[tagGroupName];
-                      const isExpanded = expandedTagGroups.includes(
-                        tagGroup.id,
-                      );
-                      const isSelected = selectedTagGroup === tagGroup.id;
-                      // A key/value id can collide across unrelated tag
-                      // groups, so selection state must only ever render for
-                      // the locked tag group — otherwise checking a value in
-                      // one tag group visually "leaks" a check mark onto a
-                      // same-id key/value in a different, unselected tag.
-                      const isLockedTagGroup =
-                        selectedTagGroup === null ||
-                        selectedTagGroup === tagGroup.id;
+                    const tagGroup = moduleTagKeys[tagGroupName];
+                    const isExpanded = expandedTagGroups.includes(tagGroup.id);
+                    const isSelected = selectedTagGroup === tagGroup.id;
+                    // A key/value id can collide across unrelated tag
+                    // groups, so selection state must only ever render for
+                    // the locked tag group — otherwise checking a value in
+                    // one tag group visually "leaks" a check mark onto a
+                    // same-id key/value in a different, unselected tag.
+                    const isLockedTagGroup =
+                      selectedTagGroup === null ||
+                      selectedTagGroup === tagGroup.id;
 
-                      return (
+                    return (
+                      <div
+                        key={tagGroupName}
+                        className="border-neutral-02 border-b last:border-b-0"
+                      >
                         <div
-                          key={tagGroupName}
-                          className="border-neutral-02 border-b last:border-b-0"
+                          className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
+                            isSelected
+                              ? 'bg-support-info-subtle'
+                              : 'hover:bg-neutral-03 bg-transparent'
+                          }`}
+                          onClick={() => toggleTagGroupExpansion(tagGroup.id)}
                         >
-                          <div
-                            className={`flex cursor-pointer items-center px-3 py-2.5 transition-colors ${
-                              isSelected
-                                ? 'bg-support-info-subtle'
-                                : 'hover:bg-neutral-03 bg-transparent'
-                            }`}
-                            onClick={() => toggleTagGroupExpansion(tagGroup.id)}
-                          >
-                            <span className="text-neutral-secondary w-3.5">
-                              {isExpanded ? (
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              ) : (
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              )}
-                            </span>
-                            <input
-                              checked={isSelected}
-                              className="ml-3 h-4 w-4 cursor-pointer"
-                              disabled={!isEditable}
-                              name="tag-group"
-                              onChange={() => setSelectedTagGroup(tagGroup.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              type="radio"
-                            />
-                            <div className="text-neutral-secondary ml-3 w-32 font-mono text-sm">
-                              {ConvertNumberToHexString(tagGroup.id) ||
-                                tagGroup.id}
-                            </div>
-                            <div className="text-neutral-primary ml-3 flex-1 text-sm font-medium">
-                              {tagGroupName}
-                            </div>
+                          <span className="text-neutral-secondary w-3.5">
+                            {isExpanded ? (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            )}
+                          </span>
+                          <input
+                            checked={isSelected}
+                            className="ml-3 h-4 w-4 cursor-pointer"
+                            disabled={!isEditable}
+                            name="tag-group"
+                            onChange={() => setSelectedTagGroup(tagGroup.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            type="radio"
+                          />
+                          <div className="text-neutral-secondary ml-3 w-32 font-mono text-sm">
+                            {ConvertNumberToHexString(tagGroup.id) ||
+                              tagGroup.id}
                           </div>
-
-                          {isExpanded && (
-                            <div className="bg-primary">
-                              {Object.keys(tagGroup.keys).map((modKeyName) => {
-                                const modKey = tagGroup.keys[modKeyName];
-                                const isModKeyExpanded =
-                                  expandedModKeys[modKey.id];
-                                const allValuesSelected =
-                                  isLockedTagGroup &&
-                                  modKey.values.every(
-                                    (v) => selectedValues[modKey.id]?.[v.id],
-                                  );
-                                const someValuesSelected =
-                                  isLockedTagGroup &&
-                                  modKey.values.some(
-                                    (v) => selectedValues[modKey.id]?.[v.id],
-                                  );
-
-                                return (
-                                  <div key={modKeyName}>
-                                    <div
-                                      className={`border-neutral-02 flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors ${
-                                        allValuesSelected
-                                          ? 'bg-support-info-subtle'
-                                          : 'bg-secondary hover:bg-neutral-03'
-                                      }`}
-                                      onClick={() =>
-                                        toggleModKeyExpansion(modKey.id)
-                                      }
-                                    >
-                                      <span className="text-neutral-secondary w-3">
-                                        {isModKeyExpanded ? (
-                                          <ChevronDown className="h-3 w-3" />
-                                        ) : (
-                                          <ChevronRight className="h-3 w-3" />
-                                        )}
-                                      </span>
-                                      <input
-                                        ref={(input) => {
-                                          if (input) {
-                                            input.indeterminate =
-                                              !allValuesSelected &&
-                                              someValuesSelected;
-                                          }
-                                        }}
-                                        checked={allValuesSelected}
-                                        className="ml-2 h-4 w-4 cursor-pointer"
-                                        disabled={!isEditable}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          toggleModKeySelection(
-                                            tagGroup.id,
-                                            modKey.id,
-                                          );
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        type="checkbox"
-                                      />
-                                      <span className="text-neutral-primary mr-2 ml-3 w-32 font-mono text-sm">
-                                        {ConvertNumberToHexString(modKey.id) ||
-                                          modKey.id}
-                                      </span>
-                                      <span className="text-neutral-primary text-sm font-medium">
-                                        {modKeyName}
-                                      </span>
-                                    </div>
-
-                                    {isModKeyExpanded && (
-                                      <div>
-                                        {modKey.values.map((value) => (
-                                          <div
-                                            key={value.id}
-                                            className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors ${
-                                              isLockedTagGroup &&
-                                              selectedValues[modKey.id]?.[
-                                                value.id
-                                              ]
-                                                ? 'bg-support-info-subtle'
-                                                : 'bg-transparent'
-                                            }`}
-                                          >
-                                            <Checkbox
-                                              aria-label={`Select ${value.name}`}
-                                              checked={
-                                                (isLockedTagGroup &&
-                                                  selectedValues[modKey.id]?.[
-                                                    value.id
-                                                  ]) ||
-                                                false
-                                              }
-                                              disabled={!isEditable}
-                                              onCheckedChange={() =>
-                                                toggleValueSelection(
-                                                  modKey.id,
-                                                  value.id,
-                                                  tagGroup.id,
-                                                )
-                                              }
-                                              size="sm"
-                                            />
-                                            <div className="text-neutral-secondary w-32 font-mono text-sm">
-                                              {ConvertNumberToHexString(
-                                                value.id,
-                                              ) || value.id}
-                                            </div>
-                                            <div className="text-neutral-primary flex-1 text-sm">
-                                              {value.name}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="text-neutral-primary ml-3 flex-1 text-sm font-medium">
+                            {tagGroupName}
+                          </div>
                         </div>
-                      );
-                    })}
+
+                        {isExpanded && (
+                          <div className="bg-primary">
+                            {Object.keys(tagGroup.keys).map((modKeyName) => {
+                              const modKey = tagGroup.keys[modKeyName];
+                              const isModKeyExpanded =
+                                expandedModKeys[modKey.id];
+                              const allValuesSelected =
+                                isLockedTagGroup &&
+                                modKey.values.every(
+                                  (v) => selectedValues[modKey.id]?.[v.id],
+                                );
+                              const someValuesSelected =
+                                isLockedTagGroup &&
+                                modKey.values.some(
+                                  (v) => selectedValues[modKey.id]?.[v.id],
+                                );
+
+                              return (
+                                <div key={modKeyName}>
+                                  <div
+                                    className={`border-neutral-02 flex cursor-pointer items-center border-b px-3 py-2 pl-16 transition-colors ${
+                                      allValuesSelected
+                                        ? 'bg-support-info-subtle'
+                                        : 'bg-secondary hover:bg-neutral-03'
+                                    }`}
+                                    onClick={() =>
+                                      toggleModKeyExpansion(modKey.id)
+                                    }
+                                  >
+                                    <span className="text-neutral-secondary w-3">
+                                      {isModKeyExpanded ? (
+                                        <ChevronDown className="h-3 w-3" />
+                                      ) : (
+                                        <ChevronRight className="h-3 w-3" />
+                                      )}
+                                    </span>
+                                    <input
+                                      ref={(input) => {
+                                        if (input) {
+                                          input.indeterminate =
+                                            !allValuesSelected &&
+                                            someValuesSelected;
+                                        }
+                                      }}
+                                      checked={allValuesSelected}
+                                      className="ml-2 h-4 w-4 cursor-pointer"
+                                      disabled={!isEditable}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        toggleModKeySelection(
+                                          tagGroup.id,
+                                          modKey.id,
+                                        );
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      type="checkbox"
+                                    />
+                                    <span className="text-neutral-primary mr-2 ml-3 w-32 font-mono text-sm">
+                                      {ConvertNumberToHexString(modKey.id) ||
+                                        modKey.id}
+                                    </span>
+                                    <span className="text-neutral-primary text-sm font-medium">
+                                      {modKeyName}
+                                    </span>
+                                  </div>
+
+                                  {isModKeyExpanded && (
+                                    <div>
+                                      {modKey.values.map((value) => (
+                                        <div
+                                          key={value.id}
+                                          className={`border-neutral-03 flex items-center gap-3 border-t px-3 py-2 pl-[88px] transition-colors ${
+                                            isLockedTagGroup &&
+                                            selectedValues[modKey.id]?.[
+                                              value.id
+                                            ]
+                                              ? 'bg-support-info-subtle'
+                                              : 'bg-transparent'
+                                          }`}
+                                        >
+                                          <Checkbox
+                                            aria-label={`Select ${value.name}`}
+                                            checked={
+                                              (isLockedTagGroup &&
+                                                selectedValues[modKey.id]?.[
+                                                  value.id
+                                                ]) ||
+                                              false
+                                            }
+                                            disabled={!isEditable}
+                                            onCheckedChange={() =>
+                                              toggleValueSelection(
+                                                modKey.id,
+                                                value.id,
+                                                tagGroup.id,
+                                              )
+                                            }
+                                            size="sm"
+                                          />
+                                          <div className="text-neutral-secondary w-32 font-mono text-sm">
+                                            {ConvertNumberToHexString(
+                                              value.id,
+                                            ) || value.id}
+                                          </div>
+                                          <div className="text-neutral-primary flex-1 text-sm">
+                                            {value.name}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </>

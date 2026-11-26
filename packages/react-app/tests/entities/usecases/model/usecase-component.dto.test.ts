@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {
-  isInterUsecaseLink,
-  toControlLinkType,
-} from '~entities/usecases';
+import {isInterUsecaseLink, toControlLinkType} from '~entities/usecases';
 
 describe('link type helpers', () => {
   it.each([
     ['INTER_USECASE', true],
     ['NORMAL', false],
     ['EC', false],
-  ] as const)('identifies %s interUsecase state as %s', (linkType, expected) => {
-    expect(isInterUsecaseLink(linkType)).toBe(expected);
-  });
+  ] as const)(
+    'identifies %s interUsecase state as %s',
+    (linkType, expected) => {
+      expect(isInterUsecaseLink(linkType)).toBe(expected);
+    },
+  );
 
   it.each(['NORMAL', 'INTER_USECASE'] as const)(
     'accepts %s as a control link type',

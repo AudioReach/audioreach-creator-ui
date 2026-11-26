@@ -139,7 +139,11 @@ const rowB: ConnectionRow = {
   systemId: 'row-b',
   usecases: [uc1],
 };
-const rowSg: ConnectionRow = {...rowA, isInterUsecase: false, systemId: 'row-sg'};
+const rowSg: ConnectionRow = {
+  ...rowA,
+  isInterUsecase: false,
+  systemId: 'row-sg',
+};
 const rowInterUsecase: ConnectionRow = {
   ...rowB,
   isInterUsecase: true,

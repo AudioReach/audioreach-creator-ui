@@ -2184,12 +2184,7 @@ describe('createGraphDataSlice - store-only property updates', () => {
 
     store
       .getState()
-      .updateModulePortCountLocal(
-        'mod-1',
-        'maxOutputPorts',
-        2,
-        returnedModule,
-      );
+      .updateModulePortCountLocal('mod-1', 'maxOutputPorts', 2, returnedModule);
 
     const module = store.getState().graphData?.moduleInstances['mod-1'];
     expect(module).toEqual(
@@ -2275,12 +2270,7 @@ describe('createGraphDataSlice - store-only property updates', () => {
 
     store
       .getState()
-      .updateModulePortCountLocal(
-        'mod-1',
-        'maxOutputPorts',
-        1,
-        returnedModule,
-      );
+      .updateModulePortCountLocal('mod-1', 'maxOutputPorts', 1, returnedModule);
 
     const module = store.getState().graphData?.moduleInstances['mod-1'];
     expect(module?.maxOutputPorts).toBeUndefined();

@@ -176,7 +176,10 @@ function assignModuleLayers(
   }
 
   for (const link of dataLinks) {
-    if (!moduleIds.has(link.sourceNodeId) || !moduleIds.has(link.targetNodeId)) {
+    if (
+      !moduleIds.has(link.sourceNodeId) ||
+      !moduleIds.has(link.targetNodeId)
+    ) {
       continue;
     }
     const targets = adj.get(link.sourceNodeId)!;
@@ -380,12 +383,12 @@ async function runSubgraphElkPass(
 
   const graph: ElkNode = {
     children: containers.map((container) => ({
-      children: (modulesByContainer.get(containerLayoutId(container)) ?? []).map(
-        (m) => {
-          const d = dims.get(m.id) ?? {height: 80, width: 160};
-          return {height: d.height, id: m.id, width: d.width};
-        },
-      ),
+      children: (
+        modulesByContainer.get(containerLayoutId(container)) ?? []
+      ).map((m) => {
+        const d = dims.get(m.id) ?? {height: 80, width: 160};
+        return {height: d.height, id: m.id, width: d.width};
+      }),
       id: containerLayoutId(container),
       layoutOptions: {
         ...ELK_OPTIONS,

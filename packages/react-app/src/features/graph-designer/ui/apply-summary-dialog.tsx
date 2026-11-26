@@ -276,10 +276,10 @@ export function ApplySummaryDialog(props: ApplySummaryDialogProps) {
           {created.length > 0 && anyCreatedChecked && (
             <div className="flex flex-col gap-4">
               <Divider />
-              <h4 className="text-sm font-semibold text-neutral-primary">
+              <h4 className="text-neutral-primary text-sm font-semibold">
                 Navigation after applying changes
               </h4>
-              <p className="text-xs text-neutral-secondary">
+              <p className="text-neutral-secondary text-xs">
                 Choose how to navigate after applying the changes.
               </p>
               <RadioGroup.Root

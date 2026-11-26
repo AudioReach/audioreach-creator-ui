@@ -120,10 +120,9 @@ describe('usePropertiesPanelStore', () => {
     ]);
 
     expect(mockFetchSpfModuleProperties).toHaveBeenCalledTimes(1);
-    expect(mockFetchSpfModuleProperties).toHaveBeenCalledWith(
-      'proj-1',
-      ['mod-1'],
-    );
+    expect(mockFetchSpfModuleProperties).toHaveBeenCalledWith('proj-1', [
+      'mod-1',
+    ]);
     expect(
       usePropertiesPanelStore.getState().entries[
         propertiesEntryKey('proj-1', 'module', 'mod-1')

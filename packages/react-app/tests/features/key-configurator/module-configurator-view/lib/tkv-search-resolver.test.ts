@@ -91,15 +91,15 @@ describe('resolveTkvSearchInput', () => {
     expect(resolveTkvSearchInput('', availableModuleTagsInfo, null)).toEqual({
       kind: 'empty',
     });
-    expect(
-      resolveTkvSearchInput('   ', availableModuleTagsInfo, null),
-    ).toEqual({kind: 'empty'});
+    expect(resolveTkvSearchInput('   ', availableModuleTagsInfo, null)).toEqual(
+      {kind: 'empty'},
+    );
   });
 
   it('returns kind query for a non-matching fragment', () => {
-    expect(
-      resolveTkvSearchInput('Zzz', availableModuleTagsInfo, null),
-    ).toEqual({kind: 'query', queryText: 'Zzz'});
+    expect(resolveTkvSearchInput('Zzz', availableModuleTagsInfo, null)).toEqual(
+      {kind: 'query', queryText: 'Zzz'},
+    );
   });
 
   it('resolves a single complete [Key: Value] token to a confirmed selection', () => {
@@ -209,14 +209,12 @@ describe('resolveTkvSearchInput', () => {
   });
 
   it('resolves a [TagName] bracket token for a tag group with no keys', () => {
-    expect(resolveTkvSearchInput('[TagEmpty]', tagEmptyFixture, null)).toEqual(
-      {
-        kind: 'selection',
-        pairs: [],
-        queryText: '',
-        tagGroupId: 600,
-      },
-    );
+    expect(resolveTkvSearchInput('[TagEmpty]', tagEmptyFixture, null)).toEqual({
+      kind: 'selection',
+      pairs: [],
+      queryText: '',
+      tagGroupId: 600,
+    });
   });
 
   it('resolves a bare exact tag-name search for a tag group with no keys', () => {
@@ -264,9 +262,10 @@ describe('getTkvSearchSuggestions', () => {
       availableModuleTagsInfo,
       null,
     );
-    expect(
-      suggestions.map((suggestion) => suggestion.value.name),
-    ).toEqual(['Alpha1', 'Shared']);
+    expect(suggestions.map((suggestion) => suggestion.value.name)).toEqual([
+      'Alpha1',
+      'Shared',
+    ]);
   });
 
   it('ranks an exact match above a prefix match above a substring match', () => {

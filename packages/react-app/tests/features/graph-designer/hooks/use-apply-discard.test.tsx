@@ -393,6 +393,7 @@ describe('useApplyDiscard', () => {
     async function openReview(
       store: StoreApi<GraphDesignerStore>,
       response: CreateUsecasesResponseDto = makeReviewResponse(),
+      selectedUsecaseSystemIds: string[] = ['uc-existing'],
     ) {
       store.getState().markDirty();
       mockRunApplyReconcile.mockResolvedValue({
@@ -400,7 +401,11 @@ describe('useApplyDiscard', () => {
         notices: [],
         response,
       });
-      const rendered = renderApplyDiscard(store);
+      const rendered = renderApplyDiscard(
+        store,
+        true,
+        selectedUsecaseSystemIds,
+      );
       await act(async () => {
         await rendered.result.current.apply();
       });
@@ -699,10 +704,32 @@ describe('useApplyDiscard', () => {
       expect(store.getState().mode).toBe('edit');
     });
 
-    it('nav choice add reloads selectedUsecases plus createdSystemIds, deduplicated', async () => {
+    it('queries selected usecase system IDs after review when the store holds display names', async () => {
       const store = makeStore();
+      store.setState({selectedUsecases: ['Music • Playback']});
+      const {result} = await openReview(store, makeReviewResponse(), [
+        'uc-existing',
+      ]);
+      mockRunFinalize.mockResolvedValue({
+        kind: 'committed',
+        sessionMode: 'READONLY',
+        summary: 'done',
+      });
+
+      await act(async () => {
+        await result.current.submitReview(['change-1'], 'keep');
+      });
+
+      expect(mockGetUsecaseComponents).toHaveBeenCalledWith(PROJECT_ID, [
+        'uc-existing',
+      ]);
+    });
+
+    it('nav choice add reloads selected system IDs plus created IDs, deduplicated', async () => {
+      const store = makeStore();
+      store.setState({selectedUsecases: ['Music • Playback']});
       const response = makeReviewResponse();
-      const {result} = await openReview(store, response);
+      const {result} = await openReview(store, response, ['uc-existing']);
       mockRunFinalize.mockResolvedValue({
         kind: 'committed',
         sessionMode: 'READONLY',

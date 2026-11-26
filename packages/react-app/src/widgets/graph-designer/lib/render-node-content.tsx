@@ -24,9 +24,7 @@ export function renderNodeContent(node: AnyNode): NodeContentOverride | null {
     return {
       header: (
         <SubgraphHeader
-          subgraphId={
-            node.meta?.subgraphSystemId ?? String(node.subgraphId)
-          }
+          subgraphId={node.meta?.subgraphSystemId ?? String(node.subgraphId)}
         />
       ),
     };

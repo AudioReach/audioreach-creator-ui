@@ -41,10 +41,7 @@ export interface ModuleDefinition {
 
 export interface ModuleListSlice {
   loadModuleList: () => Promise<void>;
-  moduleDefinitionsBySystemId: Record<
-    string,
-    SpfModuleDefinitionResponseDto
-  >;
+  moduleDefinitionsBySystemId: Record<string, SpfModuleDefinitionResponseDto>;
   moduleList: ModuleDefinition[];
   moduleListSearchQuery: string;
   moduleListStatus: SliceStatus;

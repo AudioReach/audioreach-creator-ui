@@ -8,12 +8,7 @@ import {createToaster, Toaster} from '@qualcomm-ui/react/toast';
 
 // Type definitions
 export type ToastPlacement =
-  | 'top-start'
-  | 'top'
-  | 'top-end'
-  | 'bottom-start'
-  | 'bottom'
-  | 'bottom-end';
+  'top-start' | 'top' | 'top-end' | 'bottom-start' | 'bottom' | 'bottom-end';
 
 // Create global toaster instance
 export const globalToaster = createToaster({

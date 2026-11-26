@@ -4,7 +4,11 @@
  */
 
 import type {ApiIssueItem} from '~entities/api-issues';
-import type {ControlLinkDto, DataLinkDto, KeyValueInfo} from '~entities/usecases';
+import type {
+  ControlLinkDto,
+  DataLinkDto,
+  KeyValueInfo,
+} from '~entities/usecases';
 
 export interface SubgraphKvSelectionDto {
   systemId: string;

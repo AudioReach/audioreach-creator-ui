@@ -12,14 +12,17 @@ import {
 } from '../commands/home';
 import {testCase, testSession} from '../framework';
 
-testSession('EX-3 selects all the available use cases', async ({testSession}) => {
-  const opened = await testSession.run(
-    openFile({workspacePath: testSession.testData.validOpenProjectPath}),
-  );
-  expect(opened.ok).toBe(true);
+testSession(
+  'EX-3 selects all the available use cases',
+  async ({testSession}) => {
+    const opened = await testSession.run(
+      openFile({workspacePath: testSession.testData.validOpenProjectPath}),
+    );
+    expect(opened.ok).toBe(true);
 
-  await testSession.run(selectAllUseCases());
-});
+    await testSession.run(selectAllUseCases());
+  },
+);
 
 testSession(
   'EX-4 filters and selects the first use case from the list',

@@ -134,12 +134,10 @@ export function useSubgraphKvMetadataRefresh(projectId: string): void {
               );
               return null;
             })
-            .then(
-              (metadata): MetadataResolutionResult => ({
-                metadata,
-                subgraphSystemId,
-              }),
-            ),
+            .then((metadata): MetadataResolutionResult => ({
+              metadata,
+              subgraphSystemId,
+            })),
         ),
       );
       const failedSubgraphIds = metadataResults

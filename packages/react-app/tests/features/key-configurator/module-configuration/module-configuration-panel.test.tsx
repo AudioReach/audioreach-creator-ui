@@ -174,9 +174,7 @@ describe('ModuleConfigurationPanel', () => {
       configuredCkvs,
       updateConfiguredCkvs,
     });
-    expect(capturedModuleTagKeysProps).not.toHaveProperty(
-      'calibrationKeys',
-    );
+    expect(capturedModuleTagKeysProps).not.toHaveProperty('calibrationKeys');
     expect(capturedModuleTagKeysProps).not.toHaveProperty(
       'updateConfiguredCkvs',
     );
