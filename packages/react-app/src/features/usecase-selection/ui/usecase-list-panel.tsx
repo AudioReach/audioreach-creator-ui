@@ -149,9 +149,7 @@ const UsecaseItemRow = memo<UsecaseItemRowProps>(
             </label>
           </div>
           {isExpanded && (
-            <div
-              className="border-neutral-02 ml-8 border-l pl-2"
-            >
+            <div className="border-neutral-02 ml-8 border-l pl-2">
               {item.children!.map((child) => (
                 <UsecaseItemRow
                   key={child.systemId ?? child.name}
@@ -232,6 +230,7 @@ interface UsecaseListPanelProps {
   lockedUsecases?: Set<string>;
   onClose: () => void;
   onCollapseAll: () => void;
+  onDeleteDialogOpenChange?: (open: boolean) => void;
   onDeleteSelected: () => void;
   onExpandAll: () => void;
   selectedUsecases: string[];
@@ -251,6 +250,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   lockedUsecases = EMPTY_LOCKED,
   onClose,
   onCollapseAll,
+  onDeleteDialogOpenChange,
   onDeleteSelected,
   onExpandAll,
   selectedUsecases,
@@ -344,9 +344,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
   return (
     <div className="flex w-full flex-col">
       {/* Top controls - Sticky header */}
-      <div
-        className="border-neutral-02 flex-shrink-0 border-b px-3 py-2"
-      >
+      <div className="border-neutral-02 flex-shrink-0 border-b px-3 py-2">
         <div className="flex items-center justify-between">
           <label
             className={`text-neutral-primary flex items-center text-sm ${selectAllState.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
@@ -381,7 +379,13 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
               variant="ghost"
             />
             {allowDelete && selectedUsecases.length > 0 && (
-              <Dialog.Root emphasis="danger" preventScroll={false}>
+              <Dialog.Root
+                emphasis="danger"
+                onOpenChange={(nextOpen) =>
+                  onDeleteDialogOpenChange?.(nextOpen)
+                }
+                preventScroll={false}
+              >
                 <Dialog.Trigger>
                   <IconButton
                     aria-label="Delete"
@@ -510,9 +514,7 @@ export const UsecaseListPanel: React.FC<UsecaseListPanelProps> = ({
 
                 {/* Category items — rendered recursively */}
                 {isCategoryExpanded && (
-                  <div
-                    className="border-neutral-02 ml-10 border-l pl-3"
-                  >
+                  <div className="border-neutral-02 ml-10 border-l pl-3">
                     {category.items.map((item) => (
                       <UsecaseItemRow
                         key={item.systemId ?? item.name}

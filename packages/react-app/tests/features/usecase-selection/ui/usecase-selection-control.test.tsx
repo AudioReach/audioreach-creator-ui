@@ -155,8 +155,12 @@ jest.mock('@qualcomm-ui/react/dialog', () => {
       Footer: ({children}: any) => <div>{children}</div>,
       Heading: ({children}: any) => <h2>{children}</h2>,
       IndicatorIcon: () => <span />,
-      Root: ({children}: any) => {
-        const [open, setOpen] = React.useState(false);
+      Root: ({children, onOpenChange}: any) => {
+        const [open, setOpenState] = React.useState(false);
+        const setOpen = (next: boolean) => {
+          setOpenState(next);
+          onOpenChange?.(next);
+        };
         return (
           <DialogContext.Provider value={{open, setOpen}}>
             <div>{children}</div>
@@ -497,6 +501,41 @@ describe('UsecaseSelectionControl — handleDeleteSelected', () => {
     await waitFor(() => {
       expect(mockDeleteUsecases).toHaveBeenCalledWith(PROJECT_ID, ['UC_001']);
       expect(screen.queryAllByText('Speaker_Mic')).toHaveLength(0);
+    });
+  });
+
+  // ── 8b. Portaled confirm dialog must not trigger outside-click close ─────
+
+  it('keeps dropdown open when mousedown lands outside the container while the delete dialog is open', async () => {
+    const user = userEvent.setup();
+    renderControl(['Speaker_Mic']);
+
+    await openDropdown(user);
+    // Open the confirmation dialog (trash icon)
+    await user.click(screen.getByRole('button', {name: 'Delete'}));
+
+    // The real dialog is portaled, so its buttons are outside the container.
+    const portaled = document.createElement('button');
+    document.body.appendChild(portaled);
+    fireEvent.mouseDown(portaled);
+    portaled.remove();
+
+    expect(screen.getByText('Done')).toBeInTheDocument();
+  });
+
+  it('still closes dropdown on outside mousedown when the delete dialog is closed', async () => {
+    const user = userEvent.setup();
+    renderControl(['Speaker_Mic']);
+
+    await openDropdown(user);
+
+    const outside = document.createElement('div');
+    document.body.appendChild(outside);
+    fireEvent.mouseDown(outside);
+    outside.remove();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Done')).not.toBeInTheDocument();
     });
   });
 

@@ -119,6 +119,7 @@ export const UsecaseSelectionControl: React.FC<
   // ── Local UI/action state ───────────────────────────────────────────────────
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isDeleteDialogOpenRef = useRef(false);
   const [draftSelectedUsecases, setDraftSelectedUsecases] =
     useState(selectedUsecases);
   // Suggestion popup state
@@ -249,8 +250,18 @@ export const UsecaseSelectionControl: React.FC<
   }, [isSuggestionOpen]);
 
   useEffect(() => {
+    // Never carry a stale "dialog open" flag across dropdown open/close.
+    isDeleteDialogOpenRef.current = false;
+  }, [isDropdownOpen]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isDeleting) {
+        return;
+      }
+
+      // The delete dialog sits outside the container; don't close.
+      if (isDeleteDialogOpenRef.current) {
         return;
       }
 
@@ -785,6 +796,9 @@ export const UsecaseSelectionControl: React.FC<
             lockedUsecases={lockedUsecases}
             onClose={closeDropdown}
             onCollapseAll={handleCollapseAll}
+            onDeleteDialogOpenChange={(open) => {
+              isDeleteDialogOpenRef.current = open;
+            }}
             onDeleteSelected={() => void handleDeleteSelected()}
             onExpandAll={handleExpandAll}
             selectedUsecases={draftSelectedUsecases}
