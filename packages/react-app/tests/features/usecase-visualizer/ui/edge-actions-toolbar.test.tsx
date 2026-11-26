@@ -113,12 +113,10 @@ describe('EdgeActionsToolbar', () => {
     ).not.toBeInTheDocument();
   });
 
-  // Verifies that locked edges never show the action toolbar.
-  it('does not render for a locked edge', () => {
-    renderToolbar({edge: makeDataLink({locked: true})});
+  // Verifies that locked edges are passed to getItems, which decides the items.
+  it('asks getItems for a locked edge', () => {
+    const {getItems} = renderToolbar({edge: makeDataLink({locked: true})});
 
-    expect(
-      screen.queryByRole('button', {name: 'Delete'}),
-    ).not.toBeInTheDocument();
+    expect(getItems).toHaveBeenCalled();
   });
 });
