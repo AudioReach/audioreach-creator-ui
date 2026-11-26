@@ -10,7 +10,6 @@ import {
   createDataLinkWithSubsystems,
   deleteControlLink,
   deleteDataLink,
-  toControlLinkType,
 } from '~entities/usecases';
 import type {
   ComponentCollectionDto,
@@ -97,6 +96,10 @@ export function createLinkOperations(projectId: string) {
     edgeKind: 'control' | 'data',
     edgeMode: EdgeMode,
   ): Promise<boolean> {
+    if (edgeKind === 'control' && edgeMode === 'EC') {
+      throw new Error('EC link type is only valid for data links');
+    }
+
     const useSubsystemVariant =
       isSubsystemNode(get, sourceNodeId) || isSubsystemNode(get, targetNodeId);
 
@@ -117,17 +120,21 @@ export function createLinkOperations(projectId: string) {
               sourceModuleSystemId: sourceNodeId,
               sourcePortSystemId: sourcePortId,
             })
-        : await (
-            useSubsystemVariant
-              ? createControlLinkWithSubsystems
-              : createControlLink
-          )(projectId, {
-            endComponentSystemId: targetNodeId,
-            endPortSystemId: targetPortId,
-            linkType: toControlLinkType(toDataLinkType(edgeMode)),
-            startComponentSystemId: sourceNodeId,
-            startPortSystemId: sourcePortId,
-          });
+        : useSubsystemVariant
+          ? await createControlLinkWithSubsystems(projectId, {
+              endComponentSystemId: targetNodeId,
+              endPortSystemId: targetPortId,
+              isInterUsecase: edgeMode === 'interUsecase',
+              startComponentSystemId: sourceNodeId,
+              startPortSystemId: sourcePortId,
+            })
+          : await createControlLink(projectId, {
+              endModuleSystemId: targetNodeId,
+              endPortSystemId: targetPortId,
+              isInterUsecase: edgeMode === 'interUsecase',
+              startModuleSystemId: sourceNodeId,
+              startPortSystemId: sourcePortId,
+            });
 
     if (hasBlockingIssues(result) || !result.data) {
       showToast(

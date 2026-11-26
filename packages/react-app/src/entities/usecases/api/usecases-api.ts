@@ -18,6 +18,7 @@ import type {
   ComponentCollectionDto,
   ControlLinkDto,
   CreateControlLinkRequest,
+  CreateControlLinkWithSubsystemsRequest,
   CreateDataLinkRequest,
   CreateDataLinkWithSubsystemsRequest,
   DataLinkDto,
@@ -319,7 +320,7 @@ export async function createControlLink(
  */
 export async function createControlLinkWithSubsystems(
   projectId: string,
-  request: CreateControlLinkRequest,
+  request: CreateControlLinkWithSubsystemsRequest,
 ): Promise<LinkOperationResult> {
   return httpClient.post<ComponentCollectionDto>(
     `/projects/${projectId}/control-links/with-subsystems`,

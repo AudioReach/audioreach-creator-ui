@@ -167,10 +167,10 @@ describe('createLinkOperations — connectPorts', () => {
 
     expect(result).toBe(true);
     expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {
-      endComponentSystemId: 'mod-B',
+      endModuleSystemId: 'mod-B',
       endPortSystemId: '20',
-      linkType: 'NORMAL',
-      startComponentSystemId: 'mod-A',
+      isInterUsecase: false,
+      startModuleSystemId: 'mod-A',
       startPortSystemId: '10',
     });
     expect(mockCreateControlLinkWithSubsystems).not.toHaveBeenCalled();
@@ -236,10 +236,10 @@ describe('createLinkOperations — connectPorts', () => {
     );
 
     expect(mockCreateControlLink).toHaveBeenCalledWith('proj-1', {
-      endComponentSystemId: 'mod-B',
+      endModuleSystemId: 'mod-B',
       endPortSystemId: '20',
-      linkType: 'INTER_USECASE',
-      startComponentSystemId: 'mod-A',
+      isInterUsecase: true,
+      startModuleSystemId: 'mod-A',
       startPortSystemId: '10',
     });
   });
@@ -319,7 +319,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'mod-B',
       endPortSystemId: '20',
-      linkType: 'NORMAL',
+      isInterUsecase: false,
       startComponentSystemId: 'ss-1',
       startPortSystemId: '10',
     });
@@ -431,7 +431,7 @@ describe('createLinkOperations — connectPorts', () => {
     expect(mockCreateControlLinkWithSubsystems).toHaveBeenCalledWith('proj-1', {
       endComponentSystemId: 'sys-ss-2',
       endPortSystemId: '20',
-      linkType: 'NORMAL',
+      isInterUsecase: false,
       startComponentSystemId: 'sys-ss-1',
       startPortSystemId: '10',
     });
