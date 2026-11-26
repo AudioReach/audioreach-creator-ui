@@ -484,4 +484,124 @@ describe('context-menu-config', () => {
       linkType,
     );
   });
+
+  describe('subgraph link add/remove items', () => {
+    const edge = (sourceNodeId: string, targetNodeId: string) => ({
+      edge: {
+        edgeKind: 'data' as const,
+        id: 'e1',
+        sourceNodeId,
+        sourcePortId: 'p1',
+        targetNodeId,
+        targetPortId: 'p2',
+      },
+      kind: 'data-link' as const,
+    });
+    const levelView = {
+      levelId: 'l',
+      subgraphs: [
+        {id: 'sg1', nodeKind: 'subgraph'},
+        {id: 'sg2', nodeKind: 'subgraph'},
+      ],
+    };
+
+    it('adds Add/Remove for subgraph-to-subgraph links', () => {
+      const config = configFor(
+        makeStore({effectiveLevelView: levelView} as never),
+      );
+      expect(
+        config.getItems(edge('sg1', 'sg2')).map((item) => item.id),
+      ).toEqual(['delete', 'add-link', 'remove-link']);
+    });
+
+    it('adds Add/Remove for module links across different subgraphs', () => {
+      const config = configFor(
+        makeStore({
+          effectiveLevelView: {
+            containers: [{id: 'c1', parentId: 'sg2'}],
+            levelId: 'l',
+            modules: [
+              {id: 'm1', parentId: 'sg1'},
+              {id: 'm2', parentId: 'c1'},
+            ],
+            subgraphs: [
+              {id: 'sg1', nodeKind: 'subgraph'},
+              {id: 'sg2', nodeKind: 'subgraph'},
+            ],
+          },
+        } as never),
+      );
+      expect(config.getItems(edge('m1', 'm2')).map((item) => item.id)).toEqual([
+        'delete',
+        'add-link',
+        'remove-link',
+      ]);
+    });
+
+    it('adds Add/Remove for links between collapsed subgraph proxies', () => {
+      const config = configFor(
+        makeStore({
+          effectiveLevelView: {
+            levelId: 'l',
+            subgraphProxies: [
+              {id: 'p1', nodeKind: 'subgraph-proxy'},
+              {id: 'p2', nodeKind: 'subgraph-proxy'},
+            ],
+          },
+        } as never),
+      );
+      expect(config.getItems(edge('p1', 'p2')).map((item) => item.id)).toEqual([
+        'delete',
+        'add-link',
+        'remove-link',
+      ]);
+    });
+
+    it('offers only Add/Remove on locked collapsed proxy links', () => {
+      const config = configFor(
+        makeStore({
+          effectiveLevelView: {
+            levelId: 'l',
+            subgraphProxies: [
+              {id: 'p1', nodeKind: 'subgraph-proxy'},
+              {id: 'p2', nodeKind: 'subgraph-proxy'},
+            ],
+          },
+        } as never),
+      );
+      const target = edge('p1', 'p2');
+      expect(
+        config
+          .getItems({...target, edge: {...target.edge, locked: true}})
+          .map((item) => item.id),
+      ).toEqual(['add-link', 'remove-link']);
+    });
+
+    it('omits Add/Remove for links inside one subgraph', () => {
+      const config = configFor(
+        makeStore({
+          effectiveLevelView: {
+            levelId: 'l',
+            modules: [
+              {id: 'm1', parentId: 'sg1'},
+              {id: 'm2', parentId: 'sg1'},
+            ],
+            subgraphs: [{id: 'sg1', nodeKind: 'subgraph'}],
+          },
+        } as never),
+      );
+      expect(config.getItems(edge('m1', 'm2')).map((item) => item.id)).toEqual([
+        'delete',
+      ]);
+    });
+
+    it('omits Add/Remove when an end is not a subgraph', () => {
+      const config = configFor(
+        makeStore({effectiveLevelView: levelView} as never),
+      );
+      expect(
+        config.getItems(edge('sg1', 'module-1')).map((item) => item.id),
+      ).toEqual(['delete']);
+    });
+  });
 });

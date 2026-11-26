@@ -5,7 +5,13 @@
 
 import {ChevronRight, Link, Minus, Plus, Trash2} from 'lucide-react';
 
-import {EDGE_KIND, PORT_IO_TYPE, type PortIoType} from '~entities/graph';
+import {
+  EDGE_KIND,
+  NODE_KIND,
+  PORT_IO_TYPE,
+  type AnyNode,
+  type PortIoType,
+} from '~entities/graph';
 import {
   DELETE_HANDLERS,
   resolveGraphDesignerNodeId,
@@ -66,6 +72,10 @@ const MANUAL_USECASE_ITEMS = [
     label: 'Remove from Manual Usecase',
   },
 ];
+const SUBGRAPH_LINK_ITEMS: ContextMenuItem[] = [
+  {icon: Plus, id: 'add-link', label: 'Add'},
+  {icon: Minus, id: 'remove-link', label: 'Remove'},
+];
 
 type EdgeTarget = Extract<
   ContextMenuTarget,
@@ -113,6 +123,37 @@ function buildSubsystemPlacementItems(
       ? [{id: 'remove-from-subsystem', label: 'Remove from Subsystem'}]
       : []),
   ];
+}
+function isSubgraphToSubgraphLink(
+  store: GraphDesignerStore,
+  edge: {sourceNodeId: string; targetNodeId: string},
+): boolean {
+  const view = store.effectiveLevelView;
+  const nodes: AnyNode[] = [
+    ...(view?.subgraphs ?? []),
+    ...(view?.subgraphProxies ?? []),
+    ...(view?.containers ?? []),
+    ...(view?.modules ?? []),
+  ];
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const owningSubgraphId = (id: string) => {
+    for (
+      let node = byId.get(id), hops = 0;
+      node && hops <= nodes.length;
+      node = node.parentId ? byId.get(node.parentId) : undefined, hops++
+    ) {
+      if (
+        node.nodeKind === NODE_KIND.SUBGRAPH ||
+        node.nodeKind === NODE_KIND.SUBGRAPH_PROXY
+      ) {
+        return node.id;
+      }
+    }
+    return null;
+  };
+  const source = owningSubgraphId(edge.sourceNodeId);
+  const target = owningSubgraphId(edge.targetNodeId);
+  return source !== null && target !== null && source !== target;
 }
 
 function isPairLink(store: GraphDesignerStore, connectionId: string): boolean {
@@ -270,8 +311,14 @@ export function buildContextMenuConfig(
         case 'proxy-control-link':
         case 'proxy-data-link':
           return [
-            {icon: Trash2, id: 'delete', label: 'Delete'},
-            ...(isPairLink(store, target.edge.id)
+            ...(target.edge.locked
+              ? []
+              : [{icon: Trash2, id: 'delete', label: 'Delete'}]),
+            // Only links between two subgraphs get Add/Remove.
+            ...(isSubgraphToSubgraphLink(store, target.edge)
+              ? SUBGRAPH_LINK_ITEMS
+              : []),
+            ...(!target.edge.locked && isPairLink(store, target.edge.id)
               ? [{id: 'exclude-link', label: 'Exclude Link'}]
               : []),
           ];

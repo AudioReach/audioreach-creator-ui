@@ -33,13 +33,7 @@ export function EdgeActionsToolbar({
   const mode = useVisualizerStore((state) => state.mode);
   const config = useVisualizerStore((state) => state.contextMenu);
 
-  if (
-    !selected ||
-    mode !== VISUALIZER_MODE.EDIT ||
-    !edge ||
-    edge.locked ||
-    !config
-  ) {
+  if (!selected || mode !== VISUALIZER_MODE.EDIT || !edge || !config) {
     return null;
   }
 
