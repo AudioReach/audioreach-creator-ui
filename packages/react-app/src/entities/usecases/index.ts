@@ -20,6 +20,7 @@ export {
 } from './api/usecases-api';
 export type {
   CreateControlLinkRequest,
+  CreateControlLinkWithSubsystemsRequest,
   CreateDataLinkRequest,
   CreateDataLinkWithSubsystemsRequest,
   ControlLinkDto,

@@ -159,9 +159,18 @@ export interface ControlLinkDto {
 }
 
 export interface CreateControlLinkRequest {
+  endModuleSystemId: string;
+  endPortSystemId: string;
+  isInterUsecase?: boolean;
+  parentSystemId?: string;
+  startModuleSystemId: string;
+  startPortSystemId: string;
+}
+
+export interface CreateControlLinkWithSubsystemsRequest {
   endComponentSystemId: string;
   endPortSystemId: string;
-  linkType: ControlLinkType;
+  isInterUsecase?: boolean;
   parentSystemId?: string;
   startComponentSystemId: string;
   startPortSystemId: string;
