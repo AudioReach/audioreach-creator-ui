@@ -45,8 +45,9 @@ export interface ApiIssueFixOption {
   commandPayload: Record<string, unknown>;
   commandType: string;
   description: string;
+  /** Stable fix-option identifier, rather than an entity system ID. */
+  id: string;
   requiredClientInputs: ApiIssueFixOptionClientInput[];
-  systemId: string;
 }
 
 export interface ApiIssue {

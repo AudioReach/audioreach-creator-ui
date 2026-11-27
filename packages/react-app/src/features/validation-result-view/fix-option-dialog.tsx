@@ -33,17 +33,15 @@ export function FixOptionDialog({
 }: FixOptionDialogProps) {
   const options = result.fixOptions ?? [];
   const executableOptions = options.filter(isExecutable);
-  const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   useEffect(() => {
     const nextOptions = result.fixOptions?.filter(isExecutable) ?? [];
-    setSelectedSystemId(
-      nextOptions.length === 1 ? nextOptions[0].systemId : null,
-    );
+    setSelectedOptionId(nextOptions.length === 1 ? nextOptions[0].id : null);
   }, [open, result.fixOptions, result.id]);
 
   const selectedOption = executableOptions.find(
-    (option) => option.systemId === selectedSystemId,
+    (option) => option.id === selectedOptionId,
   );
 
   const handleConfirm = (): void => {
@@ -79,22 +77,22 @@ export function FixOptionDialog({
               <p className="text-neutral-primary text-sm">{result.message}</p>
             </div>
             <RadioGroup.Root
-              onValueChange={setSelectedSystemId}
-              value={selectedSystemId}
+              onValueChange={setSelectedOptionId}
+              value={selectedOptionId}
             >
               <RadioGroup.Items className="flex flex-col gap-2">
                 {options.map((option) => {
                   const disabled = !isExecutable(option);
                   return (
                     <div
-                      key={option.systemId}
+                      key={option.id}
                       className="border-neutral-border rounded-md border p-3"
                     >
                       <Radio
                         disabled={disabled || isSubmitting}
                         label={option.description}
                         size="sm"
-                        value={option.systemId}
+                        value={option.id}
                       />
                       {disabled && (
                         <p className="text-neutral-secondary mt-2 text-xs">

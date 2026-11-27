@@ -101,8 +101,8 @@ describe('FixOptionDialog', () => {
       commandPayload: {mode: 'KEEP_EXISTING'},
       commandType: 'ResolveSameGkvCollisionCommand',
       description: 'Keep existing usecase',
+      id: 'collision-1-KEEP_EXISTING',
       requiredClientInputs: [],
-      systemId: 'collision-1-KEEP_EXISTING',
     };
     const onConfirm = jest.fn();
 
@@ -128,15 +128,15 @@ describe('FixOptionDialog', () => {
       commandPayload: {mode: 'KEEP_EXISTING'},
       commandType: 'ResolveSameGkvCollisionCommand',
       description: 'Keep existing usecase',
+      id: 'collision-1-KEEP_EXISTING',
       requiredClientInputs: [],
-      systemId: 'collision-1-KEEP_EXISTING',
     };
     const secondOption = {
       commandPayload: {mode: 'USE_IMPORTED'},
       commandType: 'ResolveSameGkvCollisionCommand',
       description: 'Use imported usecase',
+      id: 'collision-1-USE_IMPORTED',
       requiredClientInputs: [],
-      systemId: 'collision-1-USE_IMPORTED',
     };
     const onConfirm = jest.fn();
 
@@ -165,10 +165,10 @@ describe('FixOptionDialog', () => {
       commandPayload: {mode: 'CUSTOM'},
       commandType: 'ResolveSameGkvCollisionCommand',
       description: 'Choose custom usecase',
+      id: 'collision-1-CUSTOM',
       requiredClientInputs: [
         {field: 'usecaseId', label: 'Usecase', type: 'STRING' as const},
       ],
-      systemId: 'collision-1-CUSTOM',
     };
 
     render(
