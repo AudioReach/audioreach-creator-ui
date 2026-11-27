@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {UnsavedChangesDialog} from './unsaved-changes-dialog';
+import {UnsavedChangesDialog} from '~shared/controls/unsaved-changes-dialog';
 
 interface IndexSwitchDialogProps {
   onCancel: () => void;

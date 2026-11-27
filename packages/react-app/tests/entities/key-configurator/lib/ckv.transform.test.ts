@@ -1,5 +1,6 @@
 import {
   buildKeyDefinitionLookup,
+  filterVoiceKeys,
   transformCkvsToConfiguredCkvs,
   transformConfiguredCkvsToCkvs,
   transformKeyDefinitionsToCalibrationKeys,
@@ -164,5 +165,49 @@ describe('transformConfiguredCkvsToCkvs', () => {
         systemId: 'p-100',
       },
     ]);
+  });
+});
+
+describe('filterVoiceKeys', () => {
+  it('keeps only key definitions whose isVoice is true', () => {
+    const keyDefinitions = [
+      {
+        isVoice: true,
+        name: 'VoiceKey',
+        naturalId: 1,
+        systemId: 'k1',
+        values: [],
+      } as never,
+      {
+        isVoice: false,
+        name: 'OtherKey',
+        naturalId: 2,
+        systemId: 'k2',
+        values: [],
+      } as never,
+    ];
+    const result = filterVoiceKeys(keyDefinitions);
+    expect(Object.keys(result)).toEqual(['VoiceKey']);
+  });
+
+  it('builds voice keys directly from the definitions, with no other input', () => {
+    const keyDefinitions = [
+      {
+        isVoice: true,
+        name: 'Direction',
+        naturalId: 5,
+        systemId: 'k5',
+        values: [{name: 'Tx', naturalId: 1, systemId: 'v1'}],
+      } as never,
+    ];
+    const result = filterVoiceKeys(keyDefinitions);
+    expect(result).toEqual({
+      Direction: {
+        id: 5,
+        name: 'Direction',
+        systemId: 'k5',
+        values: [{id: 1, name: 'Tx', systemId: 'v1'}],
+      },
+    });
   });
 });

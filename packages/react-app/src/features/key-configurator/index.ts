@@ -15,3 +15,6 @@ export {
 
 // Subsystem configuration exports
 export * from './subsystem-configurator-view';
+
+// VCPM configuration exports
+export * from './vcpm-configurator-view';

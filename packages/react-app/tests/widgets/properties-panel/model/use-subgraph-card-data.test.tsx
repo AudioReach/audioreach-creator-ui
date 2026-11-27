@@ -92,6 +92,26 @@ describe('useSubgraphCardData scenario save', () => {
     expect(onStagedChange).toHaveBeenCalledTimes(1);
   });
 
+  // The scenario PUT returns 204 No Content on success, so `data` is
+  // undefined; that must not be mistaken for a failed save.
+  it('treats a bodyless (204) scenario PUT response as success', async () => {
+    const voiceCallScenario: PropertyDto = {
+      ...scenario,
+      elements: scenario.elements?.map((element) => ({
+        ...element,
+        value: '3',
+      })),
+    };
+    (fetchSubgraphProperties as jest.Mock)
+      .mockResolvedValueOnce({data: [scenario], success: true})
+      .mockResolvedValueOnce({data: [voiceCallScenario], success: true});
+    (patchSubgraphScenario as jest.Mock).mockResolvedValue({success: true});
+
+    await commitScenario();
+
+    expect(onStagedChange).toHaveBeenCalledTimes(1);
+  });
+
   // A rejected scenario PUT stages nothing.
   it('reports nothing when the scenario PUT fails', async () => {
     (fetchSubgraphProperties as jest.Mock).mockResolvedValue({
@@ -103,5 +123,76 @@ describe('useSubgraphCardData scenario save', () => {
     });
     await commitScenario();
     expect(onStagedChange).not.toHaveBeenCalled();
+  });
+
+  it('reports isVoiceCall via onScenarioIdChanged when the refresh succeeds', async () => {
+    const onScenarioIdChanged = jest.fn();
+    const voiceCallScenario: PropertyDto = {
+      ...scenario,
+      elements: scenario.elements?.map((element) => ({
+        ...element,
+        value: '3',
+      })),
+    };
+    (fetchSubgraphProperties as jest.Mock)
+      .mockResolvedValueOnce({data: [scenario], success: true})
+      .mockResolvedValue({data: [voiceCallScenario], success: true});
+    (patchSubgraphScenario as jest.Mock).mockResolvedValue({
+      data: {},
+      success: true,
+    });
+
+    const {result} = renderHook(() =>
+      useSubgraphCardData({
+        onScenarioIdChanged,
+        onStagedChange,
+        projectId: 'p',
+        subgraphId: 'sg-1',
+      }),
+    );
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    await act(async () => {
+      await result.current.handleCommit([dirtyItem]);
+    });
+
+    expect(onScenarioIdChanged).toHaveBeenCalledWith('sg-1', true);
+  });
+
+  // saveProperty already re-fetches and the hook applies that result
+  // directly; a further refetch is both wasted work and a race that can
+  // clobber the just-applied value with a stale read.
+  it('does not refetch a second time after the scenario save already refreshed', async () => {
+    const voiceCallScenario: PropertyDto = {
+      ...scenario,
+      elements: scenario.elements?.map((element) => ({
+        ...element,
+        value: '3',
+      })),
+    };
+    (fetchSubgraphProperties as jest.Mock)
+      .mockResolvedValueOnce({data: [scenario], success: true})
+      .mockResolvedValueOnce({data: [voiceCallScenario], success: true})
+      .mockResolvedValue({data: [scenario], success: true});
+    (patchSubgraphScenario as jest.Mock).mockResolvedValue({
+      data: {},
+      success: true,
+    });
+
+    const {result} = renderHook(() =>
+      useSubgraphCardData({onStagedChange, projectId: 'p', subgraphId: 'sg-1'}),
+    );
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    await act(async () => {
+      await result.current.handleCommit([dirtyItem]);
+    });
+
+    expect(fetchSubgraphProperties).toHaveBeenCalledTimes(2);
+    const scenarioElement = result.current.data?.items
+      .find((item) => item.id === String(SCENARIO_PROPERTY_ID))
+      ?.elements?.find(
+        (element) =>
+          element.type === 'ConfigElement' && element.name === 'Scenario ID',
+      );
+    expect(scenarioElement).toMatchObject({value: '3'});
   });
 });

@@ -9,6 +9,7 @@ export function makeProperty(
   name: string,
   value = '1',
   allowedValues: Array<{name: string; value: string}> = [],
+  naturalId: number = name.length,
 ): PropertyDto {
   return {
     elements: [
@@ -24,7 +25,7 @@ export function makeProperty(
       },
     ],
     hasDefinition: true,
-    naturalId: name.length,
+    naturalId,
     propertyName: name,
     systemId: `${name}-system-id`,
   };

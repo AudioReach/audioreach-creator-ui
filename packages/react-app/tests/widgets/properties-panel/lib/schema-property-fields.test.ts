@@ -4,10 +4,11 @@
  */
 
 import type {TreeViewData} from '~features/generic-tree-view';
-import type {PropertyElement} from '~shared/lib/property.dto';
+import type {PropertyDto, PropertyElement} from '~shared/lib/property.dto';
 import {
   buildConfigElementValueDirtyItem,
   findConfigElement,
+  findPropertyConfigElement,
 } from '~widgets/properties-panel/lib/schema-property-fields';
 
 function makeData(elements: PropertyElement[]): TreeViewData {
@@ -83,5 +84,52 @@ describe('schema-property-fields', () => {
         value: [],
       },
     ]);
+  });
+});
+
+describe('findPropertyConfigElement', () => {
+  it('finds a config element across multiple raw properties', () => {
+    const properties: PropertyDto[] = [
+      {
+        elements: [],
+        hasDefinition: true,
+        naturalId: 1,
+        propertyName: 'Other',
+        systemId: 'prop-other',
+      },
+      {
+        elements: [
+          {
+            isReadOnly: false,
+            name: 'Scenario ID',
+            policy: 'BASIC',
+            type: 'ConfigElement',
+            value: '3',
+          } as PropertyElement,
+        ],
+        hasDefinition: true,
+        naturalId: 2,
+        propertyName: 'Scenario ID',
+        systemId: 'prop-scenario',
+      },
+    ];
+
+    expect(findPropertyConfigElement(properties, 'Scenario ID')?.value).toBe(
+      '3',
+    );
+  });
+
+  it('returns null when no property has a matching config element', () => {
+    const properties: PropertyDto[] = [
+      {
+        elements: [],
+        hasDefinition: true,
+        naturalId: 1,
+        propertyName: 'Other',
+        systemId: 'prop-other',
+      },
+    ];
+
+    expect(findPropertyConfigElement(properties, 'Scenario ID')).toBeNull();
   });
 });

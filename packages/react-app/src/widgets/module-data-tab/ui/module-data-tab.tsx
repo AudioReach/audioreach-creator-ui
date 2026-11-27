@@ -15,6 +15,7 @@ import {
   type TreeViewItem,
 } from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
+import {UnsavedChangesDialog} from '~shared/controls/unsaved-changes-dialog';
 import {logger} from '~shared/lib/logger';
 import {hasInvalidPaths, isUiStateDirty} from '~shared/lib/tree-view-ui-state';
 import type {GenericTreeViewUiState} from '~shared/types/tree-view-ui-state';
@@ -31,7 +32,6 @@ import {
 
 import {CalDataPanel} from './cal-data-panel';
 import {TagDataPanel} from './tag-data-panel';
-import {UnsavedChangesDialog} from './unsaved-changes-dialog';
 
 async function writeDirtyTab<Dto, Payload>(
   moduleInstanceId: string,

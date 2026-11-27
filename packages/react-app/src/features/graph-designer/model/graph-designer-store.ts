@@ -84,6 +84,11 @@ import {
   createSubgraphListSlice,
   type SubgraphListSlice,
 } from './subgraph-list-slice';
+import {createVcpmDataSlice, type VcpmDataSlice} from './vcpm-data-slice';
+import {
+  createVcpmKeyConfigSlice,
+  type VcpmKeyConfigSlice,
+} from './vcpm-key-config-slice';
 import {createVisualizerSlice, type VisualizerSlice} from './visualizer-slice';
 
 export type GraphDesignerStore = UsecaseSelectionSlice &
@@ -96,9 +101,11 @@ export type GraphDesignerStore = UsecaseSelectionSlice &
   KeyConfigSlice &
   ModuleTagKeyConfigSlice &
   CalibrationKeyConfigSlice &
+  VcpmKeyConfigSlice &
   ValidationResultSlice &
   ModuleListSlice &
   ModuleDataSlice &
+  VcpmDataSlice &
   ContainerOperations &
   LinkOperations &
   ModuleOperations &
@@ -131,6 +138,7 @@ export function createGraphDesignerStore(
     ...createKeyConfigSlice(set, get),
     ...createModuleTagKeyConfigSlice(set, get, projectId),
     ...createCalibrationKeyConfigSlice(set, get, projectId),
+    ...createVcpmKeyConfigSlice(set, get, projectId),
     ...createValidationResultSlice(set, get),
     ...createModuleListSlice(
       (partial) => set(partial as Partial<GraphDesignerStore>),
@@ -138,6 +146,7 @@ export function createGraphDesignerStore(
       projectId,
     ),
     ...createModuleDataSlice(set, get, projectId),
+    ...createVcpmDataSlice(set, get, projectId),
     ...createContainerOperations(projectId),
     ...createLinkOperations(projectId),
     ...createModuleOperations(set, projectId),
