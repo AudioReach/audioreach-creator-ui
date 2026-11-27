@@ -313,10 +313,11 @@ export function buildContextMenuConfig(
           return;
         }
         if (actionId === 'remove-from-subsystem') {
+          const parentId = parentSubsystemIdOf(store.graphData, nodeId);
           void store.moveToSubsystem(
             get,
             nodeId,
-            parentSubsystemIdOf(store.graphData, nodeId),
+            parentId ? {subsystemId: parentId} : null,
           );
           return;
         }

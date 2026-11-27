@@ -36,8 +36,7 @@ import type {GraphDesignerStore} from '../model/graph-designer-store';
 
 import type {InnerActionOptions} from './module-operations';
 
-export type MoveDestination =
-  {createNew: true} | {subsystemId: string} | string | null;
+export type MoveDestination = {createNew: true} | {subsystemId: string} | null;
 
 export interface SubsystemOperations {
   deleteSubsystem: (
@@ -223,30 +222,14 @@ export function createSubsystemOperations(
       : {subsystemSystemIds: [nodeId], targetSubsystemSystemId};
   }
 
-  function resolveMoveTargetSystemId(
-    destination: MoveDestination,
-  ): string | null {
-    if (destination === null || typeof destination === 'string') {
-      return destination;
-    }
-    if ('subsystemId' in destination) {
-      return destination.subsystemId;
-    }
-    return null;
-  }
-
   function isNewSubsystemDestination(
     destination: MoveDestination,
   ): destination is {createNew: true} {
-    return (
-      destination !== null &&
-      typeof destination !== 'string' &&
-      'createNew' in destination
-    );
+    return destination !== null && 'createNew' in destination;
   }
 
-  // Parent for the new subsystem so it sits beside the node's current one.
-  function siblingParentIdFor(
+  // Parent for the new subsystem, at the same level as the node's subsystem.
+  function findParentSystemId(
     get: () => GraphDesignerStore,
     nodeId: string,
   ): string | undefined {
@@ -258,10 +241,10 @@ export function createSubsystemOperations(
     if (node) {
       return node.parentSubsystemId ?? undefined;
     }
-    const container = Object.values(graphData.subsystems).find((subsystem) =>
-      subsystem.subgraphs.includes(nodeId),
+    const subgraphParent = Object.values(graphData.subsystems).find(
+      (subsystem) => subsystem.subgraphs.includes(nodeId),
     );
-    return container?.parentSubsystemId ?? undefined;
+    return subgraphParent?.parentSubsystemId ?? undefined;
   }
 
   function withMovedMembership(
@@ -469,7 +452,7 @@ export function createSubsystemOperations(
     moveToSubsystem: (get, nodeId, destination) =>
       withMutationLock(get, async () => {
         if (!isNewSubsystemDestination(destination)) {
-          const targetSubsystemId = resolveMoveTargetSystemId(destination);
+          const targetSubsystemId = destination?.subsystemId ?? null;
           if (
             targetSubsystemId !== null &&
             !canMoveToSubsystem(nodeId, targetSubsystemId)
@@ -483,7 +466,7 @@ export function createSubsystemOperations(
           );
         }
 
-        const parentSystemId = siblingParentIdFor(get, nodeId);
+        const parentSystemId = findParentSystemId(get, nodeId);
         const createResult = await createSubsystem(projectId, {
           ...(parentSystemId && {parentSystemId}),
         });

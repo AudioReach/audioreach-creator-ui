@@ -35,6 +35,8 @@ describe('withTopNode', () => {
 describe('toMoveDestination', () => {
   it('maps the virtual Top node to a null destination', () => {
     expect(toMoveDestination(TOP_ID)).toBeNull();
-    expect(toMoveDestination('subsystem-1')).toBe('subsystem-1');
+    expect(toMoveDestination('subsystem-1')).toEqual({
+      subsystemId: 'subsystem-1',
+    });
   });
 });
