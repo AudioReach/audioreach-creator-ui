@@ -13,6 +13,8 @@ let latestPropertiesPanelProps: MockPropertiesPanelProps | null = null;
 interface MockPropertiesPanelProps {
   moduleDefinitionsBySystemId: unknown;
   onNavigateToNode: (nodeId: string) => void;
+  onOpenVcpmConfig: (subgraphId: string, subgraphName: string) => void;
+  onScenarioIdChanged: (subgraphId: string, isVoiceCall: boolean) => void;
   onVirtualControlLinkRowDelete: (realControlLinkId: string) => void;
   onVirtualDataLinkRowDelete: (realDataLinkId: string) => void;
   virtualControlLinks: unknown[];
@@ -26,13 +28,31 @@ jest.mock('~widgets/properties-panel', () => ({
   },
 }));
 
+jest.mock('~widgets/project-layout/project-layout-manager', () => ({
+  tabLayoutService: {createProjectTab: jest.fn()},
+}));
+
+jest.mock('~widgets/vcpm-data-tab', () => ({
+  VcpmDataTab: forwardRef(function VcpmDataTabMock(
+    props: {subgraphSystemId: string},
+    ref: React.Ref<unknown>,
+  ) {
+    useImperativeHandle(ref, () => ({confirmClose: async () => true}));
+    return <div data-testid={`vcpm-data-tab-${props.subgraphSystemId}`} />;
+  }),
+}));
+
 import {act, render, screen} from '@testing-library/react';
+import {forwardRef, useImperativeHandle} from 'react';
 
 import {EDGE_KIND, type LevelView} from '~entities/graph';
 import {GraphDesignerStoreContext} from '~features/graph-designer';
 import {createGraphDesignerStore} from '~features/graph-designer/model/graph-designer-store';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {PropertiesPanelHost} from '~widgets/graph-designer/ui/properties-panel-host';
+import {useProjectLayoutStore} from '~shared/store';
+import {TabType} from '~shared/store/project-layout.types';
+import {tabLayoutService} from '~widgets/project-layout/project-layout-manager';
 
 const PROJECT_ID = 'proj-1';
 
@@ -79,6 +99,33 @@ function renderHost(graph?: LevelView) {
   );
 
   return store;
+}
+
+function addSubgraph(
+  store: ReturnType<typeof createGraphDesignerStore>,
+  subgraphId: string,
+  naturalId?: number,
+) {
+  const graphData = store.getState().graphData;
+  if (!graphData) {
+    return;
+  }
+  store.setState({
+    graphData: {
+      ...graphData,
+      subgraphs: {
+        ...graphData.subgraphs,
+        [subgraphId]: {
+          containers: [],
+          kvVectors: [],
+          ...(naturalId === undefined ? {} : {naturalId}),
+          subgraphName: 'Subgraph 1',
+          subgraphType: 'Standard',
+          systemId: subgraphId,
+        },
+      },
+    },
+  });
 }
 
 describe('PropertiesPanelHost', () => {
@@ -170,5 +217,140 @@ describe('PropertiesPanelHost', () => {
     expect(
       store.getState().excludedLinks.map((link) => link.systemId),
     ).toContain('cl-1');
+  });
+
+  describe('VCPM config tab', () => {
+    beforeEach(() => {
+      let tabNumber = 0;
+      jest
+        .mocked(tabLayoutService.createProjectTab)
+        .mockImplementation((title) => ({
+          id: `vcpm-tab-${++tabNumber}`,
+          tabType: TabType.ProjectTab,
+          title,
+        }));
+    });
+
+    it('opens a new VCPM tab via onOpenVcpmConfig', async () => {
+      const store = renderHost();
+      act(() => addSubgraph(store, 'sg-1'));
+      jest.spyOn(store.getState(), 'queryVcpmData').mockResolvedValue(true);
+
+      await act(async () =>
+        latestPropertiesPanelProps?.onOpenVcpmConfig('sg-1', 'Subgraph 1'),
+      );
+
+      expect(tabLayoutService.createProjectTab).toHaveBeenCalled();
+      expect(store.getState().vcpmOpenTabs['sg-1']).toBe('vcpm-tab-1');
+    });
+
+    it('titles the VCPM tab with the subgraph natural ID in hex', async () => {
+      const store = renderHost();
+      act(() => addSubgraph(store, 'sg-1', 2_952_790_017));
+      jest.spyOn(store.getState(), 'queryVcpmData').mockResolvedValue(true);
+
+      await act(async () =>
+        latestPropertiesPanelProps?.onOpenVcpmConfig('sg-1', 'Subgraph 1'),
+      );
+
+      expect(tabLayoutService.createProjectTab).toHaveBeenCalledWith(
+        'VCPM Configuration - Subgraph (0xB0000001)',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('falls back to the subgraph systemId in the title when no natural ID is known', async () => {
+      const store = renderHost();
+      act(() => addSubgraph(store, 'sg-1'));
+      jest.spyOn(store.getState(), 'queryVcpmData').mockResolvedValue(true);
+
+      await act(async () =>
+        latestPropertiesPanelProps?.onOpenVcpmConfig('sg-1', 'Subgraph 1'),
+      );
+
+      expect(tabLayoutService.createProjectTab).toHaveBeenCalledWith(
+        'VCPM Configuration - Subgraph (sg-1)',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('reuses the existing tab on reopen', async () => {
+      const store = renderHost();
+      act(() => {
+        addSubgraph(store, 'sg-1');
+        store.setState({vcpmOpenTabs: {'sg-1': 'vcpm-tab-1'}});
+      });
+      const setActiveProjectTab = jest.spyOn(
+        useProjectLayoutStore.getState(),
+        'setActiveProjectTab',
+      );
+
+      await act(async () =>
+        latestPropertiesPanelProps?.onOpenVcpmConfig('sg-1', 'Subgraph 1'),
+      );
+
+      expect(setActiveProjectTab).toHaveBeenCalledWith(
+        PROJECT_ID,
+        'vcpm-tab-1',
+      );
+      expect(tabLayoutService.createProjectTab).not.toHaveBeenCalled();
+    });
+
+    it('force-closes the open VCPM tab when its subgraph is deleted', () => {
+      const store = renderHost();
+      act(() => {
+        addSubgraph(store, 'sg-1');
+        store.setState({vcpmOpenTabs: {'sg-1': 'vcpm-tab-1'}});
+      });
+      const removeProjectTab = jest.spyOn(
+        useProjectLayoutStore.getState(),
+        'removeProjectTab',
+      );
+
+      act(() =>
+        store.setState({
+          graphData: {...store.getState().graphData!, subgraphs: {}},
+        }),
+      );
+
+      expect(removeProjectTab).toHaveBeenCalledWith(PROJECT_ID, 'vcpm-tab-1');
+      expect(store.getState().vcpmOpenTabs['sg-1']).toBeNull();
+    });
+
+    it('does not force-close when the subgraph is merely deselected', () => {
+      const store = renderHost();
+      act(() => {
+        addSubgraph(store, 'sg-1');
+        store.setState({vcpmOpenTabs: {'sg-1': 'vcpm-tab-1'}});
+      });
+      const removeProjectTab = jest.spyOn(
+        useProjectLayoutStore.getState(),
+        'removeProjectTab',
+      );
+
+      act(() => store.setState({selectedEdges: [], selectedNodes: []}));
+
+      expect(removeProjectTab).not.toHaveBeenCalled();
+    });
+
+    it('force-closes the VCPM tab when onScenarioIdChanged reports the scenario left VoiceCall', () => {
+      const store = renderHost();
+      act(() => {
+        addSubgraph(store, 'sg-1');
+        store.setState({vcpmOpenTabs: {'sg-1': 'vcpm-tab-1'}});
+      });
+      const removeProjectTab = jest.spyOn(
+        useProjectLayoutStore.getState(),
+        'removeProjectTab',
+      );
+
+      act(() => latestPropertiesPanelProps?.onScenarioIdChanged('sg-1', false));
+
+      expect(removeProjectTab).toHaveBeenCalledWith(PROJECT_ID, 'vcpm-tab-1');
+    });
   });
 });

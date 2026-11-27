@@ -107,3 +107,11 @@ export function transformConfiguredCkvsToCkvs(
     systemId: ckv.systemId,
   }));
 }
+
+export function filterVoiceKeys(
+  keyDefinitions: KeyDefinitionResponseDto[],
+): Record<string, GraphKey> {
+  return transformKeyDefinitionsToCalibrationKeys(
+    keyDefinitions.filter((definition) => definition.isVoice),
+  );
+}

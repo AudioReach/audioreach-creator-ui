@@ -95,6 +95,18 @@ beforeEach(() => {
   });
 });
 
+describe('GraphDesignerStore — vcpm slice composition', () => {
+  it('includes the vcpm data and vcpm key config slices', () => {
+    const store = createGraphDesignerStore('tab-1', 'project-1');
+    const state = store.getState();
+
+    expect(state.vcpmDataBySubgraphId).toEqual({});
+    expect(state.configuredVcpmCkvsBySubgraphId).toEqual({});
+    expect(typeof state.queryVcpmData).toBe('function');
+    expect(typeof state.addVcpmCkvs).toBe('function');
+  });
+});
+
 describe('GraphDesignerStore — EditSessionSlice composition', () => {
   it('composes EditSessionSlice with correct initial state and methods', () => {
     const store = createGraphDesignerStore('tab-1', 'proj-1');

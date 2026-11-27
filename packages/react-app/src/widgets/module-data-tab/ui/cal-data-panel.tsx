@@ -16,7 +16,9 @@ import {selectCollection} from '@qualcomm-ui/core/select';
 import type {CkvDto} from '~entities/spf-module-data';
 import type {GenericTreeViewHandle} from '~features/generic-tree-view';
 import {useGraphDesignerStoreShallow} from '~features/graph-designer';
+import {IndexSelect} from '~shared/controls/index-select';
 import {isUiStateDirty} from '~shared/lib/tree-view-ui-state';
+import {useIndexSwitchDialog} from '~shared/lib/use-index-switch-dialog';
 
 import {
   calDataDtoToTreeViewData,
@@ -24,9 +26,7 @@ import {
 } from '../lib/cal-data-adapter';
 import {keyValuePairsToLabel} from '../lib/key-value-label';
 import {compareByKeyValueSystemIds} from '../lib/sort-by-key-value';
-import {useIndexSwitchDialog} from '../use-index-switch-dialog';
 
-import {IndexSelect} from './index-select';
 import {IndexSwitchDialog} from './index-switch-dialog';
 import {ModuleDataPanelBody} from './module-data-panel-body';
 

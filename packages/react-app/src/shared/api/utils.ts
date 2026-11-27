@@ -49,6 +49,10 @@ export async function processApiResponse<T>(
     };
   }
 
+  if (response.status === 204) {
+    return {data: undefined as T};
+  }
+
   const contentType = response.headers.get('content-type') ?? '';
 
   if (contentType.includes('multipart/form-data')) {

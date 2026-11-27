@@ -89,6 +89,22 @@ export function propertyDtosHaveConfigName(
   );
 }
 
+export function findPropertyConfigElement(
+  properties: PropertyDto[],
+  name: string,
+): ConfigElementDto | null {
+  for (const property of properties) {
+    const element = collectConfigElements(property.elements ?? []).find(
+      (candidate) => candidate.name === name,
+    );
+    if (element) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
 export function toNameValueOptions(
   element: ConfigElementDto | null,
 ): Array<{label: string; value: string}> {

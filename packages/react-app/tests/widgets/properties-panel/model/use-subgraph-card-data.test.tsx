@@ -104,4 +104,37 @@ describe('useSubgraphCardData scenario save', () => {
     await commitScenario();
     expect(onStagedChange).not.toHaveBeenCalled();
   });
+
+  it('reports isVoiceCall via onScenarioIdChanged when the refresh succeeds', async () => {
+    const onScenarioIdChanged = jest.fn();
+    const voiceCallScenario: PropertyDto = {
+      ...scenario,
+      elements: scenario.elements?.map((element) => ({
+        ...element,
+        value: '3',
+      })),
+    };
+    (fetchSubgraphProperties as jest.Mock)
+      .mockResolvedValueOnce({data: [scenario], success: true})
+      .mockResolvedValue({data: [voiceCallScenario], success: true});
+    (patchSubgraphScenario as jest.Mock).mockResolvedValue({
+      data: {},
+      success: true,
+    });
+
+    const {result} = renderHook(() =>
+      useSubgraphCardData({
+        onScenarioIdChanged,
+        onStagedChange,
+        projectId: 'p',
+        subgraphId: 'sg-1',
+      }),
+    );
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    await act(async () => {
+      await result.current.handleCommit([dirtyItem]);
+    });
+
+    expect(onScenarioIdChanged).toHaveBeenCalledWith('sg-1', true);
+  });
 });

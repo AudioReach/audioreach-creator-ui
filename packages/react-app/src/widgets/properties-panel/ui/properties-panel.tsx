@@ -55,6 +55,8 @@ export interface PropertiesPanelProps {
     module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
+  onOpenVcpmConfig?: (subgraphId: string, subgraphName: string) => void;
+  onScenarioIdChanged?: (subgraphId: string, isVoiceCall: boolean) => void;
   onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onSubsystemNameChange: (id: string, name: string) => void;
@@ -78,6 +80,8 @@ export function PropertiesPanel({
   onModuleContainerChange,
   onModulePortCountChange,
   onNavigateToNode,
+  onOpenVcpmConfig,
+  onScenarioIdChanged,
   onSchemaPropertyStaged,
   onSubgraphNameChange,
   onSubsystemNameChange,
@@ -159,6 +163,8 @@ export function PropertiesPanel({
                 onModuleContainerChange,
                 onModulePortCountChange,
                 onNavigateToNode,
+                onOpenVcpmConfig,
+                onScenarioIdChanged,
                 onSchemaPropertyStaged,
                 onSubgraphNameChange,
                 onSubsystemNameChange,
@@ -202,6 +208,8 @@ function renderPropertyCard({
   onModuleContainerChange,
   onModulePortCountChange,
   onNavigateToNode,
+  onOpenVcpmConfig,
+  onScenarioIdChanged,
   onSchemaPropertyStaged,
   onSubgraphNameChange,
   onSubsystemNameChange,
@@ -232,6 +240,8 @@ function renderPropertyCard({
     module?: SpfModuleDto,
   ) => void;
   onNavigateToNode: (nodeId: string) => void;
+  onOpenVcpmConfig?: (subgraphId: string, subgraphName: string) => void;
+  onScenarioIdChanged?: (subgraphId: string, isVoiceCall: boolean) => void;
   onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onSubsystemNameChange: (id: string, name: string) => void;
@@ -249,6 +259,8 @@ function renderPropertyCard({
           {...collapseProps}
           graphData={graphData}
           isEditing={isEditing}
+          onOpenVcpmConfig={onOpenVcpmConfig}
+          onScenarioIdChanged={onScenarioIdChanged}
           onSchemaPropertyStaged={onSchemaPropertyStaged}
           onSubgraphNameChange={onSubgraphNameChange}
           projectId={projectId}

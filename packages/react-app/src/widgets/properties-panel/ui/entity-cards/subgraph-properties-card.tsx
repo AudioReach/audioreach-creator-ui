@@ -5,11 +5,14 @@
 
 import {useCallback} from 'react';
 
+import {Button} from '@qualcomm-ui/react/button';
+
 import {patchSubgraph} from '~entities/subgraphs';
 import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-slice';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow} from '~shared/controls/property-row';
 
+import {findConfigElement} from '../../lib/schema-property-fields';
 import {useStaticFieldSave} from '../../model/use-static-field-save';
 import {useSubgraphCardData} from '../../model/use-subgraph-card-data';
 import {CollapsibleCard} from '../shared/collapsible-card';
@@ -20,6 +23,8 @@ import {CopyableIdRow, MissingEntityAlert} from './card-fields';
 export interface SubgraphPropertiesCardProps extends EntityCollapseProps {
   graphData: UsecaseGraphData;
   isEditing: boolean;
+  onOpenVcpmConfig?: (subgraphId: string, subgraphName: string) => void;
+  onScenarioIdChanged?: (subgraphId: string, isVoiceCall: boolean) => void;
   onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   projectId: string;
@@ -30,6 +35,8 @@ export function SubgraphPropertiesCard({
   graphData,
   isCollapsed,
   isEditing,
+  onOpenVcpmConfig,
+  onScenarioIdChanged,
   onSchemaPropertyStaged,
   onSubgraphNameChange,
   onToggle,
@@ -47,6 +54,8 @@ export function SubgraphPropertiesCard({
       isCollapsed={isCollapsed}
       isEditing={isEditing}
       name={subgraph.subgraphName}
+      onOpenVcpmConfig={onOpenVcpmConfig}
+      onScenarioIdChanged={onScenarioIdChanged}
       onSchemaPropertyStaged={onSchemaPropertyStaged}
       onSubgraphNameChange={onSubgraphNameChange}
       onToggle={onToggle}
@@ -61,6 +70,8 @@ function SubgraphPropertiesCardBody({
   isCollapsed,
   isEditing,
   name,
+  onOpenVcpmConfig,
+  onScenarioIdChanged,
   onSchemaPropertyStaged,
   onSubgraphNameChange,
   onToggle,
@@ -71,6 +82,8 @@ function SubgraphPropertiesCardBody({
   isCollapsed?: boolean;
   isEditing: boolean;
   name: string;
+  onOpenVcpmConfig?: (subgraphId: string, subgraphName: string) => void;
+  onScenarioIdChanged?: (subgraphId: string, isVoiceCall: boolean) => void;
   onSchemaPropertyStaged?: () => void;
   onSubgraphNameChange: (id: string, name: string) => void;
   onToggle?: () => void;
@@ -103,10 +116,13 @@ function SubgraphPropertiesCardBody({
     value: name,
   });
   const schemaData = useSubgraphCardData({
+    onScenarioIdChanged,
     onStagedChange: onSchemaPropertyStaged,
     projectId,
     subgraphId,
   });
+  const isVoiceCall =
+    findConfigElement(schemaData.data, 'Scenario ID')?.value === '3';
 
   return (
     <CollapsibleCard isCollapsed={isCollapsed} onToggle={onToggle} title={name}>
@@ -130,6 +146,15 @@ function SubgraphPropertiesCardBody({
         onRetry={() => void schemaData.load()}
         title="Schema Properties"
       />
+      {isVoiceCall && onOpenVcpmConfig ? (
+        <Button
+          onClick={() => onOpenVcpmConfig(subgraphId, name)}
+          size="sm"
+          variant="outline"
+        >
+          VCPM Config
+        </Button>
+      ) : null}
       {schemaData.saveError ? (
         <div className="text-status-error text-sm" role="alert">
           {schemaData.saveError}

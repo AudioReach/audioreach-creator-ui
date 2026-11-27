@@ -8,7 +8,7 @@ jest.mock('~shared/lib/logger');
 const genericTreeViewMock = jest.fn();
 
 jest.mock('~features/generic-tree-view', () => ({
-  GenericTreeView: (props: unknown) => {
+  GenericTreeView: (props: object) => {
     genericTreeViewMock(props);
     return <div data-testid="generic-tree-view" />;
   },
@@ -23,6 +23,7 @@ jest.mock('~entities/subgraphs', () => ({
 }));
 
 import {render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import {fetchSubgraphProperties} from '~entities/subgraphs';
 import {SubgraphPropertiesCard} from '~widgets/properties-panel/ui/entity-cards/subgraph-properties-card';
@@ -87,5 +88,80 @@ describe('SubgraphPropertiesCard', () => {
     await waitFor(() =>
       expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument(),
     );
+  });
+
+  it('does not render the VCPM Config button when Scenario ID is not VoiceCall', async () => {
+    render(
+      <SubgraphPropertiesCard
+        graphData={makeGraphData()}
+        isEditing
+        onOpenVcpmConfig={jest.fn()}
+        onSubgraphNameChange={jest.fn()}
+        projectId="proj-1"
+        subgraphId="sg-1"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('generic-tree-view')).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole('button', {name: 'VCPM Config'}),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders the VCPM Config button when Scenario ID is VoiceCall', async () => {
+    mockFetchSubgraphProperties.mockResolvedValue({
+      data: [makeProperty('Scenario ID', '3')],
+      message: 'ok',
+      success: true,
+    });
+
+    render(
+      <SubgraphPropertiesCard
+        graphData={makeGraphData()}
+        isEditing
+        onOpenVcpmConfig={jest.fn()}
+        onSubgraphNameChange={jest.fn()}
+        projectId="proj-1"
+        subgraphId="sg-1"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'VCPM Config'}),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('calls onOpenVcpmConfig with the subgraph id and name when clicked', async () => {
+    mockFetchSubgraphProperties.mockResolvedValue({
+      data: [makeProperty('Scenario ID', '3')],
+      message: 'ok',
+      success: true,
+    });
+    const onOpenVcpmConfig = jest.fn();
+    const user = userEvent.setup();
+
+    render(
+      <SubgraphPropertiesCard
+        graphData={makeGraphData()}
+        isEditing
+        onOpenVcpmConfig={onOpenVcpmConfig}
+        onSubgraphNameChange={jest.fn()}
+        projectId="proj-1"
+        subgraphId="sg-1"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'VCPM Config'}),
+      ).toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole('button', {name: 'VCPM Config'}));
+
+    expect(onOpenVcpmConfig).toHaveBeenCalledWith('sg-1', 'Main Subgraph');
   });
 });

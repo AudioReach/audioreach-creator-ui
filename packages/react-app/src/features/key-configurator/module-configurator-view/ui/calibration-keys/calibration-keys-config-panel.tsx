@@ -23,7 +23,6 @@ import {logger} from '~shared/lib/logger';
 import type {
   ConfiguredCkv,
   GraphKey as CalibrationKey,
-  Key,
   KeyValue,
   SortColumn,
   SortOrder,
@@ -34,6 +33,18 @@ import {
 } from '~shared/utils/converter-utils';
 
 import {ConfigSummaryView} from '../../../config-summary-view';
+import {
+  buildCkvSystemId,
+  generateCartesianProduct,
+  getActiveSearchToken,
+  groupSelectedValuesByKey,
+  matchesSearchTerm,
+  partitionKeysBySelection,
+  resolveGraphKeyAndValue,
+  resolveSelectedPairs,
+  sortKeys,
+} from '../../../lib/ckv-picker-selection';
+import {CkvSearchDiagnostics} from '../../../ui/ckv-search-diagnostics';
 import {
   KvVectorEditor,
   type KvVectorEditorSuggestion,
@@ -79,294 +90,6 @@ interface CalibrationKeysConfigPanelProps {
 
 type ActiveCkvOperation = {type: 'add'} | {index: number; type: 'edit'} | null;
 
-/**
- * Determines whether a calibration key or any of its values match the given search term.
- *
- * A match occurs when the key name or key ID matches the search term, or when any of the
- * key's values match by name or ID. Numeric search terms are compared against IDs directly.
- *
- * @param keyName - The display name of the calibration key.
- * @param key - The calibration key object containing its ID and associated values.
- * @param searchTerm - The raw string entered by the user in the search bar.
- * @param searchNumber - The numeric representation of `searchTerm`, or `null` if it is not a valid number.
- * @returns `true` if the key or any of its values match the search term; otherwise `false`.
- */
-const matchesSearchTerm = (
-  keyName: string,
-  key: CalibrationKey,
-  searchTerm: string,
-  searchNumber: number | null,
-): boolean => {
-  const keyMatches =
-    keyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (searchNumber !== null && key.id === searchNumber);
-  const valueMatches = key.values.some(
-    (v) =>
-      v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (searchNumber !== null && v.id === searchNumber),
-  );
-  return keyMatches || valueMatches;
-};
-
-/**
- * Isolates the token currently being typed out of a filter/search string that
- * may contain already-resolved tokens (e.g. `[Volume: Level_0] voi` once a
- * prior token has resolved) — mirrors SGKV's caret-based active token
- * isolation (`getValueOnlyReplacementRange`) without needing caret tracking,
- * since this editor only supports appending at the end. Both ` ` and the
- * legacy `+` join character are treated as boundaries, so a stray `+` never
- * gets folded into the token being matched against key/value names.
- */
-const getActiveSearchToken = (text: string): string => {
-  const separatorIndex = Math.max(text.lastIndexOf(' '), text.lastIndexOf('+'));
-  return separatorIndex < 0
-    ? text.trim()
-    : text.slice(separatorIndex + 1).trim();
-};
-
-/**
- * Returns a sorted copy of the provided key-name array based on the active sort column and order.
- *
- * When `sortColumn` is `null` the original order is preserved. Sorting by `'id'` compares
- * numeric key IDs, while sorting by `'name'` performs a locale-aware, case-insensitive
- * string comparison.
- *
- * @param keys - Array of calibration key names to sort.
- * @param calibrationKeyData - Map from key name to its {@link CalibrationKey} data.
- * @param sortColumn - The column to sort by (`'id'`, `'name'`, or `null` for no sort).
- * @param sortOrder - The direction of the sort: `'asc'` for ascending or `'desc'` for descending.
- * @returns A new sorted array of key names; the original array is not mutated.
- */
-const sortKeys = (
-  keys: string[],
-  calibrationKeyData: Record<string, CalibrationKey>,
-  sortColumn: SortColumn,
-  sortOrder: SortOrder,
-): string[] => {
-  if (!sortColumn) {
-    return keys;
-  }
-
-  return [...keys].sort((a, b) => {
-    let comparison: number;
-    if (sortColumn === 'id') {
-      comparison = calibrationKeyData[a].id - calibrationKeyData[b].id;
-    } else {
-      comparison = a.toLowerCase().localeCompare(b.toLowerCase());
-    }
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-};
-
-/**
- * Reorders the key-name array so that keys with at least one selected value appear first.
- *
- * Keys that have one or more values currently selected are moved to the front of the list,
- * while keys with no selected values follow. The relative order within each group is
- * preserved.
- *
- * @param keys - Array of calibration key names to partition.
- * @param calibrationKeyData - Map from key name to its {@link CalibrationKey} data.
- * @param selectedKeyValues - Nested map of `keyId → valueId → isSelected` representing the current selection state.
- * @returns A new array with keys that have selected values placed before those that do not.
- */
-const partitionKeysBySelection = (
-  keys: string[],
-  calibrationKeyData: Record<string, CalibrationKey>,
-  selectedKeyValues: Record<number, Record<number, boolean>>,
-): string[] => {
-  const keysWithSelectedValues = keys.filter((keyName) => {
-    const key = calibrationKeyData[keyName];
-    const keySelections = selectedKeyValues[key.id];
-    return keySelections && key.values.some((v) => keySelections[v.id]);
-  });
-  const keysWithoutSelectedValues = keys.filter((keyName) => {
-    const key = calibrationKeyData[keyName];
-    const keySelections = selectedKeyValues[key.id];
-    return !keySelections || !key.values.some((v) => keySelections[v.id]);
-  });
-  return [...keysWithSelectedValues, ...keysWithoutSelectedValues];
-};
-
-/**
- * Computes the Cartesian product of the selected values across all calibration keys.
- *
- * Each element of the returned array is one unique combination of key-value pairs — one
- * pair per calibration key — covering every possible permutation of the selected values.
- *
- * @param selectedPerKey - Array where each entry contains a calibration key and the list
- *   of values selected for that key.
- * @returns A two-dimensional array of key-value pair combinations representing the full
- *   Cartesian product of the selections.
- */
-const generateCartesianProduct = (
-  selectedPerKey: Array<{
-    key: Key;
-    values: Array<{id: number; name: string}>;
-  }>,
-): Array<
-  Array<{
-    key: Key;
-    value: {id: number; name: string};
-  }>
-> => {
-  const combinations: Array<
-    Array<{
-      key: Key;
-      value: {id: number; name: string};
-    }>
-  > = [];
-
-  const generate = (
-    index: number,
-    currentCombo: Array<{
-      key: Key;
-      value: {id: number; name: string};
-    }>,
-  ) => {
-    if (index === selectedPerKey.length) {
-      combinations.push([...currentCombo]);
-      return;
-    }
-
-    const {key, values} = selectedPerKey[index];
-    values.forEach((value) => {
-      currentCombo.push({key, value});
-      generate(index + 1, currentCombo);
-      currentCombo.pop();
-    });
-  };
-
-  generate(0, []);
-  return combinations;
-};
-
-/**
- * Transforms the flat selection state map into a structured list grouped by calibration key.
- *
- * Iterates over every key ID present in `selectedKeyValues`, resolves the corresponding
- * key name from `calibrationKeyData`, and collects only the values whose selection flag is
- * `true`. Keys that cannot be resolved or that have no selected values are omitted from the
- * result. The output is consumed by {@link generateCartesianProduct} to produce the final
- * set of CKV combinations.
- *
- * @param selectedKeyValues - Nested map of `keyId → valueId → isSelected` representing the current selection state.
- * @param calibrationKeyData - Map from key name to its {@link CalibrationKey} data, used to resolve key and value metadata.
- * @returns An array of objects, each containing a calibration key descriptor and the list
- *   of selected value descriptors for that key.
- */
-const groupSelectedValuesByKey = (
-  selectedKeyValues: Record<number, Record<number, boolean>>,
-  calibrationKeyData: Record<string, CalibrationKey>,
-): Array<{
-  key: Key;
-  values: Array<{id: number; name: string}>;
-}> => {
-  const selectedPerKey: Array<{
-    key: Key;
-    values: Array<{id: number; name: string}>;
-  }> = [];
-
-  Object.entries(selectedKeyValues).forEach(([keyIdStr, valueSelections]) => {
-    const keyId = parseInt(keyIdStr, 10);
-
-    const keyName = Object.keys(calibrationKeyData).find(
-      (name) => calibrationKeyData[name].id === keyId,
-    );
-    if (!keyName) {
-      return;
-    }
-
-    const key = calibrationKeyData[keyName];
-    const selectedValues: Array<{id: number; name: string}> = [];
-
-    Object.entries(valueSelections).forEach(([valueIdStr, isSelected]) => {
-      if (!isSelected) {
-        return;
-      }
-
-      const valueId = parseInt(valueIdStr, 10);
-      const value = key.values.find((v) => v.id === valueId);
-      if (value) {
-        selectedValues.push({id: value.id, name: value.name});
-      }
-    });
-
-    if (selectedValues.length > 0) {
-      selectedPerKey.push({
-        key: {id: key.id, name: key.name, systemId: key.systemId},
-        values: selectedValues,
-      });
-    }
-  });
-
-  return selectedPerKey;
-};
-
-/**
- * Re-resolves a narrow `{id, name}` key/value pair produced by the Cartesian-product
- * helpers above into the full {@link CalibrationKey}/{@link KeyValue} shape required by
- * `ConfiguredCkv`, by matching on `id` against `calibrationKeys` — the helpers
- * above intentionally stay widening-free, so this is the one place that re-attaches
- * `systemId` metadata.
- */
-function resolveGraphKeyAndValue(
-  calibrationKeys: Record<string, CalibrationKey>,
-  keyId: number,
-  valueId: number,
-): {key: CalibrationKey; value: KeyValue} | null {
-  const key = Object.values(calibrationKeys).find(
-    (candidate) => candidate.id === keyId,
-  );
-  if (!key) {
-    return null;
-  }
-  const value = key.values.find((candidate) => candidate.id === valueId);
-  if (!value) {
-    return null;
-  }
-  return {key, value};
-}
-
-/**
- * Resolves every flagged entry in a `keyId → valueId → isSelected` selection
- * map into full {@link CalibrationKey}/{@link KeyValue} pairs — shared by the
- * memoized current-selection view and by `applyPickerSelection`, which needs
- * the same resolution for a not-yet-committed `next` state.
- */
-function resolveSelectedPairs(
-  selectedKeyValues: Record<number, Record<number, boolean>>,
-  calibrationKeys: Record<string, CalibrationKey>,
-): Array<{key: CalibrationKey; value: KeyValue}> {
-  return Object.entries(selectedKeyValues).flatMap(
-    ([keyIdStr, valueSelections]) => {
-      const keyId = parseInt(keyIdStr, 10);
-      return Object.entries(valueSelections)
-        .filter(([, isSelected]) => isSelected)
-        .map(([valueIdStr]) =>
-          resolveGraphKeyAndValue(
-            calibrationKeys,
-            keyId,
-            parseInt(valueIdStr, 10),
-          ),
-        )
-        .filter(
-          (pair): pair is {key: CalibrationKey; value: KeyValue} =>
-            pair !== null,
-        );
-    },
-  );
-}
-
-function buildCkvSystemId(
-  keyValuePairs: Array<{key: CalibrationKey; value: KeyValue}>,
-): string {
-  return keyValuePairs
-    .map((pair) => `${pair.key.systemId}:${pair.value.systemId}`)
-    .sort()
-    .join('|');
-}
-
 async function copyCkvEntry(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
@@ -377,30 +100,6 @@ async function copyCkvEntry(text: string): Promise<void> {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
-}
-
-function renderDiagnostic(diagnostic: CkvSearchDiagnostic, key: number) {
-  if (diagnostic.code === 'unknown-token') {
-    return (
-      <div key={key}>
-        Value &quot;{diagnostic.token}&quot; was not found for any key.
-      </div>
-    );
-  }
-  if (diagnostic.code === 'value-auto-resolved-by-key-id') {
-    return (
-      <div key={key}>
-        {diagnostic.valueName} is ambiguous between{' '}
-        {diagnostic.candidateKeyNames.join(', ')}; resolved to the lowest-ID
-        key.
-      </div>
-    );
-  }
-  return (
-    <div key={key}>
-      Cannot assign distinct keys to tokens: {diagnostic.tokens.join(', ')}
-    </div>
-  );
 }
 
 export function CalibrationKeysConfigPanel({
@@ -1146,13 +845,7 @@ export function CalibrationKeysConfigPanel({
             }
           />
 
-          {diagnostics.length > 0 && (
-            <div className="text-support-danger text-sm" role="alert">
-              {diagnostics.map((diagnostic, index) =>
-                renderDiagnostic(diagnostic, index),
-              )}
-            </div>
-          )}
+          <CkvSearchDiagnostics diagnostics={diagnostics} />
 
           <div
             ref={availableKeysTableRef}

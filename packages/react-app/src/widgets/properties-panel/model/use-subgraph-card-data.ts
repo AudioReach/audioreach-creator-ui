@@ -18,6 +18,7 @@ import type {PropertyDto} from '~shared/lib/property.dto';
 import {propertyDtoToUpdateRequest} from '../lib/property-tree-adapter';
 import {
   dirtyItemsHaveConfigName,
+  findPropertyConfigElement,
   propertyDtosHaveConfigName,
 } from '../lib/schema-property-fields';
 import {
@@ -29,10 +30,12 @@ const SCENARIO_PROPERTY_ID = 0x08001010;
 const VSID_PROPERTY_ID = 0x080010cc;
 
 export function useSubgraphCardData({
+  onScenarioIdChanged,
   onStagedChange,
   projectId,
   subgraphId,
 }: {
+  onScenarioIdChanged?: (subgraphId: string, isVoiceCall: boolean) => void;
   onStagedChange?: () => void;
   projectId: string;
   subgraphId: string;
@@ -78,6 +81,11 @@ export function useSubgraphCardData({
             success: false as const,
           };
         }
+
+        const isVoiceCall =
+          findPropertyConfigElement(nextProperties.data, 'Scenario ID')
+            ?.value === '3';
+        onScenarioIdChanged?.(subgraphId, isVoiceCall);
 
         return {
           data: {
@@ -130,7 +138,7 @@ export function useSubgraphCardData({
         success: true as const,
       };
     },
-    [onStagedChange, projectId, subgraphId],
+    [onScenarioIdChanged, onStagedChange, projectId, subgraphId],
   );
 
   const schemaData = useSchemaCardData({
