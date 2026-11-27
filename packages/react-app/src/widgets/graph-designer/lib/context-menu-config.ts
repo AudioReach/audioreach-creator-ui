@@ -7,7 +7,7 @@ import {ChevronRight, Link, Minus, Plus, Trash2} from 'lucide-react';
 
 import {EDGE_KIND, PORT_IO_TYPE, type PortIoType} from '~entities/graph';
 import {
-  DELETE_HANDLERS,
+  deleteSelection,
   resolveGraphDesignerNodeId,
   type GraphDesignerStore,
   type UsecaseGraphData,
@@ -46,7 +46,9 @@ const COMPLETE_LINK_ACTIONS: ReadonlySet<string> = new Set([
 ]);
 
 export interface ContextMenuConfigOptions {
-  /** true for Subsystem level and System Workflow; shows the subsystem move actions. */
+  /**
+   * true for Subsystem level and System Workflow; shows the subsystem move actions.
+   */
   onAddToManualUsecase: (subgraphId: number) => void;
   onRemoveFromManualUsecase: (subgraphId: number) => void;
   onRequestMoveToSubsystem: (nodeId: string) => void;
@@ -279,6 +281,10 @@ export function buildContextMenuConfig(
     },
     onAction: (actionId, target): ConnectionCommand | void => {
       const store = get();
+      // Menus can remain open while mode and mutation state change.
+      if (store.mode !== 'edit' || store.isMutating) {
+        return;
+      }
       if (target.kind === 'port') {
         const edgeMode =
           START_EDGE_MODES[actionId as keyof typeof START_EDGE_MODES];
@@ -305,7 +311,8 @@ export function buildContextMenuConfig(
           return;
         }
         if (actionId === 'delete') {
-          void DELETE_HANDLERS[target.node.nodeKind](get, nodeId);
+          // The shared command includes backend calls and child cascades.
+          void deleteSelection(get, [nodeId], []);
           return;
         }
         if (actionId === 'move-to-subsystem') {
@@ -326,7 +333,7 @@ export function buildContextMenuConfig(
         return;
       }
       if (actionId === 'delete') {
-        void store.deleteLink(get, target.edge.id, resolveEdgeLinkType(target));
+        void deleteSelection(get, [], [target.edge.id]);
       }
       if (actionId === 'exclude-link') {
         store.excludeLink(get, target.edge.id);

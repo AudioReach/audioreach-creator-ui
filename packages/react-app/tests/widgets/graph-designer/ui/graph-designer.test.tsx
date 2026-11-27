@@ -52,6 +52,10 @@ interface MockUsecaseVisualizerProps {
     }) => void;
     onNodesDeleted?: (payload: {nodeIds: string[]}) => void;
     onSelectionChange?: (payload: SelectionChangePayload) => void;
+    onSelectionDeleted?: (payload: {
+      edgeIds: string[];
+      nodeIds: string[];
+    }) => void;
   };
   graph?: LevelView;
   rendering?: {nodeDisplayConfig?: NodeDisplayConfig};
@@ -140,7 +144,15 @@ let capturedContextMenu: VisualizerContextMenuConfig | undefined;
 const mockUsecaseVisualizer = (props: MockUsecaseVisualizerProps) => {
   mockVisualizerProps = props;
   capturedContextMenu = props.contextMenu;
-  return <div data-testid="usecase-visualizer" />;
+  return (
+    <div data-testid="usecase-visualizer">
+      {props.graph?.modules?.map((module) => (
+        <span key={module.id} data-testid="canvas-module">
+          {module.label}
+        </span>
+      ))}
+    </div>
+  );
 };
 
 jest.mock('~features/usecase-visualizer', () => ({
@@ -453,6 +465,108 @@ describe('GraphDesigner - subgraph metadata initialization', () => {
 
     await waitFor(() => {
       expect(loadSubgraphList).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('GraphDesigner - canvas updates during mutations', () => {
+  it.each(['success', 'partial failure'])(
+    'holds modules on the canvas until deletion ends with %s',
+    async (outcome) => {
+      const graphData = makeGraphData();
+      graphData.moduleInstances['mod-2'] = {
+        ...graphData.moduleInstances['mod-1'],
+        displayName: 'Module 2',
+        moduleName: 'Module 2',
+        naturalId: 2,
+        systemId: 'mod-2',
+      };
+      graphData.containers['cnt-1'].moduleInstances.push('mod-2');
+      const {graphDesignerStore} = renderGraphDesigner({graphData});
+      await waitFor(() => {
+        expect(screen.getAllByTestId('canvas-module')).toHaveLength(2);
+      });
+      jest.mocked(layoutLevelView).mockClear();
+
+      act(() => graphDesignerStore.getState().beginMutation());
+      act(() => {
+        graphDesignerStore.getState().applyDeletedCollection({
+          controlLinks: [],
+          dataLinks: [],
+          spfModules: ['mod-1'],
+        });
+      });
+
+      expect(screen.getAllByTestId('canvas-module')).toHaveLength(2);
+      expect(layoutLevelView).not.toHaveBeenCalled();
+
+      if (outcome === 'success') {
+        act(() => {
+          graphDesignerStore.setState({
+            graphData: {
+              ...graphData,
+              containers: {},
+              moduleInstances: {},
+              subgraphs: {},
+            },
+          });
+        });
+      }
+      expect(screen.getAllByTestId('canvas-module')).toHaveLength(2);
+
+      act(() => graphDesignerStore.getState().endMutation());
+
+      if (outcome === 'success') {
+        await waitFor(() => {
+          expect(screen.queryAllByTestId('canvas-module')).toHaveLength(0);
+        });
+      } else {
+        await waitFor(() => {
+          expect(screen.getAllByTestId('canvas-module')).toHaveLength(1);
+          expect(screen.getByTestId('canvas-module')).toHaveTextContent(
+            'Module 2',
+          );
+        });
+      }
+    },
+  );
+
+  it('ignores a layout that completes during a mutation', async () => {
+    const graphData = makeGraphData();
+    const {graphDesignerStore} = renderGraphDesigner({graphData});
+    await screen.findByTestId('canvas-module');
+    let completeLayout!: (view: LevelView) => void;
+    jest.mocked(layoutLevelView).mockImplementationOnce(
+      () =>
+        new Promise<LevelView>((resolve) => {
+          completeLayout = resolve;
+        }),
+    );
+
+    act(() => {
+      graphDesignerStore.setState({
+        graphData: {
+          ...graphData,
+          moduleInstances: {...graphData.moduleInstances},
+        },
+      });
+    });
+    await waitFor(() => {
+      expect(completeLayout).toEqual(expect.any(Function));
+    });
+    const displayedGraph = mockVisualizerProps?.graph;
+    act(() => graphDesignerStore.getState().beginMutation());
+    await act(async () => {
+      completeLayout({levelId: 'uc-1', modules: []});
+    });
+
+    expect(mockVisualizerProps?.graph).toBe(displayedGraph);
+    expect(screen.getByTestId('canvas-module')).toHaveTextContent('Module 1');
+
+    act(() => graphDesignerStore.getState().endMutation());
+    await waitFor(() => {
+      expect(mockVisualizerProps?.graph).not.toBe(displayedGraph);
+      expect(screen.getByTestId('canvas-module')).toHaveTextContent('Module 1');
     });
   });
 });
@@ -1220,6 +1334,27 @@ describe('GraphDesigner — enable overlay sync', () => {
 });
 
 describe('GraphDesigner - visualizer wiring', () => {
+  it('calls deleteSelection once for a mixed keyboard selection', async () => {
+    const {graphDesignerStore} = renderGraphDesigner({
+      graphData: makeGraphData(),
+    });
+    await screen.findByTestId('usecase-visualizer');
+
+    act(() => {
+      mockVisualizerProps?.eventHandlers?.onSelectionDeleted?.({
+        edgeIds: ['link-1'],
+        nodeIds: ['module-1'],
+      });
+    });
+
+    expect(deleteSelection).toHaveBeenCalledTimes(1);
+    expect(deleteSelection).toHaveBeenCalledWith(
+      graphDesignerStore.getState,
+      ['module-1'],
+      ['link-1'],
+    );
+  });
+
   it('passes a context menu config wrapping buildContextMenuConfig in edit mode', async () => {
     renderGraphDesigner({graphData: makeGraphData()});
     await screen.findByTestId('usecase-visualizer');

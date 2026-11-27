@@ -155,6 +155,16 @@ function stringMeta(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+// Text editors own keystrokes while graph items remain selected.
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest(
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"], [role="spinbutton"]',
+    ) !== null
+  );
+}
+
 function selectedNodeFromReactFlowNode(
   node: Node,
 ): SelectedNodeRef | undefined {
@@ -528,7 +538,12 @@ function VisualizerCanvas({
     if (!el) {
       return undefined;
     }
+    // Keep held keys from starting overlapping backend requests.
+    let isDeleting = false;
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || isEditableTarget(event.target)) {
+        return;
+      }
       const state = store.getState();
       if (event.key === 'Escape') {
         if (state.connectionInProgress) {
@@ -557,8 +572,18 @@ function VisualizerCanvas({
         });
         return;
       }
-      if (event.key === 'Delete') {
-        if (state.mode !== VISUALIZER_MODE.EDIT) {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (
+          state.mode !== VISUALIZER_MODE.EDIT ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey
+        ) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (isDeleting || event.repeat) {
           return;
         }
         const sel = state.selection;
@@ -575,18 +600,40 @@ function VisualizerCanvas({
               rfEdgesRef.current.find((e) => e.id === id)?.data?.locked !==
               true,
           );
+        if (nodeIds.length === 0 && edgeIds.length === 0) {
+          return;
+        }
+        isDeleting = true;
         void (async () => {
-          if (nodeIds.length > 0) {
-            const result = await state.eventHandlers?.onNodesDeleted?.({
-              nodeIds,
+          try {
+            if (state.eventHandlers?.onSelectionDeleted) {
+              const result = await state.eventHandlers.onSelectionDeleted({
+                edgeIds,
+                nodeIds,
+              });
+              removeDeletedSelection(store, result);
+              return;
+            }
+            if (nodeIds.length > 0) {
+              const result = await state.eventHandlers?.onNodesDeleted?.({
+                nodeIds,
+              });
+              removeDeletedSelection(store, result);
+            }
+            if (edgeIds.length > 0) {
+              const result = await state.eventHandlers?.onEdgesDeleted?.({
+                edgeIds,
+              });
+              removeDeletedSelection(store, result);
+            }
+          } catch (error) {
+            logger.error('UsecaseVisualizer: keyboard deletion failed', {
+              action: 'delete_selection',
+              component: 'UsecaseVisualizer',
+              error: error instanceof Error ? error.message : String(error),
             });
-            removeDeletedSelection(store, result);
-          }
-          if (edgeIds.length > 0) {
-            const result = await state.eventHandlers?.onEdgesDeleted?.({
-              edgeIds,
-            });
-            removeDeletedSelection(store, result);
+          } finally {
+            isDeleting = false;
           }
         })();
       }
@@ -868,7 +915,24 @@ function VisualizerCanvas({
   );
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div
+      ref={containerRef}
+      aria-label="Graph canvas"
+      className="relative h-full w-full"
+      onPointerDownCapture={(event) => {
+        // Graph clicks focus this canvas; controls retain their own focus.
+        if (
+          !isEditableTarget(event.target) &&
+          !(
+            event.target instanceof Element && event.target.closest('button, a')
+          )
+        ) {
+          containerRef.current?.focus({preventScroll: true});
+        }
+      }}
+      role="region"
+      tabIndex={0}
+    >
       <svg
         aria-hidden
         className="pointer-events-none absolute"
@@ -893,6 +957,10 @@ function VisualizerCanvas({
       <ReactFlow
         colorMode={colorMode}
         connectionLineComponent={BoundaryAwareConnectionLine}
+        deleteKeyCode={
+          // App commands handle Delete keys and enforce Edit mode.
+          null
+        }
         edgeTypes={edgeTypes}
         edges={rfEdges}
         minZoom={0.05}

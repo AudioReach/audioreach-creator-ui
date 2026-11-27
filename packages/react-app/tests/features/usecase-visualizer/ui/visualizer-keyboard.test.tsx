@@ -163,6 +163,46 @@ describe('keyboard: Escape', () => {
 });
 
 describe('keyboard: Delete', () => {
+  it('dispatches mixed selection as one deletion batch', async () => {
+    const onSelectionDeleted = jest.fn().mockResolvedValue({
+      deletedEdgeIds: [],
+      deletedNodeIds: [],
+    });
+    const onNodesDeleted = jest.fn();
+    const onEdgesDeleted = jest.fn();
+    render(
+      <UsecaseVisualizer
+        eventHandlers={{onEdgesDeleted, onNodesDeleted, onSelectionDeleted}}
+        graph={makeGraph()}
+        mode={VISUALIZER_MODE.EDIT}
+      />,
+    );
+    latestReactFlowProps.current?.onSelectionChange?.({
+      edges: [
+        {
+          data: makeEdge('e1'),
+          id: 'e1',
+          source: 'n1',
+          target: 'n2',
+          type: 'control-link',
+        },
+      ],
+      nodes: [{data: makeModule('n1'), id: 'n1', type: 'module'}],
+    });
+
+    fireEvent.keyDown(getContainer(), {key: 'Delete'});
+
+    await waitFor(() =>
+      expect(onSelectionDeleted).toHaveBeenCalledWith({
+        edgeIds: ['e1'],
+        nodeIds: ['sys-n1'],
+      }),
+    );
+    expect(onSelectionDeleted).toHaveBeenCalledTimes(1);
+    expect(onNodesDeleted).not.toHaveBeenCalled();
+    expect(onEdgesDeleted).not.toHaveBeenCalled();
+  });
+
   it('clears only confirmed deleted nodes from selection', async () => {
     const onNodesDeleted = jest.fn().mockResolvedValue({
       deletedEdgeIds: [],

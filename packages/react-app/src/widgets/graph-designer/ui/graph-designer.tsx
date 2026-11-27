@@ -402,6 +402,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
 
   // Graph data from store
   const graphData = useGraphDesignerStoreShallow((s) => s.graphData);
+  const isMutating = useGraphDesignerStoreShallow((s) => s.isMutating);
   const subsystemData = useGraphDesignerStoreShallow((s) => s.subsystemData);
   const subsystemPickTree = useMemo(
     () => withTopNode(subsystemData),
@@ -916,10 +917,11 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   // sizes/packs modules, containers, and subgraphs around the ports that
   // will actually be visible, instead of the full port count.
   useEffect(() => {
-    if (graphDataStatus !== 'ready' || !graphData) {
+    const gen = ++layoutGenerationRef.current;
+    // Hold the canvas until all requests in the edit operation finish.
+    if (isMutating || graphDataStatus !== 'ready' || !graphData) {
       return;
     }
-    const gen = ++layoutGenerationRef.current;
     const levelId = activeSubsystemId
       ? `subsystem:${activeSubsystemId}`
       : selectedUsecases.join(',');
@@ -945,18 +947,21 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       return;
     }
     void layoutLevelView(filtered).then((lv) => {
-      if (layoutGenerationRef.current === gen) {
+      // A layout started before the mutation must not publish during it.
+      if (!store.getState().isMutating && layoutGenerationRef.current === gen) {
         setLevelView(lv);
       }
     });
   }, [
     graphDataStatus,
     graphData,
+    isMutating,
     selectedUsecases,
     setLevelView,
     effectivePortVisibilityMode,
     activeSubsystemId,
     simplifySubsystems,
+    store,
   ]);
 
   // Side nav > View > Auto Align Graphs re-runs the layout on the active graph.
@@ -1431,6 +1436,14 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           mapSelectedNodesToConfigurationItems(selectedNodes, graphData),
         );
       },
+      // Keyboard and button deletion share backend and cascade handling.
+      onSelectionDeleted: ({
+        edgeIds,
+        nodeIds,
+      }: {
+        edgeIds: string[];
+        nodeIds: string[];
+      }) => deleteSelection(store.getState, nodeIds, edgeIds),
       onSubgraphCollapse: (subgraphId: number) => {
         setCollapseByLevel((prev) => ({
           ...prev,

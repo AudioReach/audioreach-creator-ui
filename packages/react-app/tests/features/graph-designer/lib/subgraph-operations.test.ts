@@ -775,6 +775,170 @@ describe('createSubgraphOperations — excludeLink / reincludeLink', () => {
 });
 
 describe('createSubgraphOperations — deleteSubgraph', () => {
+  async function prepareSubgraphDeletion() {
+    const context = makeTestStore();
+    await context.store.getState().enterEditMode();
+    context.store.setState({
+      graphData: {
+        ...EMPTY_GRAPH_DATA,
+        containers: {
+          'cnt-1': {
+            containerSystemId: 'cnt-1',
+            moduleInstances: ['mod-1', 'mod-2'],
+            naturalId: 10,
+            subgraphSystemId: 'sg-1',
+          },
+        },
+        moduleInstances: {
+          'mod-1': makeModuleInstance({
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-1',
+          }),
+          'mod-2': makeModuleInstance({
+            containerSystemId: 'cnt-1',
+            subgraphSystemId: 'sg-1',
+            systemId: 'mod-2',
+          }),
+        },
+        subgraphs: {
+          'sg-1': {
+            containers: ['cnt-1'],
+            naturalId: 1,
+            subgraphName: 'SG1',
+            subgraphType: '',
+            systemId: 'sg-1',
+          },
+        },
+      },
+      subgraphProvenanceById: {'sg-1': 'pre-loaded'},
+    });
+    return {
+      ...context,
+      applyCollection: jest.spyOn(
+        context.store.getState(),
+        'applyComponentCollection',
+      ),
+    };
+  }
+
+  it('applies backend confirmations while the mutation lock stays active', async () => {
+    const {applyCollection, get, store, subgraphOperations} =
+      await prepareSubgraphDeletion();
+    let release!: () => void;
+    let signalSecondRequest!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const secondRequestStarted = new Promise<void>((resolve) => {
+      signalSecondRequest = resolve;
+    });
+    mockDeleteSpfModule
+      .mockResolvedValueOnce({
+        data: {
+          deleted: {
+            controlLinks: ['control-1'],
+            dataLinks: ['data-1'],
+            spfModules: ['mod-1'],
+          },
+        },
+        success: true,
+      })
+      .mockImplementationOnce(async () => {
+        signalSecondRequest();
+        await waiting;
+        return {
+          data: {
+            deleted: {
+              controlLinks: ['control-2'],
+              dataLinks: ['data-2'],
+              spfModules: ['mod-2'],
+              subgraphs: ['sg-1'],
+            },
+          },
+          success: true,
+        };
+      });
+
+    const deletion = subgraphOperations.deleteSubgraph(get, 'sg-1');
+    // The first deletion is confirmed while the second request is held open.
+    await secondRequestStarted;
+    const duringDeletion = store.getState();
+    const callsDuringDeletion = applyCollection.mock.calls.length;
+    release();
+    const ok = await deletion;
+
+    expect(duringDeletion.graphData!.moduleInstances['mod-1']).toBeUndefined();
+    expect(duringDeletion.graphData!.moduleInstances['mod-2']).toBeDefined();
+    expect(duringDeletion.isMutating).toBe(true);
+    expect(callsDuringDeletion).toBe(1);
+    expect(ok).toBe(true);
+    expect(applyCollection).toHaveBeenCalledTimes(2);
+    expect(applyCollection.mock.calls[0][0].deleted).toEqual({
+      controlLinks: ['control-1'],
+      dataLinks: ['data-1'],
+      spfModules: ['mod-1'],
+      subgraphs: [],
+    });
+    expect(applyCollection.mock.calls[1][0].deleted).toEqual({
+      controlLinks: ['control-2'],
+      dataLinks: ['data-2'],
+      spfModules: ['mod-2'],
+      subgraphs: ['sg-1'],
+    });
+    expect(store.getState().graphData).toMatchObject({
+      containers: {},
+      moduleInstances: {},
+      subgraphs: {},
+    });
+    expect(store.getState().subgraphProvenanceById).toEqual({});
+    expect(store.getState().isMutating).toBe(false);
+  });
+
+  it('reconciles confirmed deletions when a later backend call rejects', async () => {
+    const {applyCollection, get, store, subgraphOperations} =
+      await prepareSubgraphDeletion();
+    let callsBeforeFailure: number | undefined;
+    mockDeleteSpfModule
+      .mockResolvedValueOnce({
+        data: {
+          deleted: {controlLinks: [], dataLinks: [], spfModules: ['mod-1']},
+        },
+        success: true,
+      })
+      .mockImplementationOnce(async () => {
+        callsBeforeFailure = applyCollection.mock.calls.length;
+        throw new Error('backend unavailable');
+      });
+
+    await expect(
+      subgraphOperations.deleteSubgraph(get, 'sg-1'),
+    ).rejects.toThrow('backend unavailable');
+
+    expect(callsBeforeFailure).toBe(1);
+    expect(applyCollection).toHaveBeenCalledTimes(1);
+    expect(
+      store.getState().graphData!.moduleInstances['mod-1'],
+    ).toBeUndefined();
+    expect(store.getState().graphData!.moduleInstances['mod-2']).toBeDefined();
+    expect(store.getState().isMutating).toBe(false);
+  });
+
+  it('keeps the graph unchanged when no backend deletion succeeds', async () => {
+    const {applyCollection, get, store, subgraphOperations} =
+      await prepareSubgraphDeletion();
+    const before = store.getState().graphData;
+    mockDeleteSpfModule.mockRejectedValueOnce(new Error('backend unavailable'));
+
+    await expect(
+      subgraphOperations.deleteSubgraph(get, 'sg-1'),
+    ).rejects.toThrow('backend unavailable');
+
+    expect(applyCollection).not.toHaveBeenCalled();
+    expect(store.getState().graphData).toBe(before);
+    expect(store.getState().isMutating).toBe(false);
+  });
+
   it('removes a palette-placed subgraph from the UI cache only, with no backend call', async () => {
     const {get, store, subgraphOperations} = makeTestStore();
     await store.getState().enterEditMode();
@@ -1164,6 +1328,11 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
       },
       subgraphProvenanceById: {'sg-1': 'pre-loaded'},
     });
+    const applyCollection = jest.spyOn(
+      store.getState(),
+      'applyComponentCollection',
+    );
+    let callsBeforeFailure: number | undefined;
     mockDeleteSpfModule
       .mockResolvedValueOnce({
         data: {
@@ -1176,13 +1345,18 @@ describe('createSubgraphOperations — deleteSubgraph', () => {
         message: 'ok',
         success: true,
       })
-      .mockResolvedValueOnce({
-        issues: [{code: 'DELETE_FAILED', message: 'boom', severity: 'ERROR'}],
+      .mockImplementationOnce(async () => {
+        callsBeforeFailure = applyCollection.mock.calls.length;
+        return {
+          issues: [{code: 'DELETE_FAILED', message: 'boom', severity: 'ERROR'}],
+        };
       });
 
     const ok = await subgraphOperations.deleteSubgraph(get, 'sg-1');
 
     expect(ok).toBe(false);
+    expect(callsBeforeFailure).toBe(1);
+    expect(applyCollection).toHaveBeenCalledTimes(1);
     expect(mockShowToast).toHaveBeenCalledWith('boom', 'danger');
     expect(
       store.getState().graphData!.moduleInstances['mod-1'],
