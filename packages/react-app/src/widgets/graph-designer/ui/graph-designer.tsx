@@ -55,10 +55,11 @@ import {
   parseModuleDropPayload,
   parseSubgraphDropPayload,
   type GraphDesignerStore,
+  type MoveDestination,
   useGraphDesignerStore,
   useGraphDesignerStoreShallow,
 } from '~features/graph-designer';
-import {toMoveDestination, withTopNode} from '~features/subsystem-browser';
+import {withTopNode} from '~features/subsystem-browser';
 import {keyConfiguratorStoreManager} from '~features/key-configurator';
 import {
   PortConnectionsInfoPopup,
@@ -1047,7 +1048,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
   ]);
 
   const handleMoveToSubsystem = useCallback(
-    async (destinationId: string) => {
+    async (destination: MoveDestination) => {
       if (moveNodeId === null) {
         return;
       }
@@ -1055,11 +1056,7 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
       try {
         const moved = await store
           .getState()
-          .moveToSubsystem(
-            store.getState,
-            moveNodeId,
-            toMoveDestination(destinationId),
-          );
+          .moveToSubsystem(store.getState, moveNodeId, destination);
         // Keep the dialog open on failure so the selection isn't lost.
         if (moved) {
           setMoveNodeId(null);
@@ -1750,6 +1747,33 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
           </div>,
           document.body,
         )}
+      {isMoving &&
+        createPortal(
+          <div
+            aria-busy="true"
+            className="fixed inset-0 z-9999 flex cursor-wait items-center justify-center backdrop-blur-sm"
+            role="status"
+            style={{
+              backgroundColor:
+                'color-mix(in oklab, var(--color-surface-overlay) 50%, transparent)',
+            }}
+          >
+            <div className="bg-raised rounded-lg p-8 shadow-xl">
+              <div className="text-center">
+                <div className="mb-4 flex justify-center">
+                  <ProgressRing />
+                </div>
+                <div className="text-neutral-primary mb-2 text-lg font-semibold">
+                  Moving to subsystem…
+                </div>
+                <div className="text-neutral-secondary text-sm">
+                  This may take a few minutes.
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
       {state.status === 'loading-links' &&
         createPortal(
           <div
@@ -1911,8 +1935,8 @@ const GraphDesigner: React.FC<GraphDesignerProps> = ({
         isMoving={isMoving}
         movingNodeId={moveNodeId}
         onCancel={() => setMoveNodeId(null)}
-        onConfirm={(destinationId) => {
-          void handleMoveToSubsystem(destinationId);
+        onConfirm={(destination) => {
+          void handleMoveToSubsystem(destination);
         }}
         open={moveNodeId !== null}
         tree={subsystemPickTree}

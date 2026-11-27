@@ -29,6 +29,6 @@ export function withTopNode(
   ];
 }
 
-export function toMoveDestination(id: string): string | null {
-  return id === TOP_ID ? null : id;
+export function toMoveDestination(id: string): {subsystemId: string} | null {
+  return id === TOP_ID ? null : {subsystemId: id};
 }

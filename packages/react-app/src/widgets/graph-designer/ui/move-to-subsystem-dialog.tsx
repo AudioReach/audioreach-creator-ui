@@ -8,10 +8,12 @@ import {useState} from 'react';
 import {Button} from '@qualcomm-ui/react/button';
 import {Dialog} from '@qualcomm-ui/react/dialog';
 
+import type {MoveDestination} from '~features/graph-designer';
 import {
   SubsystemTreeView,
   TOP_ID,
   TOP_NODE_ID,
+  toMoveDestination,
 } from '~features/subsystem-browser';
 import type {SubsystemBrowserTreeNode} from '~shared/store/tab-store-slices/subsystem-slice';
 
@@ -20,7 +22,7 @@ interface MoveToSubsystemDialogProps {
   isMoving?: boolean;
   movingNodeId: string | null;
   onCancel: () => void;
-  onConfirm: (destinationId: string) => void;
+  onConfirm: (destination: MoveDestination) => void;
   open: boolean;
   tree: SubsystemBrowserTreeNode[];
 }
@@ -60,6 +62,16 @@ function MoveToSubsystemDialogContent({
             selectedSystemId={selectedId}
           />
         </div>
+        <Button
+          className="mt-3 w-fit self-start"
+          disabled={isMoving}
+          emphasis="neutral"
+          onClick={() => onConfirm({createNew: true})}
+          size="sm"
+          variant="outline"
+        >
+          + Create new subsystem
+        </Button>
       </Dialog.Body>
       <Dialog.Footer>
         <Button
@@ -79,7 +91,7 @@ function MoveToSubsystemDialogContent({
               onCancel();
               return;
             }
-            onConfirm(selectedId);
+            onConfirm(toMoveDestination(selectedId));
           }}
           size="sm"
           variant="fill"

@@ -400,18 +400,62 @@ describe('createSubsystemOperations - moveToSubsystem new destination', () => {
 
     const ok = await subsystemOperations.moveToSubsystem(get, 'sg-1', {
       createNew: true,
-      name: 'New SS',
     });
 
     expect(ok).toBe(true);
-    expect(mockCreateSubsystem).toHaveBeenCalledWith('proj-ss-ops-1', {
-      name: 'New SS',
-    });
+    expect(mockCreateSubsystem).toHaveBeenCalledWith('proj-ss-ops-1', {});
     expect(mockMoveSubsystemComponents).toHaveBeenCalledWith('proj-ss-ops-1', {
       subgraphSystemIds: ['sg-1'],
       targetSubsystemSystemId: 'ss-new',
     });
     expect(store.getState().graphData!.subsystems['ss-new']).toBeDefined();
+  });
+
+  it('creates the new subsystem beside the current subsystem', async () => {
+    const {get, store, subsystemOperations} = makeTestStore();
+    store.setState({
+      graphData: {
+        ...makeEmptyGraphData(),
+        moduleInstances: {'mod-1': makeSubgraphModule()},
+        subgraphs: {'sg-1': makeSubgraph()},
+        subsystems: {
+          'ss-1': makeSubsystem({
+            parentSubsystemId: 'ss-parent',
+            subgraphs: ['sg-1'],
+          }),
+          'ss-parent': makeSubsystem({
+            childSubsystemIds: ['ss-1'],
+            subsystemId: 'ss-parent',
+          }),
+        },
+      },
+    });
+    await enterEditMode(store);
+    mockCreateSubsystem.mockResolvedValueOnce({
+      data: {
+        name: 'New SS',
+        naturalId: 101,
+        parentSystemId: 'ss-parent',
+        systemId: 'ss-new',
+      },
+      message: 'ok',
+      success: true,
+    });
+    mockMoveSubsystemComponents.mockResolvedValueOnce({
+      data: moveResponseWithModules(['mod-1'], 'ss-new'),
+      message: 'ok',
+      success: true,
+    });
+
+    await subsystemOperations.moveToSubsystem(get, 'sg-1', {createNew: true});
+
+    // No name is sent, so the backend generates one.
+    expect(mockCreateSubsystem).toHaveBeenCalledWith('proj-ss-ops-1', {
+      parentSystemId: 'ss-parent',
+    });
+    expect(
+      store.getState().graphData!.subsystems['ss-parent'].childSubsystemIds,
+    ).toEqual(['ss-1', 'ss-new']);
   });
 
   it('leaves the created subsystem when the follow-up move fails', async () => {
@@ -439,7 +483,6 @@ describe('createSubsystemOperations - moveToSubsystem new destination', () => {
 
     const ok = await subsystemOperations.moveToSubsystem(get, 'sg-1', {
       createNew: true,
-      name: 'New SS',
     });
 
     expect(ok).toBe(false);
