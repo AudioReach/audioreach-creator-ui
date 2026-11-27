@@ -252,7 +252,8 @@ function VcpmDataTabInner(
       onSetAndSwitch: async () => {
         await writeDirtyVcpmData();
       },
-      onSwitch: (newIndex) => selectVcpmCalIndex(subgraphSystemId, newIndex),
+      onSwitch: (newIndex) =>
+        void selectVcpmCalIndex(subgraphSystemId, newIndex),
     });
 
   function handleToggleKeyConfigurator() {

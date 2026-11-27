@@ -9,7 +9,7 @@ import type {
   AddVcpmCkvsResponseDto,
   CreateVcpmCkvsRequestDto,
   UpdateVcpmCalDataRequestDto,
-  VcpmCalDataListResponseDto,
+  VcpmCalDataDto,
   VcpmCkvListResponseDto,
   VcpmParameterCalDataDto,
 } from '../model/vcpm.dto';
@@ -46,9 +46,10 @@ export async function deleteVcpmCkv(
 export async function getVcpmCalData(
   projectId: string,
   subgraphId: string,
-): Promise<ApiResult<VcpmCalDataListResponseDto>> {
+  ckvSystemId: string,
+): Promise<ApiResult<VcpmCalDataDto>> {
   return httpClient.get(
-    `${vcpmCkvResourcePath(projectId, subgraphId)}/cal-data`,
+    `${vcpmCkvResourcePath(projectId, subgraphId)}/${ckvSystemId}/cal-data`,
   );
 }
 

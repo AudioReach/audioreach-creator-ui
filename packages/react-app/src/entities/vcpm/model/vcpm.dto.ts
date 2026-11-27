@@ -10,8 +10,22 @@ export interface VcpmCkvDto {
   systemId: string;
 }
 
+export interface VcpmAssociatedCkvDto {
+  ckv: KeyValueInfo[];
+  ckvSystemId: string;
+}
+
+// Verified against the real backend: this GET is keyed by parameter, not
+// by CKV — each configured parameter lists the CKVs it's associated with,
+// and the same ckvSystemId can repeat across multiple parameters.
+export interface VcpmConfiguredParamDto {
+  associatedCkvs: VcpmAssociatedCkvDto[];
+  paramName: string;
+  paramSystemId: string;
+}
+
 export interface VcpmCkvListResponseDto {
-  ckv: VcpmCkvDto[];
+  configuredParams: VcpmConfiguredParamDto[];
 }
 
 export interface CreateVcpmCkvsRequestDto {
@@ -36,11 +50,10 @@ export interface VcpmParameterCalDataDto {
 }
 
 // Added beyond design.md's literal API table — see plan Deviation 1.
-export interface VcpmCalDataByCkvDto {
-  ckvSystemId: string;
+// Verified against the real backend: this GET returns cal data for one
+// CKV at a time, not a bulk list across every CKV in the subgraph.
+export interface VcpmCalDataDto {
+  Ckv: KeyValueInfo[];
   parameters: VcpmParameterCalDataDto[];
-}
-
-export interface VcpmCalDataListResponseDto {
-  calData: VcpmCalDataByCkvDto[];
+  systemId: string;
 }

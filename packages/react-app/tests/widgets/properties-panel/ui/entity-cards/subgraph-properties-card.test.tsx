@@ -26,6 +26,7 @@ import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import {fetchSubgraphProperties} from '~entities/subgraphs';
+import {SCENARIO_PROPERTY_ID} from '~widgets/properties-panel/lib/schema-property-fields';
 import {SubgraphPropertiesCard} from '~widgets/properties-panel/ui/entity-cards/subgraph-properties-card';
 
 import {makeGraphData} from './test-graph-data';
@@ -37,7 +38,7 @@ describe('SubgraphPropertiesCard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchSubgraphProperties.mockResolvedValue({
-      data: [makeProperty('Scenario ID')],
+      data: [makeProperty('Scenario ID', '1', [], SCENARIO_PROPERTY_ID)],
       message: 'ok',
       success: true,
     });
@@ -112,7 +113,7 @@ describe('SubgraphPropertiesCard', () => {
 
   it('renders the VCPM Config button when Scenario ID is VoiceCall', async () => {
     mockFetchSubgraphProperties.mockResolvedValue({
-      data: [makeProperty('Scenario ID', '3')],
+      data: [makeProperty('Scenario ID', '3', [], SCENARIO_PROPERTY_ID)],
       message: 'ok',
       success: true,
     });
@@ -137,7 +138,7 @@ describe('SubgraphPropertiesCard', () => {
 
   it('calls onOpenVcpmConfig with the subgraph id and name when clicked', async () => {
     mockFetchSubgraphProperties.mockResolvedValue({
-      data: [makeProperty('Scenario ID', '3')],
+      data: [makeProperty('Scenario ID', '3', [], SCENARIO_PROPERTY_ID)],
       message: 'ok',
       success: true,
     });

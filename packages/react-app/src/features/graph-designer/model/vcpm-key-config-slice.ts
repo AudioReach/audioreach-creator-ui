@@ -99,7 +99,7 @@ export function createVcpmKeyConfigSlice<
 
         const entry = get().vcpmDataBySubgraphId[subgraphSystemId];
         if (!entry?.selectedCkvSystemId && added[0]) {
-          get().selectVcpmCalIndex(subgraphSystemId, added[0].systemId);
+          await get().selectVcpmCalIndex(subgraphSystemId, added[0].systemId);
         }
         return true;
       } catch (error) {
@@ -148,7 +148,7 @@ export function createVcpmKeyConfigSlice<
           get().configuredVcpmCkvsBySubgraphId[subgraphSystemId] ?? [];
         const entry = get().vcpmDataBySubgraphId[subgraphSystemId];
         if (entry?.selectedCkvSystemId === ckvSystemId) {
-          get().selectVcpmCalIndex(
+          await get().selectVcpmCalIndex(
             subgraphSystemId,
             remaining[0]?.systemId ?? '',
           );

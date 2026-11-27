@@ -10,14 +10,18 @@ export {
   getVcpmCkvs,
   updateVcpmCalData,
 } from './api/vcpm-api';
-export {transformVcpmCkvsToConfiguredCkvs} from './lib/vcpm.transform';
+export {
+  transformVcpmCkvsToConfiguredCkvs,
+  transformVcpmConfiguredParamsToConfiguredCkvs,
+} from './lib/vcpm.transform';
 export type {
   AddVcpmCkvsResponseDto,
   CreateVcpmCkvsRequestDto,
   UpdateVcpmCalDataRequestDto,
-  VcpmCalDataByCkvDto,
-  VcpmCalDataListResponseDto,
+  VcpmAssociatedCkvDto,
+  VcpmCalDataDto,
   VcpmCkvDto,
   VcpmCkvListResponseDto,
+  VcpmConfiguredParamDto,
   VcpmParameterCalDataDto,
 } from './model/vcpm.dto';

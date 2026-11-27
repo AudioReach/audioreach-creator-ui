@@ -27,18 +27,22 @@ describe('vcpm-api', () => {
   const subgraphId = 'sg-1';
 
   it('getVcpmCkvs calls GET on the vcpm-ckv resource', async () => {
-    (httpClient.get as jest.Mock).mockResolvedValue({data: {ckv: []}});
+    (httpClient.get as jest.Mock).mockResolvedValue({
+      data: {configuredParams: []},
+    });
     await getVcpmCkvs(projectId, subgraphId);
     expect(httpClient.get).toHaveBeenCalledWith(
       `/projects/${projectId}/subgraphs/${subgraphId}/vcpm-ckv`,
     );
   });
 
-  it('getVcpmCalData calls GET on the cal-data sub-resource', async () => {
-    (httpClient.get as jest.Mock).mockResolvedValue({data: {calData: []}});
-    await getVcpmCalData(projectId, subgraphId);
+  it('getVcpmCalData calls GET on the ckv-specific cal-data sub-resource', async () => {
+    (httpClient.get as jest.Mock).mockResolvedValue({
+      data: {Ckv: [], parameters: [], systemId: 'ckv-1'},
+    });
+    await getVcpmCalData(projectId, subgraphId, 'ckv-1');
     expect(httpClient.get).toHaveBeenCalledWith(
-      `/projects/${projectId}/subgraphs/${subgraphId}/vcpm-ckv/cal-data`,
+      `/projects/${projectId}/subgraphs/${subgraphId}/vcpm-ckv/ckv-1/cal-data`,
     );
   });
 

@@ -41,14 +41,30 @@ describe('vcpm-data-slice', () => {
     expect(store.getState().vcpmOpenTabs).toEqual({});
   });
 
-  it('queryVcpmData returns false and leaves state untouched on a blocking issue', async () => {
+  it('queryVcpmData returns false and leaves state untouched on a blocking issue from getVcpmCkvs', async () => {
     (vcpmApi.getVcpmCkvs as jest.Mock).mockResolvedValue({
       issues: [
         {category: 'BLOCKING', code: 'E', message: 'm', severity: 'ERROR'},
       ],
     });
+    const store = createTestStore();
+    const ok = await store.getState().queryVcpmData('sg-1', 'Subgraph 1');
+    expect(ok).toBe(false);
+    expect(store.getState().vcpmDataBySubgraphId['sg-1']).toBeUndefined();
+    expect(vcpmApi.getVcpmCalData).not.toHaveBeenCalled();
+  });
+
+  it('queryVcpmData returns false and leaves state untouched on a blocking issue from getVcpmCalData', async () => {
+    (vcpmApi.getVcpmCkvs as jest.Mock).mockResolvedValue({
+      data: {configuredParams: []},
+    });
+    (
+      vcpmApi.transformVcpmConfiguredParamsToConfiguredCkvs as jest.Mock
+    ).mockReturnValue([{keyValuePairs: [], systemId: 'ckv-1'}]);
     (vcpmApi.getVcpmCalData as jest.Mock).mockResolvedValue({
-      data: {calData: []},
+      issues: [
+        {category: 'BLOCKING', code: 'E', message: 'm', severity: 'ERROR'},
+      ],
     });
     const store = createTestStore();
     const ok = await store.getState().queryVcpmData('sg-1', 'Subgraph 1');
@@ -56,34 +72,160 @@ describe('vcpm-data-slice', () => {
     expect(store.getState().vcpmDataBySubgraphId['sg-1']).toBeUndefined();
   });
 
-  it('queryVcpmData selects every available parameter by default', async () => {
+  it('queryVcpmData fetches cal data for the default CKV only, by systemId', async () => {
     (vcpmApi.getVcpmCkvs as jest.Mock).mockResolvedValue({
-      data: {ckv: []},
+      data: {configuredParams: []},
     });
     (vcpmApi.getVcpmCalData as jest.Mock).mockResolvedValue({
       data: {
-        calData: [
-          {
-            ckvSystemId: 'ckv-1',
-            parameters: [
-              {elements: [], name: 'Param A', systemId: 'p-1'},
-              {elements: [], name: 'Param B', systemId: 'p-2'},
-            ],
-          },
+        Ckv: [],
+        parameters: [
+          {elements: [], name: 'Param A', systemId: 'p-1'},
+          {elements: [], name: 'Param B', systemId: 'p-2'},
         ],
+        systemId: 'ckv-1',
       },
     });
-    (vcpmApi.transformVcpmCkvsToConfiguredCkvs as jest.Mock).mockReturnValue([
-      {keyValuePairs: [], systemId: 'ckv-1'},
-    ]);
+    (
+      vcpmApi.transformVcpmConfiguredParamsToConfiguredCkvs as jest.Mock
+    ).mockReturnValue([{keyValuePairs: [], systemId: 'ckv-1'}]);
     const store = createTestStore();
 
     const ok = await store.getState().queryVcpmData('sg-1', 'Subgraph 1');
 
     expect(ok).toBe(true);
+    expect(vcpmApi.getVcpmCalData).toHaveBeenCalledWith(
+      'project-1',
+      'sg-1',
+      'ckv-1',
+    );
     const entry = store.getState().vcpmDataBySubgraphId['sg-1'];
     expect(entry.selectedCkvSystemId).toBe('ckv-1');
+    expect(entry.calDataByCkvId).toEqual({
+      'ckv-1': [
+        {elements: [], name: 'Param A', systemId: 'p-1'},
+        {elements: [], name: 'Param B', systemId: 'p-2'},
+      ],
+    });
     expect(entry.uiState?.selectedIds).toEqual(['p-1', 'p-2']);
+  });
+
+  it('queryVcpmData skips the cal data call entirely when there are no CKVs', async () => {
+    (vcpmApi.getVcpmCkvs as jest.Mock).mockResolvedValue({
+      data: {configuredParams: []},
+    });
+    (
+      vcpmApi.transformVcpmConfiguredParamsToConfiguredCkvs as jest.Mock
+    ).mockReturnValue([]);
+    const store = createTestStore();
+
+    const ok = await store.getState().queryVcpmData('sg-1', 'Subgraph 1');
+
+    expect(ok).toBe(true);
+    expect(vcpmApi.getVcpmCalData).not.toHaveBeenCalled();
+    const entry = store.getState().vcpmDataBySubgraphId['sg-1'];
+    expect(entry.selectedCkvSystemId).toBeUndefined();
+    expect(entry.calDataByCkvId).toEqual({});
+  });
+
+  describe('selectVcpmCalIndex', () => {
+    it('fetches and caches cal data for a CKV not yet loaded', async () => {
+      (vcpmApi.getVcpmCalData as jest.Mock).mockResolvedValue({
+        data: {
+          Ckv: [],
+          parameters: [{elements: [], name: 'Param A', systemId: 'p-1'}],
+          systemId: 'ckv-2',
+        },
+      });
+      const store = createTestStore();
+      store.setState({
+        vcpmDataBySubgraphId: {
+          'sg-1': {
+            calDataByCkvId: {'ckv-1': []},
+            selectedCkvSystemId: 'ckv-1',
+            status: 'ready',
+          },
+        },
+      });
+
+      await store.getState().selectVcpmCalIndex('sg-1', 'ckv-2');
+
+      expect(vcpmApi.getVcpmCalData).toHaveBeenCalledWith(
+        'project-1',
+        'sg-1',
+        'ckv-2',
+      );
+      const entry = store.getState().vcpmDataBySubgraphId['sg-1'];
+      expect(entry.selectedCkvSystemId).toBe('ckv-2');
+      expect(entry.calDataByCkvId).toEqual({
+        'ckv-1': [],
+        'ckv-2': [{elements: [], name: 'Param A', systemId: 'p-1'}],
+      });
+    });
+
+    it('reuses already-cached cal data without refetching', async () => {
+      const store = createTestStore();
+      store.setState({
+        vcpmDataBySubgraphId: {
+          'sg-1': {
+            calDataByCkvId: {'ckv-1': [], 'ckv-2': []},
+            selectedCkvSystemId: 'ckv-1',
+            status: 'ready',
+          },
+        },
+      });
+
+      await store.getState().selectVcpmCalIndex('sg-1', 'ckv-2');
+
+      expect(vcpmApi.getVcpmCalData).not.toHaveBeenCalled();
+      expect(
+        store.getState().vcpmDataBySubgraphId['sg-1'].selectedCkvSystemId,
+      ).toBe('ckv-2');
+    });
+
+    it('clears the selection without fetching when given an empty ckvSystemId', async () => {
+      const store = createTestStore();
+      store.setState({
+        vcpmDataBySubgraphId: {
+          'sg-1': {
+            calDataByCkvId: {'ckv-1': []},
+            selectedCkvSystemId: 'ckv-1',
+            status: 'ready',
+          },
+        },
+      });
+
+      await store.getState().selectVcpmCalIndex('sg-1', '');
+
+      expect(vcpmApi.getVcpmCalData).not.toHaveBeenCalled();
+      expect(
+        store.getState().vcpmDataBySubgraphId['sg-1'].selectedCkvSystemId,
+      ).toBe('');
+    });
+
+    it('leaves the selection untouched when the fetch for a new CKV fails', async () => {
+      (vcpmApi.getVcpmCalData as jest.Mock).mockResolvedValue({
+        issues: [
+          {category: 'BLOCKING', code: 'E', message: 'm', severity: 'ERROR'},
+        ],
+      });
+      const store = createTestStore();
+      store.setState({
+        vcpmDataBySubgraphId: {
+          'sg-1': {
+            calDataByCkvId: {'ckv-1': []},
+            selectedCkvSystemId: 'ckv-1',
+            status: 'ready',
+          },
+        },
+      });
+
+      await store.getState().selectVcpmCalIndex('sg-1', 'ckv-2');
+
+      const entry = store.getState().vcpmDataBySubgraphId['sg-1'];
+      expect(entry.selectedCkvSystemId).toBe('ckv-1');
+      expect(entry.calDataByCkvId).toEqual({'ckv-1': []});
+    });
   });
 
   it('setVcpmUiState merges the patch without touching selectedCkvSystemId', () => {

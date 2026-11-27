@@ -13,6 +13,12 @@ import {
 import type {TreeViewData, TreeViewItem} from '~features/generic-tree-view';
 import type {PropertyDto, PropertyElement} from '~shared/lib/property.dto';
 
+// propertyName ("Scenario ID") is a display label; the backend's
+// ConfigElement.name ("scenario_id") is an internal field name and the
+// two don't match, so this property must be identified by its stable
+// naturalId instead of by matching a display string against an element.
+export const SCENARIO_PROPERTY_ID = 0x08001010;
+
 export function collectConfigElements(
   elements: PropertyElement[] | undefined,
 ): ConfigElementDto[] {
@@ -59,6 +65,16 @@ export function findConfigElement(
   return null;
 }
 
+export function findConfigElementByNaturalId(
+  data: TreeViewData | null,
+  naturalId: number,
+): ConfigElementDto | null {
+  const item = data?.items.find(
+    (candidate) => candidate.id === String(naturalId),
+  );
+  return item ? (collectConfigElements(item.elements)[0] ?? null) : null;
+}
+
 export function buildConfigElementValueDirtyItem(
   data: TreeViewData | null,
   name: string,
@@ -103,6 +119,18 @@ export function findPropertyConfigElement(
   }
 
   return null;
+}
+
+export function findPropertyConfigElementByNaturalId(
+  properties: PropertyDto[],
+  naturalId: number,
+): ConfigElementDto | null {
+  const property = properties.find(
+    (candidate) => candidate.naturalId === naturalId,
+  );
+  return property
+    ? (collectConfigElements(property.elements ?? [])[0] ?? null)
+    : null;
 }
 
 export function toNameValueOptions(

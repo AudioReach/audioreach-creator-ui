@@ -12,7 +12,10 @@ import type {UsecaseGraphData} from '~features/graph-designer/model/graph-data-s
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import {PropertyRow} from '~shared/controls/property-row';
 
-import {findConfigElement} from '../../lib/schema-property-fields';
+import {
+  findConfigElementByNaturalId,
+  SCENARIO_PROPERTY_ID,
+} from '../../lib/schema-property-fields';
 import {useStaticFieldSave} from '../../model/use-static-field-save';
 import {useSubgraphCardData} from '../../model/use-subgraph-card-data';
 import {CollapsibleCard} from '../shared/collapsible-card';
@@ -122,7 +125,8 @@ function SubgraphPropertiesCardBody({
     subgraphId,
   });
   const isVoiceCall =
-    findConfigElement(schemaData.data, 'Scenario ID')?.value === '3';
+    findConfigElementByNaturalId(schemaData.data, SCENARIO_PROPERTY_ID)
+      ?.value === '3';
 
   return (
     <CollapsibleCard isCollapsed={isCollapsed} onToggle={onToggle} title={name}>

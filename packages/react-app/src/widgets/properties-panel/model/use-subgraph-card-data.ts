@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {useCallback, useRef} from 'react';
+import {useCallback} from 'react';
 
 import {
   fetchSubgraphProperties,
@@ -11,22 +11,19 @@ import {
   patchSubgraphScenario,
   patchSubgraphVsid,
 } from '~entities/subgraphs';
-import type {TreeViewItem} from '~features/generic-tree-view';
 import {getIssueMessage, hasBlockingIssues} from '~shared/api';
 import type {PropertyDto} from '~shared/lib/property.dto';
 
 import {propertyDtoToUpdateRequest} from '../lib/property-tree-adapter';
 import {
-  dirtyItemsHaveConfigName,
-  findPropertyConfigElement,
-  propertyDtosHaveConfigName,
+  findPropertyConfigElementByNaturalId,
+  SCENARIO_PROPERTY_ID,
 } from '../lib/schema-property-fields';
 import {
   useSchemaCardData,
   type UseSchemaCardDataResult,
 } from './use-schema-card-data';
 
-const SCENARIO_PROPERTY_ID = 0x08001010;
 const VSID_PROPERTY_ID = 0x080010cc;
 
 export function useSubgraphCardData({
@@ -40,7 +37,6 @@ export function useSubgraphCardData({
   projectId: string;
   subgraphId: string;
 }): UseSchemaCardDataResult {
-  const loadRef = useRef<(() => Promise<void>) | null>(null);
   const fetchProperties = useCallback(
     (entityId: string) => fetchSubgraphProperties(projectId, entityId),
     [projectId],
@@ -55,7 +51,9 @@ export function useSubgraphCardData({
           subgraphId,
           request,
         );
-        if (hasBlockingIssues(result) || !result.data) {
+        // No `!result.data` check — this endpoint returns no body on
+        // success, so a missing body is not a failure.
+        if (hasBlockingIssues(result)) {
           return {
             message: getIssueMessage(
               result,
@@ -83,8 +81,10 @@ export function useSubgraphCardData({
         }
 
         const isVoiceCall =
-          findPropertyConfigElement(nextProperties.data, 'Scenario ID')
-            ?.value === '3';
+          findPropertyConfigElementByNaturalId(
+            nextProperties.data,
+            SCENARIO_PROPERTY_ID,
+          )?.value === '3';
         onScenarioIdChanged?.(subgraphId, isVoiceCall);
 
         return {
@@ -141,27 +141,12 @@ export function useSubgraphCardData({
     [onScenarioIdChanged, onStagedChange, projectId, subgraphId],
   );
 
-  const schemaData = useSchemaCardData({
+  return useSchemaCardData({
     entityId: subgraphId,
     entityType: 'subgraph',
     fetchProperties,
-    onCommitSuccess: async (
-      dirtyItems: TreeViewItem[],
-      nextProperties: PropertyDto[],
-    ) => {
-      if (
-        dirtyItemsHaveConfigName(dirtyItems, 'Scenario ID') ||
-        propertyDtosHaveConfigName(nextProperties, 'Scenario ID')
-      ) {
-        await loadRef.current?.();
-      }
-    },
     onStagedChange,
     projectId,
     saveProperty,
   });
-
-  loadRef.current = schemaData.load;
-
-  return schemaData;
 }

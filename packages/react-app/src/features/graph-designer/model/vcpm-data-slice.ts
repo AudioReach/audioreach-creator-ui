@@ -9,7 +9,7 @@ import {buildKeyDefinitionLookup} from '~entities/key-configurator/lib/ckv.trans
 import {
   getVcpmCalData,
   getVcpmCkvs,
-  transformVcpmCkvsToConfiguredCkvs,
+  transformVcpmConfiguredParamsToConfiguredCkvs,
   updateVcpmCalData,
   type UpdateVcpmCalDataRequestDto,
   type VcpmParameterCalDataDto,
@@ -38,7 +38,10 @@ export interface VcpmDataSlice {
     subgraphSystemId: string,
     subgraphName: string,
   ) => Promise<boolean>;
-  selectVcpmCalIndex: (subgraphSystemId: string, ckvSystemId: string) => void;
+  selectVcpmCalIndex: (
+    subgraphSystemId: string,
+    ckvSystemId: string,
+  ) => Promise<void>;
   setVcpmCalData: (
     subgraphSystemId: string,
     parameterSystemId: string,
@@ -124,17 +127,9 @@ export function createVcpmDataSlice<
       const previousEntry = get().vcpmDataBySubgraphId[subgraphSystemId];
       patchEntry(subgraphSystemId, {status: 'loading'});
       try {
-        const [ckvsResult, calDataResult] = await Promise.all([
-          getVcpmCkvs(projectId, subgraphSystemId),
-          getVcpmCalData(projectId, subgraphSystemId),
-        ]);
+        const ckvsResult = await getVcpmCkvs(projectId, subgraphSystemId);
 
-        if (
-          hasBlockingIssues(ckvsResult) ||
-          !ckvsResult.data ||
-          hasBlockingIssues(calDataResult) ||
-          !calDataResult.data
-        ) {
+        if (hasBlockingIssues(ckvsResult) || !ckvsResult.data) {
           const message = getIssueMessage(
             ckvsResult,
             `Failed to load VCPM data for ${subgraphName}`,
@@ -151,25 +146,44 @@ export function createVcpmDataSlice<
         const keyDefinitionsByNaturalId = buildKeyDefinitionLookup(
           get().calibrationKeys,
         );
-        const configuredCkvs = transformVcpmCkvsToConfiguredCkvs(
-          ckvsResult.data.ckv,
+        const configuredCkvs = transformVcpmConfiguredParamsToConfiguredCkvs(
+          ckvsResult.data.configuredParams,
           keyDefinitionsByNaturalId,
         );
-        const calDataByCkvId = Object.fromEntries(
-          calDataResult.data.calData.map((entry) => [
-            entry.ckvSystemId,
-            entry.parameters,
-          ]),
-        );
         const defaultCkvSystemId = configuredCkvs[0]?.systemId;
+
+        // Cal data is scoped to one CKV per call (no bulk "every CKV at
+        // once" endpoint exists) — only the default CKV is fetched up
+        // front; switching CKVs fetches on demand via selectVcpmCalIndex.
+        let defaultParameters: VcpmParameterCalDataDto[] = [];
+        if (defaultCkvSystemId) {
+          const calDataResult = await getVcpmCalData(
+            projectId,
+            subgraphSystemId,
+            defaultCkvSystemId,
+          );
+          if (hasBlockingIssues(calDataResult) || !calDataResult.data) {
+            const message = getIssueMessage(
+              calDataResult,
+              `Failed to load VCPM data for ${subgraphName}`,
+            );
+            showToast(message, 'danger');
+            logger.error(message, {
+              action: 'queryVcpmData',
+              component: 'vcpm-data-slice',
+            });
+            restoreEntry(subgraphSystemId, previousEntry);
+            return false;
+          }
+          defaultParameters = calDataResult.data.parameters;
+        }
+
         // Opening the tab should start with every available parameter
         // checked, matching the module tab's CKV parameter checklist
         // default, rather than requiring a manual select-all click.
-        const defaultSelectedIds = defaultCkvSystemId
-          ? (calDataByCkvId[defaultCkvSystemId] ?? []).map(
-              (parameter) => parameter.systemId,
-            )
-          : [];
+        const defaultSelectedIds = defaultParameters.map(
+          (parameter) => parameter.systemId,
+        );
 
         set({
           configuredVcpmCkvsBySubgraphId: {
@@ -178,7 +192,9 @@ export function createVcpmDataSlice<
           },
         } as Partial<S>);
         patchEntry(subgraphSystemId, {
-          calDataByCkvId,
+          calDataByCkvId: defaultCkvSystemId
+            ? {[defaultCkvSystemId]: defaultParameters}
+            : {},
           selectedCkvSystemId: defaultCkvSystemId,
           status: 'ready',
           uiState: {
@@ -200,8 +216,55 @@ export function createVcpmDataSlice<
       }
     },
 
-    selectVcpmCalIndex: (subgraphSystemId, ckvSystemId) => {
-      patchEntry(subgraphSystemId, {selectedCkvSystemId: ckvSystemId});
+    selectVcpmCalIndex: async (subgraphSystemId, ckvSystemId) => {
+      const entry = get().vcpmDataBySubgraphId[subgraphSystemId];
+      if (!ckvSystemId || entry?.calDataByCkvId?.[ckvSystemId]) {
+        patchEntry(subgraphSystemId, {selectedCkvSystemId: ckvSystemId});
+        return;
+      }
+
+      try {
+        const result = await getVcpmCalData(
+          projectId,
+          subgraphSystemId,
+          ckvSystemId,
+        );
+        if (hasBlockingIssues(result) || !result.data) {
+          const message = getIssueMessage(
+            result,
+            'Failed to load VCPM calibration index',
+          );
+          showToast(message, 'danger');
+          logger.error(message, {
+            action: 'selectVcpmCalIndex',
+            component: 'vcpm-data-slice',
+          });
+          return;
+        }
+
+        const latest = get().vcpmDataBySubgraphId[subgraphSystemId];
+        set({
+          vcpmDataBySubgraphId: {
+            ...get().vcpmDataBySubgraphId,
+            [subgraphSystemId]: {
+              ...latest,
+              calDataByCkvId: {
+                ...latest?.calDataByCkvId,
+                [ckvSystemId]: result.data.parameters,
+              },
+              selectedCkvSystemId: ckvSystemId,
+            },
+          },
+        } as Partial<S>);
+      } catch (error) {
+        const message = 'Failed to load VCPM calibration index';
+        showToast(message, 'danger');
+        logger.error(message, {
+          action: 'selectVcpmCalIndex',
+          component: 'vcpm-data-slice',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     },
 
     // `parameterSystemId` is accepted per design.md's literal signature but
