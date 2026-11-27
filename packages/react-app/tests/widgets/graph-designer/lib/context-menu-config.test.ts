@@ -4,9 +4,15 @@
  */
 
 jest.mock('~shared/lib/logger');
+jest.mock('~features/graph-designer/lib/multi-select-delete', () => ({
+  deleteSelection: jest
+    .fn()
+    .mockResolvedValue({deletedEdgeIds: [], deletedNodeIds: []}),
+}));
 
 import {NODE_KIND} from '~entities/graph';
 import type {GraphDesignerStore} from '~features/graph-designer';
+import {deleteSelection} from '~features/graph-designer/lib/multi-select-delete';
 import {
   buildContextMenuConfig,
   containingSubsystemIdOf,
@@ -61,6 +67,49 @@ function configFor(store: GraphDesignerStore, options = makeOptions()) {
 }
 
 describe('context-menu-config', () => {
+  it('uses the shared deletion command for the subgraph Delete button', () => {
+    const store = makeStore();
+    configFor(store).onAction('delete', {
+      kind: 'subgraph',
+      node: {
+        id: 'subgraph-visual',
+        meta: {systemId: 'sg-system-1'},
+        nodeKind: NODE_KIND.SUBGRAPH,
+      } as never,
+    });
+
+    expect(deleteSelection).toHaveBeenCalledWith(
+      expect.any(Function),
+      ['sg-system-1'],
+      [],
+    );
+  });
+
+  it('uses the shared deletion command for the connection Delete button', () => {
+    const store = makeStore();
+    configFor(store).onAction('delete', {
+      edge: {edgeKind: 'data', id: 'link-system-1'} as never,
+      kind: 'data-link',
+    });
+
+    expect(deleteSelection).toHaveBeenCalledWith(
+      expect.any(Function),
+      [],
+      ['link-system-1'],
+    );
+  });
+
+  it('ignores a stale Delete button action after leaving edit mode', () => {
+    const store = makeStore({mode: 'view'});
+    configFor(store).onAction('delete', {
+      edge: {edgeKind: 'data', id: 'link-system-1'} as never,
+      kind: 'data-link',
+    });
+
+    expect(store.deleteLink).not.toHaveBeenCalled();
+    expect(deleteSelection).not.toHaveBeenCalled();
+  });
+
   it('returns no items outside edit mode', () => {
     const config = configFor(makeStore({mode: 'view'}));
     expect(

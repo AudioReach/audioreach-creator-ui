@@ -217,6 +217,11 @@ export interface VisualizerEventHandlers {
   onNodesDeleted?: (payload: {
     nodeIds: string[];
   }) => Promise<DeleteSelectionResult | void> | void;
+  /** One node/link batch reports confirmed IDs for selection cleanup. */
+  onSelectionDeleted?: (payload: {
+    edgeIds: string[];
+    nodeIds: string[];
+  }) => Promise<DeleteSelectionResult | void> | void;
 }
 
 // ── Top-level component props ─────────────────────────────────────────────────
